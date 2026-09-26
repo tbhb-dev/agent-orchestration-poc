@@ -98,4 +98,8 @@ Sandbox escapes and system changes go to the operator with the exact proposed ch
 
 ## Bus
 
-The messaging bus does not exist yet. Phase 2 adds `agentctl` usage here after the bootstrap bus is verified. Until then, use the coordinator's dispatch and reporting channel and commit the evidence files it needs.
+Set `AGENTCTL_GROUP`, `AGENTCTL_AGENT`, and `AGENTCTL_CREDS_FILE` to the assigned group, identity, and credential file path. Set `AGENTCTL_PORT` when the daemon does not use port `4222`. Keep the credential contents out of arguments, environment values, logs, and evidence.
+
+Run `agentctl join` at startup. Use `agentctl send <to> <text>` for messages, `agentctl receive --timeout 30` to wait for one, and `agentctl ack '<id>'` with the receive result's `id` after handling it. Run `agentctl status --set working|idle|blocked --detail "..."` when work state changes, and `agentctl roster` to see joined agents. See the [agentctl reference](docs/src/content/docs/guides/agentctl.md) for output and exit codes.
+
+The #82 credential policy currently blocks JetStream commands through per-agent credentials. Use the coordinator's dispatch and reporting channel until the reviewed permission or broker-mediation change is merged. Record bus failures as evidence rather than using another agent's credential.
