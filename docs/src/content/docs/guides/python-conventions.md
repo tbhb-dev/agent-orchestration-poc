@@ -188,7 +188,7 @@ Use Hypothesis 6.168.1 `@given` tests for pure core functions. These run with or
 
 ## Mutation testing
 
-Run `mise run check:mutation:python` after changing the Python core or its tests. Mutmut 3.8.0 scores only `agent_orchestration_poc.core`. The task deletes `mutants/` before every run because mutmut otherwise reuses results after test edits. The score floor is 80 percent. Pytest-cov 7.0.0 also requires line coverage of the core to reach 90 percent. Both gates run outside `mise run check` in the always-present mutation CI job (research/gates/testing/notes.md §4, decision 0005).
+Run `mise run check:mutation:python` after changing the Python core or its tests. Mutmut 3.8.0 scores only `agent_orchestration_poc.core`. The task deletes `mutants/` before every run because mutmut otherwise reuses results after test edits. The score floor is 80 percent, and the task fails if the scored outcomes do not account for every mutant, including runs with crashes, interruptions, or skipped mutants. Pytest-cov 7.0.0 also requires line coverage of the core to reach 90 percent. Both gates run outside `mise run check` in the always-present mutation CI job (research/gates/testing/notes.md §4, decision 0005).
 
 ## Functional core and imperative shell
 

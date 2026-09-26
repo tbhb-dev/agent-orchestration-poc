@@ -6,6 +6,8 @@ import subprocess
 from pathlib import Path
 from typing import cast
 
+from agent_orchestration_poc.core.mutation_score import evaluate
+
 
 def main() -> int:
     """Run mutants, print the score, and fail below 80 percent."""
@@ -17,16 +19,12 @@ def main() -> int:
     stats = cast(
         "dict[str, int]", json.loads((mutants / "mutmut-cicd-stats.json").read_text())
     )
-    killed = stats["killed"]
-    scored = killed + sum(
-        stats[key] for key in ("survived", "timeout", "suspicious", "no_tests")
+    score, passed = evaluate(stats)
+    print(
+        f"Python core mutation score: {score:.2f}% "
+        f"({stats.get('killed', 0)} killed of {stats.get('total', 0)})"
     )
-    if scored == 0:
-        print("No Python core mutants were scored")
-        return 1
-    score = 100 * killed / scored
-    print(f"Python core mutation score: {score:.2f}% ({killed} killed of {scored})")
-    return 0 if score >= 80 else 1
+    return 0 if passed else 1
 
 
 if __name__ == "__main__":
