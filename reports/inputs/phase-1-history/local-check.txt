@@ -1,0 +1,74 @@
+[check:go] $ scripts/check-gofumpt.sh
+[check:ruff] $ uv run ruff check .
+[check:ryl] $ ryl check .
+[check:vale] $ scripts/check-vale.sh
+[check:pytest] $ uv run pytest
+[check:rumdl] $ rumdl check .
+[check:biome] $ biome check --no-errors-on-unmatched .
+[check:pyrefly] $ uv run pyrefly check
+[check:ruff] All checks passed!
+[check:ruff] $ uv run ruff format --check .
+[check:pyrefly]  INFO Checking project configured at `/Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.worktrees/docs-phase-1-checkpoint/pyproject.toml`
+[check:ruff] 3 files already formatted
+[check:ruff] Finished in 196.8ms
+[check:tombi] $ tombi lint
+[check:pyrefly]  INFO 0 diagnostics
+[check:pyrefly] Finished in 262.9ms
+[check:guard-markdown] $ scripts/markdown-files.sh | xargs -r guard-markdown
+[check:tombi] 6 files linted successfully
+[check:tombi] $ tombi format --check
+[check:tombi] 6 files did not need formatting
+[check:tombi] Finished in 229.9ms
+[check:mermaid] $ scripts/check-mermaid.sh
+[check:pytest] ============================= test session starts ==============================
+[check:pytest] platform darwin -- Python 3.14.6, pytest-9.1.1, pluggy-1.6.0
+[check:pytest] rootdir: /Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.worktrees/docs-phase-1-checkpoint
+[check:pytest] configfile: pyproject.toml
+[check:pytest] testpaths: tests
+[check:pytest] collected 2 items
+[check:pytest]
+[check:rumdl]
+[check:rumdl] Success: No issues found in 82 files (80ms)
+[check:rumdl] Finished in 508.4ms
+[check:experiments] $ scripts/check-experiments.sh
+[check:pytest] tests/test_package.py .s                                                 [100%]
+[check:pytest]
+[check:pytest] =========================== short test summary info ============================
+[check:pytest] SKIPPED [1] tests/test_package.py:13: needs --run-integration
+[check:pytest] ========================= 1 passed, 1 skipped in 0.03s =========================
+[check:experiments] Finished in 31.8ms
+[check:secrets] $ gitleaks git --redact --no-banner .
+[check:guard-markdown] Finished in 285.1ms
+[check:go] $ go vet ./...
+[check:actions] $ actionlint
+[check:actions] Finished in 103.5ms
+[check:pytest] Finished in 714.7ms
+[check:biome] Checked 8 files in 677ms. No fixes applied.
+[check:biome] Finished in 757.5ms
+[check:go] $ go mod tidy -diff
+[check:go] $ go mod verify
+[check:go] all modules verified
+[check:go] $ golangci-lint run ./...
+[check:ryl] Finished in 965.9ms
+[check:go] 0 issues.
+[check:go] $ go build ./...
+[check:secrets] 6:30PM INF 18 commits scanned.
+[check:secrets] 6:30PM INF scanned ~5311077 bytes (5.31 MB) in 395ms
+[check:secrets] 6:30PM INF no leaks found
+[check:secrets] Finished in 759.2ms
+[check:go] $ go test -race -shuffle=on ./...
+[check:mermaid] mermaid: 7 block(s) in 82 file(s), 0 invalid
+[check:mermaid] Finished in 1.37s
+[check:vale] ✔ 0 errors, 0 warnings and 0 suggestions in 82 files.
+[check:vale] Finished in 2.72s
+[check:go] ?   	github.com/tbhb/agent-orchestration-poc/cmd/agentctl	[no test files]
+[check:go] ?   	github.com/tbhb/agent-orchestration-poc/cmd/agentd	[no test files]
+[check:go] ?   	github.com/tbhb/agent-orchestration-poc/internal/api	[no test files]
+[check:go] ?   	github.com/tbhb/agent-orchestration-poc/internal/backend/container	[no test files]
+[check:go] ?   	github.com/tbhb/agent-orchestration-poc/internal/backend/tmux	[no test files]
+[check:go] ?   	github.com/tbhb/agent-orchestration-poc/internal/bus	[no test files]
+[check:go] ?   	github.com/tbhb/agent-orchestration-poc/internal/registry	[no test files]
+[check:go] ?   	github.com/tbhb/agent-orchestration-poc/internal/term	[no test files]
+[check:go] ok  	github.com/tbhb/agent-orchestration-poc/internal/version	1.203s
+[check:go] Finished in 7.43s
+Finished in 7.45s

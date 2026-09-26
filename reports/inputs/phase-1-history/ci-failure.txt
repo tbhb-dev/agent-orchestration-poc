@@ -1,0 +1,42 @@
+check	Run mise run check	﻿2026-09-26T21:41:07.9399843Z ##[group]Run mise run check
+check	Run mise run check	2026-09-26T21:41:07.9400189Z ^[[36;1mmise run check^[[0m
+check	Run mise run check	2026-09-26T21:41:07.9651523Z shell: /usr/bin/bash -e {0}
+check	Run mise run check	2026-09-26T21:41:07.9651893Z env:
+check	Run mise run check	2026-09-26T21:41:07.9652233Z   MISE_RUSTUP_HOME: /home/runner/.local/share/mise/rustup
+check	Run mise run check	2026-09-26T21:41:07.9652743Z   MISE_CARGO_HOME: /home/runner/.local/share/mise/cargo
+check	Run mise run check	2026-09-26T21:41:07.9653160Z   MISE_LOG_LEVEL: info
+check	Run mise run check	2026-09-26T21:41:07.9656902Z   MISE_GITHUB_TOKEN: ***
+check	Run mise run check	2026-09-26T21:41:07.9657491Z   MISE_TRUSTED_CONFIG_PATHS: /home/runner/work/agent-orchestration-poc/agent-orchestration-poc
+check	Run mise run check	2026-09-26T21:41:07.9658098Z   MISE_YES: 1
+check	Run mise run check	2026-09-26T21:41:07.9658405Z   CARGO_HOME: /home/runner/.local/share/mise/cargo
+check	Run mise run check	2026-09-26T21:41:07.9658883Z   GOBIN: /home/runner/.local/share/mise/installs/go/1.27.1/bin
+check	Run mise run check	2026-09-26T21:41:07.9659398Z   GOROOT: /home/runner/.local/share/mise/installs/go/1.27.1
+check	Run mise run check	2026-09-26T21:41:07.9659861Z   GOTOOLCHAIN: local
+check	Run mise run check	2026-09-26T21:41:07.9660177Z   RUSTUP_HOME: /home/runner/.local/share/mise/rustup
+check	Run mise run check	2026-09-26T21:41:07.9660548Z   RUSTUP_TOOLCHAIN: 1.98.1
+check	Run mise run check	2026-09-26T21:41:07.9660792Z   UV_PYTHON_PREFERENCE: only-system
+check	Run mise run check	2026-09-26T21:41:07.9661059Z ##[endgroup]
+check	Run mise run check	2026-09-26T21:41:08.0776890Z ^[[35m[check:pytest]^[[0m ^[[1m$ uv run pytest^[[0m
+check	Run mise run check	2026-09-26T21:41:08.0786809Z ^[[34m[check:vale]^[[0m ^[[1m$ scripts/check-vale.sh^[[0m
+check	Run mise run check	2026-09-26T21:41:08.0976682Z ^[[32m^[[2m[check:ruff]^[[0m ^[[1m$ uv run ruff check .^[[0m
+check	Run mise run check	2026-09-26T21:41:08.1021786Z ^[[38;5;12m[check:rumdl]^[[0m ^[[1m$ rumdl check .^[[0m
+check	Run mise run check	2026-09-26T21:41:08.1096923Z ^[[32m^[[2m[check:guard-markdown]^[[0m ^[[1m$ scripts/markdown-files.sh | xargs -r guard-markdown^[[0m
+check	Run mise run check	2026-09-26T21:41:08.1126568Z ^[[34m^[[1m[check:biome]^[[0m ^[[1m$ biome check --no-errors-on-unmatched .^[[0m
+check	Run mise run check	2026-09-26T21:41:08.1202855Z ^[[32m[check:tombi]^[[0m ^[[1m$ tombi lint^[[0m
+check	Run mise run check	2026-09-26T21:41:08.1306514Z ^[[38;5;10m[check:ryl]^[[0m ^[[1m$ ryl check .^[[0m
+check	Run mise run check	2026-09-26T21:41:08.1948410Z ^[[38;5;12m[check:rumdl]^[[0m HANDOFF.md:27:104: [MD057] Relative link '../../.git/info/exclude' does not exist
+check	Run mise run check	2026-09-26T21:41:08.3207264Z ^[[38;5;10m[check:ryl]^[[0m Finished in 188.4ms
+check	Run mise run check	2026-09-26T21:41:08.3356759Z ^[[32m^[[1m[check:mermaid]^[[0m ^[[1m$ scripts/check-mermaid.sh^[[0m
+check	Run mise run check	2026-09-26T21:41:08.3446665Z ^[[32m^[[2m[check:guard-markdown]^[[0m Finished in 236.5ms
+check	Run mise run check	2026-09-26T21:41:08.3584534Z ^[[38;5;12m[check:experiments]^[[0m ^[[1m$ scripts/check-experiments.sh^[[0m
+check	Run mise run check	2026-09-26T21:41:08.3880995Z ^[[38;5;12m[check:experiments]^[[0m Finished in 29.4ms
+check	Run mise run check	2026-09-26T21:41:08.4016184Z ^[[38;5;12m[check:rumdl]^[[0m
+check	Run mise run check	2026-09-26T21:41:08.4025220Z ^[[35m[check:secrets]^[[0m ^[[1m$ gitleaks git --redact --no-banner .^[[0m
+check	Run mise run check	2026-09-26T21:41:08.4060270Z ^[[38;5;12m[check:rumdl]^[[0m Issues: Found 1 issues in 1/44 files (245ms)
+check	Run mise run check	2026-09-26T21:41:08.4200522Z ^[[34m[check:vale]^[[0m
+check	Run mise run check	2026-09-26T21:41:08.4233485Z ^[[2mFinished in 370.6ms^[[0m
+check	Run mise run check	2026-09-26T21:41:08.4234003Z  [0/2]  0% | 0s
+check	Run mise run check	2026-09-26T21:41:08.4258960Z ^[[38;5;12m[check:rumdl]^[[0m ^[[31mERROR^[[0m task failed
+check	Run mise run check	2026-09-26T21:41:08.4259568Z Syncing ai-tells [0/2]  0% | 0s
+check	Run mise run check	2026-09-26T21:41:08.4273598Z Syncing ai-tells [1/2] ████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░ 50% | 0s
+check	Run mise run check	2026-09-26T21:41:08.4292158Z ##[error]Process completed with exit code 1.
