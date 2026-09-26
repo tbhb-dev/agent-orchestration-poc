@@ -13,7 +13,7 @@ exclude = ["research/imported/**", ".worktrees/", ".venv/", "node_modules/"]
   "MD033",
   "MD042",
   "MD052",
-  "MD057"
+  "MD057",
 ]
 # Two sections legitimately share the heading "What could not be found" under different parents.
 "experiments/00-system-assessment/harness-research.md" = ["MD024"]
