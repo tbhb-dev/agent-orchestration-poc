@@ -9,14 +9,48 @@ dependencies = []
 
 [dependency-groups]
 dev = [
+  "pyrefly==1.3.1",
   "pytest>=9.1.1",
   "ruff>=0.16.9",
-  "ty>=0.0.84",
 ]
 
 [build-system]
 requires = ["uv_build>=0.12.10,<0.13.0"]
 build-backend = "uv_build"
+
+# Strict type checking for every Python file the repository tracks (research/gates/pyrefly/notes.md).
+[tool.pyrefly]
+# Everything except the verbatim research imports, the sketches, and gitignored trees (use-ignore-files
+# defaults to true), so experiments/ and scripts/ join the check the day they gain a .py file.
+project-excludes = ["research/imported", "design-sketch"]
+search-path = ["src"]
+# pyrefly does not read requires-python; without this it takes the version from the queried interpreter.
+python-version = "3.14"
+# The strict preset plus the off-by-default kinds that make the helper package fully typed.
+preset = "strict"
+# Warn-by-default kinds (deprecated, redundant-cast, unreachable, untyped-import, ...) fail the check too.
+min-severity = "warn"
+
+[tool.pyrefly.errors]
+unannotated-return = true
+no-any-return = true
+implicit-reexport = true
+unused-type-ignore = true
+
+# tests/ and experiments/ are exempt from annotation completeness, mirroring the ruff ANN per-file-ignores.
+[[tool.pyrefly.sub-config]]
+matches = "tests/**"
+
+[tool.pyrefly.sub-config.errors]
+implicit-any-parameter = false
+unannotated-return = false
+
+[[tool.pyrefly.sub-config]]
+matches = "experiments/**"
+
+[tool.pyrefly.sub-config.errors]
+implicit-any-parameter = false
+unannotated-return = false
 
 [tool.pytest.ini_options]
 addopts = "-ra --import-mode=importlib"
@@ -83,7 +117,3 @@ convention = "google"
 [tool.ruff.format]
 docstring-code-format = true
 line-ending = "lf"
-
-[tool.ty.src]
-# Imported research is verbatim and never checked (ruff excludes it the same way).
-exclude = ["research/imported/"]
