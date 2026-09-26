@@ -12,3 +12,5 @@ exclude = ["research/imported/**", ".worktrees/", ".venv/", "node_modules/"]
 "experiments/00-system-assessment/dependency-clones.md" = ["MD033", "MD042", "MD052", "MD057"]
 # Two sections legitimately share the heading "What could not be found" under different parents.
 "experiments/00-system-assessment/harness-research.md" = ["MD024"]
+# Claude's root instructions begin with the cross-harness import.
+"CLAUDE.md" = ["MD041"]
