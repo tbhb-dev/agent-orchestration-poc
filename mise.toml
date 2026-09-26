@@ -129,3 +129,33 @@ run = "scripts/check-pr-body.sh"
 [tasks."check:imported-research"]
 description = "Check that research/imported/ is unchanged against a base ref: mise run check:imported-research -- <base> '<title>'"
 run = "scripts/check-imported-research.sh"
+
+# Docs site (Astro Starlight in docs/). Not part of `check`; CI runs a separate docs job.
+[tasks."docs:install"]
+description = "Install the docs site dependencies from the committed lockfile"
+dir = "docs"
+run = "pnpm install --frozen-lockfile"
+
+[tasks."docs:browsers"]
+description = "Install the Playwright Chromium that rehype-mermaid renders diagrams with"
+dir = "docs"
+run = "pnpm exec playwright install --with-deps chromium"
+
+[tasks."docs:dev"]
+description = "Serve the docs site with live reload"
+dir = "docs"
+depends = ["docs:install"]
+run = "pnpm exec astro dev"
+
+[tasks."docs:build"]
+description = "Build the docs site into docs/dist"
+dir = "docs"
+depends = ["docs:install"]
+run = "pnpm exec astro build"
+
+[tasks."docs:check-links"]
+description = "Build the docs site with starlight-links-validator enabled"
+dir = "docs"
+depends = ["docs:install"]
+env = { CHECK_LINKS = "1" }
+run = "pnpm exec astro build"

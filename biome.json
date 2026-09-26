@@ -12,7 +12,9 @@
       "!research/imported",
       "!.worktrees",
       "!**/.venv",
-      "!**/node_modules"
+      "!!**/node_modules",
+      "!!docs/.astro",
+      "!!docs/dist"
     ]
   },
   "formatter": {

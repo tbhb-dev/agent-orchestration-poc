@@ -1,0 +1,5 @@
+{
+  "name": "agent-orchestration-poc",
+  "private": true,
+  "packageManager": "pnpm@12.7.0"
+}
