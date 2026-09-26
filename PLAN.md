@@ -313,7 +313,7 @@ The tables below reproduce model ids, display names, and accepted effort values 
 
 ### Assignments
 
-Assignments and their rationale follow `INPUTS/phase-0-decisions.md`, section 9, informed by the vendor documentation recorded in `experiments/00-system-assessment/model-research.md`.
+Assignments and their rationale follow `reports/inputs/phase-0-decisions.md`, section 9, informed by the vendor documentation recorded in `experiments/00-system-assessment/model-research.md`.
 
 | Worker or task | Harness | Model | Effort | Why |
 | --- | --- | --- | --- | --- |
