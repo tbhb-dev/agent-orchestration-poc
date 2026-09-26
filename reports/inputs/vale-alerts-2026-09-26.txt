@@ -98,3 +98,14 @@ Alerts per rule:
       1 ai-tells.DoubleHyphen
       1 ai-tells.ConsequenceParticiple
       1 ai-tells.AbsoluteAssertions
+
+Files added to main by PRs #19 and #20 after this count, exempted the same way (344 alerts in 8 files, counted 2026-09-26):
+    123 research/gates/go/notes.md
+     92 reports/inputs/phase-0-retro-findings.md
+     50 docs/src/content/docs/guides/go-conventions.md
+     28 .claude/rules/go.md
+     21 docs/src/content/docs/decisions/0001-go-linter.md
+     18 reports/retros/2026-09-26-phase-0.md
+      8 reports/devlog/2026-09-26.md
+      4 research/gates/go/versions.md
+Top rules for these eight: SemicolonUsage 129 (non-reports files only), ColonUsage 27, VerbTricolon 14, NegatedObject 9, ShipOveruse 9.
