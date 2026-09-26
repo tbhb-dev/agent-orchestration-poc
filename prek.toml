@@ -137,6 +137,21 @@ files = "^experiments/"
 pass_filenames = false
 
 [[repos.hooks]]
+id = "ignore-collisions"
+name = "tracked path ignore and case collisions"
+language = "system"
+entry = "scripts/check-ignore-collisions.sh"
+pass_filenames = false
+always_run = true
+
+[[repos.hooks]]
+id = "commit-trailers"
+name = "commit attribution and Refs trailers"
+language = "system"
+entry = "scripts/check-pr-body.sh --commit-msg"
+stages = ["commit-msg"]
+
+[[repos.hooks]]
 id = "vale-commit-msg"
 name = "vale (commit message)"
 language = "system"

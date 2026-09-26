@@ -168,7 +168,7 @@ Handoff procedure:
 
 1. Finish or park in-flight reviews. Dispatched workers keep running.
 2. Write new facts to memory.
-3. Have Codex regenerate `HANDOFF.md` from the coordinator's inputs, review it, commit and push it (on `main` for a checkpoint handoff, on the current branch otherwise).
+3. Have Codex regenerate `HANDOFF.md` from the coordinator's inputs, review it, commit and push it (on `main` for a checkpoint handoff, on the current branch otherwise). Refer to the handoff's own PR by branch name until it merges, then refresh the PR state after the merge.
 4. Record the session id in `HANDOFF.md`.
 5. The operator starts a new session in the repository with `@HANDOFF.md`.
 6. The new coordinator verifies before acting: `git status` and open PRs, the Project board, the bus roster and status bucket once they exist, and the memory index. It reports any discrepancy with `HANDOFF.md` to the operator instead of trusting the document.
