@@ -16,12 +16,21 @@ Read the assigned issue and [project plan](docs/src/content/docs/project/plan.md
 - CI jobs are `check` (linters, formatting, tests, and repository guards), `docs` (site build and internal links), `pr-body` (trailers and evidence links), and `imported-research` (import immutability). See [workflow](docs/src/content/docs/workflow/index.md).
 - Use `gh query` for read-only GitHub API calls. Reserve `gh api` for mutations.
 
+## Functional core, imperative shell
+
+- Functional core, imperative shell is a binding operator requirement from 2026-09-26. Put decisions and data transformations in pure functions. Keep side effects in a thin shell at the edges. A PR that puts I/O in the core or decisions in the shell cannot merge.
+- Go core packages live under `internal/core/`. `cmd/`, `internal/bus`, `internal/registry`, `internal/backend/`, `internal/term`, and `internal/api` are shell packages. golangci-lint 2.14.0 `depguard` checks core imports.
+- Python core modules live under `agent_orchestration_poc.core`. I/O lives under `agent_orchestration_poc.shell` and in experiment scripts. import-linter 2.15 checks the layers and forbidden I/O imports, with ruff 0.16.9 `TID251` as a partial call check.
+- Test the core with plain values and no mocks. Add property tests and mutation testing when #59 and #60 land. Put process and socket tests in the shell's integration suite.
+- Review rejects calls that import checkers cannot see, including `pathlib` writes and I/O through writer, connection, or process parameters. Run `check:go`, `check:imports`, and `check:ruff` for the boundary.
+
 ## Mise and checks
 
 Run project tools through mise tasks, never as bare tools or global installs. For an ad hoc invocation without a task, use `mise exec -- <tool>` and add a task when the action becomes repeatable. Non-interactive shells may lack mise shims.
 
 - Run `mise run vale:sync` once in each fresh worktree for the pinned prose styles.
 - Run `mise run check` before completion. Run `mise run fmt` to apply formatters, then inspect the diff.
+- `check:imports`, `check:dupl`, and `check:deadcode` also run in the `check` aggregate.
 - Run `mise run build` for `bin/agentd` and `bin/agentctl`.
 - Use `mise run docs:dev` for local docs, `mise run docs:build` for the output, and `mise run docs:check-links` to validate internal links. These tasks install locked site dependencies through `docs:install`.
 - `mise run docs:browsers` installs Chromium for Mermaid rendering when needed. Any required system change goes to the operator first.

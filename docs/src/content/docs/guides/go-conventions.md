@@ -58,3 +58,44 @@ Run unit tests with `go test -race -shuffle=on ./...` and integration tests with
 Codex loads `AGENTS.override.md`, `AGENTS.md`, or configured fallback files from the project root down to its working directory, in that priority per directory, within a default 32 KiB total budget; it has directory-scoped instructions rather than Claude Code path globs, so a Codex worker started at the root needs Go rules in root `AGENTS.md` (codex/codex-rs/core/src/agents_md.rs; codex/codex-rs/config/src/config_toml.rs; research/gates/go/notes.md §6).
 
 agy 1.2.11 describes user and workspace Markdown rules and `rules.json` include and exclusion lists, but its help and changelog do not establish the discovery directory, path scoping, or whether it reads `AGENTS.md`; those behaviors still need testing before mirroring the Go rules (agy 1.2.11 `agy help`, `agy changelog`; research/gates/go/notes.md §6).
+
+## Functional core and imperative shell
+
+Place pure decisions and data transformations under `internal/core/<topic>`. The existing `internal/bus`, `internal/registry`, `internal/backend/*`, `internal/term`, `internal/api`, and `cmd/*` packages are the imperative shell. `internal/core/roster` can return a roster transition from an input value, while `internal/registry` stores the resulting value in SQLite. Keep `internal/version` where it is (research/gates/boundaries/notes.md §§1, 3).
+
+golangci-lint 2.14.0 runs depguard on the core tree. Its `.golangci.yml` rule denies imports of `os`, `net`, `syscall`, the NATS modules, and shell packages, while allowing `net/netip` and `net/url` as value types. The test rule targets `**_test.go` files and denies process, socket, broker, and backend imports. Deny the shortest prefix only, since listing both `os` and `os/exec` let other `os` subpackages escape in a trial (research/gates/boundaries/notes.md §3).
+
+```yaml
+depguard:
+  rules:
+    core:
+      list-mode: lax
+      files: ["**/internal/core/**", "!$test"]
+      allow: [net/netip, net/url]
+      deny:
+        - pkg: os
+          desc: core packages do no I/O
+    core-tests:
+      list-mode: lax
+      files: ["**/internal/core/**_test.go"]
+```
+
+Run `mise run check:go`. Core tests call functions with plain values and compare results without mocks. Import checks cannot see a write through an `io.Writer` parameter or a call that reads the clock, so review those calls. Add property and mutation tests when #59 and #60 land (research/gates/boundaries/notes.md §4).
+
+## Quality gates
+
+golangci-lint 2.14.0 gates cognitive complexity and cyclomatic complexity at 15, function length at 60 lines and 40 statements, and nested `if` complexity at 5. `funlen` excludes `_test.go` because table rows increase length without increasing logic. The settings below are in `.golangci.yml` (research/gates/quality-gates/notes.md §Complexity).
+
+```yaml
+gocognit:
+  min-complexity: 15
+gocyclo:
+  min-complexity: 15
+funlen:
+  lines: 60
+  statements: 40
+nestif:
+  min-complexity: 5
+```
+
+`check:dupl` runs jscpd 5.3.2 across Go, Python, and TypeScript at 50 tokens and 5 lines. `check:deadcode` runs deadcode from `golang.org/x/tools` 0.50.0 with `-test ./...` and fails on any output. The existing `unused` linter covers nonfunction identifiers. Run these tasks through mise. Recalibrate thresholds at the first retro with phase 2 code (research/gates/quality-gates/notes.md §§Duplicate code, Dead code, First run).

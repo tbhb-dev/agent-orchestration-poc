@@ -80,3 +80,7 @@ The following versioned rules belong in `AGENTS.md` and the Claude docs-stack ru
 
 - Confirm in issue #9 that, on Astro 7.3.5 and Starlight 0.42.4, `rehype-mermaid` 3.0.0 runs before Expressive Code so a fenced `mermaid` block becomes SVG rather than highlighted code. The plugin order is inferred from Starlight's integration insertion, not yet build-tested (withastro/starlight@3ec633b `packages/starlight/src/index.ts`, research/gates/docs-stack/notes.md §2).
 - Confirm in issue #9 with `pnpm why @astrojs/mdx` and the build log that Starlight 0.42.4's `@astrojs/mdx` 8.x and starlight-blog 0.30.0's `@astrojs/mdx` 7.x coexist without duplicate-integration warnings. That outcome is inferred, not yet build-tested (withastro/starlight@3ec633b `packages/starlight/package.json`, HiDeoo/starlight-blog@19e7832 `packages/starlight-blog/package.json`, research/gates/docs-stack/notes.md §3).
+
+## Quality gates
+
+Biome 2.5.14 checks TypeScript and JavaScript functions for cognitive complexity 15, length 60 lines, and at most 5 parameters. The rules are `noExcessiveCognitiveComplexity`, `noExcessiveLinesPerFunction`, and `useMaxParams` in the `complexity` group, each at error level in `biome.json`. Run `mise run check:biome`. jscpd 5.3.2 also checks duplicate TypeScript blocks at 50 tokens and 5 lines through `mise run check:dupl`. Recalibrate thresholds at the first retro with phase 2 code (research/gates/quality-gates/notes.md §Complexity).

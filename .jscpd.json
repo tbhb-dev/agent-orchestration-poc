@@ -1,0 +1,19 @@
+{
+  "reporters": ["console"],
+  "minLines": 5,
+  "minTokens": 50,
+  "format": ["go", "python", "typescript", "tsx"],
+  "ignore": [
+    "**/research/imported/**",
+    "**/design-sketch/**",
+    "**/node_modules/**",
+    "**/.venv/**",
+    "**/.worktrees/**",
+    "**/docs/dist/**",
+    "**/docs/.astro/**",
+    "**/*.lock",
+    "**/*-lock.json",
+    "**/*-lock.yaml",
+    "**/*-lock.yml"
+  ]
+}

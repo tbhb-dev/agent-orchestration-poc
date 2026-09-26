@@ -195,3 +195,45 @@ Run `mise run check:pyrefly` from the repository root. This task runs `uv run py
 Use `# pyrefly: ignore[kind]` with a reason on the same line for a necessary suppression. Strict mode rejects unused pyrefly suppressions, and the added `unused-type-ignore` kind rejects unused type ignores (research/gates/pyrefly/notes.md §§3, 7).
 
 The `tests/**` and `experiments/**` sub-configs disable only `implicit-any-parameter` and `unannotated-return`. They match ruff's `ANN` per-file ignores. The operator may overturn this relaxation at the phase 1 checkpoint (research/gates/pyrefly/notes.md §4).
+
+## Functional core and imperative shell
+
+Put pure functions in `src/agent_orchestration_poc/core/` and side effects in `src/agent_orchestration_poc/shell/`. Experiment scripts are shell code. A core function can return a process specification from a listing of values, then a shell function starts the process. The dependency direction runs from shell to core (research/gates/boundaries/notes.md §1).
+
+import-linter 2.15 checks a layers contract and a forbidden import contract with external packages included. The configured module list covers `os`, `sys`, `subprocess`, `socket`, `asyncio`, process helpers, `websockets`, and `nats`. Run `mise run check:imports`. Ruff 0.16.9 also enables `TID251` in the core directory (research/gates/boundaries/notes.md §2).
+
+```toml
+[tool.importlinter]
+root_package = "agent_orchestration_poc"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+type = "layers"
+layers = ["shell", "core"]
+containers = ["agent_orchestration_poc"]
+
+[[tool.importlinter.contracts]]
+type = "forbidden"
+source_modules = ["agent_orchestration_poc.core"]
+forbidden_modules = ["os", "socket", "subprocess", "asyncio", "nats"]
+```
+
+Core tests pass plain values without mocks or markers. Shell process and socket tests use the registered integration markers. Import checkers cannot see `Path.write_text` on a parameter or I/O through a passed file handle, so review calls as well as imports. Add property and mutation tests when #59 and #60 land (research/gates/boundaries/notes.md §§2, 4).
+
+## Quality gates
+
+Ruff 0.16.9 selects `C901`, `PLR0911`, `PLR0912`, `PLR0915`, and `PLR0917` alongside the existing `PLR0913`. Their limits are 10 McCabe complexity, 6 returns, 12 branches, 50 statements, 5 arguments, and 5 positional arguments. The thresholds are configured at the tool defaults in `pyproject.toml` (research/gates/quality-gates/notes.md §Complexity).
+
+```toml
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.pylint]
+max-args = 5
+max-branches = 12
+max-positional-args = 5
+max-returns = 6
+max-statements = 50
+```
+
+`check:dupl` uses jscpd 5.3.2 at 50 tokens and 5 lines across source, tests, and experiments. `check:deadcode` runs vulture 2.16 at confidence 60, ignoring pytest hooks and fixtures. Run both tasks through mise and recalibrate their thresholds at the first retro with phase 2 code (research/gates/quality-gates/notes.md §§Duplicate code, Dead code, First run).

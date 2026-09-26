@@ -57,6 +57,14 @@ entry = "mise exec -- uv run ruff format --check --force-exclude"
 types = ["python"]
 
 [[repos.hooks]]
+id = "import-linter"
+name = "import-linter contracts"
+language = "system"
+entry = "mise exec -- uv run lint-imports --no-logo"
+types = ["python"]
+pass_filenames = false
+
+[[repos.hooks]]
 id = "pyrefly"
 name = "pyrefly check"
 language = "system"
