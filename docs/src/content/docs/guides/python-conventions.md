@@ -91,7 +91,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101", "PLR2004", "ANN", "D", "ARG", "INP001"]
+"tests/**" = ["S101", "PLR2004", "D", "ARG", "INP001"]
 "experiments/**" = ["T20", "INP001", "D", "ANN"]
 
 [tool.ruff.lint.isort]
@@ -107,7 +107,7 @@ line-ending = "lf"
 
 The added families enforce imports, Google-style public docstrings, annotations, subprocess security checks, quiet library output, naming, pytest style, unused arguments, pathlib, precise suppressions, package boundaries, logging, and straightforward control flow. The individual rules catch lost tasks, busy waits, hidden imports, large signatures, and exception handling errors (ruff/docs/linter.md, ruff/crates/ruff_workspace/src/options.rs, research/gates/python/notes.md §3).
 
-Tests may use assertions, literals, untyped fixtures, and no package initializer. Experiment scripts may print and omit docstrings or type annotations, while `src/` keeps the full checks (ruff/crates/ruff_workspace/src/options.rs, research/gates/python/notes.md §3).
+Tests may use assertions, literals, fixtures, and no package initializer. Experiment scripts may print and omit docstrings. Source, tests, and experiments require parameter and return annotations after the operator's 2026-09-26 strict-everywhere decision (ruff/crates/ruff_workspace/src/options.rs, research/gates/python/notes.md §3, decision 0002).
 
 Suppress one finding with `# noqa: CODE` or `# ruff: ignore[CODE]` and a reason. Keep `S603` and `S607` off for intended PATH-resolved subprocesses, and `D105` and `D107` off for magic methods and initializers (ruff/CHANGELOG.md, `ruff rule S603`, `ruff rule S607`, research/gates/python/notes.md §3).
 
@@ -172,20 +172,6 @@ no-any-return = true
 implicit-reexport = true
 unused-type-ignore = true
 
-# tests/ and experiments/ are exempt from annotation completeness, mirroring the ruff ANN per-file-ignores.
-[[tool.pyrefly.sub-config]]
-matches = "tests/**"
-
-[tool.pyrefly.sub-config.errors]
-implicit-any-parameter = false
-unannotated-return = false
-
-[[tool.pyrefly.sub-config]]
-matches = "experiments/**"
-
-[tool.pyrefly.sub-config.errors]
-implicit-any-parameter = false
-unannotated-return = false
 ```
 
 `python-version = "3.14"` is explicit because pyrefly does not read `requires-python`. `search-path = ["src"]` fixes the import root. The two `project-excludes` omit imported research and design sketches (research/gates/pyrefly/notes.md §§2, 4 through 5).
@@ -194,7 +180,15 @@ Run `mise run check:pyrefly` from the repository root. This task runs `uv run py
 
 Use `# pyrefly: ignore[kind]` with a reason on the same line for a necessary suppression. Strict mode rejects unused pyrefly suppressions, and the added `unused-type-ignore` kind rejects unused type ignores (research/gates/pyrefly/notes.md §§3, 7).
 
-The `tests/**` and `experiments/**` sub-configs disable only `implicit-any-parameter` and `unannotated-return`. They match ruff's `ANN` per-file ignores. The operator may overturn this relaxation at the phase 1 checkpoint (research/gates/pyrefly/notes.md §4).
+The operator decided "Strict everywhere" on 2026-09-26. Pyrefly and ruff require parameter and return annotations in source, tests, and experiments, with no test or experiment sub-config (decision 0002).
+
+## Property testing
+
+Use Hypothesis 6.168.1 `@given` tests for pure core functions. These run with ordinary pytest tests in `mise run check`. Keep the built-in `ci` profile for required CI, which derandomizes examples and disables the example database. Local runs use random examples. The nightly task selects the default profile with an explicit random seed, which its failure issue records (research/gates/testing/notes.md §2, decision 0005).
+
+## Mutation testing
+
+Run `mise run check:mutation:python` after changing the Python core or its tests. Mutmut 3.8.0 scores only `agent_orchestration_poc.core`. The task deletes `mutants/` before every run because mutmut otherwise reuses results after test edits. The score floor is 80 percent. Pytest-cov 7.0.0 also requires line coverage of the core to reach 90 percent. Both gates run outside `mise run check` in the always-present mutation CI job (research/gates/testing/notes.md §4, decision 0005).
 
 ## Functional core and imperative shell
 
@@ -218,7 +212,7 @@ source_modules = ["agent_orchestration_poc.core"]
 forbidden_modules = ["os", "socket", "subprocess", "asyncio", "nats"]
 ```
 
-Core tests pass plain values without mocks or markers. Shell process and socket tests use the registered integration markers. Import checkers cannot see `Path.write_text` on a parameter or I/O through a passed file handle, so review calls as well as imports. Add property and mutation tests when #59 and #60 land (research/gates/boundaries/notes.md §§2, 4).
+Core tests pass plain values without mocks or markers. Shell process and socket tests use the registered integration markers. Import checkers cannot see `Path.write_text` on a parameter or I/O through a passed file handle, so review calls as well as imports. Property and mutation gates test the core (research/gates/boundaries/notes.md §§2, 4, decision 0005).
 
 ## Quality gates
 
