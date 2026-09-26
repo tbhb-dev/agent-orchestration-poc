@@ -1,0 +1,4 @@
+{
+  "submitted_at": 1790434342.444127,
+  "prompt": "Repeat the controlled capture experiment. First say STREAM_COMMENTARY_BETA as a progress message. Then run exactly this one shell command: python3 -u -c 'import time; print(\"STREAM_BETA_ONE\", flush=True); time.sleep(5); print(\"STREAM_BETA_TWO\", flush=True); time.sleep(5); print(\"STREAM_BETA_THREE\", flush=True)'. After it completes, write a final response beginning STREAM_FINAL_BETA followed by the numbers 1 through 150 in order, separated by spaces. Do nothing else."
+}

@@ -1,0 +1,461 @@
+{
+  "date": "2026-09-26",
+  "scope": "Disposable interactive Codex recipient created on the existing tmux server. No steering payload A/B or queue comparison payload was submitted in these attempts.",
+  "attempts": [
+    {
+      "source_file": "codex-steering-history-observation.jsonl",
+      "records": [
+        {
+          "label": "preflight",
+          "time": 1790435508.139498,
+          "response": {
+            "status": {
+              "type": "idle"
+            },
+            "queueCount": 0,
+            "init": {
+              "id": 1,
+              "result": {
+                "userAgent": "codex-tui/0.157.1 (Mac OS 26.5.1; arm64) Ghostty (codex_peering_probe; 0.1)",
+                "codexHome": "/Users/tony/.codex",
+                "platformFamily": "unix",
+                "platformOs": "macos"
+              }
+            }
+          }
+        },
+        {
+          "label": "idle-steer",
+          "time": 1790435508.14065,
+          "response": {
+            "error": {
+              "code": -32600,
+              "message": "no active turn to steer"
+            },
+            "id": 2
+          }
+        },
+        {
+          "label": "missing-turn-id",
+          "time": 1790435508.140775,
+          "response": {
+            "error": {
+              "code": -32600,
+              "message": "Invalid request: missing field `expectedTurnId`"
+            },
+            "id": 3
+          }
+        },
+        {
+          "label": "start",
+          "time": 1790435508.144465,
+          "response": {
+            "id": 5,
+            "result": {
+              "turn": {
+                "id": "01a0de45-bfad-7ba2-ac57-e14ee48edca4",
+                "items": [],
+                "itemsView": "notLoaded",
+                "status": "inProgress",
+                "error": null,
+                "startedAt": null,
+                "completedAt": null,
+                "durationMs": null
+              }
+            }
+          }
+        }
+      ],
+      "probe_exit_code": 1,
+      "probe_exception": "No active tool observed; cannot establish busy timing"
+    },
+    {
+      "source_file": "codex-steering-projection-lag.jsonl",
+      "records": [
+        {
+          "label": "preflight",
+          "time": 1790435557.4758568,
+          "response": {
+            "status": {
+              "type": "idle"
+            },
+            "queueCount": 0,
+            "init": {
+              "id": 1,
+              "result": {
+                "userAgent": "codex-tui/0.157.1 (Mac OS 26.5.1; arm64) Ghostty (codex_peering_probe; 0.1)",
+                "codexHome": "/Users/tony/.codex",
+                "platformFamily": "unix",
+                "platformOs": "macos"
+              }
+            }
+          }
+        },
+        {
+          "label": "idle-steer",
+          "time": 1790435557.477002,
+          "response": {
+            "error": {
+              "code": -32600,
+              "message": "no active turn to steer"
+            },
+            "id": 2
+          }
+        },
+        {
+          "label": "missing-turn-id",
+          "time": 1790435557.477095,
+          "response": {
+            "error": {
+              "code": -32600,
+              "message": "Invalid request: missing field `expectedTurnId`"
+            },
+            "id": 3
+          }
+        },
+        {
+          "label": "observer-subscribe",
+          "time": 1790435557.4787798,
+          "response": {
+            "ok": true
+          }
+        },
+        {
+          "label": "start",
+          "time": 1790435557.4824378,
+          "response": {
+            "id": 6,
+            "result": {
+              "turn": {
+                "id": "01a0de46-8067-7a51-846f-d76e8f646557",
+                "items": [],
+                "itemsView": "notLoaded",
+                "status": "inProgress",
+                "error": null,
+                "startedAt": null,
+                "completedAt": null,
+                "durationMs": null
+              }
+            }
+          }
+        }
+      ],
+      "probe_exit_code": 1,
+      "probe_exception": "Turn completed before command observation"
+    },
+    {
+      "source_file": "codex-steering-extended.jsonl",
+      "records": [
+        {
+          "label": "preflight",
+          "time": 1790435583.690079,
+          "response": {
+            "status": {
+              "type": "idle"
+            },
+            "queueCount": 0,
+            "init": {
+              "id": 1,
+              "result": {
+                "userAgent": "codex-tui/0.157.1 (Mac OS 26.5.1; arm64) Ghostty (codex_peering_probe; 0.1)",
+                "codexHome": "/Users/tony/.codex",
+                "platformFamily": "unix",
+                "platformOs": "macos"
+              }
+            }
+          }
+        },
+        {
+          "label": "idle-steer",
+          "time": 1790435583.691048,
+          "response": {
+            "error": {
+              "code": -32600,
+              "message": "no active turn to steer"
+            },
+            "id": 2
+          }
+        },
+        {
+          "label": "missing-turn-id",
+          "time": 1790435583.691144,
+          "response": {
+            "error": {
+              "code": -32600,
+              "message": "Invalid request: missing field `expectedTurnId`"
+            },
+            "id": 3
+          }
+        },
+        {
+          "label": "observer-subscribe",
+          "time": 1790435583.6928809,
+          "response": {
+            "ok": true
+          }
+        },
+        {
+          "label": "start",
+          "time": 1790435583.695622,
+          "response": {
+            "id": 6,
+            "result": {
+              "turn": {
+                "id": "01a0de46-e6cd-7c51-b4a8-19850a5df2df",
+                "items": [],
+                "itemsView": "notLoaded",
+                "status": "inProgress",
+                "error": null,
+                "startedAt": null,
+                "completedAt": null,
+                "durationMs": null
+              }
+            }
+          }
+        }
+      ],
+      "probe_exit_code": 1,
+      "probe_exception": "Turn completed before command observation"
+    }
+  ],
+  "final": {
+    "tmux": {
+      "tmux_session": "codex-steering-757a243a",
+      "pane": "%33",
+      "cwd": "/var/folders/ns/cc4x7s5j5271ltrw1t08w7p40000gn/T/codex-steering-c0xsd4m9",
+      "argv": [
+        "codex",
+        "--remote",
+        "unix://",
+        "--no-alt-screen",
+        "-C",
+        "/var/folders/ns/cc4x7s5j5271ltrw1t08w7p40000gn/T/codex-steering-c0xsd4m9",
+        "--sandbox",
+        "read-only",
+        "--ask-for-approval",
+        "on-request",
+        "You are a disposable interactive recipient for Tony's authorized Codex app-server steering experiments. This scratch directory is only for these tests. For this initial turn reply exactly STEERING-RECIPIENT-READY and then wait for further messages. Later messages will ask you to run harmless timed shell commands and report markers. Do not modify repository files, spawn agents, or send messages to other sessions."
+      ],
+      "thread_id": "01a0de45-529c-78f1-89a5-76d437dc1671"
+    },
+    "status": {
+      "type": "idle"
+    },
+    "queue": {
+      "data": [],
+      "nextCursor": null
+    },
+    "history": {
+      "data": [
+        {
+          "id": "01a0de46-e6cd-7c51-b4a8-19850a5df2df",
+          "items": [
+            {
+              "type": "userMessage",
+              "id": "01a0de46-e6e5-7883-9a8f-3dbeeb58be4d",
+              "clientId": null,
+              "content": [
+                {
+                  "type": "text",
+                  "text": "STEER-EXT-09: Tony authorized another steering experiment. Please run exactly one shell command `sleep 20; printf \"STEER-TOOL-FINISHED\\n\"`, wait for completion, then answer STEER-EXT-BASE. We will send steering inputs while the tool runs and one separate queued follow-up. Do not modify files or send other messages.",
+                  "text_elements": []
+                }
+              ]
+            },
+            {
+              "type": "agentMessage",
+              "id": "msg_0ffb86c97e8e7243016ab7e102325487d1b15624565ff29120",
+              "text": "I\u2019ll run the command once and wait for completion.",
+              "phase": "commentary",
+              "memoryCitation": null,
+              "delivery": null,
+              "questions": null
+            },
+            {
+              "type": "commandExecution",
+              "id": "exec-00b3545c-aa04-4895-bc35-e9a8841ede8a",
+              "pluginId": null,
+              "scriptPath": null,
+              "command": "/bin/zsh -lc \"sleep 20; printf \\\"STEER-TOOL-FINISHED\\\\n\\\"\"",
+              "cwd": "/var/folders/ns/cc4x7s5j5271ltrw1t08w7p40000gn/T/codex-steering-c0xsd4m9",
+              "processId": "52932",
+              "source": "unifiedExecStartup",
+              "status": "completed",
+              "commandActions": [
+                {
+                  "type": "unknown",
+                  "command": "sleep 20; printf \"STEER-TOOL-FINISHED\\n\""
+                }
+              ],
+              "aggregatedOutput": "STEER-TOOL-FINISHED\n",
+              "exitCode": 0,
+              "durationMs": 19875
+            },
+            {
+              "type": "agentMessage",
+              "id": "msg_0ffb86c97e8e7243016ab7e119584487d1baa0178631d835b2",
+              "text": "STEER-EXT-BASE",
+              "phase": "final_answer",
+              "memoryCitation": null,
+              "delivery": null,
+              "questions": null
+            }
+          ],
+          "itemsView": "full",
+          "status": "completed",
+          "error": null,
+          "startedAt": 1790435583,
+          "completedAt": 1790435609,
+          "durationMs": 25956
+        },
+        {
+          "id": "01a0de46-8067-7a51-846f-d76e8f646557",
+          "items": [
+            {
+              "type": "userMessage",
+              "id": "01a0de46-8081-7870-86c4-ba01fc21d18d",
+              "clientId": null,
+              "content": [
+                {
+                  "type": "text",
+                  "text": "STEER-EXT-09: Tony authorized another steering experiment. Please run exactly one shell command `sleep 20; printf \"STEER-TOOL-FINISHED\\n\"`, wait for completion, then answer STEER-EXT-BASE. We will send steering inputs while the tool runs and one separate queued follow-up. Do not modify files or send other messages.",
+                  "text_elements": []
+                }
+              ]
+            },
+            {
+              "type": "agentMessage",
+              "id": "msg_0ffb86c97e8e7243016ab7e0e6fd7087d184cb47c7c00f805f",
+              "text": "I\u2019ll run the command once and wait for completion.",
+              "phase": "commentary",
+              "memoryCitation": null,
+              "delivery": null,
+              "questions": null
+            },
+            {
+              "type": "commandExecution",
+              "id": "exec-6049248c-35bd-4a30-a912-748e6d448231",
+              "pluginId": null,
+              "scriptPath": null,
+              "command": "/bin/zsh -lc \"sleep 20; printf \\\"STEER-TOOL-FINISHED\\\\n\\\"\"",
+              "cwd": "/var/folders/ns/cc4x7s5j5271ltrw1t08w7p40000gn/T/codex-steering-c0xsd4m9",
+              "processId": "65389",
+              "source": "unifiedExecStartup",
+              "status": "completed",
+              "commandActions": [
+                {
+                  "type": "unknown",
+                  "command": "sleep 20; printf \"STEER-TOOL-FINISHED\\n\""
+                }
+              ],
+              "aggregatedOutput": "STEER-TOOL-FINISHED\n",
+              "exitCode": 0,
+              "durationMs": 19870
+            },
+            {
+              "type": "agentMessage",
+              "id": "msg_0ffb86c97e8e7243016ab7e0ff23f887d18eccbc58074f3688",
+              "text": "STEER-EXT-BASE",
+              "phase": "final_answer",
+              "memoryCitation": null,
+              "delivery": null,
+              "questions": null
+            }
+          ],
+          "itemsView": "full",
+          "status": "completed",
+          "error": null,
+          "startedAt": 1790435557,
+          "completedAt": 1790435583,
+          "durationMs": 25962
+        },
+        {
+          "id": "01a0de45-bfad-7ba2-ac57-e14ee48edca4",
+          "items": [
+            {
+              "type": "userMessage",
+              "id": "01a0de45-bfc6-7543-b0ef-71c86d2ef726",
+              "clientId": null,
+              "content": [
+                {
+                  "type": "text",
+                  "text": "STEER-EXT-09: Tony authorized another steering experiment. Please run exactly one shell command `sleep 20; printf \"STEER-TOOL-FINISHED\\n\"`, wait for completion, then answer STEER-EXT-BASE. We will send steering inputs while the tool runs and one separate queued follow-up. Do not modify files or send other messages.",
+                  "text_elements": []
+                }
+              ]
+            },
+            {
+              "type": "commandExecution",
+              "id": "exec-36683fa5-2086-4249-8528-7524e5b2e8a7",
+              "pluginId": null,
+              "scriptPath": null,
+              "command": "/bin/zsh -lc \"sleep 20; printf \\\"STEER-TOOL-FINISHED\\\\n\\\"\"",
+              "cwd": "/var/folders/ns/cc4x7s5j5271ltrw1t08w7p40000gn/T/codex-steering-c0xsd4m9",
+              "processId": "52022",
+              "source": "unifiedExecStartup",
+              "status": "completed",
+              "commandActions": [
+                {
+                  "type": "unknown",
+                  "command": "sleep 20; printf \"STEER-TOOL-FINISHED\\n\""
+                }
+              ],
+              "aggregatedOutput": "STEER-TOOL-FINISHED\n",
+              "exitCode": 0,
+              "durationMs": 19874
+            },
+            {
+              "type": "agentMessage",
+              "id": "msg_0ffb86c97e8e7243016ab7e0cd3aec87d1b58b35613c514dae",
+              "text": "STEER-EXT-BASE",
+              "phase": "final_answer",
+              "memoryCitation": null,
+              "delivery": null,
+              "questions": null
+            }
+          ],
+          "itemsView": "full",
+          "status": "completed",
+          "error": null,
+          "startedAt": 1790435508,
+          "completedAt": 1790435533,
+          "durationMs": 25791
+        },
+        {
+          "id": "01a0de45-52f0-7d22-af4b-ed927124041e",
+          "items": [
+            {
+              "type": "userMessage",
+              "id": "01a0de45-5a05-7b22-83f0-9a66fbf6dbde",
+              "clientId": "471fae56-45cb-4218-ae79-8fc7021cfbeb",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "You are a disposable interactive recipient for Tony's authorized Codex app-server steering experiments. This scratch directory is only for these tests. For this initial turn reply exactly STEERING-RECIPIENT-READY and then wait for further messages. Later messages will ask you to run harmless timed shell commands and report markers. Do not modify repository files, spawn agents, or send messages to other sessions.",
+                  "text_elements": []
+                }
+              ]
+            },
+            {
+              "type": "agentMessage",
+              "id": "msg_0ffb86c97e8e7243016ab7e09bafe087d191b716deca0679fb",
+              "text": "STEERING-RECIPIENT-READY",
+              "phase": "final_answer",
+              "memoryCitation": null,
+              "delivery": null,
+              "questions": null
+            }
+          ],
+          "itemsView": "full",
+          "status": "completed",
+          "error": null,
+          "startedAt": 1790435480,
+          "completedAt": 1790435484,
+          "durationMs": 3778
+        }
+      ],
+      "nextCursor": null,
+      "backwardsCursor": "{\"requestedThreadId\":\"01a0de45-529c-78f1-89a5-76d437dc1671\",\"rolloutOrdinal\":69,\"includeAnchor\":true,\"scope\":{\"kind\":\"turns\"}}"
+    }
+  }
+}

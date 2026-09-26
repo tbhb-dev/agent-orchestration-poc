@@ -1,0 +1,632 @@
+[
+  {
+    "observed_at": 1790434480.404521,
+    "method": "initialize",
+    "response": {
+      "id": 1,
+      "result": {
+        "userAgent": "codex-tui/0.157.1 (Mac OS 26.5.1; arm64) Ghostty (stream_history_probe; 0.1)",
+        "codexHome": "/Users/tony/.codex",
+        "platformFamily": "unix",
+        "platformOs": "macos"
+      }
+    }
+  },
+  {
+    "observed_at": 1790434480.407328,
+    "method": "thread/read",
+    "response": {
+      "id": 3,
+      "result": {
+        "thread": {
+          "id": "01a0de30-b8f5-7b71-8477-2b26f44469b6",
+          "environments": [
+            {
+              "environmentId": "local",
+              "cwd": "/Users/tony/Code/github.com/tbhb/agent-session-tests/codex",
+              "runtimeWorkspaceRoots": [
+                "/Users/tony/Code/github.com/tbhb/agent-session-tests/codex"
+              ]
+            }
+          ],
+          "extra": null,
+          "sessionId": "01a0de30-b8f5-7b71-8477-2b26f44469b6",
+          "forkedFromId": null,
+          "parentThreadId": null,
+          "preview": "This is a controlled live-output capture experiment. Do not inspect files or use skills. First say STREAM_COMMENTARY_ALPHA as a progress message. Then run exactly this one shell command: python3 -u -c 'import time; print(\"STREAM_TOOL_ONE\", flush=True); time.sleep(4); print(\"STREAM_TOOL_TWO\", flush=True); time.sleep(4); print(\"STREAM_TOOL_THREE\", flush=True)'. After it completes, write a final response beginning STREAM_FINAL_ALPHA followed by the numbers 1 through 80 in order, separated by spaces. Do nothing else.",
+          "ephemeral": false,
+          "section": null,
+          "sectionEnteredAt": null,
+          "projectId": null,
+          "historyMode": "paginated",
+          "modelProvider": "openai",
+          "model": "gpt-6-astra",
+          "reasoningEffort": null,
+          "createdAt": 1790434130,
+          "updatedAt": 1790434455,
+          "recencyAt": 1790434427,
+          "status": {
+            "type": "idle"
+          },
+          "path": "/Users/tony/.codex/sessions/2026/09/26/rollout-2026-09-26T10-48-50-01a0de30-b8f5-7b71-8477-2b26f44469b6.jsonl",
+          "cwd": "/Users/tony/Code/github.com/tbhb/agent-session-tests/codex",
+          "cliVersion": "0.157.1",
+          "originator": "codex-tui",
+          "source": "vscode",
+          "canAcceptDirectInput": true,
+          "threadSource": "user",
+          "agentNickname": null,
+          "agentRole": null,
+          "gitInfo": null,
+          "name": "Run live-output capture",
+          "daybreakEnabled": null,
+          "turns": [
+            {
+              "id": "01a0de32-a208-7b73-a397-ab13706d5132",
+              "items": [
+                {
+                  "type": "userMessage",
+                  "id": "01a0de32-a334-7160-a3ca-f90f42ed79c4",
+                  "clientId": "8f57b3c5-4741-4dbe-b853-614b557b8c43",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "This is a controlled live-output capture experiment. Do not inspect files or use skills. First say STREAM_COMMENTARY_ALPHA as a progress message. Then run exactly this one shell command: python3 -u -c 'import time; print(\"STREAM_TOOL_ONE\", flush=True); time.sleep(4); print(\"STREAM_TOOL_TWO\", flush=True); time.sleep(4); print(\"STREAM_TOOL_THREE\", flush=True)'. After it completes, write a final response beginning STREAM_FINAL_ALPHA followed by the numbers 1 through 80 in order, separated by spaces. Do nothing else.",
+                      "text_elements": []
+                    }
+                  ]
+                },
+                {
+                  "type": "agentMessage",
+                  "id": "msg_0f9c57ef187bd1a5016ab7dbd26be087d183947c479202bf1a",
+                  "text": "STREAM_COMMENTARY_ALPHA\n",
+                  "phase": "commentary",
+                  "memoryCitation": null,
+                  "delivery": null,
+                  "questions": null
+                },
+                {
+                  "type": "commandExecution",
+                  "id": "exec-e0f265de-612b-4349-94d2-3d211af2538a",
+                  "pluginId": null,
+                  "scriptPath": null,
+                  "command": "/bin/zsh -lc \"python3 -u -c 'import time; print(\\\"STREAM_TOOL_ONE\\\", flush=True); time.sleep(4); print(\\\"STREAM_TOOL_TWO\\\", flush=True); time.sleep(4); print(\\\"STREAM_TOOL_THREE\\\", flush=True)'\"",
+                  "cwd": "/Users/tony/Code/github.com/tbhb/agent-session-tests/codex",
+                  "processId": "73825",
+                  "source": "unifiedExecStartup",
+                  "status": "completed",
+                  "commandActions": [
+                    {
+                      "type": "unknown",
+                      "command": "python3 -u -c 'import time; print(\"STREAM_TOOL_ONE\", flush=True); time.sleep(4); print(\"STREAM_TOOL_TWO\", flush=True); time.sleep(4); print(\"STREAM_TOOL_THREE\", flush=True)'"
+                    }
+                  ],
+                  "aggregatedOutput": "STREAM_TOOL_TWO\nSTREAM_TOOL_THREE\n",
+                  "exitCode": 0,
+                  "durationMs": 7892
+                },
+                {
+                  "type": "agentMessage",
+                  "id": "msg_0f9c57ef187bd1a5016ab7dbdf03dc87d1bb966b4a6716f9b3",
+                  "text": "STREAM_FINAL_ALPHA 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80",
+                  "phase": "final_answer",
+                  "memoryCitation": null,
+                  "delivery": null,
+                  "questions": null
+                }
+              ],
+              "itemsView": "full",
+              "status": "completed",
+              "error": null,
+              "startedAt": 1790434255,
+              "completedAt": 1790434275,
+              "durationMs": 20623
+            },
+            {
+              "id": "01a0de33-f62d-7f23-8232-777b5b640374",
+              "items": [
+                {
+                  "type": "userMessage",
+                  "id": "01a0de33-f86c-7f62-a694-ba7d9956edd5",
+                  "clientId": "13a9d6c3-d625-4415-b010-9a9959b919c8",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "Repeat the controlled capture experiment. First say STREAM_COMMENTARY_BETA as a progress message. Then run exactly this one shell command: python3 -u -c 'import time; print(\"STREAM_BETA_ONE\", flush=True); time.sleep(5); print(\"STREAM_BETA_TWO\", flush=True); time.sleep(5); print(\"STREAM_BETA_THREE\", flush=True)'. After it completes, write a final response beginning STREAM_FINAL_BETA followed by the numbers 1 through 150 in order, separated by spaces. Do nothing else.",
+                      "text_elements": []
+                    }
+                  ]
+                },
+                {
+                  "type": "agentMessage",
+                  "id": "msg_0f9c57ef187bd1a5016ab7dc290fe087d1b5d144dee597f3f2",
+                  "text": "STREAM_COMMENTARY_BETA\n",
+                  "phase": "commentary",
+                  "memoryCitation": null,
+                  "delivery": null,
+                  "questions": null
+                },
+                {
+                  "type": "commandExecution",
+                  "id": "exec-a6aaca80-0091-46d8-85d2-f708fbdc89a9",
+                  "pluginId": null,
+                  "scriptPath": null,
+                  "command": "/bin/zsh -lc \"python3 -u -c 'import time; print(\\\"STREAM_BETA_ONE\\\", flush=True); time.sleep(5); print(\\\"STREAM_BETA_TWO\\\", flush=True); time.sleep(5); print(\\\"STREAM_BETA_THREE\\\", flush=True)'\"",
+                  "cwd": "/Users/tony/Code/github.com/tbhb/agent-session-tests/codex",
+                  "processId": "27748",
+                  "source": "unifiedExecStartup",
+                  "status": "completed",
+                  "commandActions": [
+                    {
+                      "type": "unknown",
+                      "command": "python3 -u -c 'import time; print(\"STREAM_BETA_ONE\", flush=True); time.sleep(5); print(\"STREAM_BETA_TWO\", flush=True); time.sleep(5); print(\"STREAM_BETA_THREE\", flush=True)'"
+                    }
+                  ],
+                  "aggregatedOutput": "STREAM_BETA_TWO\nSTREAM_BETA_THREE\n",
+                  "exitCode": 0,
+                  "durationMs": 9933
+                },
+                {
+                  "type": "agentMessage",
+                  "id": "msg_0f9c57ef187bd1a5016ab7dc370d5487d1b03229bfc0843020",
+                  "text": "STREAM_FINAL_BETA 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 96 97 98 99 100 101 102 103 104 105 106 107 108 109 110 111 112 113 114 115 116 117 118 119 120 121 122 123 124 125 126 127 128 129 130 131 132 133 134 135 136 137 138 139 140 141 142 143 144 145 146 147 148 149 150",
+                  "phase": "final_answer",
+                  "memoryCitation": null,
+                  "delivery": null,
+                  "questions": null
+                }
+              ],
+              "itemsView": "full",
+              "status": "completed",
+              "error": null,
+              "startedAt": 1790434342,
+              "completedAt": 1790434368,
+              "durationMs": 25851
+            },
+            {
+              "id": "01a0de35-4183-7b90-a359-752d7d9f8e73",
+              "items": [
+                {
+                  "type": "userMessage",
+                  "id": "01a0de35-41a8-7952-aa33-7c53488f90f0",
+                  "clientId": "6ce9209c-51dc-47a8-a17a-d9c3b2e7e2b8",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "Controlled timing test: say STREAM_COMMENTARY_GAMMA, then run exactly one shell command: python3 -u -c 'import time; time.sleep(2); print(\"STREAM_GAMMA_ONE\", flush=True); time.sleep(12); print(\"STREAM_GAMMA_TWO\", flush=True); time.sleep(8); print(\"STREAM_GAMMA_THREE\", flush=True)'. Then answer STREAM_FINAL_GAMMA. Do nothing else.",
+                      "text_elements": []
+                    }
+                  ]
+                },
+                {
+                  "type": "agentMessage",
+                  "id": "msg_0f9c57ef187bd1a5016ab7dc7cac3887d183238771ab0d690f",
+                  "text": "STREAM_COMMENTARY_GAMMA\n",
+                  "phase": "commentary",
+                  "memoryCitation": null,
+                  "delivery": null,
+                  "questions": null
+                },
+                {
+                  "type": "commandExecution",
+                  "id": "exec-ea4fef38-53e3-4d52-8367-076b2c7a574c",
+                  "pluginId": null,
+                  "scriptPath": null,
+                  "command": "/bin/zsh -lc \"python3 -u -c 'import time; time.sleep(2); print(\\\"STREAM_GAMMA_ONE\\\", flush=True); time.sleep(12); print(\\\"STREAM_GAMMA_TWO\\\", flush=True); time.sleep(8); print(\\\"STREAM_GAMMA_THREE\\\", flush=True)'\"",
+                  "cwd": "/Users/tony/Code/github.com/tbhb/agent-session-tests/codex",
+                  "processId": "97999",
+                  "source": "unifiedExecStartup",
+                  "status": "completed",
+                  "commandActions": [
+                    {
+                      "type": "unknown",
+                      "command": "python3 -u -c 'import time; time.sleep(2); print(\"STREAM_GAMMA_ONE\", flush=True); time.sleep(12); print(\"STREAM_GAMMA_TWO\", flush=True); time.sleep(8); print(\"STREAM_GAMMA_THREE\", flush=True)'"
+                    }
+                  ],
+                  "aggregatedOutput": "STREAM_GAMMA_ONE\nSTREAM_GAMMA_TWO\nSTREAM_GAMMA_THREE\n",
+                  "exitCode": 0,
+                  "durationMs": 21912
+                },
+                {
+                  "type": "agentMessage",
+                  "id": "msg_0f9c57ef187bd1a5016ab7dc978f9087d1bb5b093965939a40",
+                  "text": "STREAM_FINAL_GAMMA",
+                  "phase": "final_answer",
+                  "memoryCitation": null,
+                  "delivery": null,
+                  "questions": null
+                }
+              ],
+              "itemsView": "full",
+              "status": "completed",
+              "error": null,
+              "startedAt": 1790434427,
+              "completedAt": 1790434455,
+              "durationMs": 28557
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "observed_at": 1790434480.408417,
+    "method": "thread/turns/list",
+    "response": {
+      "id": 4,
+      "result": {
+        "data": [
+          {
+            "id": "01a0de35-4183-7b90-a359-752d7d9f8e73",
+            "items": [
+              {
+                "type": "userMessage",
+                "id": "01a0de35-41a8-7952-aa33-7c53488f90f0",
+                "clientId": "6ce9209c-51dc-47a8-a17a-d9c3b2e7e2b8",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Controlled timing test: say STREAM_COMMENTARY_GAMMA, then run exactly one shell command: python3 -u -c 'import time; time.sleep(2); print(\"STREAM_GAMMA_ONE\", flush=True); time.sleep(12); print(\"STREAM_GAMMA_TWO\", flush=True); time.sleep(8); print(\"STREAM_GAMMA_THREE\", flush=True)'. Then answer STREAM_FINAL_GAMMA. Do nothing else.",
+                    "text_elements": []
+                  }
+                ]
+              },
+              {
+                "type": "agentMessage",
+                "id": "msg_0f9c57ef187bd1a5016ab7dc7cac3887d183238771ab0d690f",
+                "text": "STREAM_COMMENTARY_GAMMA\n",
+                "phase": "commentary",
+                "memoryCitation": null,
+                "delivery": null,
+                "questions": null
+              },
+              {
+                "type": "commandExecution",
+                "id": "exec-ea4fef38-53e3-4d52-8367-076b2c7a574c",
+                "pluginId": null,
+                "scriptPath": null,
+                "command": "/bin/zsh -lc \"python3 -u -c 'import time; time.sleep(2); print(\\\"STREAM_GAMMA_ONE\\\", flush=True); time.sleep(12); print(\\\"STREAM_GAMMA_TWO\\\", flush=True); time.sleep(8); print(\\\"STREAM_GAMMA_THREE\\\", flush=True)'\"",
+                "cwd": "/Users/tony/Code/github.com/tbhb/agent-session-tests/codex",
+                "processId": "97999",
+                "source": "unifiedExecStartup",
+                "status": "completed",
+                "commandActions": [
+                  {
+                    "type": "unknown",
+                    "command": "python3 -u -c 'import time; time.sleep(2); print(\"STREAM_GAMMA_ONE\", flush=True); time.sleep(12); print(\"STREAM_GAMMA_TWO\", flush=True); time.sleep(8); print(\"STREAM_GAMMA_THREE\", flush=True)'"
+                  }
+                ],
+                "aggregatedOutput": "STREAM_GAMMA_ONE\nSTREAM_GAMMA_TWO\nSTREAM_GAMMA_THREE\n",
+                "exitCode": 0,
+                "durationMs": 21912
+              },
+              {
+                "type": "agentMessage",
+                "id": "msg_0f9c57ef187bd1a5016ab7dc978f9087d1bb5b093965939a40",
+                "text": "STREAM_FINAL_GAMMA",
+                "phase": "final_answer",
+                "memoryCitation": null,
+                "delivery": null,
+                "questions": null
+              }
+            ],
+            "itemsView": "full",
+            "status": "completed",
+            "error": null,
+            "startedAt": 1790434427,
+            "completedAt": 1790434455,
+            "durationMs": 28557
+          },
+          {
+            "id": "01a0de33-f62d-7f23-8232-777b5b640374",
+            "items": [
+              {
+                "type": "userMessage",
+                "id": "01a0de33-f86c-7f62-a694-ba7d9956edd5",
+                "clientId": "13a9d6c3-d625-4415-b010-9a9959b919c8",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Repeat the controlled capture experiment. First say STREAM_COMMENTARY_BETA as a progress message. Then run exactly this one shell command: python3 -u -c 'import time; print(\"STREAM_BETA_ONE\", flush=True); time.sleep(5); print(\"STREAM_BETA_TWO\", flush=True); time.sleep(5); print(\"STREAM_BETA_THREE\", flush=True)'. After it completes, write a final response beginning STREAM_FINAL_BETA followed by the numbers 1 through 150 in order, separated by spaces. Do nothing else.",
+                    "text_elements": []
+                  }
+                ]
+              },
+              {
+                "type": "agentMessage",
+                "id": "msg_0f9c57ef187bd1a5016ab7dc290fe087d1b5d144dee597f3f2",
+                "text": "STREAM_COMMENTARY_BETA\n",
+                "phase": "commentary",
+                "memoryCitation": null,
+                "delivery": null,
+                "questions": null
+              },
+              {
+                "type": "commandExecution",
+                "id": "exec-a6aaca80-0091-46d8-85d2-f708fbdc89a9",
+                "pluginId": null,
+                "scriptPath": null,
+                "command": "/bin/zsh -lc \"python3 -u -c 'import time; print(\\\"STREAM_BETA_ONE\\\", flush=True); time.sleep(5); print(\\\"STREAM_BETA_TWO\\\", flush=True); time.sleep(5); print(\\\"STREAM_BETA_THREE\\\", flush=True)'\"",
+                "cwd": "/Users/tony/Code/github.com/tbhb/agent-session-tests/codex",
+                "processId": "27748",
+                "source": "unifiedExecStartup",
+                "status": "completed",
+                "commandActions": [
+                  {
+                    "type": "unknown",
+                    "command": "python3 -u -c 'import time; print(\"STREAM_BETA_ONE\", flush=True); time.sleep(5); print(\"STREAM_BETA_TWO\", flush=True); time.sleep(5); print(\"STREAM_BETA_THREE\", flush=True)'"
+                  }
+                ],
+                "aggregatedOutput": "STREAM_BETA_TWO\nSTREAM_BETA_THREE\n",
+                "exitCode": 0,
+                "durationMs": 9933
+              },
+              {
+                "type": "agentMessage",
+                "id": "msg_0f9c57ef187bd1a5016ab7dc370d5487d1b03229bfc0843020",
+                "text": "STREAM_FINAL_BETA 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 96 97 98 99 100 101 102 103 104 105 106 107 108 109 110 111 112 113 114 115 116 117 118 119 120 121 122 123 124 125 126 127 128 129 130 131 132 133 134 135 136 137 138 139 140 141 142 143 144 145 146 147 148 149 150",
+                "phase": "final_answer",
+                "memoryCitation": null,
+                "delivery": null,
+                "questions": null
+              }
+            ],
+            "itemsView": "full",
+            "status": "completed",
+            "error": null,
+            "startedAt": 1790434342,
+            "completedAt": 1790434368,
+            "durationMs": 25851
+          },
+          {
+            "id": "01a0de32-a208-7b73-a397-ab13706d5132",
+            "items": [
+              {
+                "type": "userMessage",
+                "id": "01a0de32-a334-7160-a3ca-f90f42ed79c4",
+                "clientId": "8f57b3c5-4741-4dbe-b853-614b557b8c43",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "This is a controlled live-output capture experiment. Do not inspect files or use skills. First say STREAM_COMMENTARY_ALPHA as a progress message. Then run exactly this one shell command: python3 -u -c 'import time; print(\"STREAM_TOOL_ONE\", flush=True); time.sleep(4); print(\"STREAM_TOOL_TWO\", flush=True); time.sleep(4); print(\"STREAM_TOOL_THREE\", flush=True)'. After it completes, write a final response beginning STREAM_FINAL_ALPHA followed by the numbers 1 through 80 in order, separated by spaces. Do nothing else.",
+                    "text_elements": []
+                  }
+                ]
+              },
+              {
+                "type": "agentMessage",
+                "id": "msg_0f9c57ef187bd1a5016ab7dbd26be087d183947c479202bf1a",
+                "text": "STREAM_COMMENTARY_ALPHA\n",
+                "phase": "commentary",
+                "memoryCitation": null,
+                "delivery": null,
+                "questions": null
+              },
+              {
+                "type": "commandExecution",
+                "id": "exec-e0f265de-612b-4349-94d2-3d211af2538a",
+                "pluginId": null,
+                "scriptPath": null,
+                "command": "/bin/zsh -lc \"python3 -u -c 'import time; print(\\\"STREAM_TOOL_ONE\\\", flush=True); time.sleep(4); print(\\\"STREAM_TOOL_TWO\\\", flush=True); time.sleep(4); print(\\\"STREAM_TOOL_THREE\\\", flush=True)'\"",
+                "cwd": "/Users/tony/Code/github.com/tbhb/agent-session-tests/codex",
+                "processId": "73825",
+                "source": "unifiedExecStartup",
+                "status": "completed",
+                "commandActions": [
+                  {
+                    "type": "unknown",
+                    "command": "python3 -u -c 'import time; print(\"STREAM_TOOL_ONE\", flush=True); time.sleep(4); print(\"STREAM_TOOL_TWO\", flush=True); time.sleep(4); print(\"STREAM_TOOL_THREE\", flush=True)'"
+                  }
+                ],
+                "aggregatedOutput": "STREAM_TOOL_TWO\nSTREAM_TOOL_THREE\n",
+                "exitCode": 0,
+                "durationMs": 7892
+              },
+              {
+                "type": "agentMessage",
+                "id": "msg_0f9c57ef187bd1a5016ab7dbdf03dc87d1bb966b4a6716f9b3",
+                "text": "STREAM_FINAL_ALPHA 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80",
+                "phase": "final_answer",
+                "memoryCitation": null,
+                "delivery": null,
+                "questions": null
+              }
+            ],
+            "itemsView": "full",
+            "status": "completed",
+            "error": null,
+            "startedAt": 1790434255,
+            "completedAt": 1790434275,
+            "durationMs": 20623
+          }
+        ],
+        "nextCursor": null,
+        "backwardsCursor": "{\"requestedThreadId\":\"01a0de30-b8f5-7b71-8477-2b26f44469b6\",\"rolloutOrdinal\":41,\"includeAnchor\":true,\"scope\":{\"kind\":\"turns\"}}"
+      }
+    }
+  },
+  {
+    "observed_at": 1790434480.408784,
+    "method": "thread/items/list",
+    "response": {
+      "id": 5,
+      "result": {
+        "data": [
+          {
+            "turnId": "01a0de32-a208-7b73-a397-ab13706d5132",
+            "item": {
+              "type": "userMessage",
+              "id": "01a0de32-a334-7160-a3ca-f90f42ed79c4",
+              "clientId": "8f57b3c5-4741-4dbe-b853-614b557b8c43",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "This is a controlled live-output capture experiment. Do not inspect files or use skills. First say STREAM_COMMENTARY_ALPHA as a progress message. Then run exactly this one shell command: python3 -u -c 'import time; print(\"STREAM_TOOL_ONE\", flush=True); time.sleep(4); print(\"STREAM_TOOL_TWO\", flush=True); time.sleep(4); print(\"STREAM_TOOL_THREE\", flush=True)'. After it completes, write a final response beginning STREAM_FINAL_ALPHA followed by the numbers 1 through 80 in order, separated by spaces. Do nothing else.",
+                  "text_elements": []
+                }
+              ]
+            },
+            "startedAtMs": 1790434255668,
+            "completedAtMs": 1790434255668
+          },
+          {
+            "turnId": "01a0de32-a208-7b73-a397-ab13706d5132",
+            "item": {
+              "type": "agentMessage",
+              "id": "msg_0f9c57ef187bd1a5016ab7dbd26be087d183947c479202bf1a",
+              "text": "STREAM_COMMENTARY_ALPHA\n",
+              "phase": "commentary",
+              "memoryCitation": null,
+              "delivery": null,
+              "questions": null
+            },
+            "startedAtMs": 1790434258382,
+            "completedAtMs": 1790434258860
+          },
+          {
+            "turnId": "01a0de32-a208-7b73-a397-ab13706d5132",
+            "item": {
+              "type": "commandExecution",
+              "id": "exec-e0f265de-612b-4349-94d2-3d211af2538a",
+              "pluginId": null,
+              "scriptPath": null,
+              "command": "/bin/zsh -lc \"python3 -u -c 'import time; print(\\\"STREAM_TOOL_ONE\\\", flush=True); time.sleep(4); print(\\\"STREAM_TOOL_TWO\\\", flush=True); time.sleep(4); print(\\\"STREAM_TOOL_THREE\\\", flush=True)'\"",
+              "cwd": "/Users/tony/Code/github.com/tbhb/agent-session-tests/codex",
+              "processId": "73825",
+              "source": "unifiedExecStartup",
+              "status": "completed",
+              "commandActions": [
+                {
+                  "type": "unknown",
+                  "command": "python3 -u -c 'import time; print(\"STREAM_TOOL_ONE\", flush=True); time.sleep(4); print(\"STREAM_TOOL_TWO\", flush=True); time.sleep(4); print(\"STREAM_TOOL_THREE\", flush=True)'"
+                }
+              ],
+              "aggregatedOutput": "STREAM_TOOL_TWO\nSTREAM_TOOL_THREE\n",
+              "exitCode": 0,
+              "durationMs": 7892
+            },
+            "startedAtMs": 1790434261100,
+            "completedAtMs": 1790434268992
+          },
+          {
+            "turnId": "01a0de32-a208-7b73-a397-ab13706d5132",
+            "item": {
+              "type": "agentMessage",
+              "id": "msg_0f9c57ef187bd1a5016ab7dbdf03dc87d1bb966b4a6716f9b3",
+              "text": "STREAM_FINAL_ALPHA 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80",
+              "phase": "final_answer",
+              "memoryCitation": null,
+              "delivery": null,
+              "questions": null
+            },
+            "startedAtMs": 1790434270978,
+            "completedAtMs": 1790434275975
+          },
+          {
+            "turnId": "01a0de33-f62d-7f23-8232-777b5b640374",
+            "item": {
+              "type": "userMessage",
+              "id": "01a0de33-f86c-7f62-a694-ba7d9956edd5",
+              "clientId": "13a9d6c3-d625-4415-b010-9a9959b919c8",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Repeat the controlled capture experiment. First say STREAM_COMMENTARY_BETA as a progress message. Then run exactly this one shell command: python3 -u -c 'import time; print(\"STREAM_BETA_ONE\", flush=True); time.sleep(5); print(\"STREAM_BETA_TWO\", flush=True); time.sleep(5); print(\"STREAM_BETA_THREE\", flush=True)'. After it completes, write a final response beginning STREAM_FINAL_BETA followed by the numbers 1 through 150 in order, separated by spaces. Do nothing else.",
+                  "text_elements": []
+                }
+              ]
+            },
+            "startedAtMs": 1790434343022,
+            "completedAtMs": 1790434343022
+          },
+          {
+            "turnId": "01a0de33-f62d-7f23-8232-777b5b640374",
+            "item": {
+              "type": "agentMessage",
+              "id": "msg_0f9c57ef187bd1a5016ab7dc290fe087d1b5d144dee597f3f2",
+              "text": "STREAM_COMMENTARY_BETA\n",
+              "phase": "commentary",
+              "memoryCitation": null,
+              "delivery": null,
+              "questions": null
+            },
+            "startedAtMs": 1790434345032,
+            "completedAtMs": 1790434345544
+          },
+          {
+            "turnId": "01a0de33-f62d-7f23-8232-777b5b640374",
+            "item": {
+              "type": "commandExecution",
+              "id": "exec-a6aaca80-0091-46d8-85d2-f708fbdc89a9",
+              "pluginId": null,
+              "scriptPath": null,
+              "command": "/bin/zsh -lc \"python3 -u -c 'import time; print(\\\"STREAM_BETA_ONE\\\", flush=True); time.sleep(5); print(\\\"STREAM_BETA_TWO\\\", flush=True); time.sleep(5); print(\\\"STREAM_BETA_THREE\\\", flush=True)'\"",
+              "cwd": "/Users/tony/Code/github.com/tbhb/agent-session-tests/codex",
+              "processId": "27748",
+              "source": "unifiedExecStartup",
+              "status": "completed",
+              "commandActions": [
+                {
+                  "type": "unknown",
+                  "command": "python3 -u -c 'import time; print(\"STREAM_BETA_ONE\", flush=True); time.sleep(5); print(\"STREAM_BETA_TWO\", flush=True); time.sleep(5); print(\"STREAM_BETA_THREE\", flush=True)'"
+                }
+              ],
+              "aggregatedOutput": "STREAM_BETA_TWO\nSTREAM_BETA_THREE\n",
+              "exitCode": 0,
+              "durationMs": 9933
+            },
+            "startedAtMs": 1790434347857,
+            "completedAtMs": 1790434357791
+          },
+          {
+            "turnId": "01a0de33-f62d-7f23-8232-777b5b640374",
+            "item": {
+              "type": "agentMessage",
+              "id": "msg_0f9c57ef187bd1a5016ab7dc370d5487d1b03229bfc0843020",
+              "text": "STREAM_FINAL_BETA 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 96 97 98 99 100 101 102 103 104 105 106 107 108 109 110 111 112 113 114 115 116 117 118 119 120 121 122 123 124 125 126 127 128 129 130 131 132 133 134 135 136 137 138 139 140 141 142 143 144 145 146 147 148 149 150",
+              "phase": "final_answer",
+              "memoryCitation": null,
+              "delivery": null,
+              "questions": null
+            },
+            "startedAtMs": 1790434359009,
+            "completedAtMs": 1790434368278
+          },
+          {
+            "turnId": "01a0de35-4183-7b90-a359-752d7d9f8e73",
+            "item": {
+              "type": "userMessage",
+              "id": "01a0de35-41a8-7952-aa33-7c53488f90f0",
+              "clientId": "6ce9209c-51dc-47a8-a17a-d9c3b2e7e2b8",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Controlled timing test: say STREAM_COMMENTARY_GAMMA, then run exactly one shell command: python3 -u -c 'import time; time.sleep(2); print(\"STREAM_GAMMA_ONE\", flush=True); time.sleep(12); print(\"STREAM_GAMMA_TWO\", flush=True); time.sleep(8); print(\"STREAM_GAMMA_THREE\", flush=True)'. Then answer STREAM_FINAL_GAMMA. Do nothing else.",
+                  "text_elements": []
+                }
+              ]
+            },
+            "startedAtMs": 1790434427305,
+            "completedAtMs": 1790434427305
+          },
+          {
+            "turnId": "01a0de35-4183-7b90-a359-752d7d9f8e73",
+            "item": {
+              "type": "agentMessage",
+              "id": "msg_0f9c57ef187bd1a5016ab7dc7cac3887d183238771ab0d690f",
+              "text": "STREAM_COMMENTARY_GAMMA\n",
+              "phase": "commentary",
+              "memoryCitation": null,
+              "delivery": null,
+              "questions": null
+            },
+            "startedAtMs": 1790434428640,
+            "completedAtMs": 1790434429216
+          }
+        ],
+        "nextCursor": "{\"requestedThreadId\":\"01a0de30-b8f5-7b71-8477-2b26f44469b6\",\"rolloutOrdinal\":45,\"includeAnchor\":false,\"scope\":{\"kind\":\"itemsByCreatedAtOrdinal\"}}",
+        "backwardsCursor": "{\"requestedThreadId\":\"01a0de30-b8f5-7b71-8477-2b26f44469b6\",\"rolloutOrdinal\":10,\"includeAnchor\":true,\"scope\":{\"kind\":\"itemsByCreatedAtOrdinal\"}}"
+      }
+    }
+  }
+]

@@ -1,0 +1,39 @@
+{"observed_at": 1790434255.39779, "timestamp": "2026-09-26T14:50:55.371Z", "type": "event_msg", "payload_type": "thread_settings_applied", "role": null, "bytes": 2840, "markers": []}
+{"observed_at": 1790434255.397962, "timestamp": "2026-09-26T14:50:55.373Z", "type": "event_msg", "payload_type": "task_started", "role": null, "bytes": 298, "markers": []}
+{"observed_at": 1790434255.662004, "timestamp": "2026-09-26T14:50:55.651Z", "type": "response_item", "payload_type": "message", "role": "developer", "bytes": 21011, "markers": []}
+{"observed_at": 1790434255.6620631, "timestamp": "2026-09-26T14:50:55.651Z", "type": "response_item", "payload_type": "message", "role": "developer", "bytes": 2863, "markers": []}
+{"observed_at": 1790434255.6620831, "timestamp": "2026-09-26T14:50:55.651Z", "type": "response_item", "payload_type": "message", "role": "developer", "bytes": 669, "markers": []}
+{"observed_at": 1790434255.662113, "timestamp": "2026-09-26T14:50:55.651Z", "type": "response_item", "payload_type": "message", "role": "user", "bytes": 5424, "markers": []}
+{"observed_at": 1790434255.6621702, "timestamp": "2026-09-26T14:50:55.652Z", "type": "world_state", "payload_type": null, "role": null, "bytes": 15630, "markers": []}
+{"observed_at": 1790434255.6622028, "timestamp": "2026-09-26T14:50:55.652Z", "type": "turn_context", "payload_type": null, "role": null, "bytes": 3848, "markers": []}
+{"observed_at": 1790434255.717272, "timestamp": "2026-09-26T14:50:55.668Z", "type": "response_item", "payload_type": "message", "role": "user", "bytes": 991, "markers": ["STREAM_COMMENTARY_ALPHA", "STREAM_FINAL_ALPHA", "STREAM_TOOL_ONE", "STREAM_TOOL_THREE", "STREAM_TOOL_TWO"]}
+{"observed_at": 1790434255.7173288, "timestamp": "2026-09-26T14:50:55.668Z", "type": "event_msg", "payload_type": "item_completed", "role": null, "bytes": 976, "markers": ["STREAM_COMMENTARY_ALPHA", "STREAM_FINAL_ALPHA", "STREAM_TOOL_ONE", "STREAM_TOOL_THREE", "STREAM_TOOL_TWO"]}
+{"observed_at": 1790434258.890136, "timestamp": "2026-09-26T14:50:58.860Z", "type": "event_msg", "payload_type": "item_completed", "role": null, "bytes": 447, "markers": ["STREAM_COMMENTARY_ALPHA"]}
+{"observed_at": 1790434258.890177, "timestamp": "2026-09-26T14:50:58.861Z", "type": "response_item", "payload_type": "message", "role": "assistant", "bytes": 496, "markers": ["STREAM_COMMENTARY_ALPHA"]}
+{"observed_at": 1790434260.9418712, "timestamp": "2026-09-26T14:51:00.918Z", "type": "response_item", "payload_type": "custom_tool_call", "role": null, "bytes": 653, "markers": ["STREAM_TOOL_ONE", "STREAM_TOOL_THREE", "STREAM_TOOL_TWO"]}
+{"observed_at": 1790434261.04406, "timestamp": "2026-09-26T14:51:01.009Z", "type": "token_usage_record", "payload_type": null, "role": null, "bytes": 863, "markers": []}
+{"observed_at": 1790434269.034148, "timestamp": "2026-09-26T14:51:08.992Z", "type": "event_msg", "payload_type": "item_completed", "role": null, "bytes": 1166, "markers": ["STREAM_TOOL_ONE", "STREAM_TOOL_THREE", "STREAM_TOOL_TWO"]}
+{"observed_at": 1790434269.034403, "timestamp": "2026-09-26T14:51:08.994Z", "type": "response_item", "payload_type": "custom_tool_call_output", "role": null, "bytes": 713, "markers": ["STREAM_TOOL_ONE", "STREAM_TOOL_THREE", "STREAM_TOOL_TWO"]}
+{"observed_at": 1790434269.0344288, "timestamp": "2026-09-26T14:51:08.994Z", "type": "event_msg", "payload_type": "token_count", "role": null, "bytes": 792, "markers": []}
+{"observed_at": 1790434275.998345, "timestamp": "2026-09-26T14:51:15.975Z", "type": "event_msg", "payload_type": "item_completed", "role": null, "bytes": 673, "markers": ["STREAM_FINAL_ALPHA"]}
+{"observed_at": 1790434275.998467, "timestamp": "2026-09-26T14:51:15.976Z", "type": "response_item", "payload_type": "message", "role": "assistant", "bytes": 722, "markers": ["STREAM_FINAL_ALPHA"]}
+{"observed_at": 1790434275.9984949, "timestamp": "2026-09-26T14:51:15.995Z", "type": "token_usage_record", "payload_type": null, "role": null, "bytes": 866, "markers": []}
+{"observed_at": 1790434275.998512, "timestamp": "2026-09-26T14:51:15.995Z", "type": "event_msg", "payload_type": "token_count", "role": null, "bytes": 794, "markers": []}
+{"observed_at": 1790434275.998543, "timestamp": "2026-09-26T14:51:15.997Z", "type": "event_msg", "payload_type": "task_complete", "role": null, "bytes": 529, "markers": ["STREAM_FINAL_ALPHA"]}
+{"observed_at": 1790434342.46142, "timestamp": "2026-09-26T14:52:22.450Z", "type": "event_msg", "payload_type": "thread_settings_applied", "role": null, "bytes": 2841, "markers": []}
+{"observed_at": 1790434342.46157, "timestamp": "2026-09-26T14:52:22.453Z", "type": "event_msg", "payload_type": "task_started", "role": null, "bytes": 299, "markers": []}
+{"observed_at": 1790434343.036745, "timestamp": "2026-09-26T14:52:23.001Z", "type": "turn_context", "payload_type": null, "role": null, "bytes": 3849, "markers": []}
+{"observed_at": 1790434343.036822, "timestamp": "2026-09-26T14:52:23.020Z", "type": "response_item", "payload_type": "message", "role": "user", "bytes": 944, "markers": ["STREAM_BETA_ONE", "STREAM_BETA_THREE", "STREAM_BETA_TWO", "STREAM_COMMENTARY_BETA", "STREAM_FINAL_BETA"]}
+{"observed_at": 1790434343.036879, "timestamp": "2026-09-26T14:52:23.022Z", "type": "event_msg", "payload_type": "item_completed", "role": null, "bytes": 928, "markers": ["STREAM_BETA_ONE", "STREAM_BETA_THREE", "STREAM_BETA_TWO", "STREAM_COMMENTARY_BETA", "STREAM_FINAL_BETA"]}
+{"observed_at": 1790434345.58113, "timestamp": "2026-09-26T14:52:25.544Z", "type": "event_msg", "payload_type": "item_completed", "role": null, "bytes": 446, "markers": ["STREAM_COMMENTARY_BETA"]}
+{"observed_at": 1790434345.581166, "timestamp": "2026-09-26T14:52:25.547Z", "type": "response_item", "payload_type": "message", "role": "assistant", "bytes": 495, "markers": ["STREAM_COMMENTARY_BETA"]}
+{"observed_at": 1790434347.692208, "timestamp": "2026-09-26T14:52:27.647Z", "type": "response_item", "payload_type": "custom_tool_call", "role": null, "bytes": 648, "markers": ["STREAM_BETA_ONE", "STREAM_BETA_THREE", "STREAM_BETA_TWO"]}
+{"observed_at": 1790434347.747902, "timestamp": "2026-09-26T14:52:27.706Z", "type": "token_usage_record", "payload_type": null, "role": null, "bytes": 864, "markers": []}
+{"observed_at": 1790434357.8014321, "timestamp": "2026-09-26T14:52:37.791Z", "type": "event_msg", "payload_type": "item_completed", "role": null, "bytes": 1166, "markers": ["STREAM_BETA_ONE", "STREAM_BETA_THREE", "STREAM_BETA_TWO"]}
+{"observed_at": 1790434357.801472, "timestamp": "2026-09-26T14:52:37.793Z", "type": "response_item", "payload_type": "custom_tool_call_output", "role": null, "bytes": 716, "markers": ["STREAM_BETA_ONE", "STREAM_BETA_THREE", "STREAM_BETA_TWO"]}
+{"observed_at": 1790434357.801493, "timestamp": "2026-09-26T14:52:37.793Z", "type": "event_msg", "payload_type": "token_count", "role": null, "bytes": 793, "markers": []}
+{"observed_at": 1790434368.323701, "timestamp": "2026-09-26T14:52:48.278Z", "type": "event_msg", "payload_type": "item_completed", "role": null, "bytes": 933, "markers": ["STREAM_FINAL_BETA"]}
+{"observed_at": 1790434368.3237572, "timestamp": "2026-09-26T14:52:48.280Z", "type": "response_item", "payload_type": "message", "role": "assistant", "bytes": 982, "markers": ["STREAM_FINAL_BETA"]}
+{"observed_at": 1790434368.323782, "timestamp": "2026-09-26T14:52:48.300Z", "type": "token_usage_record", "payload_type": null, "role": null, "bytes": 866, "markers": []}
+{"observed_at": 1790434368.32387, "timestamp": "2026-09-26T14:52:48.301Z", "type": "event_msg", "payload_type": "token_count", "role": null, "bytes": 794, "markers": []}
+{"observed_at": 1790434368.323885, "timestamp": "2026-09-26T14:52:48.303Z", "type": "event_msg", "payload_type": "task_complete", "role": null, "bytes": 789, "markers": ["STREAM_FINAL_BETA"]}

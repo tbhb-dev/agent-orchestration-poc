@@ -1,0 +1,1315 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>claude_code_session_management</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="CLAUDE_CODE_SESSION_MANAGEMENT_files/libs/clipboard/clipboard.min.js"></script>
+<script src="CLAUDE_CODE_SESSION_MANAGEMENT_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="CLAUDE_CODE_SESSION_MANAGEMENT_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="CLAUDE_CODE_SESSION_MANAGEMENT_files/libs/quarto-html/popper.min.js"></script>
+<script src="CLAUDE_CODE_SESSION_MANAGEMENT_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="CLAUDE_CODE_SESSION_MANAGEMENT_files/libs/quarto-html/anchor.min.js"></script>
+<link href="CLAUDE_CODE_SESSION_MANAGEMENT_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="CLAUDE_CODE_SESSION_MANAGEMENT_files/libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="CLAUDE_CODE_SESSION_MANAGEMENT_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="CLAUDE_CODE_SESSION_MANAGEMENT_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="CLAUDE_CODE_SESSION_MANAGEMENT_files/libs/bootstrap/bootstrap-917079515d91bccb85b543faf8aa8bb6.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+
+
+
+<section id="claude-code-session-management" class="level1">
+<h1>Claude Code session management</h1>
+<p>How Claude Code identifies, persists, resumes, and exposes its sessions, written to inform a cross-harness session manager covering Claude Code, Codex, and Gemini.</p>
+<p>Everything here was observed on this machine on 2026-09-26 against Claude Code <strong>2.1.283</strong> (native install, macOS), by reading <code>~/.claude/</code>, running the CLI, and running a set of throwaway headless sessions to test identity, resume, fork, compaction, and hook behavior. Items marked <strong>(unverified)</strong> are inferred and were not directly tested. The on-disk formats are undocumented internals and change between versions: this machine has live sessions running 2.1.272 through 2.1.283, and records differ across them.</p>
+<section id="key-takeaways-for-a-session-manager" class="level2">
+<h2 class="anchored" data-anchor-id="key-takeaways-for-a-session-manager">Key takeaways for a session manager</h2>
+<ol type="1">
+<li><strong>Two ground-truth sources cover almost everything.</strong> <code>~/.claude/sessions/&lt;pid&gt;.json</code> is a live registry of running interactive sessions with a status field. <code>~/.claude/projects/&lt;encoded-cwd&gt;/&lt;sessionId&gt;.jsonl</code> is the append-only transcript of every persisted session. A watcher on those two paths gives both live observability and history.</li>
+<li><strong><code>claude agents --json</code> is the supported way to list live sessions.</strong> It needs no TTY and returns the registry after checking which processes are still alive. Prefer it over parsing <code>sessions/*.json</code> yourself when you can afford to spawn a process.</li>
+<li><strong>Hooks are the push channel.</strong> Every hook payload carries <code>session_id</code>, <code>transcript_path</code>, and <code>cwd</code>, and <code>SessionStart</code> reports <em>why</em> the session started (<code>startup</code>, <code>resume</code>, <code>compact</code>, <code>clear</code>). A small hook that forwards events to your manager is the most reliable real-time integration and does not depend on internal file formats.</li>
+<li><strong>A session ID is not one conversation for the life of a process.</strong> <code>/clear</code> rotates the ID and starts a new file. <code>--fork-session</code> copies history into a new ID. <code>/compact</code> and <code>--resume</code> keep the ID. Plan the data model around <em>conversations linked by lineage</em>, not one ID per terminal.</li>
+<li><strong>Retention is short on this machine.</strong> <code>cleanupPeriodDays: 7</code> is set in <code>~/.claude/settings.json</code>, and only 13 main transcripts survived across 30 project dirs when this investigation started. A manager that wants history must copy transcripts out on its own schedule.</li>
+<li><strong>Headless <code>-p</code> sessions are invisible to the live registry</strong> and to <code>history.jsonl</code>. They only show up as transcripts, or through hooks and <code>--output-format stream-json</code>.</li>
+</ol>
+</section>
+<section id="session-identity" class="level2">
+<h2 class="anchored" data-anchor-id="session-identity">Session identity</h2>
+<section id="identifiers" class="level3">
+<h3 class="anchored" data-anchor-id="identifiers">Identifiers</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Identifier</th>
+<th>Form</th>
+<th>Where it appears</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>sessionId</code></td>
+<td>UUIDv4</td>
+<td>Every transcript record, registry file, <code>history.jsonl</code>, hook payloads (as <code>session_id</code>), <code>CLAUDE_CODE_SESSION_ID</code> env var</td>
+<td>The conversation ID. Also the transcript filename.</td>
+</tr>
+<tr class="even">
+<td><code>session_id</code> (on records)</td>
+<td>UUIDv4</td>
+<td>Some transcript records, mostly tool results and attachments</td>
+<td>Stays at the process’s original session after <code>/clear</code>, so it links post-clear files back to where they started (see below).</td>
+</tr>
+<tr class="odd">
+<td>PID</td>
+<td>integer</td>
+<td>Registry filename <code>sessions/&lt;pid&gt;.json</code>, socket <code>/tmp/cc-socks/&lt;pid&gt;.sock</code>, <code>CLAUDE_PID</code> env var</td>
+<td>Process identity. Pair it with <code>procStart</code> to guard against PID reuse.</td>
+</tr>
+<tr class="even">
+<td>Peer ref</td>
+<td>6 hex chars, for example <code>[55aa88]</code></td>
+<td><code>ListAgents</code> tool output</td>
+<td>Short handle used for inter-session messaging disambiguation.</td>
+</tr>
+<tr class="odd">
+<td>Background id</td>
+<td>short id</td>
+<td><code>claude --bg</code> output, <code>claude attach/logs/stop/rm</code></td>
+<td><code>null</code> for interactive sessions in <code>claude agents --json</code>. <strong>(unverified)</strong> format for background sessions; none were running.</td>
+</tr>
+<tr class="even">
+<td><code>agentId</code></td>
+<td>17 hex chars, for example <code>a46da1757253f672f</code></td>
+<td>Subagent transcripts, <code>toolUseResult.agentId</code></td>
+<td>Identity of a subagent spawned by the <code>Agent</code> tool.</td>
+</tr>
+<tr class="odd">
+<td><code>uuid</code> / <code>parentUuid</code></td>
+<td>UUIDv4</td>
+<td>Every message-like record</td>
+<td>Per-record identity forming a DAG (see Transcript format).</td>
+</tr>
+<tr class="even">
+<td><code>promptId</code></td>
+<td>UUIDv4</td>
+<td>User records, hook payloads (<code>prompt_id</code>)</td>
+<td>Groups everything produced by one user turn.</td>
+</tr>
+<tr class="odd">
+<td><code>requestId</code></td>
+<td><code>req_...</code></td>
+<td>Assistant records</td>
+<td>The Anthropic API request ID.</td>
+</tr>
+</tbody>
+</table>
+<p>You can pick the ID up front with <code>--session-id &lt;uuid&gt;</code>, which is useful for a manager that launches sessions and wants to know the transcript path before the first byte is written. Inside a session the ID is available as <code>$CLAUDE_CODE_SESSION_ID</code>.</p>
+</section>
+<section id="names-and-titles" class="level3">
+<h3 class="anchored" data-anchor-id="names-and-titles">Names and titles</h3>
+<p>A session carries several human-readable labels, each recorded differently:</p>
+<ul>
+<li><strong>Registry <code>name</code></strong>, as in <code>agent-session-tests-26</code>, with <code>nameSource: "derived"</code> (auto-generated from the directory plus a suffix) or <code>"user"</code>. Set with <code>-n/--name</code> at launch. This is the name other sessions use to message this one.</li>
+<li><strong><code>custom-title</code> record</strong> in the transcript, written when the user names the session.</li>
+<li><strong><code>agent-name</code> record</strong> in the transcript.</li>
+<li><strong><code>ai-title</code> record</strong>: an auto-generated summary title, rewritten as the conversation evolves (18 times in one 341-line transcript). The latest one wins. This session’s reads “Session management exploration and report”.</li>
+<li><strong><code>last-prompt</code> record</strong>: the most recent user prompt plus <code>leafUuid</code>, used by the <code>/resume</code> picker.</li>
+</ul>
+</section>
+<section id="how-the-id-changes-across-lifecycle-events" class="level3">
+<h3 class="anchored" data-anchor-id="how-the-id-changes-across-lifecycle-events">How the ID changes across lifecycle events</h3>
+<p>Tested directly with headless sessions, and confirmed against existing transcripts for <code>/clear</code>:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Event</th>
+<th>Session ID</th>
+<th>Transcript file</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>New session</td>
+<td>New UUID (or <code>--session-id</code>)</td>
+<td>New file</td>
+<td>Test</td>
+</tr>
+<tr class="even">
+<td><code>--resume &lt;id&gt;</code> / <code>-c</code></td>
+<td><strong>Same</strong></td>
+<td>Appends to the same file</td>
+<td>Test: second turn appended to the same file, recalled the earlier message</td>
+</tr>
+<tr class="odd">
+<td><code>--resume &lt;id&gt; --fork-session</code></td>
+<td><strong>New</strong></td>
+<td>New file holding a <strong>copy of the full history</strong> with <code>sessionId</code> rewritten</td>
+<td>Test: fork file had all prior turns; 21 record <code>uuid</code>s were identical to the original</td>
+</tr>
+<tr class="even">
+<td><code>/compact</code> (manual or auto)</td>
+<td><strong>Same</strong></td>
+<td>Same file; a <code>system/compact_boundary</code> record is appended</td>
+<td>Test plus existing transcript; <code>SessionStart</code> hook fires with <code>source: "compact"</code></td>
+</tr>
+<tr class="odd">
+<td><code>/clear</code></td>
+<td><strong>New</strong></td>
+<td>New file; the old one stops growing</td>
+<td>Existing transcripts: one process produced four files (<code>805aa31c</code>, then <code>2addad29</code>, <code>ae50f5df</code>, <code>f0842b0f</code>), each new file starting with the <code>/clear</code> command record</td>
+</tr>
+<tr class="even">
+<td><code>--no-session-persistence</code> (<code>-p</code> only)</td>
+<td>Assigned but ephemeral</td>
+<td><strong>Nothing written</strong></td>
+<td>Test</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Lineage signals</strong> a manager can use, since there is no explicit <code>parentSessionId</code> field:</p>
+<ul>
+<li><strong>Fork:</strong> the fork shares record <code>uuid</code>s with its source. Build an index of uuid → sessionId and treat overlap as a fork edge.</li>
+<li><strong>Clear:</strong> records in the new file carry <code>session_id</code> equal to the process’s original session. In the example above, every post-clear file has records with <code>session_id: 805aa31c-…</code>. The live registry also still lists the originating PID.</li>
+<li><strong>Compact:</strong> the <code>compact_boundary</code> record has <code>parentUuid: null</code> and a <code>logicalParentUuid</code> pointing at the last pre-compaction record, plus <code>compactMetadata</code> (<code>trigger</code>, <code>preTokens</code>, <code>postTokens</code>, <code>preservedSegment</code>).</li>
+<li><strong>Worktree:</strong> <code>worktree-state</code> records carry the <code>sessionId</code> of the session that created the worktree, which can differ from the current one.</li>
+</ul>
+</section>
+</section>
+<section id="on-disk-layout" class="level2">
+<h2 class="anchored" data-anchor-id="on-disk-layout">On-disk layout</h2>
+<p>Root is <code>~/.claude/</code> (override with <code>CLAUDE_CONFIG_DIR</code>, <strong>unverified</strong> here), plus the global state file <code>~/.claude.json</code>.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Path</th>
+<th>Scope</th>
+<th>Contents</th>
+<th>Session-manager relevance</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>projects/&lt;encoded-cwd&gt;/&lt;sessionId&gt;.jsonl</code></td>
+<td>per session</td>
+<td>Full transcript (JSONL, append-only)</td>
+<td><strong>Primary history source</strong></td>
+</tr>
+<tr class="even">
+<td><code>projects/&lt;encoded-cwd&gt;/&lt;sessionId&gt;/subagents/agent-&lt;agentId&gt;.jsonl</code></td>
+<td>per subagent</td>
+<td>Subagent transcript (<code>isSidechain: true</code>)</td>
+<td>Nested activity</td>
+</tr>
+<tr class="odd">
+<td><code>projects/&lt;encoded-cwd&gt;/&lt;sessionId&gt;/subagents/agent-&lt;agentId&gt;.meta.json</code></td>
+<td>per subagent</td>
+<td><code>agentType</code>, <code>description</code>, <code>toolUseId</code>, <code>spawnDepth</code>, <code>requestShape</code> (<code>background</code>), <code>requestNonInteractive</code>, <code>model</code></td>
+<td>Subagent summary without parsing the transcript</td>
+</tr>
+<tr class="even">
+<td><code>projects/&lt;encoded-cwd&gt;/memory/</code></td>
+<td>per project</td>
+<td>Auto-memory Markdown files plus <code>MEMORY.md</code> index</td>
+<td>Persistent cross-session knowledge</td>
+</tr>
+<tr class="odd">
+<td><code>sessions/&lt;pid&gt;.json</code></td>
+<td>per live process</td>
+<td>Live registry (see below)</td>
+<td><strong>Primary liveness and status source</strong></td>
+</tr>
+<tr class="even">
+<td><code>sessions/&lt;pid&gt;.&lt;sha256&gt;.key</code></td>
+<td>per live process</td>
+<td><code>peerToken</code>, <code>procStart</code>, <code>pidDomain</code> (mode 0600)</td>
+<td>Auth for peer messaging; do not read casually</td>
+</tr>
+<tr class="odd">
+<td><code>/tmp/cc-socks/&lt;pid&gt;.sock</code></td>
+<td>per live process</td>
+<td>Unix socket, also in <code>CLAUDE_CODE_MESSAGING_SOCKET</code></td>
+<td>Inter-session messaging endpoint</td>
+</tr>
+<tr class="even">
+<td><code>history.jsonl</code></td>
+<td>global</td>
+<td>One line per typed prompt: <code>display</code>, <code>pastedContents</code>, <code>project</code>, <code>sessionId</code>, <code>timestamp</code> (ms)</td>
+<td>Cheap cross-session “what was I doing” index; interactive only</td>
+</tr>
+<tr class="odd">
+<td><code>file-history/&lt;sessionId&gt;/&lt;hash&gt;@v&lt;n&gt;</code></td>
+<td>per session</td>
+<td>Pre-edit backups of files Claude modified, versioned</td>
+<td>Checkpoint and rewind data; matching <code>file-history-snapshot</code> and <code>file-history-delta</code> records sit in the transcript</td>
+</tr>
+<tr class="even">
+<td><code>session-env/&lt;sessionId&gt;/</code></td>
+<td>per session</td>
+<td>Directory, empty in every case observed</td>
+<td>Presence marks a session that initialized; purpose <strong>unverified</strong></td>
+</tr>
+<tr class="odd">
+<td><code>shell-snapshots/snapshot-&lt;shell&gt;-&lt;ms&gt;-&lt;rand&gt;.sh</code></td>
+<td>per session start</td>
+<td>Captured shell environment (aliases, functions, PATH) that the Bash tool sources</td>
+<td>Not keyed by session ID, only by timestamp</td>
+</tr>
+<tr class="even">
+<td><code>tasks/session-&lt;8-char-prefix&gt;/</code></td>
+<td>per session</td>
+<td>Task-list storage, empty here</td>
+<td>Keyed by an ID <strong>prefix</strong></td>
+</tr>
+<tr class="odd">
+<td><code>teams/session-&lt;8-char-prefix&gt;/config.json</code></td>
+<td>per session</td>
+<td>Agent team: <code>leadSessionId</code>, <code>members[]</code> with <code>name</code>, <code>agentType</code>, <code>backendType</code> (<code>in-process</code>), <code>model</code>, <code>tmuxPaneId</code>, <code>cwd</code></td>
+<td>Maps subagents and teammates to their lead session</td>
+</tr>
+<tr class="even">
+<td><code>teams/session-&lt;prefix&gt;/inboxes/&lt;member&gt;.json</code></td>
+<td>per teammate</td>
+<td>JSON array of pending messages, empty once consumed</td>
+<td>Messaging queue between teammates</td>
+</tr>
+<tr class="odd">
+<td><code>backups/.claude.json.backup.&lt;ms&gt;</code></td>
+<td>global</td>
+<td>Rolling copies of <code>~/.claude.json</code>, at most 5 kept</td>
+<td>Ignore</td>
+</tr>
+<tr class="even">
+<td><code>~/.claude.json</code> → <code>projects[&lt;abs path&gt;]</code></td>
+<td>per project</td>
+<td><code>lastSessionId</code>, <code>lastCost</code>, <code>lastDuration</code>, <code>lastTotal{Input,Output,CacheRead,CacheCreation}Tokens</code>, <code>lastModelUsage</code>, <code>lastLinesAdded/Removed</code>, <code>lastGracefulShutdown</code>, <code>lastSessionMetrics</code>, trust and MCP settings</td>
+<td>Per-project summary of the <strong>most recent</strong> session only</td>
+</tr>
+<tr class="odd">
+<td><code>settings.json</code> → <code>cleanupPeriodDays</code></td>
+<td>global</td>
+<td>Retention in days (7 here)</td>
+<td>Controls pruning</td>
+</tr>
+</tbody>
+</table>
+<section id="project-directory-encoding" class="level3">
+<h3 class="anchored" data-anchor-id="project-directory-encoding">Project directory encoding</h3>
+<p>The directory name is the absolute cwd with every <code>/</code> and <code>.</code> replaced by <code>-</code>, so <code>/Users/tony/Code/github.com/tbhb/agent-session-tests</code> becomes <code>-Users-tony-Code-github-com-tbhb-agent-session-tests</code>, and <code>/private/tmp/.../-Users-...</code> becomes <code>-private-tmp-...--Users-...</code>. <strong>The mapping is lossy and cannot be reversed.</strong> A literal <code>-</code> or <code>.</code> in the path is indistinguishable from a separator. Always take the real cwd from the <code>cwd</code> field on transcript records, or from the registry or hook payload.</p>
+<p>Two further caveats:</p>
+<ul>
+<li><strong>Worktree sessions are filed under the parent repo’s directory.</strong> Session <code>756d25d7</code> ran in <code>vale-ai-tells/.claude/worktrees/strained</code>, and every record’s <code>cwd</code> is the worktree path, yet the transcript lives in <code>-Users-tony-Code-github-com-tbhb-vale-ai-tells/</code>. The transcript carries 28 <code>relocated</code> records (<code>relocatedCwd</code> = the main repo) and <code>worktree-state</code> records describing the worktree (<code>worktreePath</code>, <code>worktreeBranch</code>, <code>originalBranch</code>, <code>originalHeadCommit</code>). A <code>worktree-state</code> with a null <code>worktreeSession</code> marks leaving the worktree.</li>
+<li><strong>Project dirs are not exclusively Claude’s.</strong> <code>-Users-tony-Code-github-com-tbhb-repotools--claude-worktrees-agy/</code> holds more than a hundred <code>agy-explore-*.log</code> files from some other tool. Filter on <code>*.jsonl</code> whose stem is a UUID.</li>
+</ul>
+</section>
+</section>
+<section id="the-live-session-registry" class="level2">
+<h2 class="anchored" data-anchor-id="the-live-session-registry">The live session registry</h2>
+<p>Each running interactive process writes <code>~/.claude/sessions/&lt;pid&gt;.json</code> and rewrites it on state changes. This session’s entry:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode json code-with-copy"><code class="sourceCode json"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">"pid"</span><span class="fu">:</span> <span class="dv">59507</span><span class="fu">,</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">"sessionId"</span><span class="fu">:</span> <span class="st">"5e50414a-c061-49dc-8c7d-a61d03e13124"</span><span class="fu">,</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">"cwd"</span><span class="fu">:</span> <span class="st">"/Users/tony/Code/github.com/tbhb/agent-session-tests"</span><span class="fu">,</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">"startedAt"</span><span class="fu">:</span> <span class="dv">1790433403634</span><span class="fu">,</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">"procStart"</span><span class="fu">:</span> <span class="st">"Sat Sep 26 14:36:43 2026"</span><span class="fu">,</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">"version"</span><span class="fu">:</span> <span class="st">"2.1.283"</span><span class="fu">,</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="dt">"peerProtocol"</span><span class="fu">:</span> <span class="dv">1</span><span class="fu">,</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="dt">"peerFeatures"</span><span class="fu">:</span> <span class="ot">[</span><span class="st">"notify_idle"</span><span class="ot">,</span> <span class="st">"reply_across_default_dirs"</span><span class="ot">,</span> <span class="st">"artifact_yield"</span><span class="ot">]</span><span class="fu">,</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="dt">"kind"</span><span class="fu">:</span> <span class="st">"interactive"</span><span class="fu">,</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  <span class="dt">"entrypoint"</span><span class="fu">:</span> <span class="st">"cli"</span><span class="fu">,</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  <span class="dt">"pidDomain"</span><span class="fu">:</span> <span class="st">"darwin"</span><span class="fu">,</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  <span class="dt">"tmux"</span><span class="fu">:</span> <span class="st">"0:@5.%19"</span><span class="fu">,</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  <span class="dt">"messagingSocketPath"</span><span class="fu">:</span> <span class="st">"/tmp/cc-socks/59507.sock"</span><span class="fu">,</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  <span class="dt">"name"</span><span class="fu">:</span> <span class="st">"agent-session-tests-26"</span><span class="fu">,</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>  <span class="dt">"nameSource"</span><span class="fu">:</span> <span class="st">"derived"</span><span class="fu">,</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>  <span class="dt">"nameSince"</span><span class="fu">:</span> <span class="dv">1790433403634</span><span class="fu">,</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>  <span class="dt">"status"</span><span class="fu">:</span> <span class="st">"busy"</span><span class="fu">,</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>  <span class="dt">"updatedAt"</span><span class="fu">:</span> <span class="dv">1790433531223</span><span class="fu">,</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>  <span class="dt">"statusUpdatedAt"</span><span class="fu">:</span> <span class="dv">1790433531223</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Observed <code>status</code> values are <code>busy</code> (a turn is running), <code>idle</code> (waiting for the next prompt), and <code>waiting</code> (blocked on the user, such as a permission prompt or question). Timestamps are epoch milliseconds, while <code>procStart</code> is a human-readable string in UTC. The <code>tmux</code> field (<code>session:@window.%pane</code>) lets a manager jump straight to the pane.</p>
+<p>Liveness caveats:</p>
+<ul>
+<li>The file tracks the <strong>process</strong>, not the conversation. After <code>/clear</code> the registry’s <code>sessionId</code> should move to the new ID. <strong>(unverified)</strong> No live process was observed across a clear.</li>
+<li>A crashed process can leave a stale file. Verify with <code>kill -0 &lt;pid&gt;</code> plus a <code>procStart</code> comparison, or delegate to <code>claude agents --json</code>, which does that check.</li>
+<li>All eight registry entries seen were <code>kind: "interactive"</code>, <code>entrypoint: "cli"</code>. <strong>Headless <code>-p</code> runs never registered</strong>, and none of the test sessions appeared. Other values of <code>kind</code> and <code>entrypoint</code>, such as background, SDK, or IDE, were not observed. Transcript records from <code>-p</code> runs carry <code>entrypoint: "sdk-cli"</code> and <code>promptSource: "sdk"</code>.</li>
+<li>The <code>sessionId</code> in the registry can outlive a resumed conversation’s origin. PID 43574 was started with <code>claude --worktree strained --resume 756d25d7-…</code>.</li>
+</ul>
+<p><code>claude agents --json</code> output (one element):</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode json code-with-copy"><code class="sourceCode json"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span><span class="dt">"pid"</span><span class="fu">:</span> <span class="dv">15383</span><span class="fu">,</span> <span class="dt">"cwd"</span><span class="fu">:</span> <span class="st">"/Users/tony/Code/github.com/tbhb/vale-ai-tells"</span><span class="fu">,</span> <span class="dt">"kind"</span><span class="fu">:</span> <span class="st">"interactive"</span><span class="fu">,</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a> <span class="dt">"startedAt"</span><span class="fu">:</span> <span class="dv">1789439471075</span><span class="fu">,</span> <span class="dt">"sessionId"</span><span class="fu">:</span> <span class="st">"189c5d33-…"</span><span class="fu">,</span> <span class="dt">"name"</span><span class="fu">:</span> <span class="st">"vale-ai-tells-fa"</span><span class="fu">,</span> <span class="dt">"status"</span><span class="fu">:</span> <span class="st">"idle"</span><span class="fu">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Add <code>--all</code> to include completed background sessions, and <code>--cwd &lt;path&gt;</code> to filter.</p>
+</section>
+<section id="transcript-format" class="level2">
+<h2 class="anchored" data-anchor-id="transcript-format">Transcript format</h2>
+<section id="envelope" class="level3">
+<h3 class="anchored" data-anchor-id="envelope">Envelope</h3>
+<p>Each line is one JSON object. Message-like records (<code>user</code>, <code>assistant</code>, <code>attachment</code>, <code>system</code>) share this envelope:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Field</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>type</code>, <code>subtype</code></td>
+<td>Record kind</td>
+</tr>
+<tr class="even">
+<td><code>uuid</code>, <code>parentUuid</code></td>
+<td>DAG link; <code>parentUuid: null</code> starts a chain (first message, or a compaction boundary)</td>
+</tr>
+<tr class="odd">
+<td><code>logicalParentUuid</code></td>
+<td>On <code>compact_boundary</code>: the pre-compaction record it logically follows</td>
+</tr>
+<tr class="even">
+<td><code>sessionId</code></td>
+<td>Conversation ID</td>
+</tr>
+<tr class="odd">
+<td><code>session_id</code></td>
+<td>Originating process session, present on a subset of records</td>
+</tr>
+<tr class="even">
+<td><code>timestamp</code></td>
+<td>ISO 8601 UTC</td>
+</tr>
+<tr class="odd">
+<td><code>cwd</code>, <code>gitBranch</code></td>
+<td>Working directory and branch at the time of the record; <code>gitBranch: "HEAD"</code> outside a repo</td>
+</tr>
+<tr class="even">
+<td><code>version</code></td>
+<td>Claude Code version that wrote the record, so it can change mid-file after a resume on a newer binary</td>
+</tr>
+<tr class="odd">
+<td><code>entrypoint</code></td>
+<td><code>cli</code>, <code>sdk-cli</code>, and others</td>
+</tr>
+<tr class="even">
+<td><code>userType</code></td>
+<td><code>external</code></td>
+</tr>
+<tr class="odd">
+<td><code>isSidechain</code></td>
+<td><code>true</code> inside subagent transcripts</td>
+</tr>
+<tr class="even">
+<td><code>agentId</code></td>
+<td>Subagent transcripts only</td>
+</tr>
+<tr class="odd">
+<td><code>isMeta</code></td>
+<td>Harness-injected rather than user-authored</td>
+</tr>
+<tr class="even">
+<td><code>promptId</code>, <code>permissionMode</code>, <code>promptSource</code>, <code>turnOrigin</code></td>
+<td>On user records</td>
+</tr>
+<tr class="odd">
+<td><code>requestId</code>, <code>effort</code>, <code>perTurnEffort</code>, <code>apiBlockIndex</code>, <code>wireToolInputs</code></td>
+<td>On assistant records</td>
+</tr>
+<tr class="even">
+<td><code>toolUseResult</code>, <code>sourceToolAssistantUUID</code></td>
+<td>On user records that carry a tool result</td>
+</tr>
+</tbody>
+</table>
+<p>The <code>message</code> field on <code>user</code> and <code>assistant</code> records is an Anthropic Messages API message (<code>role</code>, <code>content</code> blocks, and for assistant: <code>model</code>, <code>stop_reason</code>, <code>usage</code>). <strong>An assistant turn with several content blocks is split across several <code>assistant</code> records</strong> sharing one <code>requestId</code> and chained by <code>parentUuid</code>, so group by <code>requestId</code> to reconstruct API responses and to avoid double counting <code>usage</code>.</p>
+</section>
+<section id="record-types" class="level3">
+<h3 class="anchored" data-anchor-id="record-types">Record types</h3>
+<p>Counts across every transcript on this machine at the time (13 main plus 96 subagent files):</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 30%">
+<col style="width: 40%">
+<col style="width: 30%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Type</th>
+<th style="text-align: right;">Count</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>assistant</code></td>
+<td style="text-align: right;">10972</td>
+<td>Model output, one record per content block</td>
+</tr>
+<tr class="even">
+<td><code>user</code></td>
+<td style="text-align: right;">6592</td>
+<td>User prompts and tool results</td>
+</tr>
+<tr class="odd">
+<td><code>attachment</code></td>
+<td style="text-align: right;">2151</td>
+<td>Harness-injected context (see below)</td>
+</tr>
+<tr class="even">
+<td><code>queue-operation</code></td>
+<td style="text-align: right;">215</td>
+<td>Prompt queue: <code>operation</code> (<code>enqueue</code> and others), <code>content</code>, <code>reason</code></td>
+</tr>
+<tr class="odd">
+<td><code>atis-latch</code></td>
+<td style="text-align: right;">209</td>
+<td>Internal flag, value was empty in samples</td>
+</tr>
+<tr class="even">
+<td><code>mode</code></td>
+<td style="text-align: right;">208</td>
+<td><code>mode: "normal"</code> and others</td>
+</tr>
+<tr class="odd">
+<td><code>last-prompt</code></td>
+<td style="text-align: right;">199</td>
+<td>Latest prompt text and <code>leafUuid</code>, for resume</td>
+</tr>
+<tr class="even">
+<td><code>ai-title</code></td>
+<td style="text-align: right;">190</td>
+<td>Auto title, rewritten over time</td>
+</tr>
+<tr class="odd">
+<td><code>permission-mode</code></td>
+<td style="text-align: right;">137</td>
+<td>Permission mode changes (<code>default</code>, <code>auto</code>, <code>plan</code>, …)</td>
+</tr>
+<tr class="even">
+<td><code>system/turn_duration</code></td>
+<td style="text-align: right;">81</td>
+<td><code>durationMs</code>, <code>messageCount</code>, <code>pendingBackgroundAgentCount</code> per turn</td>
+</tr>
+<tr class="odd">
+<td><code>file-history-snapshot</code></td>
+<td style="text-align: right;">68</td>
+<td>Checkpoint of tracked file backups, keyed by <code>messageId</code></td>
+</tr>
+<tr class="even">
+<td><code>worktree-state</code></td>
+<td style="text-align: right;">41</td>
+<td>Worktree enter and exit (see above)</td>
+</tr>
+<tr class="odd">
+<td><code>system/away_summary</code></td>
+<td style="text-align: right;">31</td>
+<td>“While you were away” recap text generated for the user</td>
+</tr>
+<tr class="even">
+<td><code>relocated</code></td>
+<td style="text-align: right;">28</td>
+<td>Transcript filed under a different project dir than <code>cwd</code></td>
+</tr>
+<tr class="odd">
+<td><code>file-history-delta</code></td>
+<td style="text-align: right;">18</td>
+<td>Incremental file backup (<code>trackingPath</code>, <code>backup.version</code>)</td>
+</tr>
+<tr class="even">
+<td><code>cost-state</code></td>
+<td style="text-align: right;">9</td>
+<td><strong>Running session totals</strong> (see below)</td>
+</tr>
+<tr class="odd">
+<td><code>system/local_command</code></td>
+<td style="text-align: right;">8</td>
+<td>Slash command execution, as in <code>commandRun: {command: "clear"}</code></td>
+</tr>
+<tr class="even">
+<td><code>system/informational</code></td>
+<td style="text-align: right;">8</td>
+<td>Notices shown to the user</td>
+</tr>
+<tr class="odd">
+<td><code>custom-title</code></td>
+<td style="text-align: right;">4</td>
+<td>User-set title</td>
+</tr>
+<tr class="even">
+<td><code>agent-name</code></td>
+<td style="text-align: right;">4</td>
+<td>Session name</td>
+</tr>
+<tr class="odd">
+<td><code>system/compact_boundary</code></td>
+<td style="text-align: right;">1</td>
+<td>Compaction marker with <code>compactMetadata</code></td>
+</tr>
+<tr class="even">
+<td><code>system/model_refusal_fallback</code></td>
+<td style="text-align: right;">1</td>
+<td>Model switched after a refusal: <code>originalModel</code>, <code>fallbackModel</code>, <code>scope</code>, <code>requestId</code></td>
+</tr>
+</tbody>
+</table>
+<p>Attachment subtypes (<code>attachment.type</code>) seen include <code>total_tokens_reminder</code>, <code>prompt_snapshot</code>, <code>deferred_tools_record</code>, <code>deferred_tools_delta</code>, <code>mcp_instructions_delta</code>, <code>date</code>, <code>model</code>, <code>session_context</code>, <code>environment</code>, <code>skill_listing</code>, <code>instructions</code> (CLAUDE.md contents), <code>agent_listing_delta</code>, <code>queued_command</code>, <code>auto_mode</code>, <code>edited_text_file</code>, <code>read_truncation_notice</code>, <code>hook_success</code>, <code>command_permissions</code>, <code>plan_mode_exit</code>, and <code>auto_mode_exit</code>. For observability they are mostly noise, but <code>model</code>, <code>environment</code>, <code>hook_success</code>, and <code>edited_text_file</code> carry useful signals.</p>
+</section>
+<section id="cost-and-usage" class="level3">
+<h3 class="anchored" data-anchor-id="cost-and-usage">Cost and usage</h3>
+<p>Two sources:</p>
+<ul>
+<li><strong>Per request:</strong> <code>assistant.message.usage</code> has <code>input_tokens</code>, <code>output_tokens</code>, <code>cache_read_input_tokens</code>, <code>cache_creation_input_tokens</code> (split into <code>ephemeral_5m</code> and <code>ephemeral_1h</code>), <code>output_tokens_details.thinking_tokens</code>, <code>server_tool_use</code> counts, and <code>service_tier</code>. It carries no dollar figure.</li>
+<li><strong>Running totals:</strong> the <code>cost-state</code> record, appended after turns, carries <code>totalCostUSD</code>, <code>totalAPIDuration</code>, <code>totalAPIDurationWithoutRetries</code>, <code>totalToolDuration</code>, <code>totalLinesAdded</code>, <code>totalLinesRemoved</code>, <code>totalDuration</code>, <code>startTime</code>, and <code>modelUsage</code> keyed by model ID with input, output, thinking, and cache token counts. <strong>Take the last <code>cost-state</code> in the file for session cost.</strong> It is cumulative for the process run, so check across resumes whether it resets <strong>(unverified)</strong>.</li>
+</ul>
+<p><code>~/.claude.json</code> keeps the same kinds of <code>last*</code> totals per project, but only for the most recent session.</p>
+</section>
+<section id="subagents" class="level3">
+<h3 class="anchored" data-anchor-id="subagents">Subagents</h3>
+<p>The <code>Agent</code> tool writes each subagent to <code>subagents/agent-&lt;agentId&gt;.jsonl</code> beside the parent transcript, with the same envelope plus <code>agentId</code>, <code>isSidechain: true</code>, and the <strong>parent’s</strong> <code>sessionId</code>. The parent transcript’s tool result for the spawn (<code>toolUseResult</code>) includes <code>agentId</code>, <code>status</code> (such as <code>async_launched</code>), <code>description</code>, <code>prompt</code>, <code>resolvedModel</code>, <code>isAsync</code>, and <code>outputFile</code>, which is how to join parent and child. The <code>.meta.json</code> sidecar gives a summary without opening the transcript. Subagents are not sessions: they have no registry entry and no separate ID.</p>
+</section>
+</section>
+<section id="lifecycle-operations-cli" class="level2">
+<h2 class="anchored" data-anchor-id="lifecycle-operations-cli">Lifecycle operations (CLI)</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Operation</th>
+<th>Command</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Start</td>
+<td><code>claude [prompt]</code></td>
+<td>Interactive, writes registry and transcript</td>
+</tr>
+<tr class="even">
+<td>Start headless</td>
+<td><code>claude -p "…" [--output-format json\|stream-json]</code></td>
+<td>Transcript only, no registry entry</td>
+</tr>
+<tr class="odd">
+<td>Choose ID</td>
+<td><code>--session-id &lt;uuid&gt;</code></td>
+<td>Must be a valid UUID</td>
+</tr>
+<tr class="even">
+<td>Name</td>
+<td><code>-n, --name &lt;name&gt;</code></td>
+<td>Registry name and picker label</td>
+</tr>
+<tr class="odd">
+<td>Continue latest in cwd</td>
+<td><code>-c, --continue</code></td>
+<td>Scoped to the current directory</td>
+</tr>
+<tr class="even">
+<td>Resume</td>
+<td><code>-r, --resume [id \| search]</code></td>
+<td>No argument opens the picker</td>
+</tr>
+<tr class="odd">
+<td>Fork</td>
+<td><code>--resume &lt;id&gt; --fork-session</code></td>
+<td>New ID, full history copied</td>
+</tr>
+<tr class="even">
+<td>Resume by pull request</td>
+<td><code>--from-pr [number \| url]</code></td>
+<td>Sessions linked to a pull request</td>
+</tr>
+<tr class="odd">
+<td>Ephemeral</td>
+<td><code>--no-session-persistence</code></td>
+<td><code>-p</code> only; nothing written</td>
+</tr>
+<tr class="even">
+<td>Background</td>
+<td><code>--bg</code></td>
+<td>Prints a short id; <code>--bg --resume &lt;id&gt;</code> continues a stopped session in the background</td>
+</tr>
+<tr class="odd">
+<td>List</td>
+<td><code>claude agents --json [--all] [--cwd]</code></td>
+<td>Scriptable, no TTY needed</td>
+</tr>
+<tr class="even">
+<td>Attach</td>
+<td><code>claude attach &lt;id&gt;</code></td>
+<td>Background sessions</td>
+</tr>
+<tr class="odd">
+<td>Tail</td>
+<td><code>claude logs &lt;id&gt;</code></td>
+<td>Recent terminal output of a background session</td>
+</tr>
+<tr class="even">
+<td>Stop</td>
+<td><code>claude stop &lt;id&gt;</code> (<code>kill</code>)</td>
+<td>Keeps the conversation</td>
+</tr>
+<tr class="odd">
+<td>Delete</td>
+<td><code>claude rm &lt;id&gt;</code></td>
+<td>Deletes a background session and its worktree when safe</td>
+</tr>
+<tr class="even">
+<td>Restart on new binary</td>
+<td><code>claude respawn &lt;id&gt; \| --all</code></td>
+<td>Background sessions</td>
+</tr>
+<tr class="odd">
+<td>Worktree</td>
+<td><code>-w, --worktree [name]</code> plus optional <code>--tmux</code></td>
+<td>Creates <code>.claude/worktrees/&lt;name&gt;</code> on branch <code>worktree-&lt;name&gt;</code></td>
+</tr>
+<tr class="even">
+<td>Cloud</td>
+<td><code>--cloud [desc \| id \| url]</code>, <code>--teleport [id]</code></td>
+<td>Remote sessions on claude.ai; not explored</td>
+</tr>
+<tr class="odd">
+<td>Remote control</td>
+<td><code>--remote-control [name]</code></td>
+<td>Drive a local session from another surface; not explored</td>
+</tr>
+<tr class="even">
+<td>Purge project state</td>
+<td><code>claude project purge [path \| --all] [--dry-run] [-i] [-y]</code></td>
+<td>Removes transcripts, memory, the <code>~/.claude.json</code> entry, and matching <code>history.jsonl</code> lines; leaves <code>shell-snapshots/</code> and backups</td>
+</tr>
+</tbody>
+</table>
+<p>Interactive equivalents include <code>/resume</code>, <code>/clear</code>, <code>/compact</code>, and <code>/rename</code> <strong>(unverified)</strong>.</p>
+</section>
+<section id="hooks-as-an-event-stream" class="level2">
+<h2 class="anchored" data-anchor-id="hooks-as-an-event-stream">Hooks as an event stream</h2>
+<p>Hooks run a command with a JSON payload on stdin. The payloads below were captured by registering a logging hook for each event via <code>--settings</code> on a headless session, then resuming it with <code>/compact</code>:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Event</th>
+<th>Payload fields besides <code>hook_event_name</code>, <code>session_id</code>, <code>transcript_path</code>, <code>cwd</code></th>
+<th>Observed values</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>SessionStart</code></td>
+<td><code>source</code>; on resume also <code>context_tokens</code>, <code>seconds_since_last_response</code>, <code>prompt_cache_likely_expired</code>, <code>estimated_cache_write_usd</code>; on compact also <code>model</code>, <code>prompt_id</code></td>
+<td><code>source</code>: <code>startup</code>, <code>resume</code>, <code>compact</code>, (<code>clear</code> per docs, not tested)</td>
+</tr>
+<tr class="even">
+<td><code>UserPromptSubmit</code></td>
+<td><code>prompt</code>, <code>prompt_id</code>, <code>permission_mode</code></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td><code>PreToolUse</code></td>
+<td><code>tool_name</code>, <code>tool_input</code>, <code>tool_use_id</code>, <code>prompt_id</code>, <code>permission_mode</code></td>
+<td></td>
+</tr>
+<tr class="even">
+<td><code>PostToolUse</code></td>
+<td>as above plus <code>tool_response</code>, <code>duration_ms</code></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td><code>Stop</code></td>
+<td><code>last_assistant_message</code>, <code>background_tasks</code>, <code>session_crons</code>, <code>stop_hook_active</code>, <code>prompt_id</code>, <code>permission_mode</code></td>
+<td>End of each turn, the natural “went idle” signal</td>
+</tr>
+<tr class="even">
+<td><code>PreCompact</code></td>
+<td><code>trigger</code>, <code>custom_instructions</code>, <code>prompt_id</code></td>
+<td><code>trigger: "manual"</code></td>
+</tr>
+<tr class="odd">
+<td><code>SessionEnd</code></td>
+<td><code>reason</code>, <code>prompt_id</code></td>
+<td><code>reason: "other"</code> for a normal <code>-p</code> exit</td>
+</tr>
+</tbody>
+</table>
+<p>Other events exist but were not captured here, including <code>Notification</code> (permission and idle prompts, useful for “needs attention”), <code>SubagentStop</code>, and <code>PermissionRequest</code> <strong>(unverified field lists)</strong>.</p>
+<p>Implications for the manager:</p>
+<ul>
+<li>Registering hooks in <code>~/.claude/settings.json</code> covers every session on the machine, including headless ones the registry misses. <code>--bare</code> disables settings hooks, so sessions launched that way are blind to this channel.</li>
+<li><code>transcript_path</code> saves reimplementing the lossy cwd encoding.</li>
+<li><code>SessionStart</code> then <code>SessionEnd</code> bracketing gives exact session lifetimes; a <code>SessionEnd</code> missing when the PID is gone means a crash.</li>
+<li>Keep hooks fast and non-blocking: a hook that fails or hangs affects the user’s session. Appending to a file or writing to a socket and exiting is the safe shape.</li>
+</ul>
+</section>
+<section id="headless-and-sdk-output" class="level2">
+<h2 class="anchored" data-anchor-id="headless-and-sdk-output">Headless and SDK output</h2>
+<p><code>--output-format json</code> returns one object with <code>type: "result"</code>, <code>subtype</code> (<code>success</code>), <code>session_id</code>, <code>num_turns</code>, <code>duration_ms</code>, <code>total_cost_usd</code>, <code>is_error</code>, and <code>result</code>. <code>--output-format stream-json --verbose</code> emits a first <code>system/init</code> message with <code>session_id</code>, <code>cwd</code>, <code>model</code>, <code>permissionMode</code>, <code>tools</code>, <code>mcp_servers</code>, <code>agents</code>, <code>skills</code>, <code>slash_commands</code>, <code>plugins</code>, <code>memory_paths</code>, <code>messaging_socket_path</code>, <code>claude_code_version</code>, and more. That makes the init message a full capability snapshot of the session. <code>--include-hook-events</code> adds hook lifecycle events to the stream, which is an alternative to settings hooks when the manager is the one launching sessions.</p>
+</section>
+<section id="multi-session-coordination" class="level2">
+<h2 class="anchored" data-anchor-id="multi-session-coordination">Multi-session coordination</h2>
+<p>Claude Code already has a local peer layer, which a manager could observe or reuse:</p>
+<ul>
+<li>Every interactive session exposes a Unix socket at <code>/tmp/cc-socks/&lt;pid&gt;.sock</code>, advertises <code>peerProtocol: 1</code> and <code>peerFeatures</code> in its registry file, and holds a per-process <code>peerToken</code> in <code>sessions/&lt;pid&gt;.&lt;hash&gt;.key</code>. The protocol itself was not examined; treat the socket and token as private.</li>
+<li>Inside a session, <code>ListAgents</code> lists the other local sessions by name, kind, status, tmux pane, and age, and <code>SendMessage</code> delivers messages to them. From this session it listed all seven peers, including one started two minutes earlier.</li>
+<li>Agent teams (enabled here via <code>CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1</code>) write <code>teams/session-&lt;prefix&gt;/config.json</code> for every session, and every session is a team of at least one lead. Teammate messages queue in <code>inboxes/&lt;name&gt;.json</code> and are consumed on delivery.</li>
+</ul>
+</section>
+<section id="retention-and-cleanup" class="level2">
+<h2 class="anchored" data-anchor-id="retention-and-cleanup">Retention and cleanup</h2>
+<ul>
+<li><code>cleanupPeriodDays</code> (7 here) prunes old transcripts and associated state. <code>.last-cleanup</code> records the last run (<code>2026-09-26T14:12:20Z</code>). Evidence: 30 project dirs, but only 13 transcripts remained, and <code>file-history/</code> has five session directories.</li>
+<li>Pruning appears to run at startup of any session, so data can vanish while the manager is not looking <strong>(unverified trigger)</strong>.</li>
+<li><code>claude project purge</code> is the explicit per-project delete. <code>--dry-run</code> shows what would go.</li>
+<li>Shell snapshots and <code>session-env/</code> directories are not cleaned by <code>purge</code>.</li>
+</ul>
+</section>
+<section id="gotchas-for-the-session-manager" class="level2">
+<h2 class="anchored" data-anchor-id="gotchas-for-the-session-manager">Gotchas for the session manager</h2>
+<ol type="1">
+<li><strong>Do not decode project directory names.</strong> Use <code>cwd</code> from records, the registry, or hook payloads.</li>
+<li><strong>Transcript location does not equal cwd</strong> for worktree sessions (<code>relocated</code>).</li>
+<li><strong>One process, many session IDs</strong> after <code>/clear</code>. Correlate with <code>session_id</code> on records and with the PID.</li>
+<li><strong>One session ID, many processes</strong> over time through <code>--resume</code>, and <code>version</code> can change mid-file.</li>
+<li><strong>Forks duplicate content.</strong> Deduplicate by record <code>uuid</code>, or history and cost figures double count.</li>
+<li><strong>Assistant messages are split per content block.</strong> Group by <code>requestId</code> before summing usage.</li>
+<li><strong>The registry misses headless sessions</strong>, and <code>history.jsonl</code> misses them too.</li>
+<li><strong>Some stores key on an 8-char prefix</strong> of the session ID (<code>tasks/</code>, <code>teams/</code>), and some are not keyed by session at all (<code>shell-snapshots/</code>).</li>
+<li><strong>Files are append-only but written live.</strong> Tail them and tolerate a partial last line.</li>
+<li><strong>Formats are internal and version-specific.</strong> Key parsers on <code>type</code> and tolerate unknown types and fields; this machine alone shows at least 22 record types.</li>
+<li><strong>Files are sensitive.</strong> Transcripts hold prompts, tool output, and pasted content; <code>history.jsonl</code> holds <code>pastedContents</code>; <code>.key</code> files hold peer tokens. Transcripts are mode 0600.</li>
+<li><strong>The shell is macOS bash 3.2</strong> for <code>#!/usr/bin/env bash</code> scripts unless a newer bash is installed, which matters for any helper scripts the manager ships (no <code>mapfile</code>, for example).</li>
+</ol>
+</section>
+<section id="suggested-integration-shape" class="level2">
+<h2 class="anchored" data-anchor-id="suggested-integration-shape">Suggested integration shape</h2>
+<ol type="1">
+<li><strong>Discovery:</strong> poll <code>claude agents --json</code>, or watch <code>~/.claude/sessions/</code> with FSEvents or inotify, for live sessions and their status.</li>
+<li><strong>Events:</strong> install a global hook for <code>SessionStart</code>, <code>UserPromptSubmit</code>, <code>Stop</code>, <code>Notification</code>, <code>PreCompact</code>, and <code>SessionEnd</code> that appends the payload plus a timestamp to the manager’s own log or socket.</li>
+<li><strong>History:</strong> tail <code>~/.claude/projects/**/*.jsonl</code> (UUID-named only) into the manager’s store, before <code>cleanupPeriodDays</code> removes them. Index by <code>sessionId</code>, record <code>uuid</code>, <code>promptId</code>, and <code>requestId</code>.</li>
+<li><strong>Lineage:</strong> derive fork edges from shared <code>uuid</code>s, clear edges from <code>session_id</code> and PID, and compaction from <code>compact_boundary</code>.</li>
+<li><strong>Metrics:</strong> last <code>cost-state</code> per session for totals, <code>turn_duration</code> for per-turn latency, <code>assistant.message.usage</code> for per-request tokens.</li>
+<li><strong>Control:</strong> launch with <code>--session-id</code> and <code>--name</code> so the manager knows identity up front, and use <code>--resume</code>, <code>--fork-session</code>, <code>--bg</code>, <code>attach</code>, <code>stop</code>, and <code>rm</code> for lifecycle. Use the <code>tmux</code> field to focus a pane.</li>
+</ol>
+</section>
+<section id="open-questions" class="level2">
+<h2 class="anchored" data-anchor-id="open-questions">Open questions</h2>
+<ul>
+<li>What the registry shows for background (<code>--bg</code>), IDE, and desktop-app sessions, including the <code>id</code> field and <code>kind</code> values.</li>
+<li>Whether the registry’s <code>sessionId</code> updates in place after <code>/clear</code> in an interactive session.</li>
+<li>Whether <code>cost-state</code> totals reset on resume or carry over.</li>
+<li>The peer socket protocol and what <code>notify_idle</code> delivers.</li>
+<li>What <code>session-env/</code> and <code>atis-latch</code> are for.</li>
+<li>When exactly cleanup runs, and whether it removes <code>history.jsonl</code> lines and <code>file-history/</code> in step with transcripts.</li>
+<li>Cloud (<code>--cloud</code>, <code>--teleport</code>) and Remote Control sessions: where their state lives and whether any of it is local.</li>
+</ul>
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

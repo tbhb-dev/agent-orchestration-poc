@@ -1,0 +1,141 @@
+[
+  {
+    "test": "T1",
+    "frame": {
+      "type": "user",
+      "message": {
+        "role": "user",
+        "content": "Codex T1: Minimal foreign-producer probe. Please report the exact cross-session wrapper fields (from, from-name, from-mode), whether approval was required, and what you received. This frame has no reply address; please show your report to the user in your pane for relay to Codex."
+      }
+    }
+  },
+  {
+    "test": "T2",
+    "frame": {
+      "type": "user",
+      "message": {
+        "role": "user",
+        "content": "Codex T2: Foreign reply-address probe, with msg_id and from but no from_mode or auth. Please use SendMessage to reply to uds:/tmp/cc-socks/49922.sock. Report the exact wrapper fields you see, whether this message was held for approval, and whether T1 arrived and how its wrapper rendered."
+      },
+      "msg_id": "bf78c111-8077-4444-9a7e-203c31c50002",
+      "from": "uds:/tmp/cc-socks/49922.sock"
+    }
+  },
+  {
+    "test": "T3",
+    "frame": {
+      "type": "user",
+      "message": {
+        "role": "user",
+        "content": "Codex T3: Same foreign sender, now with from_mode prompting. Please reply using SendMessage to uds:/tmp/cc-socks/49922.sock and report the exact wrapper/framing, whether any approval hold was visible, and any difference from T2. Our listener received your T2 reply as a single user frame (msgV 1, msg_id, type user, message role/content containing your cross-session wrapper, priority next, from your socket); no auth line or control frame arrived."
+      },
+      "msg_id": "bf78c111-8077-4444-9a7e-203c31c50003",
+      "from": "uds:/tmp/cc-socks/49922.sock",
+      "from_mode": "prompting"
+    }
+  },
+  {
+    "test": "T5-correct",
+    "frame": {
+      "type": "user",
+      "message": {
+        "role": "user",
+        "content": "Codex T5: Correct-session probe, session_id matches your registry sessionId. Please reply to uds:/tmp/cc-socks/49922.sock confirming delivery. After your reply I will send T5-WRONG with a different session_id; it should not arrive. T4 is skipped because no explicit auth-key-read approval was provided."
+      },
+      "msg_id": "bf78c111-8077-4444-9a7e-203c31c50005",
+      "from": "uds:/tmp/cc-socks/49922.sock",
+      "from_mode": "prompting",
+      "session_id": "8d3b00a9-d61c-4105-864a-477611e2da4c"
+    }
+  },
+  {
+    "test": "T5-wrong",
+    "frame": {
+      "type": "user",
+      "message": {
+        "role": "user",
+        "content": "Codex T5: T5-WRONG negative probe. This frame has a deliberately incorrect session_id and should be silently dropped. If you receive it, reply to uds:/tmp/cc-socks/49922.sock and report unexpected delivery."
+      },
+      "msg_id": "bf78c111-8077-4444-9a7e-203c31c50006",
+      "from": "uds:/tmp/cc-socks/49922.sock",
+      "from_mode": "prompting",
+      "session_id": "00000000-0000-4000-8000-000000000000"
+    }
+  },
+  {
+    "test": "T6",
+    "frame": {
+      "type": "user",
+      "message": {
+        "role": "user",
+        "content": "Codex T6: priority now probe, sent after your busy signal while your foreground task is running. Please reply to uds:/tmp/cc-socks/49922.sock and report whether this arrived while busy, whether it appeared before the task finished, any framing differences, and what evidence (if any) shows it ran ahead of queued work. We have no paired next-priority control, so please distinguish immediate delivery from proven priority ordering."
+      },
+      "msg_id": "bf78c111-8077-4444-9a7e-203c31c50007",
+      "from": "uds:/tmp/cc-socks/49922.sock",
+      "from_mode": "prompting",
+      "priority": "now"
+    }
+  },
+  {
+    "test": "T6-coordination",
+    "frame": {
+      "type": "user",
+      "message": {
+        "role": "user",
+        "content": "Codex T6: Coordination for a second attempt. I am ready now and have corrected the stale T6 result. Please start a foreground task lasting a fixed 90 seconds with no early exit based on files, signal busy to uds:/tmp/cc-socks/49922.sock, then keep the task running. I will send the actual priority-now probe immediately after receiving your busy signal. Report whether it is injected during the task."
+      },
+      "msg_id": "bf78c111-8077-4444-9a7e-203c31c50008",
+      "from": "uds:/tmp/cc-socks/49922.sock",
+      "from_mode": "prompting"
+    }
+  },
+  {
+    "test": "T6-retry",
+    "frame": {
+      "type": "user",
+      "message": {
+        "role": "user",
+        "content": "Codex T6: Second priority-now probe, sent immediately after your second busy signal. Please reply to uds:/tmp/cc-socks/49922.sock with when this became visible relative to the three foreground tool rounds, whether the task was still active, and any framing changes. No paired default-priority control was sent, so ordering relative to queued messages remains unmeasured."
+      },
+      "msg_id": "bf78c111-8077-4444-9a7e-203c31c50009",
+      "from": "uds:/tmp/cc-socks/49922.sock",
+      "from_mode": "prompting",
+      "priority": "now"
+    }
+  },
+  {
+    "test": "T7",
+    "frame": {
+      "type": "control",
+      "action": "notify_when_idle",
+      "from": "uds:/tmp/cc-socks/49922.sock",
+      "msg_id": "bf78c111-8077-4444-9a7e-203c31c50010",
+      "from_mode": "prompting"
+    }
+  },
+  {
+    "test": "T8-malformed",
+    "raw": "Codex T8: not JSON\n"
+  },
+  {
+    "test": "T8-blank",
+    "raw": "\n"
+  },
+  {
+    "test": "T8-empty",
+    "raw": "{\"type\":\"user\",\"message\":{\"role\":\"user\",\"content\":\"\"}}\n"
+  },
+  {
+    "test": "T8-health",
+    "frame": {
+      "type": "user",
+      "message": {
+        "role": "user",
+        "content": "Codex T8: Post-negative-case health check. I sent three fresh connections containing malformed text 'Codex T8: not JSON', a blank line, and a user frame with empty message content. Please reply to uds:/tmp/cc-socks/49922.sock confirming whether any of those appeared in your conversation and whether you remain healthy. This valid health-check message is separate from the three negative probes. T7 already returned a peer_idle_notice. Results and exact evidence are consolidated in codex-peering-results.md and codex-peering-inbound.log."
+      },
+      "msg_id": "bf78c111-8077-4444-9a7e-203c31c50011",
+      "from": "uds:/tmp/cc-socks/49922.sock",
+      "from_mode": "prompting"
+    }
+  }
+]

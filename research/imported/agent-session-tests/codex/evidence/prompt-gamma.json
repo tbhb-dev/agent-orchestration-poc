@@ -1,0 +1,4 @@
+{
+  "submitted_at": 1790434427.2684941,
+  "prompt": "Controlled timing test: say STREAM_COMMENTARY_GAMMA, then run exactly one shell command: python3 -u -c 'import time; time.sleep(2); print(\"STREAM_GAMMA_ONE\", flush=True); time.sleep(12); print(\"STREAM_GAMMA_TWO\", flush=True); time.sleep(8); print(\"STREAM_GAMMA_THREE\", flush=True)'. Then answer STREAM_FINAL_GAMMA. Do nothing else."
+}

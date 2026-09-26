@@ -1,0 +1,21 @@
+{
+  "recordsParsed": 160,
+  "scenarioChecks": {
+    "E1_resume_user_and_tool_context": true,
+    "E2_fork_history_and_identity": true,
+    "E3_ephemeral": true,
+    "E4_multiclient": true,
+    "E5_daemon_standalone": true,
+    "E6_steering": true,
+    "E7_interrupt_process_survival": true,
+    "E8_pending_interactions": true,
+    "E9_compaction": true,
+    "E10_revert": true,
+    "E11_archive_delete": true,
+    "E12_crash": true,
+    "E13_queue": true,
+    "E14_usage": true,
+    "E15_inventory": true,
+    "E16_upgrade": true
+  }
+}
