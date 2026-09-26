@@ -25,6 +25,7 @@ func TestParse(t *testing.T) {
 		{"bad status", []string{"status", "--set", "away"}, Value{}, true},
 		{"detail alone", []string{"status", "--detail", "hello"}, Value{}, true},
 		{"extra args", []string{"join", "x"}, Value{}, true},
+		{"wrong flag", []string{"ack", "x", "--wait", "2"}, Value{}, true},
 		{"unknown", []string{"memory"}, Value{}, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

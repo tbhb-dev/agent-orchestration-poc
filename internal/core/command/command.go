@@ -45,6 +45,7 @@ func Parse(args []string) (Value, error) {
 	}
 	value := Value{Name: args[0], Port: 4222, Timeout: 30 * time.Second}
 	var positional []string
+	flagsUsed := make(map[string]bool)
 	for i := 1; i < len(args); i++ {
 		arg := args[i]
 		if !strings.HasPrefix(arg, "--") {
@@ -55,6 +56,7 @@ func Parse(args []string) (Value, error) {
 			return Value{}, fmt.Errorf("%s requires a value", arg)
 		}
 		i++
+		flagsUsed[arg] = true
 		if err := setFlag(&value, arg, args[i]); err != nil {
 			return Value{}, err
 		}
@@ -62,7 +64,38 @@ func Parse(args []string) (Value, error) {
 	if err := setPositionals(&value, positional); err != nil {
 		return Value{}, err
 	}
+	if err := validateFlags(value.Name, flagsUsed); err != nil {
+		return Value{}, err
+	}
 	return value, validate(value)
+}
+
+func validateFlags(name string, used map[string]bool) error {
+	var allowed map[string]bool
+	switch name {
+	case "send":
+		allowed = map[string]bool{"--wait": true, "--id": true, "--correlation-id": true, "--reply-to-id": true}
+	case "receive":
+		allowed = map[string]bool{"--timeout": true}
+	case "status":
+		allowed = map[string]bool{"--set": true, "--detail": true}
+	}
+	for flag := range used {
+		if commonFlag(flag) || allowed[flag] {
+			continue
+		}
+		return fmt.Errorf("%s is not valid for %s", flag, name)
+	}
+	return nil
+}
+
+func commonFlag(flag string) bool {
+	switch flag {
+	case "--group", "--agent", "--creds-file", "--port":
+		return true
+	default:
+		return false
+	}
 }
 
 func setFlag(value *Value, flag, argument string) error {
