@@ -3,8 +3,6 @@ title: "0001: Go linter is golangci-lint"
 description: Why golangci-lint through mise, not standalone staticcheck.
 ---
 
-# 0001: Go linter is golangci-lint
-
 ## Status
 
 Accepted 2026-09-26 for issue #14 (research/gates/go/notes.md §5).

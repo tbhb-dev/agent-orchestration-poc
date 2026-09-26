@@ -3,8 +3,6 @@ title: Go conventions
 description: How Go is written, built, tested, and linted in this repository, at Go 1.27.1.
 ---
 
-# Go conventions
-
 ## Versions and sources
 
 This page targets Go 1.27.1 and the tools and source snapshots recorded on 2026-09-26 (research/gates/go/versions.md).
