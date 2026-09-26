@@ -41,6 +41,21 @@ See [Python conventions](../../docs/src/content/docs/guides/python-conventions.m
 - pytest 9.1.1: use `@pytest.fixture` without parentheses and yield fixtures for child processes. In teardown, call `terminate()` and wait with a timeout. Call `kill()` if necessary. Place Unix socket paths under a short temporary directory, not `tmp_path`.
 - pytest 9.1.1: add the verified async plugin before writing `async def` tests.
 
+## Core and shell
+
+- Python 3.14, import-linter 2.15: put pure decisions in `agent_orchestration_poc.core` and I/O in `agent_orchestration_poc.shell`. The core cannot import the shell or the forbidden I/O modules listed in `[tool.importlinter]`.
+- Python 3.14: core functions take and return values. They may use `pathlib` for path values but cannot call file system methods or receive an open file, socket, or process. Experiment scripts are shell code.
+- import-linter 2.15: run `mise run check:imports` and move a prohibited import into the shell. Never add `ignore_imports` to bypass a contract.
+- ruff 0.16.9: the core's nested `ruff.toml` enables `TID251` for qualified I/O calls. It cannot resolve every `Path` method call, so review the actual behavior.
+- pytest 9.1.1: test core functions with plain values and no mocks or markers. Mark shell process and socket tests `integration` or `socket`.
+
+## Quality gates
+
+- ruff 0.16.9: keep McCabe complexity at 10 with `C901`. `PLR0912` allows 12 branches, `PLR0911` allows 6 returns, and `PLR0915` allows 50 statements.
+- ruff 0.16.9: keep signatures to 5 arguments and 5 positional arguments with `PLR0913` and `PLR0917`. Leave preview complexity rules off.
+- vulture 2.16: `check:deadcode` checks `src`, `tests`, `experiments`, and `scripts` at confidence 60. Pytest hooks and fixtures are exempt. Give a reason in a whitelist for any other false positive.
+- jscpd 5.3.2: move repeated blocks of at least 50 tokens and 5 lines into the helper package. Explain any deliberate repeat marked with `jscpd:ignore-start` and `jscpd:ignore-end`.
+
 ## Typing
 
 - pyrefly 1.3.1: run `mise run check:pyrefly` from the repository root. It gates `mise run check`, CI, and prek. Pass no file names because per-file mode ignores `project-excludes`.

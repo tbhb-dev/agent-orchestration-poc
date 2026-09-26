@@ -9,3 +9,5 @@ Use a numbered `NNNN-slug.md` page with `title` and `description` frontmatter. F
 
 - [0001, Go linter is golangci-lint](/decisions/0001-go-linter/), accepted 2026-09-26 for issue #14.
 - [0002, Python type checker is strict pyrefly](/decisions/0002-python-type-checker/), accepted 2026-09-26 for issue #61.
+- [0003, Functional core and imperative shell](/decisions/0003-functional-core-imperative-shell/), accepted 2026-09-26 for issue #58.
+- [0004, Duplicate, dead, and complex code gates](/decisions/0004-quality-gates/), accepted 2026-09-26 for issues #62 and #63.

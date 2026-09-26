@@ -33,9 +33,11 @@ These are the exact pins in `mise.toml` after PR #57. Rust uses the default prof
 | `actionlint` | 1.7.12 |
 | `npm:@biomejs/biome` | 2.5.14 |
 | `pipx:ryl` | 0.22.0 |
+| `pipx:jscpd` | 5.3.2 |
+| `go:golang.org/x/tools/cmd/deadcode` | 0.50.0 |
 | `go:github.com/tbhb/repotools/cmd/guard-markdown` | 0.9.0 |
 
-Python development dependencies are locked in `uv.lock` and declared in `pyproject.toml`, including Ruff 0.16.9, pytest 9.1.1, and pyrefly 1.3.1. Site package versions are in `docs/package.json` and `pnpm-lock.yaml`, with their rationale in [docs stack conventions](/guides/docs-stack-conventions/). Vale downloads `ai-tells` and `ai-tells-commits` v1.37.0 through the release URLs in `.vale.ini`.
+Python development dependencies are locked in `uv.lock` and declared in `pyproject.toml`, including Ruff 0.16.9, pytest 9.1.1, pyrefly 1.3.1, import-linter 2.15, and vulture 2.16. Site package versions are in `docs/package.json` and `pnpm-lock.yaml`, with their rationale in [docs stack conventions](/guides/docs-stack-conventions/). Vale downloads `ai-tells` and `ai-tells-commits` v1.37.0 through the release URLs in `.vale.ini`.
 
 ## Configuration
 
@@ -43,8 +45,13 @@ Python development dependencies are locked in `uv.lock` and declared in `pyproje
 | --- | --- |
 | Go and gofumpt | `go.mod`, `mise.toml`, `scripts/check-gofumpt.sh` |
 | golangci-lint | `.golangci.yml` |
+| Go core imports and complexity | `.golangci.yml` depguard, gocognit, gocyclo, funlen, and nestif settings |
+| Duplicate code | `.jscpd.json`, with 50 tokens and 5 lines |
+| Go dead code | `scripts/check-deadcode.sh` fails on deadcode output |
 | Ruff and pytest | `pyproject.toml`, with test markers in `tests/conftest.py` |
 | pyrefly | `[tool.pyrefly]` and sub-configs in `pyproject.toml`, strict `check:pyrefly` gate |
+| Python imports | `[tool.importlinter]` in `pyproject.toml` and the core's nested `ruff.toml` |
+| Python dead code | `[tool.vulture]` in `pyproject.toml` at confidence 60 |
 | Biome | `biome.json` |
 | Vale | `.vale.ini`, generated styles under `.vale/styles/` |
 | rumdl | `.rumdl.toml` |
@@ -58,6 +65,8 @@ Python development dependencies are locked in `uv.lock` and declared in `pyproje
 
 `GOTOOLCHAIN=local` prevents an implicit Go download. `UV_PYTHON_PREFERENCE=only-system` selects mise's Python. Go checks include module tidiness and verification, then lint, build, and race-enabled shuffled tests. `check:pyrefly` runs in the `check` aggregate and CI.
 
+The `check` aggregate also runs `check:imports`, `check:dupl`, and `check:deadcode`. Go and Python complexity checks run in their existing linter tasks. Biome checks the TypeScript complexity rules at error level. Recalibrate thresholds at the first retro with phase 2 code.
+
 ## Mise tasks
 
 | Task | Purpose |
@@ -68,6 +77,9 @@ Python development dependencies are locked in `uv.lock` and declared in `pyproje
 | `fmt:go` | Format Go with gofumpt |
 | `build` | Build bin/agentd and bin/agentctl, stamping VERSION (default dev) into the binaries |
 | `check:ruff` | Lint and check formatting of Python with ruff |
+| `check:imports` | Check Python core and shell import contracts |
+| `check:dupl` | Fail on exact duplicate blocks in Go, Python, and TypeScript |
+| `check:deadcode` | Fail on unreachable Go functions and unused Python names |
 | `fmt:ruff` | Fix and format Python with ruff |
 | `check:pytest` | Run the Python tests |
 | `check:pyrefly` | Type check Python with pyrefly in strict mode |
@@ -97,7 +109,7 @@ The PR-body and imported-research tasks need arguments from a PR or base ref and
 
 ## Prek hooks
 
-The built-in hooks remove trailing whitespace, fix the final newline, and reject added large files. Local pre-commit hooks check staged secrets with gitleaks, Go formatting and golangci-lint, Ruff lint and formatting, strict pyrefly, Biome, tombi lint and formatting, ryl, rumdl, paragraph wrapping, Vale prose, Mermaid fences, and experiment layout. Tool hooks run through mise, with the shell-only experiment check invoked directly. The pyrefly hook passes no file names so project excludes apply.
+The built-in hooks remove trailing whitespace, fix the final newline, and reject added large files. Local pre-commit hooks check staged secrets with gitleaks, Go formatting and golangci-lint, Ruff lint and formatting, import-linter, strict pyrefly, Biome, tombi lint and formatting, ryl, rumdl, paragraph wrapping, Vale prose, Mermaid fences, and experiment layout. Tool hooks run through mise, with the shell-only experiment check invoked directly. The import-linter and pyrefly hooks pass no file names so whole-project configuration applies.
 
 The commit-msg hook runs Vale with `ai-tells` and `ai-tells-commits`. Real commits cannot bypass hooks. The exception is an incomplete throwaway work-in-progress commit that is removed before shared history, as described in `AGENTS.md`.
 
@@ -108,6 +120,7 @@ The commit-msg hook runs Vale with `ai-tells` and `ai-tells-commits`. Real commi
 | `scripts/markdown-files.sh` | Enumerates tracked and unignored Markdown, excluding imported research |
 | `scripts/check-vale.sh` | Synchronizes missing styles and checks supplied files or the Markdown inventory |
 | `scripts/check-gofumpt.sh` | Fails on Go files needing formatting |
+| `scripts/check-deadcode.sh` | Fails when deadcode prints an unreachable function |
 | `scripts/check-mermaid.sh` | Installs the locked parser package and checks supplied files or the inventory |
 | `scripts/mermaid-check/check.mjs` | Extracts fenced Mermaid and parses it with Mermaid |
 | `scripts/check-experiments.sh` | Requires `NN-slug`, README, evidence directory, and versions, except the phase 0 assessment |
