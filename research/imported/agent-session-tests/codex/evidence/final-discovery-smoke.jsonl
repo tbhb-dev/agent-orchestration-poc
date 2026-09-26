@@ -1,0 +1,3 @@
+{"observed_at": 1790434876.739239, "kind": "initialize", "data": {"id": 1, "result": {"userAgent": "codex-tui/0.157.1 (Mac OS 26.5.1; arm64) Ghostty (session_stream_probe; 0.1.0)", "codexHome": "/Users/tony/.codex", "platformFamily": "unix", "platformOs": "macos"}}}
+{"observed_at": 1790434876.740095, "kind": "candidate", "data": {"id": "01a0de2d-ca98-7be2-86ee-4083a0dee38a", "cwd": "/Users/tony/Code/github.com/tbhb/agent-session-tests", "status": {"type": "active", "activeFlags": []}, "path": "/Users/tony/.codex/sessions/2026/09/26/rollout-2026-09-26T10-45-38-01a0de2d-ca98-7be2-86ee-4083a0dee38a.jsonl", "cliVersion": "0.157.1", "source": "vscode"}}
+{"observed_at": 1790434876.740108, "kind": "discovery_summary", "data": {"loaded_count": 2, "matching_count": 1}}

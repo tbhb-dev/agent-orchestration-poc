@@ -1,0 +1,30 @@
+{
+  "initialize": {
+    "id": 1,
+    "result": {
+      "userAgent": "codex-tui/0.157.1 (Mac OS 26.5.1; arm64) Ghostty (own_harness_probe; 0.1)",
+      "codexHome": "/Users/tony/.codex",
+      "platformFamily": "unix",
+      "platformOs": "macos"
+    }
+  },
+  "resume_error": null,
+  "thread": {
+    "id": "01a0de2d-ca98-7be2-86ee-4083a0dee38a",
+    "status": {
+      "type": "active",
+      "activeFlags": []
+    },
+    "source": "vscode",
+    "cliVersion": "0.157.1",
+    "historyMode": "paginated"
+  },
+  "notification_counts": {
+    "thread/goal/cleared": 1,
+    "thread/tokenUsage/updated": 1,
+    "turn/diff/updated": 1,
+    "item/started": 2,
+    "item/completed": 2,
+    "item/agentMessage/delta": 73
+  }
+}

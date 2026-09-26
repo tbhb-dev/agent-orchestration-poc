@@ -1,0 +1,55 @@
+{
+  "from": "0.156.1",
+  "to": "0.157.1",
+  "structurallyChangedExistingFiles": [
+    "codex_app_server_protocol.v2.schemas.json",
+    "codex_app_server_protocol.schemas.json",
+    "ClientRequest.json",
+    "ServerNotification.json",
+    "v1/InitializeParams.json",
+    "v2/PluginShareListResponse.json",
+    "v2/ThreadItemsListResponse.json",
+    "v2/McpResourceReadParams.json",
+    "v2/PluginSearchResponse.json",
+    "v2/ListMcpServerStatusResponse.json",
+    "v2/PluginListResponse.json",
+    "v2/PluginInstalledResponse.json",
+    "v2/PluginReadResponse.json",
+    "v2/ThreadRealtimeStartParams.json"
+  ],
+  "selectedDifferences": {
+    "v1/InitializeParams.json": [
+      {
+        "path": "/definitions/InitializeCapabilities/properties/explicitGatewayOauth",
+        "change": "added",
+        "value": {
+          "type": "boolean"
+        }
+      }
+    ],
+    "v2/ThreadItemsListResponse.json": [
+      {
+        "path": "/definitions/ThreadItemEntry/properties/completedAtMs",
+        "change": "added",
+        "value": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      {
+        "path": "/definitions/ThreadItemEntry/properties/startedAtMs",
+        "change": "added",
+        "value": {
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      }
+    ]
+  }
+}

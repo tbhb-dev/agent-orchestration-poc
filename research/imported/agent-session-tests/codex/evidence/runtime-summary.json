@@ -1,0 +1,73 @@
+{
+  "parent": {
+    "path": "/Users/tony/.codex/sessions/2026/09/26/rollout-2026-09-26T10-45-38-01a0de2d-ca98-7be2-86ee-4083a0dee38a.jsonl",
+    "metadata": {
+      "id": "01a0de2d-ca98-7be2-86ee-4083a0dee38a",
+      "cwd": "/Users/tony/Code/github.com/tbhb/agent-session-tests",
+      "originator": "codex-tui",
+      "cli_version": "0.157.1",
+      "source": "vscode",
+      "model_provider": "openai"
+    },
+    "records": {
+      "session_meta/None": 1,
+      "event_msg/task_started": 1,
+      "response_item/message": 13,
+      "world_state/None": 1,
+      "turn_context/None": 1,
+      "event_msg/item_completed": 82,
+      "response_item/custom_tool_call": 29,
+      "token_usage_record/None": 29,
+      "response_item/custom_tool_call_output": 28,
+      "event_msg/token_count": 28,
+      "response_item/reasoning": 24
+    }
+  },
+  "daemon_test": {
+    "path": "/Users/tony/.codex/sessions/2026/09/26/rollout-2026-09-26T10-48-50-01a0de30-b8f5-7b71-8477-2b26f44469b6.jsonl",
+    "metadata": {
+      "id": "01a0de30-b8f5-7b71-8477-2b26f44469b6",
+      "cwd": "/Users/tony/Code/github.com/tbhb/agent-session-tests/codex",
+      "originator": "codex-tui",
+      "cli_version": "0.157.1",
+      "source": "vscode",
+      "model_provider": "openai"
+    },
+    "records": {
+      "session_meta/None": 1,
+      "event_msg/thread_settings_applied": 3,
+      "event_msg/task_started": 3,
+      "response_item/message": 13,
+      "world_state/None": 1,
+      "turn_context/None": 3,
+      "event_msg/item_completed": 12,
+      "response_item/custom_tool_call": 3,
+      "token_usage_record/None": 6,
+      "response_item/custom_tool_call_output": 3,
+      "event_msg/token_count": 6,
+      "event_msg/task_complete": 3
+    }
+  },
+  "standalone_test": {
+    "path": "/Users/tony/.codex/sessions/2026/09/26/rollout-2026-09-26T10-54-38-01a0de36-0819-78a3-98ec-9ff6b3aba5cb.jsonl",
+    "metadata": {
+      "id": "01a0de36-0819-78a3-98ec-9ff6b3aba5cb",
+      "cwd": "/Users/tony/Code/github.com/tbhb/agent-session-tests/codex/standalone",
+      "originator": "codex-tui",
+      "cli_version": "0.157.1",
+      "source": "cli",
+      "model_provider": "openai"
+    },
+    "records": {
+      "session_meta/None": 1,
+      "event_msg/task_started": 1,
+      "response_item/message": 6,
+      "world_state/None": 1,
+      "turn_context/None": 1,
+      "event_msg/item_completed": 2,
+      "token_usage_record/None": 1,
+      "event_msg/token_count": 1,
+      "event_msg/task_complete": 1
+    }
+  }
+}

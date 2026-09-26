@@ -1,0 +1,4 @@
+{
+  "submitted_at": 1790434227.8267531,
+  "prompt": "This is a controlled live-output capture experiment. Do not inspect files or use skills. First say STREAM_COMMENTARY_ALPHA as a progress message. Then run exactly this one shell command: python3 -u -c 'import time; print(\"STREAM_TOOL_ONE\", flush=True); time.sleep(4); print(\"STREAM_TOOL_TWO\", flush=True); time.sleep(4); print(\"STREAM_TOOL_THREE\", flush=True)'. After it completes, write a final response beginning STREAM_FINAL_ALPHA followed by the numbers 1 through 80 in order, separated by spaces. Do nothing else."
+}

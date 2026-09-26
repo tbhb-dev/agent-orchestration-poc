@@ -1,0 +1,5 @@
+Hello! I am **Antigravity**, a powerful agentic AI coding assistant designed by the Google DeepMind team working on Advanced Agentic Coding. I am currently powered by the Gemini 3.1 Pro model.
+
+I'm here to pair program with you and help solve your coding tasks—whether that involves creating a new codebase, modifying or debugging an existing one, or simply answering questions you might have. 
+
+How can I help you today?

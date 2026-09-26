@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(codex queue:*)"
+    ]
+  },
+  "sandbox": {
+    "enabled": true,
+    "excludedCommands": [
+      "codex queue:*"
+    ],
+    "autoAllowBashIfSandboxed": true,
+    "network": {
+      "allowedDomains": [
+        "127.0.0.1",
+        "localhost",
+        "[::1]"
+      ]
+    }
+  }
+}
