@@ -1,14 +1,14 @@
 # Coordinator handoff
 
-Date: 2026-09-26, evening. Previous coordinator session: `0b1b7917-950a-4135-8c89-7951a84c8690`. Start the new Claude Code session on `claude-fable-5-1[1m]` with `@HANDOFF.md`.
+Date: 2026-09-26, evening, after operator approval. Previous coordinator session: `0b1b7917-950a-4135-8c89-7951a84c8690`. Start the new Claude Code session on `claude-fable-5-1[1m]` with `@HANDOFF.md`.
 
 ## Current phase and operator decisions
 
-Phase 0 is complete pending the operator's approval of the revised plan as a whole and the model and effort assignments. Permission modes, concurrency of three workers per harness, unattended `agy`, squash-only merges, the evidence-commit policy, and coordinator-managed branch protection are approved or applied. The operator must also confirm whether the `tbhb` account has GitHub Pro, which is needed to enforce branch protection on this private personal repository. See [PLAN.md](PLAN.md), Status, GitHub workflow, Concurrency, Permission modes, and Phase 0; and [the checkpoint report](reports/phase-0-checkpoint.md), Open questions.
+Phase 0 is complete. The operator approved the revised plan and the model and effort assignments ("I approve the plan") and confirmed the `tbhb` account has GitHub Pro. Permission modes, concurrency of three workers per harness, unattended `agy`, squash-only merges, the evidence-commit policy, and coordinator-managed branch protection are approved or applied. The coordinator enables a ruleset on `main` after the first green CI run in phase 1. See [PLAN.md](PLAN.md), Status, GitHub workflow, Concurrency, Permission modes, and Phase 0; and [the checkpoint report](reports/phase-0-checkpoint.md), Open questions.
 
 ## Open pull requests
 
-[PR #1](https://github.com/tbhb/agent-orchestration-poc/pull/1) is the only open PR. It carries the revised phase 0 plan on `docs/phase-0-plan`, four commits above `main` at `7a57116`, and awaits operator approval before a squash merge. No issues exist yet; the [Project](https://github.com/users/tbhb/projects/9) has no items.
+[PR #1](https://github.com/tbhb/agent-orchestration-poc/pull/1) was squash-merged into `main` as `7cac91a` ("docs: add the phase 0 plan, checkpoint report, and assessment evidence (#1)"). Its `docs/phase-0-plan` branch and worktree are gone. The only open PR carries this update on `docs/handoff-after-approval`; the coordinator merges it itself. No issues exist yet; the [Project](https://github.com/users/tbhb/projects/9) has no items.
 
 ## Worker roster
 
@@ -30,9 +30,9 @@ See [PLAN.md](PLAN.md): Names; Repository layout; GitHub workflow; Retrospective
 
 ## Next three actions
 
-1. If the operator has approved the revised plan and model assignments, squash merge PR #1 and record the GitHub Pro answer.
-2. Dispatch phase 1 items 1 (tooling), 1a (Go research gate), 1b (Python research gate), and 2 (skeleton) in parallel worktrees using the models and efforts in [PLAN.md](PLAN.md). Name the cloned sources each brief must read, as recorded in [dependency-clones.md](experiments/00-system-assessment/dependency-clones.md). Gate skeleton code on the Go and Python research outputs.
-3. Run the first `codex exec` devlog entry for phase 0 under `reports/devlog/` and open the phase 0 retro as the first retro. The retro must propose at least one mechanical check; the silent-worker timer and case-insensitive exclude are candidates. See [PLAN.md](PLAN.md), Retrospectives, devlog, and mechanical checks.
+1. Start phase 1 in a fresh coordinator session. Dispatch items 1 (tooling, including the first batch of mechanical checks and `mise install`), 1a (Go research gate), 1b (Python research gate), and 2 (skeleton) in parallel worktrees using the models and efforts in [PLAN.md](PLAN.md). Name the cloned sources each brief must read, as recorded in [dependency-clones.md](experiments/00-system-assessment/dependency-clones.md). Gate skeleton code on the Go and Python research outputs.
+2. Run the first `codex exec` devlog entry for phase 0 under `reports/devlog/` and the phase 0 retro as the first retro. The retro must propose at least one mechanical check; the silent-worker timer and case-insensitive exclude are candidates. See [PLAN.md](PLAN.md), Retrospectives, devlog, and mechanical checks.
+3. As CI lands, enable the `main` ruleset: require a pull request, require the CI job, and block force pushes and deletion. Record it in the phase 1 checkpoint report.
 
 ## Verify before acting
 
