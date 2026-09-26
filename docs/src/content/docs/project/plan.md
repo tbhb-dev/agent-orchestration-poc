@@ -5,7 +5,22 @@ description: The approved phases, worker assignments, research gates, and operat
 
 ## Status
 
-Written 2026-09-26 for the phase 0 checkpoint, this plan records the coordinator's decisions, subject to the requirements in `FABLE_HANDOFF.md`. The operator approved phase 0 and the revised plan and model and effort assignments on 2026-09-26. Phase 1 is in progress. The remaining sections preserve the approved plan, including its original checkpoint questions. See [project history](/project/history/) for merged work since approval and [repository layout](/workflow/repository-layout/) for the current tree.
+Written 2026-09-26 for the phase 0 checkpoint, this plan records the coordinator's decisions, subject to the requirements in `FABLE_HANDOFF.md`. The operator approved phase 0 and the revised plan and model and effort assignments on 2026-09-26. Phase 1 foundation is complete pending operator approval. Boundary and quality-gate implementation remains a phase 2 prerequisite. See [phase 1 checkpoint](/project/phase-1-checkpoint/). The remaining sections preserve the approved plan, including its original checkpoint questions. See [project history](/project/history/) for merged work since approval and [repository layout](/workflow/repository-layout/) for the current tree.
+
+## Operator requirements added in phase 1
+
+These requirements were added on 2026-09-26. `reports/inputs/phase-1-coordinator-notes.md` preserves the inputs. Phase 1 approval, confirmation of the revised model assignments, and the pyrefly exceptions remain checkpoint questions.
+
+- The coordinator may merge ordinary reviewed PRs after green CI. The operator adjusted local Claude permissions after merge and settings denials. Security policy, credentials, egress, and changes outside the repository remain operator boundaries.
+- Send permission requests through AskUserQuestion so the mobile app notifies the operator. Report Codex and agy permission blocks that project configuration would fix.
+- Give Codex network access per launch with `-c sandbox_workspace_write.network_access=true`.
+- Keep the Astro background docs daemon available to the operator at `http://localhost:4322`.
+- Apply functional core, imperative shell to all code. Every target language needs a boundary-enforcement tool. Go uses `internal/core/`, and Python uses `agent_orchestration_poc.core` and `.shell`. Issue #58 records depguard, import-linter, and Ruff TID251.
+- Require property testing and mutation testing, with implemented gates before the first core logic lands. Issues #59 and #60 hold the research and requirements.
+- Use strict pyrefly for Python. The operator may overturn the two annotation relaxations in tests and experiments recorded in decision 0002.
+- Require duplicate-code, dead-code, and complexity gates for all languages. Issues #62 and #63 record tools and thresholds.
+- Heartbeat at least every 15 minutes. Recreate a 14-minute session cron at rollover to preserve the session cache and check silent workers.
+- Shift implementation and research to Codex Sol at high, reviews and design documents to Astra at medium, and first-pass PR review to `codex exec review`. Keep Claude for coordination and Sonnet 5 cross-checks of bus semantics, credentials, and security. Keep agy unused until the provisioner exists.
 
 ## What is being built
 
@@ -316,28 +331,17 @@ The tables below reproduce model ids, display names, and accepted effort values 
 
 ### Assignments
 
-Assignments and their rationale follow `reports/inputs/phase-0-decisions.md`, section 9, informed by the vendor documentation recorded in `experiments/00-system-assessment/model-research.md`.
+The phase 1 usage snapshot has 41% of weekly Fable usage, 24% of the overall weekly Claude limit, and 34% of the current session limit consumed, with 99% of the Codex weekly limit remaining. These operator-supplied figures motivate the revised assignments below. `reports/inputs/phase-1-coordinator-notes.md` records them. Confirm the assignments at the phase 1 checkpoint and refresh usage before dispatch.
 
 | Worker or task | Harness | Model | Effort | Why |
 | --- | --- | --- | --- | --- |
-| Coordinator (this session and its successors) | Claude Code | `claude-fable-5-1[1m]` | high | Anthropic's model for long-horizon agentic work at its default effort, with the 1M context because coordination reads everything. Fable's half-of-weekly cap is a reason the coordinator delegates reading to subagents on other models. |
-| Coordinator subagents: implementation (phase 1 items) | Claude Code | `claude-opus-5-5` | medium | The vendor's recommended starting point: Opus 5.5 at its default effort matched Opus 5 at high on repository tasks. |
-| Coordinator subagents: search, inventory, verification | Claude Code | `claude-sonnet-5` | medium | Fan-out work, medium on Sonnet 5 is documented as comparable to Sonnet 4.6 at high. |
-| Coordinator subagents: mechanical git and file operations | Claude Code | `claude-sonnet-5` | low | Scripted steps, low is documented as suited to subagents. |
-| Coordinator subagents: design-critical review | Claude Code | `claude-fable-5-1` | high | Where a missed defect is expensive (bus semantics, credentials, security policy). |
-| `build/claude-impl-1`, `build/claude-impl-2` | Claude Code | `claude-opus-5-5` | medium | Implementer default per the vendor, high when an item fails once at medium, `claude-fable-5-1` at high for design-heavy items at the coordinator's call. |
-| `build/claude-review` | Claude Code | `claude-opus-5-5` | high | Review is where "skipped a file, didn't run the tests" failures cost most, which is the vendor's trigger for stepping effort up. Experiments when idle at medium. |
-| `build/codex-docs` and routine `codex exec` document runs (pages, retros, reports) | Codex | `gpt-6-sol` | medium | OpenAI's starting point for Sol, and the docs writer is always on, Astra's Pro allowance is too small for an always-on role. |
-| Plans, design pages, and decision records (`codex exec` or `build/codex-docs` on request) | Codex | `gpt-6-astra` | medium | Judgment-heavy documents, the phase 0 plan was written at Astra's default and needed one revision for judgment, not facts. |
-| `build/codex-impl` | Codex | `gpt-6-sol` | medium | The vendor's coding model at its starting effort, high for debugging and multi-file changes, `gpt-6-astra` at high for hard items at the coordinator's call. |
-| `build/codex-review` and `codex exec review` runs | Codex | `gpt-6-astra` | low | Cross-harness review of Claude PRs, OpenAI's starting point for Astra is low, stepping up when a review misses something a retro catches. |
-| `build/agy-research` | `agy` | `gemini-3.1-pro-high` | high (the variant) | Bounded research with a defined output shape. |
-| `build/agy-probe` | `agy` | `gemini-3.8-flash-high` | high (the variant) | Runs specified probe scripts and reports, speed matters more than depth. |
-| `build/agy-impl` | `agy` | `gemini-3.1-pro-high` | high (the variant) | The strongest Gemini coding option on the list, small, fully specified items only, the seat is probationary. |
-| Coordinator agent teams and workflows (non-implementation) | Claude Code | `claude-sonnet-5`, or `claude-opus-5-5` for review passes | medium, or high for review | Anthropic's guidance for teammates, fan-out work stays cheap. |
-| Utility tier: mechanical, fully specified tasks whose output a program verifies (checksum manifests, converting probe output to tables, running a fixed verification script, parsing logs and CI results for retros, PR template checks) | Claude Code | `claude-haiku-4-5-20251001` | Not applicable (no effort control per decision 9, not established by the inventory) | Anthropic's guidance for simple subagent tasks, the verification step, not the model, carries the correctness. |
-| Utility tier on the Codex side (the same task kinds, when a Codex worker owns the item) | Codex | `gpt-6-luna` | medium | OpenAI's high-volume model, its Pro allowance is an order of magnitude larger than Sol's. |
-| `agy` headless probes (`--print`) and quick tasks | `agy` | `gemini-3.8-flash-medium` | medium (the variant) | The current Flash model at Google's default level. |
+| Coordinator | Claude Code | `claude-fable-5-1[1m]` | high, retained | Keep the coordinator session while shifting worker load to Codex. |
+| Implementation and research | Codex | `gpt-6-sol` | high | Use available Codex capacity for phase 2 work and remaining gates. |
+| Routine documentation | Codex | `gpt-6-sol` | medium, retained | The phase 1 revision does not change the routine docs assignment. |
+| Reviews and design-heavy documents | Codex | `gpt-6-astra` | medium | Apply the revised review and design assignment. |
+| First-pass PR review | Codex, `codex exec review` | `gpt-6-astra` | medium | Establish a review before coordinator review and merge. |
+| Cross-checks of Codex bus, credentials, and security PRs | Claude Code | `claude-sonnet-5` | medium, retained | Keep a different harness on these reviews while conserving Fable usage. |
+| agy workers | `agy` | Deferred | Deferred | Leave unused until the provisioner exists. |
 
 Not used: `ultra` on Codex (it delegates tasks on its own, which conflicts with the coordinator owning dispatch). Claude Code's `ultracode` setting for the same reason and because it reaches subscription limits sooner. The Claude and GPT-OSS models inside `agy` (the point of the third harness is a third model family). The `gpt-5.x` line. `max` effort anywhere until a measured gain justifies it. The utility tier is never given a task that needs judgment about whether something is wrong. The retros track rework caused by utility-tier runs and move a task class up if it recurs.
 
@@ -422,6 +426,7 @@ Checkpoint: the foundation is merged, the import and its manifest are merged, th
 
 Build `agentd` v0 and `agentctl` with subagents, then switch to provisioned workers as soon as one of each harness can be spawned and reached over the bus. Work items:
 
+0. Merge boundary enforcement from #58 before dispatching #26 and #27 in parallel. Implement property testing (#59) and mutation testing (#60) before the first core logic lands. Enforce duplicate-code and dead-code gates (#62) and complexity limits (#63) through mise and CI. Keep strict pyrefly in the checks and resolve the operator's exception decision. Apply equivalent boundary and quality gates before adding another target language.
 1. Embedded NATS server in `agentd` with JetStream, one account per group, per-agent credentials (nkeys or user JWTs) with publish permissions limited to subjects ending in the agent's own name, the subject and stream layout from `design-sketch/04-messaging-and-shared-context.md`, and a `build` group.
 2. `agentctl join|send|receive|ack|status|roster` against it, with compact machine-readable output.
 3. The registry (SQLite) and the host-tmux backend: `spawn`, `list`, `capture`, `nudge`, `stop`, and group start, stop, and status, creating the worktree and branch, minting credentials, and starting the harness in a tmux window with a brief file. The launch recipe per harness includes the writable roots its worktree needs to stage and commit.
