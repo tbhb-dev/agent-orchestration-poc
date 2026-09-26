@@ -1,0 +1,3 @@
+/Users/tony/Code/github.com/tbhb/agent-orchestration-poc                                            06e436f [main]
+/Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.worktrees/docs-phase-1-checkpoint         06e436f [docs/phase-1-checkpoint]
+/Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.worktrees/tooling-58-boundaries-and-gates a3fcce8 [tooling/58-boundaries-and-gates]

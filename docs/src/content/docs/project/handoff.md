@@ -1,44 +1,68 @@
 ---
 title: Coordinator handoff
-description: Coordinator state as of the evening of 2026-09-26 after phase 0 approval.
+description: Phase 1 checkpoint state and the prerequisites for starting phase 2.
 ---
 
-This is the handoff as of its recorded date. The coordinator has Codex regenerate it at every checkpoint and session rollover. Verify live state before acting. Later merges are recorded in [project history](/project/history/).
-
-Date: 2026-09-26, evening, after operator approval. Previous coordinator session: `0b1b7917-950a-4135-8c89-7951a84c8690`. Start the new Claude Code session on `claude-fable-5-1[1m]` with `@HANDOFF.md`.
+Date: 2026-09-26. Previous coordinator session: `0c08c1dc-01da-4925-b0b5-05e7a9a20588`. Start a fresh `claude-fable-5-1[1m]` session with `@HANDOFF.md`. This snapshot includes merges through [PR #68](https://github.com/tbhb/agent-orchestration-poc/pull/68) at 22:22:57 UTC. Verify live state before acting.
 
 ## Current phase and operator decisions
 
-Phase 0 is complete. The operator approved the revised plan and the model and effort assignments ("I approve the plan") and confirmed the `tbhb` account has GitHub Pro. Permission modes, concurrency of three workers per harness, unattended `agy`, squash-only merges, the evidence-commit policy, and coordinator-managed branch protection are approved or applied. The coordinator enables a ruleset on `main` after the first green CI run in phase 1. See [PLAN.md](/project/plan/), Status, GitHub workflow, Concurrency, Permission modes, and Phase 0. And [the checkpoint report](/project/phase-0-checkpoint/), Open questions.
+Phase 1 foundation is complete pending operator approval. Phase 2 has not started. The operator must approve the checkpoint and confirm revised model assignments. Other decisions cover pyrefly's two annotation relaxations, three Project UI settings, and whether #35 may create VMs and images. The [checkpoint report](/project/phase-1-checkpoint/) records the questions and risks.
 
-## Open pull requests
+Phase 0 approval and GitHub Pro confirmation remain recorded decisions. Ruleset `main` (24053242) is active. Ordinary reviewed PRs may be merged by the coordinator after green CI. Security policy, credentials, egress, and host changes still require the operator.
 
-[PR #1](https://github.com/tbhb/agent-orchestration-poc/pull/1) was squash-merged into `main` as `7cac91a` (`docs: add the phase 0 plan, checkpoint report, and assessment evidence (#1)`). Its `docs/phase-0-plan` branch and worktree are gone. The only open PR contains this update on `docs/handoff-after-approval`. The coordinator merges it itself. No issues exist yet. The [Project](https://github.com/users/tbhb/projects/9) has no items.
+## Pull requests and in-flight work
+
+Paths below are relative to `/Users/tony/Code/github.com/tbhb/agent-orchestration-poc`. The saved `gh pr list` refresh contains no pending PR at its collection time. Branch names identify work across later merges. The [command evidence](https://github.com/tbhb/agent-orchestration-poc/tree/dedf58fb223e086cc185a8a7e16a1f355d037185/reports/inputs/phase-1-history) includes the initial list, refresh, and worktree inventory.
+
+| Work | Branch | Worktree | Snapshot |
+| --- | --- | --- | --- |
+| Boundary, duplicate-code, dead-code, and complexity enforcement, #58, #62, #63 | `tooling/58-boundaries-and-gates` | `.worktrees/tooling-58-boundaries-and-gates` | Codex work in flight. A PR was still pending in the captured list. |
+| Property and mutation research, #59 and #60 | `research/59-60-testing` | `.worktrees/research-59-60-testing` (removed) | [PR #68](https://github.com/tbhb/agent-orchestration-poc/pull/68) merged. The gates still need code. The final inventory confirms worktree cleanup. |
+| Checkpoint documents, #69 | `docs/phase-1-checkpoint` | `.worktrees/docs-phase-1-checkpoint` | This document change. Coordinator review and merge follow CI. |
 
 ## Worker roster
 
-No workers are provisioned or running. Phase 0 used one-shot coordinator subagents for system assessment, dependency clones, the initial commit, permission facts, model inventory, model research, harness research, GitHub Projects research, and NATS research. All have finished.
+No workers are provisioned. Codex runs are launched from the coordinator's shell. The boundary branch is the remaining coding dispatch in the supplied roster. A worktree listing does not prove process liveness. Capture its current status before redispatching. The bus roster and status bucket are still unbuilt. `agy` remains unused until the provisioner exists.
 
-## Decisions since the operator handoff
+## Decisions since the last handoff
 
-See the sections in [PLAN.md](/project/plan/) covering Names, Repository layout, GitHub workflow, Retrospectives, devlog, and mechanical checks, Coordinator session rollover, The build group, Concurrency, Permission modes, Models and effort levels, Dependency sources, Phases, Departures from the design sketch, Assumptions register, Research gates for languages and stacks, Standing rules for workers, and Open questions for the operator. The [phase 0 decisions brief](https://github.com/tbhb/agent-orchestration-poc/blob/main/reports/inputs/phase-0-decisions.md) preserves the inputs.
+- Coding and research move to Codex `gpt-6-sol` at high. Reviews and design documents use `gpt-6-astra` at medium, with `codex exec review` first. Fable coordinates. Sonnet 5 cross-checks bus semantics, credentials, and security. Revised assignments await confirmation.
+- The usage snapshot has Fable weekly usage at 41%, overall Claude weekly usage at 24%, and session usage at 34%, all consumed. Codex weekly usage has 99% remaining. Refresh the meters before dispatch.
+- Functional core, imperative shell is binding. Every language needs boundary enforcement, property and mutation tests, duplicate-code and dead-code gates, and complexity limits. #58 through #63 track the requirements and research.
+- Strict pyrefly replaces ty. The test and experiment settings relax `implicit-any-parameter` and `unannotated-return` pending operator review. [Decision 0002](/decisions/0002-python-type-checker/) records the settings.
+- Subagent definitions in `.claude/agents/` hold model and effort. The prose lint exempts raw gate notes under `research/gates/`. Codex-written pages are linted. The plan retains its existing exemption. Conventions live under `guides/`, and root plan and handoff files are pointers.
+- Send permission requests to the operator through AskUserQuestion. Report Codex and agy blocks that project configuration could fix. Codex launches include `-c sandbox_workspace_write.network_access=true`.
+- Keep the docs daemon available at `http://localhost:4322`. Recreate a 14-minute session heartbeat for cache continuity and worker check-ins.
 
 ## Gotchas discovered
 
-- `codex exec` in a linked worktree needs `--add-dir <repo>/.git` to stage and commit. See [PLAN.md](/project/plan/), Permission modes, Codex.
-- Mise shims are absent from non-interactive shells. Run provisioned processes and CI steps through mise. See [PLAN.md](/project/plan/), What the system assessment established.
-- The operator's Codex config inherits only core environment variables and strips names matching `*KEY*`, `*SECRET*`, or `*TOKEN*` from tool shells. See [PLAN.md](/project/plan/), Permission modes, Codex.
-- A subagent lead stalled for nearly two hours after its sub-reports finished. Give every dispatch longer than fifteen minutes a heartbeat monitor. See [PLAN.md](/project/plan/), Retrospectives, devlog, and mechanical checks.
-- Git's `info/exclude` is case-insensitive on this filesystem: `/INPUTS/` in the common exclude file hid `reports/inputs/`. Check ignore behavior when adding case-variant paths.
-- The operator's Codex config sets `approvals_reviewer = "auto_review"`. `approval_policy = "never"` avoids invoking that reviewer. See [PLAN.md](/project/plan/), Permission modes, Codex.
-- Attribution trailers are forbidden in commits and PR bodies. The PR body becomes the squash commit body. See [PLAN.md](/project/plan/), GitHub workflow, Commits and Pull requests.
+- zsh does not word-split unquoted variables, and two coordinator scripts failed. Use explicit arguments or bash scripts.
+- Branches predating workflow merges can lack CI. Rebase and verify the workflow definitions before review.
+- Ruff needs exclusions for imported research and fenced Markdown code.
+- Semicolons in citation lists fail the prose rules. Run Vale before handing pages back.
+- `gh pr checks --watch` returned early in this session. Confirm every required check concluded success for the current head.
+- Issue #6 was closed early and reopened. Check merged-PR evidence before closing work.
+- Links into local git metadata fail in CI. Keep machine-local paths as code text.
+- Claude auto mode denied merges, settings edits, and cleanup. The operator owns permission changes.
+- Codex could not run Chromium in its sandbox. Use docs CI for rendering and internal links.
+- The coordinator Bash tool caps commands at ten minutes. Launch longer Codex work detached and monitor it.
+- Linked Codex worktrees need the common `.git` directory writable to stage and commit.
+- Non-interactive shells may lack mise shims. Run project tools through mise.
+- A case-insensitive `/INPUTS/` exclude previously hid `reports/inputs/`. Check ignored paths before staging evidence.
 
 ## Next three actions
 
-1. Start phase 1 in a fresh coordinator session. Dispatch items 1 (tooling, including the first batch of mechanical checks and `mise install`), 1a (Go research gate), 1b (Python research gate), and 2 (skeleton) in parallel worktrees using the models and efforts in [PLAN.md](/project/plan/). Specify the cloned sources each brief must read, as recorded in [dependency-clones.md](https://github.com/tbhb/agent-orchestration-poc/blob/main/experiments/00-system-assessment/dependency-clones.md). Gate skeleton code on the Go and Python research outputs.
-2. Run the first `codex exec` devlog entry for phase 0 under `reports/devlog/` and the phase 0 retro as the first retro. The retro must propose at least one mechanical check. The silent-worker timer and case-insensitive exclude are candidates. See [PLAN.md](/project/plan/), Retrospectives, devlog, and mechanical checks.
-3. When CI merges, enable the `main` ruleset with a pull request requirement and required CI job. Block force pushes and deletion. Record it in the phase 1 checkpoint report.
+1. Verify live state and present the [checkpoint report](/project/phase-1-checkpoint/) for phase 1 approval, model confirmation, and the pyrefly decision. Complete this documentation PR's review and merge through the coordinator.
+2. Review and merge `tooling/58-boundaries-and-gates`. Turn #59 and #60 research into implemented checks before core code merges, with #62 and #63 enforcement in the merge path.
+3. After operator approval and boundary enforcement, dispatch #26 and #27 to Codex Sol at high in separate worktrees. Start the next coordinator session from this handoff and retain the 14-minute heartbeat.
 
 ## Verify before acting
 
-Run `git status` on `main` and this worktree. Inspect `gh pr view 1`, the Project board, and the coordinator's memory index at `~/.claude/projects/-Users-tony-Code-github-com-tbhb-agent-orchestration-poc/memory/MEMORY.md`. The index loads automatically, and its linked files contain today's operator preferences. Read them before acting. Report any discrepancy with this document to the operator. See [PLAN.md](/project/plan/), Coordinator session rollover.
+Run `git status`, `git worktree list`, `gh pr list --state open`, and `gh issue list --state open`. Inspect Project 9 and the coordinator memory index at `~/.claude/projects/-Users-tony-Code-github-com-tbhb-agent-orchestration-poc/memory/MEMORY.md`. Compare PR heads, check conclusions, and the boundary branch with this snapshot. Report discrepancies to the operator. Do not infer live workers from directories.
+
+Recreate the 14-minute heartbeat cron in the new coordinator session and verify its next trigger. It also checks silent workers. No stalled worker was observed in phase 1, but the new session still needs the timer.
+
+From the docs directory, run `mise exec -- pnpm exec astro dev status`. If it shows the daemon stopped, restart it through `mise run docs:dev` with the project's background-daemon procedure and port 4322. Verify the page responds at `http://localhost:4322`. Inspect the installed CLI help before selecting daemon flags. Do not start a duplicate listener.
+
+Read the [plan](/project/plan/#operator-requirements-added-in-phase-1), the [coordinator inputs](https://github.com/tbhb/agent-orchestration-poc/blob/dedf58fb223e086cc185a8a7e16a1f355d037185/reports/inputs/phase-1-coordinator-notes.md), and the [retro actions](/retros/2026-09-26-phase-1/#action-items). Verify local permission settings without editing them. Resume `claude --resume 0c08c1dc-01da-4925-b0b5-05e7a9a20588` only if the handoff and durable records cannot recover needed context.

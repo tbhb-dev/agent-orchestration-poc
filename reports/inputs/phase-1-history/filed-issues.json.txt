@@ -1,0 +1,27 @@
+[
+  {
+    "title": "tooling(review): verify current main workflows before review",
+    "url": "https://github.com/tbhb/agent-orchestration-poc/issues/70",
+    "runs": "A mise review-preflight task called by the coordinator before review."
+  },
+  {
+    "title": "process(docs): put prose rules in the Codex brief template",
+    "url": "https://github.com/tbhb/agent-orchestration-poc/issues/71",
+    "runs": "The coordinator documentation dispatch template and the worker local Vale task."
+  },
+  {
+    "title": "tooling(ci): wait for a named check to conclude success",
+    "url": "https://github.com/tbhb/agent-orchestration-poc/issues/72",
+    "runs": "A mise task called by the coordinator before merge or completion reports."
+  },
+  {
+    "title": "tooling(workflow): audit issue closure against merged PRs",
+    "url": "https://github.com/tbhb/agent-orchestration-poc/issues/73",
+    "runs": "A scheduled GitHub Actions audit and coordinator checkpoint preflight."
+  },
+  {
+    "title": "process(coordinator): run coordinator scripts through bash",
+    "url": "https://github.com/tbhb/agent-orchestration-poc/issues/74",
+    "runs": "The coordinator shell launch procedure after the shell research gate."
+  }
+]
