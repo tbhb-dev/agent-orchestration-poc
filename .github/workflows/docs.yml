@@ -1,0 +1,47 @@
+---
+# Builds the docs site with the link validator on, the same way workers run
+# `mise run docs:check-links` locally. rehype-mermaid renders diagrams through
+# Playwright's Chromium, so the browser directory is cached by Playwright
+# version.
+name: docs
+
+"on":
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docs:
+    name: docs
+    runs-on: ubuntu-latest
+    steps:
+      # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      # v4.3.0
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c
+        with:
+          version: 2026.8.6
+          install: true
+          cache: true
+      - id: playwright
+        name: Read the Playwright version from the lockfile
+        run: |
+          version=$(grep -oE '^  playwright@[0-9]+\.[0-9]+\.[0-9]+:' \
+            pnpm-lock.yaml | head -n 1 | sed -E 's/^  playwright@//; s/:$//')
+          test -n "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      # v6.1.0
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: ~/.cache/ms-playwright
+          key: >-
+            playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - run: mise run docs:browsers
+      - run: mise run docs:check-links

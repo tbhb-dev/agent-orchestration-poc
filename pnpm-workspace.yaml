@@ -1,0 +1,10 @@
+---
+# Site dependencies live in docs/package.json; the lockfile is committed.
+# Build scripts are allowed or denied by package name, never with
+# dangerouslyAllowAllBuilds.
+packages:
+  - docs
+
+allowBuilds:
+  esbuild: false
+  sharp: false
