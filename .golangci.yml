@@ -6,6 +6,76 @@ version: "2"
 linters:
   # errcheck, govet, ineffassign, staticcheck, and unused.
   default: standard
+  enable:
+    - depguard
+    - funlen
+    - gocognit
+    - gocyclo
+    - nestif
+  settings:
+    depguard:
+      rules:
+        core:
+          # Functional core: internal/core/... takes values and returns values.
+          list-mode: lax
+          files:
+            - "**/internal/core/**"
+            - "!$test"
+          allow:
+            - net/netip
+            - net/url
+          deny:
+            - pkg: os
+              desc: >-
+                core packages do no I/O; the caller in cmd/ or an internal/
+                shell package passes values in
+            - pkg: net
+              desc: core packages open no sockets
+            - pkg: syscall
+              desc: core packages make no system calls
+            - pkg: github.com/nats-io/nats.go
+              desc: only internal/bus talks to the NATS client
+            - pkg: github.com/nats-io/nats-server
+              desc: only internal/bus embeds the NATS server
+            - pkg: github.com/tbhb/agent-orchestration-poc/internal/backend
+              desc: core packages never import a backend
+            - pkg: github.com/tbhb/agent-orchestration-poc/internal/bus
+              desc: core packages never import the bus
+            - pkg: github.com/tbhb/agent-orchestration-poc/internal/registry
+              desc: core packages never import the registry store
+            - pkg: github.com/tbhb/agent-orchestration-poc/internal/term
+              desc: core packages never import the terminal layer
+            - pkg: github.com/tbhb/agent-orchestration-poc/internal/api
+              desc: core packages never import the API server
+        core-tests:
+          # Core tests may read testdata through os.
+          # They still spawn and connect nothing.
+          list-mode: lax
+          files:
+            - "**/internal/core/**_test.go"
+          deny:
+            - pkg: os/exec
+              desc: core tests spawn nothing
+            - pkg: net
+              desc: core tests open no sockets
+            - pkg: github.com/nats-io
+              desc: core tests need no broker
+            - pkg: github.com/tbhb/agent-orchestration-poc/internal/backend
+              desc: core tests never import a backend
+    funlen:
+      lines: 60
+      statements: 40
+    gocognit:
+      min-complexity: 15
+    gocyclo:
+      min-complexity: 15
+    nestif:
+      min-complexity: 5
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          - funlen
 
 formatters:
   enable:

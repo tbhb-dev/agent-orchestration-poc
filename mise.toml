@@ -17,6 +17,8 @@ vale = "3.22.0"
 actionlint = "1.7.12"
 "npm:@biomejs/biome" = "2.5.14"
 "pipx:ryl" = "0.22.0"
+"pipx:jscpd" = "5.3.2"
+"go:golang.org/x/tools/cmd/deadcode" = "0.50.0"
 "go:github.com/tbhb/repotools/cmd/guard-markdown" = "0.9.0"
 
 [env]
@@ -31,6 +33,9 @@ description = "Run every check and the tests"
 depends = [
   "check:go",
   "check:ruff",
+  "check:imports",
+  "check:dupl",
+  "check:deadcode",
   "check:pytest",
   "check:pyrefly",
   "check:biome",
@@ -77,6 +82,18 @@ run = [
 [tasks."check:ruff"]
 description = "Lint and check formatting of Python with ruff"
 run = ["uv run ruff check .", "uv run ruff format --check ."]
+
+[tasks."check:imports"]
+description = "Check Python core and shell import contracts"
+run = "uv run lint-imports --no-logo"
+
+[tasks."check:dupl"]
+description = "Fail on duplicated code in Go, Python, and TypeScript with jscpd"
+run = "jscpd --config .jscpd.json --exit-code=1 cmd internal src tests experiments scripts apps packages"
+
+[tasks."check:deadcode"]
+description = "Fail on unreachable Go functions and unused Python names"
+run = ["scripts/check-deadcode.sh", "uv run vulture"]
 
 [tasks."fmt:ruff"]
 description = "Fix and format Python with ruff"

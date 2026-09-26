@@ -24,7 +24,21 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "preset": "recommended"
+      "preset": "recommended",
+      "complexity": {
+        "noExcessiveCognitiveComplexity": {
+          "level": "error",
+          "options": { "maxAllowedComplexity": 15 }
+        },
+        "noExcessiveLinesPerFunction": {
+          "level": "error",
+          "options": { "maxLines": 60 }
+        },
+        "useMaxParams": {
+          "level": "error",
+          "options": { "max": 5 }
+        }
+      }
     }
   }
 }

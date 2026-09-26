@@ -1,0 +1,10 @@
+extend = "../../../pyproject.toml"
+
+[lint]
+extend-select = ["TID251"]
+
+[lint.flake8-tidy-imports.banned-api]
+"os.remove".msg = "Core packages delete nothing. Move file operations to the shell."
+"os.system".msg = "Core packages spawn nothing. Move process operations to the shell."
+"pathlib.Path.write_text".msg = "Core packages write nothing. Move file operations to the shell."
+"pathlib.Path.write_bytes".msg = "Core packages write nothing. Move file operations to the shell."
