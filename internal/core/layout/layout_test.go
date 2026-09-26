@@ -32,6 +32,23 @@ func TestValidToken(t *testing.T) {
 	}
 }
 
+func TestValidAgent(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		want bool
+	}{{"alice", true}, {"operator", false}, {"bad.agent", false}} {
+		if (ValidAgent(tc.name) == nil) != tc.want {
+			t.Fatalf("ValidAgent(%q) validity != %t", tc.name, tc.want)
+		}
+	}
+	rapid.Check(t, func(t *rapid.T) {
+		name := rapid.StringMatching("[a-z][a-z0-9_-]{0,8}").Draw(t, "name")
+		if (ValidAgent(name) == nil) != (name != "operator") {
+			t.Fatalf("ValidAgent(%q) disagrees with reserved name", name)
+		}
+	})
+}
+
 func TestSubjectsAndStream(t *testing.T) {
 	for _, tc := range []struct {
 		name string
@@ -60,6 +77,7 @@ func TestSubjectsAndStream(t *testing.T) {
 		{"event", func() error { _, err := Event("build", "a.b", "alice"); return err }},
 		{"stream", func() error { _, err := Stream("a.b"); return err }},
 		{"filters", func() error { _, err := ConsumerFilters("build", "a.b"); return err }},
+		{"consumer", func() error { _, err := Consumer("build", "a.b"); return err }},
 	} {
 		t.Run("invalid-"+tc.name, func(t *testing.T) {
 			if err := tc.call(); err == nil {
@@ -67,9 +85,16 @@ func TestSubjectsAndStream(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestStreamAndConsumer(t *testing.T) {
 	stream, err := Stream("build")
-	if err != nil || stream.Name != "GROUP_BUILD" || !reflect.DeepEqual(stream.Subjects, []string{"grp.build.msg.>", "grp.build.evt.>"}) {
+	if err != nil || stream.Name != "GROUP_BUILD" || stream.Storage != "file" || stream.Retention != "limits" || !reflect.DeepEqual(stream.Subjects, []string{"grp.build.msg.>", "grp.build.evt.>"}) {
 		t.Fatalf("stream = %+v, %v", stream, err)
+	}
+	consumer, err := Consumer("build", "alice")
+	if err != nil || consumer.Name != "alice" || consumer.AckPolicy != "explicit" || !reflect.DeepEqual(consumer.FilterSubjects, []string{"grp.build.msg.all.*", "grp.build.msg.dm.alice.*"}) {
+		t.Fatalf("consumer = %+v, %v", consumer, err)
 	}
 	filters, err := ConsumerFilters("build", "alice")
 	if err != nil || !reflect.DeepEqual(filters, []string{"grp.build.msg.all.*", "grp.build.msg.dm.alice.*"}) {
@@ -102,9 +127,20 @@ func TestProperties(t *testing.T) {
 				t.Fatalf("subject %q: %v", subject, err)
 			}
 		}
+	})
+}
+
+func TestStreamAndConsumerProperties(t *testing.T) {
+	rapid.Check(t, func(t *rapid.T) {
+		group := rapid.StringMatching("[a-z][a-z0-9-]{0,8}").Draw(t, "group")
+		agent := rapid.StringMatching("[a-z][a-z0-9-]{0,8}").Draw(t, "agent")
 		stream, err := Stream(group)
-		if err != nil || len(stream.Subjects) != 2 || stream.Subjects[0] != "grp."+group+".msg.>" || stream.Subjects[1] != "grp."+group+".evt.>" {
+		if err != nil || stream.Storage != "file" || stream.Retention != "limits" || len(stream.Subjects) != 2 || stream.Subjects[0] != "grp."+group+".msg.>" || stream.Subjects[1] != "grp."+group+".evt.>" {
 			t.Fatalf("stream %+v: %v", stream, err)
+		}
+		consumer, err := Consumer(group, agent)
+		if err != nil || consumer.Name != agent || consumer.AckPolicy != "explicit" || len(consumer.FilterSubjects) != 2 {
+			t.Fatalf("consumer %+v: %v", consumer, err)
 		}
 		filters, err := ConsumerFilters(group, agent)
 		if err != nil || len(filters) != 2 || filters[1] != "grp."+group+".msg.dm."+agent+".*" {

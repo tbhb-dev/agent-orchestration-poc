@@ -19,7 +19,7 @@ func TestAgent(t *testing.T) {
 	if err != nil || !reflect.DeepEqual(got, want) {
 		t.Fatalf("Agent = %+v, %v", got, err)
 	}
-	for _, tc := range []struct{ group, agent string }{{"bad.group", "alice"}, {"build", "bad.agent"}} {
+	for _, tc := range []struct{ group, agent string }{{"bad.group", "alice"}, {"build", "bad.agent"}, {"build", "operator"}} {
 		if _, err := Agent(tc.group, tc.agent); err == nil {
 			t.Fatalf("Agent(%q, %q) accepted", tc.group, tc.agent)
 		}

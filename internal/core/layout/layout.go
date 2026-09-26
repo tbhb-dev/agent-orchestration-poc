@@ -8,8 +8,17 @@ import (
 
 // StreamDefinition is the value translated into a JetStream stream by the bus.
 type StreamDefinition struct {
-	Name     string
-	Subjects []string
+	Name      string
+	Subjects  []string
+	Storage   string
+	Retention string
+}
+
+// ConsumerDefinition is the per-agent durable pull consumer value.
+type ConsumerDefinition struct {
+	Name           string
+	FilterSubjects []string
+	AckPolicy      string
 }
 
 // ValidToken reports whether a group or agent occupies one safe subject token.
@@ -22,6 +31,17 @@ func ValidToken(name string) error {
 			continue
 		}
 		return fmt.Errorf("invalid name %q", name)
+	}
+	return nil
+}
+
+// ValidAgent reserves the operator identity for each group.
+func ValidAgent(name string) error {
+	if err := ValidToken(name); err != nil {
+		return err
+	}
+	if name == "operator" {
+		return fmt.Errorf("operator is reserved")
 	}
 	return nil
 }
@@ -64,8 +84,10 @@ func Stream(group string) (StreamDefinition, error) {
 		return StreamDefinition{}, err
 	}
 	return StreamDefinition{
-		Name:     "GROUP_" + strings.ToUpper(strings.ReplaceAll(group, "-", "_")),
-		Subjects: []string{"grp." + group + ".msg.>", "grp." + group + ".evt.>"},
+		Name:      "GROUP_" + strings.ToUpper(strings.ReplaceAll(group, "-", "_")),
+		Subjects:  []string{"grp." + group + ".msg.>", "grp." + group + ".evt.>"},
+		Storage:   "file",
+		Retention: "limits",
 	}, nil
 }
 
@@ -75,6 +97,15 @@ func ConsumerFilters(group, agent string) ([]string, error) {
 		return nil, err
 	}
 	return []string{"grp." + group + ".msg.all.*", "grp." + group + ".msg.dm." + agent + ".*"}, nil
+}
+
+// Consumer describes an agent's durable filtered inbox.
+func Consumer(group, agent string) (ConsumerDefinition, error) {
+	filters, err := ConsumerFilters(group, agent)
+	if err != nil {
+		return ConsumerDefinition{}, err
+	}
+	return ConsumerDefinition{Name: agent, FilterSubjects: filters, AckPolicy: "explicit"}, nil
 }
 
 func validNames(names ...string) error {

@@ -22,7 +22,7 @@ func Agent(group, agent string) (Permissions, error) {
 	if err := layout.ValidToken(group); err != nil {
 		return Permissions{}, err
 	}
-	if err := layout.ValidToken(agent); err != nil {
+	if err := layout.ValidAgent(agent); err != nil {
 		return Permissions{}, err
 	}
 	prefix := "grp." + group
