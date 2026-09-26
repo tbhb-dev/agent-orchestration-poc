@@ -5,7 +5,7 @@ description: The approved phases, worker assignments, research gates, and operat
 
 ## Status
 
-Written 2026-09-26 for the phase 0 checkpoint, this plan records the coordinator's decisions, subject to the requirements in `FABLE_HANDOFF.md`. The operator approved phase 0 and the revised plan and model and effort assignments on 2026-09-26. Phase 1 foundation is complete pending operator approval. Boundary and quality-gate implementation remains a phase 2 prerequisite. See [phase 1 checkpoint](/project/phase-1-checkpoint/). The remaining sections preserve the approved plan, including its original checkpoint questions. See [project history](/project/history/) for merged work since approval and [repository layout](/workflow/repository-layout/) for the current tree.
+Written 2026-09-26 for the phase 0 checkpoint, this plan records the coordinator's decisions, subject to the requirements in `FABLE_HANDOFF.md`. The operator approved phase 0 and the revised plan and model and effort assignments on 2026-09-26. The operator approved phase 1 on 2026-09-26, and phase 2 is starting. Boundary and quality-gate implementation remains a phase 2 prerequisite. See [phase 1 checkpoint](/project/phase-1-checkpoint/). The remaining sections preserve the approved plan, including its original checkpoint questions. See [project history](/project/history/) for merged work since approval and [repository layout](/workflow/repository-layout/) for the current tree.
 
 ## Operator requirements added in phase 1
 
