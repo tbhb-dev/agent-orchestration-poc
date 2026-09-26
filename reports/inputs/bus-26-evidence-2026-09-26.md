@@ -62,3 +62,17 @@ Credential file mode: 0600
 PASS
 ok  	github.com/tbhb/agent-orchestration-poc/internal/bus	0.565s
 ```
+
+## Preliminary core mutation run
+
+[Observed] Before PR #80 merged, the Go core was mutation tested with gremlins v0.6.0 through `mise exec -- go run github.com/go-gremlins/gremlins/cmd/gremlins@v0.6.0 unleash ./internal/core --output-statuses lct --output /tmp/bus-26-gremlins.json`. The temporary configuration matched PR #80's `.gremlins.yaml` with two workers, a timeout coefficient of 200, and score floors of 80. The run used `RAPID_NOFAILFILE=1` and `RAPID_SHRINKTIME=1s`. It covered this branch's `internal/core/layout` and `internal/core/perms` before the incoming `internal/core/subject` package exists here.
+
+```text
+Mutation testing completed in 47 seconds 971 milliseconds
+Killed: 71, Lived: 0, Not covered: 0
+Timed out: 0, Not viable: 0, Skipped: 0
+Test efficacy: 100.00%
+Mutator coverage: 100.00%
+```
+
+[Untested] `mise run check:mutation` remains pending PR #80's merge and the required rebase. Its final scores will include the incoming subject package.
