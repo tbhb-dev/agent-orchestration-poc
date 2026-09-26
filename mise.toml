@@ -14,6 +14,7 @@ prek = "0.5.1"
 rumdl = "0.2.48"
 tombi = "1.5.0"
 vale = "3.22.0"
+actionlint = "1.7.12"
 "npm:@biomejs/biome" = "2.5.14"
 "pipx:ryl" = "0.22.0"
 "go:github.com/tbhb/repotools/cmd/guard-markdown" = "0.9.0"
@@ -39,6 +40,7 @@ depends = [
   "check:mermaid",
   "check:experiments",
   "check:secrets",
+  "check:actions",
 ]
 
 [tasks.fmt]
@@ -113,3 +115,17 @@ run = "scripts/check-experiments.sh"
 [tasks."check:secrets"]
 description = "Scan the git history for secrets with gitleaks"
 run = "gitleaks git --redact --no-banner ."
+
+[tasks."check:actions"]
+description = "Lint the GitHub Actions workflows with actionlint"
+run = "actionlint"
+
+# Pull request checks. These need a PR title, body, or base ref, so they run in CI (see .github/workflows/)
+# and by hand, never as part of the `check` aggregate.
+[tasks."check:pr-body"]
+description = "Check a PR body on stdin against the commit convention: mise run check:pr-body -- '<title>' < body.md"
+run = "scripts/check-pr-body.sh"
+
+[tasks."check:imported-research"]
+description = "Check that research/imported/ is unchanged against a base ref: mise run check:imported-research -- <base> '<title>'"
+run = "scripts/check-imported-research.sh"

@@ -1,0 +1,26 @@
+---
+# research/imported/ is immutable once the import lands: nothing under it may
+# be modified, renamed, or deleted, and additions are allowed only from a
+# `research(import)` PR. See scripts/check-imported-research.sh.
+name: imported-research
+
+"on":
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  imported-research:
+    name: imported-research
+    runs-on: ubuntu-latest
+    steps:
+      # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+      - env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: scripts/check-imported-research.sh "$BASE_SHA" "$PR_TITLE"
