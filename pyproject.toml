@@ -27,7 +27,7 @@ testpaths = ["tests"]
 [tool.ruff]
 target-version = "py314"
 line-length = 88
-extend-exclude = ["research/imported"]
+extend-exclude = ["research/imported", "*.md"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
