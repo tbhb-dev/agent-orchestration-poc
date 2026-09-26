@@ -8,3 +8,4 @@ Use a numbered `NNNN-slug.md` page with `title` and `description` frontmatter. F
 ## Records
 
 - [0001, Go linter is golangci-lint](/decisions/0001-go-linter/), accepted 2026-09-26 for issue #14.
+- [0002, Python type checker is strict pyrefly](/decisions/0002-python-type-checker/), accepted 2026-09-26 for issue #61.

@@ -43,5 +43,5 @@ See [Python conventions](../../docs/src/content/docs/guides/python-conventions.m
 
 ## Typing
 
-- ty 0.0.84: run the separate `check:ty` mise task. Keep it outside `check` until the phase 1 checkpoint decides whether it gates.
-- ty 0.0.84: configure under `[tool.ty]` if needed and suppress only a named rule with `# ty: ignore[rule]` and a reason. Use mypy if ty is rejected at the checkpoint.
+- pyrefly 1.3.1: run `mise run check:pyrefly` from the repository root. It gates `mise run check`, CI, and prek. Pass no file names because per-file mode ignores `project-excludes`.
+- pyrefly 1.3.1: keep `preset = "strict"` and `min-severity = "warn"` in `pyproject.toml`. Annotate parameters and returns in `src/`, use `typing.override` for overrides, and list re-exports in `__all__` or alias imports to themselves. Tests and experiments may omit parameter and return annotations until the phase 1 checkpoint. Suppress a named kind only with `# pyrefly: ignore[kind]` and a same-line reason. Move the exact pin in a PR with run evidence.

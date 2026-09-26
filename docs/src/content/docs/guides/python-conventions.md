@@ -1,11 +1,11 @@
 ---
 title: Python conventions
-description: Python 3.14.6 layout, execution, linting, testing, and typing conventions with uv 0.12.10, ruff 0.16.9, and pytest 9.1.1.
+description: Python 3.14.6 conventions with uv 0.12.10, ruff 0.16.9, pytest 9.1.1, and pyrefly 1.3.1.
 ---
 
 ## Versions and sources
 
-This page records the Python research gate from 2026-09-26. The interpreter choice and tool configurations below are coordinator decisions for the skeleton item, while the current scaffold has not yet received them (research/gates/python/versions.md, research/gates/python/notes.md §§1, 3 through 5).
+This page records the Python research gate from 2026-09-26 and the strict pyrefly decision for issue #61. The current scaffold uses the interpreter and tool configurations below (research/gates/python/versions.md, research/gates/pyrefly/versions.md).
 
 | Tool | Target version | Source read |
 | --- | --- | --- |
@@ -13,7 +13,7 @@ This page records the Python research gate from 2026-09-26. The interpreter choi
 | uv | installed 0.12.10 | `~/Code/github.com/astral-sh/uv` at `136ef973` (`0.12.19`). The source checkout is nine patch releases newer than installed (research/gates/python/versions.md) |
 | ruff | 0.16.9 | `~/Code/github.com/astral-sh/ruff` at `94e46ca1` (`0.16.9`) (research/gates/python/versions.md) |
 | pytest | 9.1.1 | `~/Code/github.com/pytest-dev/pytest` at `87211735` (9.2.0 development snapshot, latest release tag 9.1.1) (research/gates/python/versions.md) |
-| ty | 0.0.84 | `~/Code/github.com/astral-sh/ty` at `8e4aef29` (`0.0.84`) (research/gates/python/versions.md) |
+| pyrefly | 1.3.1 | `~/Code/github.com/facebook/pyrefly` at `a778c3bc8cf41398408498de3d10e99a76b9fdd2`, with the 1.3.1 tag at `3e3177d0f4755b56c2d5a710d830eed89b14c2e3` (research/gates/pyrefly/versions.md) |
 | mise | installed 2026.8.6 | `~/Code/github.com/jdx/mise` at `fdfa0efe` (research/gates/python/versions.md) |
 
 ## Layout and uv
@@ -22,7 +22,7 @@ Keep one `uv_build` project with its editable helper package under `src/agent_or
 
 Run plain files under `experiments/<NN-slug>/` from the repository root with `uv run experiments/<NN-slug>/<script>.py` and `PYTHONSAFEPATH=1`. Inline `# /// script` metadata isolates a script from the project, while safe path prevents sibling imports and module shadowing (uv/docs/concepts/projects/run.md, uv/docs/guides/scripts.md, cpython/Doc/using/cmdline.rst, research/gates/python/notes.md §1).
 
-Put development tools, including ruff 0.16.9, pytest 9.1.1, the async test plugin once verified, and ty 0.0.84, in the `dev` dependency group. Use `project.dependencies` for helper runtime imports and no published extras (uv/docs/concepts/projects/dependencies.md, research/gates/python/notes.md §§1, 4 through 5).
+Put development tools, including ruff 0.16.9, pytest 9.1.1, and pyrefly 1.3.1, in the `dev` dependency group. Add the async test plugin once verified. Use `project.dependencies` for helper runtime imports and no published extras (uv/docs/concepts/projects/dependencies.md, research/gates/python/notes.md §§1, 4, research/gates/pyrefly/notes.md §1).
 
 Add dependencies with `uv add` and commit `pyproject.toml` and `uv.lock` together. Run `uv lock --check` before committing and `uv sync --locked` in CI, then invoke locked tools as `uv run <tool>` through mise tasks (uv/docs/concepts/projects/sync.md, research/gates/python/notes.md §1).
 
@@ -148,6 +148,50 @@ pytest 9.1.1 needs an async plugin for `async def` tests. Add and verify `pytest
 
 ## Typing
 
-Add ty 0.0.84 to the `dev` group with a `check:ty` mise task running `uv run ty check`. Keep it outside the `check` aggregate, and decide whether it gates at the phase 1 checkpoint, with mypy as the fallback (ty/docs/installation.md, ty/README.md, research/gates/python/notes.md §5).
+Pyrefly 1.3.1 is pinned exactly in the `dev` group. Its strict preset turns six additional diagnostic kinds into errors and enables strict callable and `functools.partial` subtyping. The configuration enables four more error kinds. `min-severity = "warn"` makes warnings fail the check (research/gates/pyrefly/notes.md §§1, 3).
 
-ty 0.0.84 is beta with no stable diagnostic API, but it reads `requires-python` and the `src/` layout without extra configuration and passed the scaffold check. Configure it under `[tool.ty]` only if needed, and use specific `# ty: ignore[rule]` suppressions with reasons (ty/README.md, ty/docs/{configuration,modules,python-version,suppression}.md, research/gates/python/notes.md §5).
+The following configuration is copied from `pyproject.toml`:
+
+```toml
+# Strict type checking for every Python file the repository tracks (research/gates/pyrefly/notes.md).
+[tool.pyrefly]
+# Everything except the verbatim research imports, the sketches, and gitignored trees (use-ignore-files
+# defaults to true), so experiments/ and scripts/ join the check the day they gain a .py file.
+project-excludes = ["research/imported", "design-sketch"]
+search-path = ["src"]
+# pyrefly does not read requires-python; without this it takes the version from the queried interpreter.
+python-version = "3.14"
+# The strict preset plus the off-by-default kinds that make the helper package fully typed.
+preset = "strict"
+# Warn-by-default kinds (deprecated, redundant-cast, unreachable, untyped-import, ...) fail the check too.
+min-severity = "warn"
+
+[tool.pyrefly.errors]
+unannotated-return = true
+no-any-return = true
+implicit-reexport = true
+unused-type-ignore = true
+
+# tests/ and experiments/ are exempt from annotation completeness, mirroring the ruff ANN per-file-ignores.
+[[tool.pyrefly.sub-config]]
+matches = "tests/**"
+
+[tool.pyrefly.sub-config.errors]
+implicit-any-parameter = false
+unannotated-return = false
+
+[[tool.pyrefly.sub-config]]
+matches = "experiments/**"
+
+[tool.pyrefly.sub-config.errors]
+implicit-any-parameter = false
+unannotated-return = false
+```
+
+`python-version = "3.14"` is explicit because pyrefly does not read `requires-python`. `search-path = ["src"]` fixes the import root. The two `project-excludes` omit imported research and design sketches (research/gates/pyrefly/notes.md §§2, 4 through 5).
+
+Run `mise run check:pyrefly` from the repository root. This task runs `uv run pyrefly check` with no file names and belongs to `mise run check` and CI. The prek hook also passes no file names because per-file mode ignores `project-excludes` (research/gates/pyrefly/notes.md §§2, 9).
+
+Use `# pyrefly: ignore[kind]` with a reason on the same line for a necessary suppression. Strict mode rejects unused pyrefly suppressions, and the added `unused-type-ignore` kind rejects unused type ignores (research/gates/pyrefly/notes.md §§3, 7).
+
+The `tests/**` and `experiments/**` sub-configs disable only `implicit-any-parameter` and `unannotated-return`. They match ruff's `ANN` per-file ignores. The operator may overturn this relaxation at the phase 1 checkpoint (research/gates/pyrefly/notes.md §4).

@@ -32,6 +32,7 @@ depends = [
   "check:go",
   "check:ruff",
   "check:pytest",
+  "check:pyrefly",
   "check:biome",
   "check:vale",
   "check:rumdl",
@@ -85,10 +86,9 @@ run = ["uv run ruff check --fix .", "uv run ruff format ."]
 description = "Run the Python tests"
 run = "uv run pytest"
 
-# Not in `check`: the phase 1 checkpoint decides whether ty gates (python-conventions, Typing).
-[tasks."check:ty"]
-description = "Type check Python with ty"
-run = "uv run ty check"
+[tasks."check:pyrefly"]
+description = "Type check Python with pyrefly in strict mode"
+run = "uv run pyrefly check"
 
 # JavaScript, TypeScript, CSS, JSON, HTML
 [tasks."check:biome"]

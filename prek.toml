@@ -57,6 +57,14 @@ entry = "mise exec -- uv run ruff format --check --force-exclude"
 types = ["python"]
 
 [[repos.hooks]]
+id = "pyrefly"
+name = "pyrefly check"
+language = "system"
+entry = "mise exec -- uv run pyrefly check"
+types = ["python"]
+pass_filenames = false
+
+[[repos.hooks]]
 id = "biome"
 name = "biome check"
 language = "system"
