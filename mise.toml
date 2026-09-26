@@ -2,6 +2,8 @@
 # Move a pin deliberately and record the new version in the PR that moves it.
 [tools]
 go = "1.27.1"
+gofumpt = "0.12.0"
+golangci-lint = "2.14.0"
 node = "24.21.0"
 pnpm = "12.7.0"
 python = "3.14.6"
@@ -17,6 +19,8 @@ vale = "3.22.0"
 "go:github.com/tbhb/repotools/cmd/guard-markdown" = "0.9.0"
 
 [env]
+# A go.mod toolchain mismatch fails instead of downloading a Go outside mise.
+GOTOOLCHAIN = "local"
 # uv otherwise prefers its own managed interpreters over the Python mise pins above.
 UV_PYTHON_PREFERENCE = "only-system"
 
