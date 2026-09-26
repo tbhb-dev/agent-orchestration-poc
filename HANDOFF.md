@@ -24,7 +24,7 @@ See [PLAN.md](PLAN.md): Names; Repository layout; GitHub workflow; Retrospective
 - Mise shims are absent from non-interactive shells; run provisioned processes and CI steps through mise. See [PLAN.md](PLAN.md), What the system assessment established.
 - The operator's Codex config inherits only core environment variables and strips names matching `*KEY*`, `*SECRET*`, or `*TOKEN*` from tool shells. See [PLAN.md](PLAN.md), Permission modes, Codex.
 - A subagent lead stalled for nearly two hours after its sub-reports finished. Give every dispatch longer than fifteen minutes a heartbeat monitor. See [PLAN.md](PLAN.md), Retrospectives, devlog, and mechanical checks.
-- Git's `info/exclude` is case-insensitive on this filesystem: `/INPUTS/` in the common [exclude file](../../.git/info/exclude) hid `reports/inputs/`. Check ignore behavior when adding case-variant paths.
+- Git's `info/exclude` is case-insensitive on this filesystem: `/INPUTS/` in the common exclude file hid `reports/inputs/`. Check ignore behavior when adding case-variant paths.
 - The operator's Codex config sets `approvals_reviewer = "auto_review"`; `approval_policy = "never"` avoids invoking that reviewer. See [PLAN.md](PLAN.md), Permission modes, Codex.
 - Attribution trailers are forbidden in commits and PR bodies. The PR body becomes the squash commit body. See [PLAN.md](PLAN.md), GitHub workflow, Commits and Pull requests.
 

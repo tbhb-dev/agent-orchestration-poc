@@ -1,0 +1,24 @@
+---
+# The PR body becomes the squash commit, so it has to pass the commit
+# convention: no attribution trailers, a `Refs: #<n>` trailer, and an Evidence
+# section with a link for feat and exp changes. See scripts/check-pr-body.sh.
+name: pr-body
+
+"on":
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  pr-body:
+    name: pr-body
+    runs-on: ubuntu-latest
+    steps:
+      # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: printf '%s\n' "$PR_BODY" | scripts/check-pr-body.sh "$PR_TITLE"
