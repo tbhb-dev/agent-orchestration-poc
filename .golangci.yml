@@ -1,0 +1,15 @@
+---
+# golangci-lint 2.14.0 configuration.
+# See docs/src/content/docs/decisions/0001-go-linter.md.
+version: "2"
+
+linters:
+  # errcheck, govet, ineffassign, staticcheck, and unused.
+  default: standard
+
+formatters:
+  enable:
+    - gofumpt
+  settings:
+    gofumpt:
+      module-path: github.com/tbhb/agent-orchestration-poc

@@ -28,6 +28,7 @@ UV_PYTHON_PREFERENCE = "only-system"
 [tasks.check]
 description = "Run every check and the tests"
 depends = [
+  "check:go",
   "check:ruff",
   "check:pytest",
   "check:biome",
@@ -43,7 +44,31 @@ depends = [
 
 [tasks.fmt]
 description = "Apply every formatter"
-depends = ["fmt:ruff", "fmt:biome", "fmt:rumdl", "fmt:tombi"]
+depends = ["fmt:go", "fmt:ruff", "fmt:biome", "fmt:rumdl", "fmt:tombi"]
+
+# Go
+[tasks."check:go"]
+description = "Format check, vet, module checks, lint, build, and test the Go module"
+run = [
+  "scripts/check-gofumpt.sh",
+  "go vet ./...",
+  "go mod tidy -diff",
+  "go mod verify",
+  "golangci-lint run ./...",
+  "go build ./...",
+  "go test -race -shuffle=on ./...",
+]
+
+[tasks."fmt:go"]
+description = "Format Go with gofumpt"
+run = "gofumpt -w ."
+
+[tasks.build]
+description = "Build bin/agentd and bin/agentctl, stamping VERSION (default dev) into the binaries"
+run = [
+  "go build -ldflags \"-X github.com/tbhb/agent-orchestration-poc/internal/version.Version=${VERSION:-dev}\" -o bin/agentd ./cmd/agentd",
+  "go build -ldflags \"-X github.com/tbhb/agent-orchestration-poc/internal/version.Version=${VERSION:-dev}\" -o bin/agentctl ./cmd/agentctl",
+]
 
 # Python
 [tasks."check:ruff"]
