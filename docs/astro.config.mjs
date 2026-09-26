@@ -30,6 +30,7 @@ export default defineConfig({
           title: "Devlog",
           prefix: "devlog",
           navigation: "none",
+          authors: { codex: { name: "Codex" } },
         }),
         ...(checkLinks ? [starlightLinksValidator()] : []),
       ],
