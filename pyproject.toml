@@ -1,19 +1,17 @@
 [project]
 name = "agent-orchestration-poc"
 version = "0.1.0"
-description = "Add your description here"
+description = "Shared Python helper library for the agent orchestration experiment scripts"
 readme = "README.md"
 requires-python = ">=3.14"
 authors = [{ name = "Tony Burns", email = "tony@tonyburns.net" }]
 dependencies = []
 
-[project.scripts]
-agent-orchestration-poc = "agent_orchestration_poc:main"
-
 [dependency-groups]
 dev = [
   "pytest>=9.1.1",
   "ruff>=0.16.9",
+  "ty>=0.0.84",
 ]
 
 [build-system]
@@ -21,13 +19,71 @@ requires = ["uv_build>=0.12.10,<0.13.0"]
 build-backend = "uv_build"
 
 [tool.pytest.ini_options]
-addopts = "-q"
+addopts = "-ra --import-mode=importlib"
+filterwarnings = ["error"]
+log_level = "INFO"
+markers = [
+  "integration: needs a spawned process or a running harness; skipped unless --run-integration",
+  "socket: needs a Unix socket or WebSocket endpoint; skipped unless --run-integration",
+  "slow: takes more than a few seconds; deselect with -m 'not slow'",
+]
+minversion = "9.1"
+strict_config = true
+strict_markers = true
+strict_xfail = true
 testpaths = ["tests"]
 
 [tool.ruff]
-target-version = "py314"
 line-length = 88
-extend-exclude = ["research/imported", "*.md"]
+extend-exclude = [".worktrees", "research/imported", "design-sketch", "*.md"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B"]
+extend-select = [
+  "I",  # isort
+  "D",  # pydocstyle, scoped by the google convention below
+  "ANN",  # flake8-annotations: the helper package is fully typed
+  "S",  # flake8-bandit: the security category is off by default
+  "T20",  # flake8-print: no print in the library, scripts exempted below
+  "N",  # pep8-naming
+  "PT",  # flake8-pytest-style
+  "ARG",  # flake8-unused-arguments
+  "ERA",  # eradicate: commented-out code
+  "PTH",  # flake8-use-pathlib
+  "PGH",  # pygrep-hooks: blanket noqa and type: ignore
+  "INP",  # flake8-no-pep420: implicit namespace packages
+  "A",  # flake8-builtins
+  "LOG",  # flake8-logging
+  "G",  # flake8-logging-format
+  "RET",  # flake8-return
+  "TC006",  # runtime-cast-value
+  "RUF006",  # asyncio dangling task
+  "ASYNC110",  # async busy wait
+  "PLC0415",  # import outside top level
+  "PLR0913",  # too many arguments
+  "B904",  # raise ... from inside except
+  "TRY400",  # logging.exception inside handlers
+]
+ignore = [
+  "S603",  # subprocess without shell: spawning processes is the point
+  "S607",  # partial executable path: harness binaries resolve through PATH via mise
+  "D105",  # docstrings on magic methods
+  "D107",  # docstrings on __init__
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "PLR2004", "ANN", "D", "ARG", "INP001"]
+"experiments/**" = ["T20", "INP001", "D", "ANN"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["agent_orchestration_poc"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.format]
+docstring-code-format = true
+line-ending = "lf"
+
+[tool.ty.src]
+# Imported research is verbatim and never checked (ruff excludes it the same way).
+exclude = ["research/imported/"]

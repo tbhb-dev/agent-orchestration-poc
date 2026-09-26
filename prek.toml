@@ -28,6 +28,21 @@ pass_filenames = false
 always_run = true
 
 [[repos.hooks]]
+id = "gofumpt"
+name = "gofumpt (format check)"
+language = "system"
+entry = "mise exec -- scripts/check-gofumpt.sh"
+types = ["go"]
+
+[[repos.hooks]]
+id = "golangci-lint"
+name = "golangci-lint run"
+language = "system"
+entry = "mise exec -- golangci-lint run ./..."
+types = ["go"]
+pass_filenames = false
+
+[[repos.hooks]]
 id = "ruff"
 name = "ruff check"
 language = "system"
