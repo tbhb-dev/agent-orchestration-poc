@@ -1,0 +1,45 @@
+---
+name: mutation
+
+"on":
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  mutation:
+    name: mutation
+    runs-on: ubuntu-latest
+    env:
+      MISE_RUSTUP_HOME: /home/runner/.local/share/mise/rustup
+      MISE_CARGO_HOME: /home/runner/.local/share/mise/cargo
+    steps:
+      # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+      - id: changes
+        name: Check core and test changes
+        env:
+          BASE_SHA: >-
+            ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          core_paths='^(internal/core/|src/agent_orchestration_poc/core/|tests/)'
+          if git diff --name-only "$BASE_SHA" "$GITHUB_SHA" |
+            grep -Eq "$core_paths"; then
+            echo 'core=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'core=false' >> "$GITHUB_OUTPUT"
+          fi
+      # v4.3.0
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c
+        if: steps.changes.outputs.core == 'true'
+        with:
+          version: 2026.8.6
+          install: true
+          cache: true
+      - run: mise run check:mutation
+        if: steps.changes.outputs.core == 'true'
