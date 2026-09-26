@@ -25,7 +25,7 @@ The operator approved the revised plan and model assignments and confirmed GitHu
 
 The first `codex exec` run could not commit from a linked worktree because its common `.git` directory was outside the writable paths. The launch procedure now adds that directory with `--add-dir`. `HANDOFF.md` records it.
 
-The common `.git/info/exclude` rule `/INPUTS/` hid `reports/inputs/` on the case-insensitive filesystem. After the findings were gathered, the coordinator removed the entry from the exclude file the same evening. `HANDOFF.md` also became stale when its own PR merged. The retrospective in [phase 0 retrospective](/retros/2026-09-26-phase-0/) tracks a follow-up check.
+The common `.git/info/exclude` rule `/INPUTS/` hid `reports/inputs/` on the case-insensitive filesystem. After the findings were gathered, the coordinator removed the entry from the exclude file the same evening. `HANDOFF.md` also became stale when its own PR merged. The [phase 0 retrospective](/retros/2026-09-26-phase-0/) tracks a follow-up check.
 
 Two PRs merged before CI or branch protection existed and did not have a recorded review. The plan schedules CI first, followed by a `main` ruleset after a green run. This remains pending.
 
