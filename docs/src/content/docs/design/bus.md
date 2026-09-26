@@ -5,7 +5,7 @@ description: The phase 2 NATS subject layout, account boundary, streams, and cre
 
 ## Bootstrap server
 
-[Verified] `agentd serve --state-dir DIR --agent alice` starts NATS with JetStream on the literal IPv4 address `127.0.0.1`. It creates the `build` account and writes broker state below `DIR/store` (`internal/bus/bus.go`, `internal/bus/bus_test.go`). The `--agent` flag may be repeated. `--port` defaults to `4222`. The daemon prints the listener URL and state directory, then runs until interrupted (`cmd/agentd/main.go`).
+[Inference] `agentd serve --state-dir DIR --agent alice` starts NATS with JetStream on the literal IPv4 address `127.0.0.1`. It creates the `build` account and writes broker state below `DIR/store` (`internal/bus/bus.go`, `internal/bus/bus_test.go`). The `--agent` flag may be repeated. `--port` defaults to `4222`. The daemon prints the listener URL and state directory, then runs until interrupted (`cmd/agentd/main.go`).
 
 [Verified] The bus creates one account for each group passed to `bus.Start`. The group account has one file-backed JetStream stream with limits retention. Each initial agent has a durable pull consumer with explicit acknowledgments and two filters (`internal/core/layout/layout.go`, `internal/bus/bus.go`, `internal/bus/bus_test.go`).
 

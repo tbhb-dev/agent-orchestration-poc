@@ -4,7 +4,7 @@
 
 - [Verified] `go.mod` pins `github.com/nats-io/nats-server/v2 v2.15.0`, `github.com/nats-io/nats.go v1.54.0`, `github.com/nats-io/nkeys v0.4.16`, and `pgregory.net/rapid v1.3.0` (`go.mod`, `go mod verify`).
 - [Observed] The server source read was `nats-io/nats-server` commit `3e8ddaa7fcdf2c6a0688f8872ca465eab08f1221`. The client source read was `nats-io/nats.go` commit `5adc9d5d34ce8e3b7b8b002c5bd502a8b7a323d3` (`git -C <clone> rev-parse HEAD`). The implemented versions are released tags, while these source commits are later snapshots.
-- [Source] The credential and authorization calls were checked in `nats-server/server/auth.go`, `server/server.go`, `server/jetstream.go`, `nats.go/nats.go`, and `nats.go/jetstream/jetstream.go` at the commits above.
+- [Verified] The credential and authorization calls were checked in `nats-server/server/auth.go`, `server/server.go`, `server/jetstream.go`, `nats.go/nats.go`, and `nats.go/jetstream/jetstream.go` at the commits above.
 
 ## Credential decision notes
 
