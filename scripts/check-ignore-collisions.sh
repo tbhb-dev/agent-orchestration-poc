@@ -21,17 +21,17 @@ while IFS= read -r -d '' path; do
 done < <(git ls-files -z)
 
 status=0
-for path in "${paths[@]+"${paths[@]}"}"; do
+if [[ ${#paths[@]} -gt 0 ]]; then
     # Personal global ignores vary by machine and are outside this repository check.
-    match=$(git -c core.excludesFile=/dev/null check-ignore -v --no-index -- "$path" || true)
-    [[ -n $match ]] || continue
-    pattern=${match#*$'\t'}
-    pattern=${pattern#*$'\t'}
-    pattern=${pattern%%$'\t'*}
-    [[ $pattern == '!'* ]] && continue
-    printf 'ignored tracked path: %s\n' "$match"
-    status=1
-done
+    while IFS= read -r -d '' source &&
+        IFS= read -r -d '' line &&
+        IFS= read -r -d '' pattern &&
+        IFS= read -r -d '' path; do
+        [[ $pattern == '!'* ]] && continue
+        printf 'ignored tracked path: %s:%s:%s\t%s\n' "$source" "$line" "$pattern" "$path"
+        status=1
+    done < <(printf '%s\0' "${paths[@]}" | git -c core.excludesFile=/dev/null check-ignore -v -z --no-index --stdin)
+fi
 
 sources=()
 while IFS= read -r -d '' source; do

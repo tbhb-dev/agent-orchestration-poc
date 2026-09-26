@@ -163,7 +163,7 @@ run = "scripts/check-experiments.sh"
 
 [tasks."check:ignore-collisions"]
 description = "Fail on ignored tracked paths and warn about case-folded directory matches"
-run = "scripts/check-ignore-collisions.sh"
+run = ["scripts/check-ignore-collisions.sh", "scripts/test-ignore-collisions.sh"]
 
 [tasks."check:handoff"]
 description = "Verify PRs described as open in the handoff are open on GitHub"
