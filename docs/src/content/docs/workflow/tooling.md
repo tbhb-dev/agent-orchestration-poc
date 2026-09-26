@@ -35,7 +35,7 @@ These are the exact pins in `mise.toml` after PR #57. Rust uses the default prof
 | `pipx:ryl` | 0.22.0 |
 | `go:github.com/tbhb/repotools/cmd/guard-markdown` | 0.9.0 |
 
-Python development dependencies are locked in `uv.lock` and declared in `pyproject.toml`, including Ruff 0.16.9, pytest 9.1.1, and ty 0.0.84. Site package versions are in `docs/package.json` and `pnpm-lock.yaml`, with their rationale in [docs stack conventions](/guides/docs-stack-conventions/). Vale downloads `ai-tells` and `ai-tells-commits` v1.37.0 through the release URLs in `.vale.ini`.
+Python development dependencies are locked in `uv.lock` and declared in `pyproject.toml`, including Ruff 0.16.9, pytest 9.1.1, and pyrefly 1.3.1. Site package versions are in `docs/package.json` and `pnpm-lock.yaml`, with their rationale in [docs stack conventions](/guides/docs-stack-conventions/). Vale downloads `ai-tells` and `ai-tells-commits` v1.37.0 through the release URLs in `.vale.ini`.
 
 ## Configuration
 
@@ -44,7 +44,7 @@ Python development dependencies are locked in `uv.lock` and declared in `pyproje
 | Go and gofumpt | `go.mod`, `mise.toml`, `scripts/check-gofumpt.sh` |
 | golangci-lint | `.golangci.yml` |
 | Ruff and pytest | `pyproject.toml`, with test markers in `tests/conftest.py` |
-| ty | `pyproject.toml` project metadata, separate non-gating `check:ty` task |
+| pyrefly | `[tool.pyrefly]` and sub-configs in `pyproject.toml`, strict `check:pyrefly` gate |
 | Biome | `biome.json` |
 | Vale | `.vale.ini`, generated styles under `.vale/styles/` |
 | rumdl | `.rumdl.toml` |
@@ -56,7 +56,7 @@ Python development dependencies are locked in `uv.lock` and declared in `pyproje
 | Mermaid | `scripts/mermaid-check/package.json` and its lockfile |
 | Hooks | `prek.toml` |
 
-`GOTOOLCHAIN=local` prevents an implicit Go download. `UV_PYTHON_PREFERENCE=only-system` selects mise's Python. Go checks include module tidiness and verification, then lint, build, and race-enabled shuffled tests. `check:ty` stays outside `check` until the phase 1 checkpoint decides whether it should gate.
+`GOTOOLCHAIN=local` prevents an implicit Go download. `UV_PYTHON_PREFERENCE=only-system` selects mise's Python. Go checks include module tidiness and verification, then lint, build, and race-enabled shuffled tests. `check:pyrefly` runs in the `check` aggregate and CI.
 
 ## Mise tasks
 
@@ -70,7 +70,7 @@ Python development dependencies are locked in `uv.lock` and declared in `pyproje
 | `check:ruff` | Lint and check formatting of Python with ruff |
 | `fmt:ruff` | Fix and format Python with ruff |
 | `check:pytest` | Run the Python tests |
-| `check:ty` | Type check Python with ty |
+| `check:pyrefly` | Type check Python with pyrefly in strict mode |
 | `check:biome` | Lint and check formatting with Biome |
 | `fmt:biome` | Fix and format with Biome |
 | `vale:sync` | Download the pinned Vale styles into .vale/styles |
@@ -97,7 +97,7 @@ The PR-body and imported-research tasks need arguments from a PR or base ref and
 
 ## Prek hooks
 
-The built-in hooks remove trailing whitespace, fix the final newline, and reject added large files. Local pre-commit hooks check staged secrets with gitleaks, Go formatting and golangci-lint, Ruff lint and formatting, Biome, tombi lint and formatting, ryl, rumdl, paragraph wrapping, Vale prose, Mermaid fences, and experiment layout. Tool hooks run through mise, with the shell-only experiment check invoked directly.
+The built-in hooks remove trailing whitespace, fix the final newline, and reject added large files. Local pre-commit hooks check staged secrets with gitleaks, Go formatting and golangci-lint, Ruff lint and formatting, strict pyrefly, Biome, tombi lint and formatting, ryl, rumdl, paragraph wrapping, Vale prose, Mermaid fences, and experiment layout. Tool hooks run through mise, with the shell-only experiment check invoked directly. The pyrefly hook passes no file names so project excludes apply.
 
 The commit-msg hook runs Vale with `ai-tells` and `ai-tells-commits`. Real commits cannot bypass hooks. The exception is an incomplete throwaway work-in-progress commit that is removed before shared history, as described in `AGENTS.md`.
 
