@@ -151,15 +151,7 @@ func TestStreamProvisioning(t *testing.T) {
 	if !strings.HasPrefix(broker.URL(), "nats://127.0.0.1:") {
 		t.Fatalf("listener %q", broker.URL())
 	}
-	operator := connectTest(t, broker, "build", "operator")
-	js, err := jetstream.New(operator.conn)
-	if err != nil {
-		t.Fatal(err)
-	}
-	stream, err := js.Stream(t.Context(), "GROUP_BUILD")
-	if err != nil {
-		t.Fatal(err)
-	}
+	js, stream := openTestStream(t, broker)
 	info, err := stream.Info(t.Context())
 	if err != nil {
 		t.Fatal(err)
@@ -181,4 +173,52 @@ func TestStreamProvisioning(t *testing.T) {
 	if _, err := js.Stream(t.Context(), "GROUP_OTHER"); err == nil {
 		t.Fatal("build account reached other group's stream")
 	}
+}
+
+func TestRestartKeepsCredentialsAndStream(t *testing.T) {
+	state := t.TempDir()
+	cfg := Config{StateDir: state, Port: -1, Groups: []Group{{Name: "build", Agents: []string{"alice"}}}}
+	first, err := Start(t.Context(), cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	path, err := first.CredentialPath("build", "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	before, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	first.Close()
+	second, err := Start(t.Context(), cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(second.Close)
+	after, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(before, after) {
+		t.Fatal("credential changed across restart")
+	}
+	_, stream := openTestStream(t, second)
+	if _, err := stream.Consumer(t.Context(), "alice"); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func openTestStream(t *testing.T, broker *Bus) (jetstream.JetStream, jetstream.Stream) {
+	t.Helper()
+	operator := connectTest(t, broker, "build", "operator")
+	js, err := jetstream.New(operator.conn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stream, err := js.Stream(t.Context(), "GROUP_BUILD")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return js, stream
 }

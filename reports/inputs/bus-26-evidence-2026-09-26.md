@@ -52,11 +52,13 @@ Credential file mode: 0600
 === RUN   TestSubscribePermissions
 === RUN   TestSubscribePermissions/other_direct
 === RUN   TestSubscribePermissions/other_group
---- PASS: TestSubscribePermissions (0.01s)
+--- PASS: TestSubscribePermissions (0.02s)
     --- PASS: TestSubscribePermissions/other_direct (0.00s)
     --- PASS: TestSubscribePermissions/other_group (0.00s)
 === RUN   TestStreamProvisioning
 --- PASS: TestStreamProvisioning (0.01s)
+=== RUN   TestRestartKeepsCredentialsAndStream
+--- PASS: TestRestartKeepsCredentialsAndStream (0.01s)
 PASS
-ok  	github.com/tbhb/agent-orchestration-poc/internal/bus	0.473s
+ok  	github.com/tbhb/agent-orchestration-poc/internal/bus	0.565s
 ```
