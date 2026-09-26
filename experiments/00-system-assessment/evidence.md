@@ -19,7 +19,7 @@ Date: 2026-09-26. Host: Tony's MacBook Air. All commands were read-only. Nothing
 
 VERIFIED.
 
-```
+```text
 $ sw_vers
 ProductName:    macOS
 ProductVersion: 26.5.1
@@ -47,7 +47,7 @@ Filesystem      Size  Used Avail Use% Mounted on
 
 VERIFIED.
 
-```
+```text
 $ xcode-select -p
 /Library/Developer/CommandLineTools
 
@@ -67,7 +67,7 @@ Target: arm64-apple-darwin25.5.0
 
 VERIFIED. The system was already running before this assessment; nothing was started. `container system status` is a read-only query.
 
-```
+```text
 $ container --version
 container CLI version 1.4.1 (build: release, commit: 9a8917c)
 
@@ -105,7 +105,7 @@ Note the `com.apple.containermanagerd` and `com.apple.ContainerMigrationService`
 
 VERIFIED.
 
-```
+```text
 $ git --version
 git version 2.55.0
 global user.name set: yes
@@ -133,7 +133,7 @@ The active `tbhb` account has the `project` scope. The secondary `aitellsbot` ac
 
 VERIFIED.
 
-```
+```text
 $ tmux -V
 tmux 3.7b
 
@@ -145,7 +145,7 @@ shpool not found
 
 VERIFIED. `mise install` was not run.
 
-```
+```text
 $ mise --version
 2026.8.6 macos-arm64 (2026-08-14)
 mise WARN  mise version 2026.9.14 available
@@ -182,7 +182,7 @@ Pinned tools as resolved by `mise ls` in the repo (rows that cite the repo `mise
 | vale | latest | 3.22.0 | installed |
 | python (from .python-version) | 3.14 | 3.14.6 | installed |
 
-```
+```text
 $ mise ls --missing
 (no output)
 ```
@@ -199,7 +199,7 @@ VERIFIED. Two views are shown because they differ: what this session's non-inter
 
 Resolution in this session's shell (`which`):
 
-```
+```text
 go      -> /Users/tony/.local/share/mise/installs/go/1.27.1/bin/go   (mise)
 rustc   -> /opt/homebrew/bin/rustc                                    (Homebrew)
 cargo   -> /opt/homebrew/bin/cargo                                    (Homebrew)
@@ -213,7 +213,7 @@ uv      -> /opt/homebrew/bin/uv                                       (Homebrew)
 
 Versions in this session's shell:
 
-```
+```text
 go version go1.27.1 darwin/arm64
 rustc 1.97.1 (8bab26f4f 2026-07-14) (Homebrew)
 cargo 1.97.1 (c980f4866 2026-06-30) (Homebrew)
@@ -227,7 +227,7 @@ uv 0.12.1 (Homebrew 2026-07-31 aarch64-apple-darwin)
 
 Resolution via mise for the repo (`mise which` and `mise exec`):
 
-```
+```text
 rustc   -> /Users/tony/.cargo/bin/rustc        rustc 1.98.1 (48a229cea 2026-09-01)
 cargo   -> /Users/tony/.cargo/bin/cargo        cargo 1.98.1 (797e8a9bc 2026-08-05)
 uv      -> ~/.local/share/mise/installs/uv/latest/uv-aarch64-apple-darwin/uv   uv 0.12.10 (3c979abda 2026-09-04)
@@ -237,7 +237,7 @@ node    -> ~/.local/share/mise/installs/node/lts/bin/node
 
 The PATH in this session contains only the mise entries from the global config (bun, go, kubectl, node, ruby, starship), not the repo-level ones (uv, prek, rumdl, vale, tombi, python, pipx-ryl). That is why `uv`, `rustc`, and `python3` fall through to Homebrew. Anything the orchestrator launches from a non-login or non-activated shell should run through `mise exec` or `mise x`, or put `~/.local/share/mise/shims` on PATH.
 
-```
+```text
 $ uv python list | grep 3.14
 cpython-3.14.6-macos-aarch64-none                   /opt/homebrew/bin/python3.14 -> ../Cellar/python@3.14/3.14.6/bin/python3.14
 cpython-3.14.6-macos-aarch64-none                   /opt/homebrew/bin/python3 -> ../Cellar/python@3.14/3.14.6/bin/python3
@@ -257,7 +257,7 @@ Three Python 3.14 sources exist: Homebrew 3.14.6, mise 3.14.6, and uv-managed 3.
 
 VERIFIED unless noted.
 
-```
+```text
 $ claude --version
 2.1.283 (Claude Code)
 $ which claude
@@ -286,13 +286,13 @@ $ claude auth status
 
 User-scope settings, `~/.claude/settings.json` top-level keys:
 
-```
+```text
 $schema, agentPushNotifEnabled, attribution, autoMode, cleanupPeriodDays, effortLevel, enabledPlugins, env, feedbackSurveyState, hooks, includeCoAuthoredBy, model, modelSettings, permissions, promptSuggestionEnabled, skipDangerousModePermissionPrompt, skipWorkflowUsageWarning, spinnerVerbs, statusLine, switchModelsOnFlag, tui
 ```
 
 Hook event names in `settings.json`: `PreToolUse` only.
 
-```
+```text
 ~/.claude/settings.local.json   exists (79 bytes), top-level key: permissions
 ~/.claude/hooks/                guard-exit-echo.pl  rewrite-bsd-sed-i.pl  rewrite-zsh-equals.pl
 ~/.claude/CLAUDE.md             exists (3745 bytes)
@@ -311,7 +311,7 @@ Installed plugins from `installed_plugins.json`: `48-flaws-of-power@social-skill
 
 VERIFIED unless noted.
 
-```
+```text
 $ codex --version
 codex-cli 0.157.1
 $ which codex
@@ -327,7 +327,7 @@ Logged in using ChatGPT
 
 Full `codex exec --help` (112 lines):
 
-```
+```text
 Run Codex non-interactively
 
 Usage: codex exec [OPTIONS] [PROMPT]
@@ -512,7 +512,7 @@ Note the `shell_environment_policy.inherit = "core"` setting: Codex child shells
 
 Other `~/.codex` items:
 
-```
+```text
 ~/.codex/AGENTS.md        exists (3739 bytes)
 ~/.codex/hooks.json       exists; one event, PreToolUse, with 1 matcher group (3 trusted hook commands)
 ~/.codex/hooks/           guard-exit-echo.pl  rewrite-bsd-sed-i.pl  rewrite-zsh-equals.pl   (same three scripts as ~/.claude/hooks)
@@ -527,7 +527,7 @@ Other `~/.codex` items:
 
 VERIFIED unless noted.
 
-```
+```text
 $ which agy
 /Users/tony/.local/bin/agy
 $ agy --version
@@ -536,7 +536,7 @@ $ agy --version
 
 `agy --help`:
 
-```
+```text
 Usage of agy:
   --add-dir                       Add a directory to the workspace (repeatable) (default [])
   --agent                         Agent for the current CLI session
@@ -580,7 +580,7 @@ Available subcommands:
 
 There is no auth-status subcommand. Config lives in `~/.gemini/`. Top-level contents:
 
-```
+```text
 ~/.gemini/antigravity-cli/   annotations/ antigravity-oauth-token (mode 600, 503 bytes, dated Sep 8) bin/ brain/ builtin/ cache/ cli.log -> log/cli-20260926_110744.log conversation_summaries.db conversations/ crashes/ history.jsonl implicit/ installation_id jetbox_summaries_proto.pb jetski_state.pbtxt keybindings.json knowledge/ last_check.timestamp log/ presence/ scratch/ settings.json (mode 600, 637 bytes) updater/
 ~/.gemini/config/            .migrated  config.json (mode 600, 86 bytes)  mcp_config.json (empty)  projects/
 ```
@@ -591,7 +591,7 @@ Auth evidence is the existence of `antigravity-oauth-token` only. Its contents a
 
 VERIFIED. No login was performed. Note `tailscale` on this machine is a zsh alias in `~/.zshrc` line 52 pointing at the app bundle binary, so non-interactive shells must call the full path.
 
-```
+```text
 $ ls -d /Applications/Tailscale.app
 /Applications/Tailscale.app
 
@@ -659,7 +659,7 @@ The Docker CLI is present at `/usr/local/bin/docker` and `~/.docker/bin` is on P
 
 VERIFIED.
 
-```
+```text
 $ brew --version
 Homebrew 7.0.4
 $ brew --prefix
@@ -674,7 +674,7 @@ Rosetta 2 is installed (the `oahd` daemon is running).
 
 VERIFIED.
 
-```
+```text
 $ /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate
 Firewall is disabled. (State = 0)
 $ csrutil status
@@ -687,7 +687,7 @@ Local servers will not be blocked by the application firewall. SIP is on, so any
 
 VERIFIED.
 
-```
+```text
 $ git -C /Users/tony/Code/github.com/tbhb/agent-orchestration-poc status --short --branch
 ## No commits yet on main
 ?? .gitignore
@@ -711,7 +711,7 @@ $ gh repo view tbhb/agent-orchestration-poc --json visibility,isPrivate,defaultB
 
 The local branch has zero commits and every file is untracked. The remote repo exists, is private, and has no default branch yet (nothing has been pushed).
 
-```
+```text
 $ gh project view 9 --owner tbhb --format json   (trimmed)
 {
   "title": "agent-orchestration-poc",
@@ -751,7 +751,7 @@ The project has only GitHub's default fields (no custom fields yet), zero items,
 
 VERIFIED.
 
-```
+```text
 $ git -C ~/Code/github.com/tbhb/agent-peering-tests rev-parse --is-inside-work-tree
 fatal: not a git repository (or any of the parent directories): .git
 du -sh: 436K
@@ -767,7 +767,7 @@ top-level: .obsidian antigravity ANTIGRAVITY_SESSION_MANAGEMENT.md CLAUDE_CODE_S
 
 Neither directory is a git repository. Both are also listed as trusted projects in the Codex config.
 
-```
+```text
 ~/Code/github.com/tbhb/agent-session-tests/codex/.venv   exists
 lib/                                                     python3.14
 site-packages top-level names:                           pip  websockets
