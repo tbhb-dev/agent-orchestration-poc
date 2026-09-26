@@ -1,0 +1,11 @@
+toml-version = "v1.0.0"
+
+[files]
+# uv.lock is generated and formatted by uv.
+exclude = [
+  "uv.lock",
+  "research/imported/**",
+  ".worktrees/**",
+  ".venv/**",
+  "node_modules/**",
+]
