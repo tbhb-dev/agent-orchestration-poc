@@ -22,6 +22,7 @@ from agent_orchestration_poc.core.subject import valid
         ("a.B", False),
         ("a/b", False),
         ("é", False),
+        ("\ud800", False),
         ("a" * 256, False),
     ],
 )
@@ -42,3 +43,8 @@ def test_joined_plain_tokens_are_valid(tokens: list[str]) -> None:
 )
 def test_empty_token_is_invalid(left: str, right: str) -> None:
     assert not valid(left + ".." + right)
+
+
+@given(st.text(alphabet=st.characters(blacklist_categories=())))
+def test_arbitrary_text_returns_bool(name: str) -> None:
+    assert isinstance(valid(name), bool)
