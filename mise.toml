@@ -1,0 +1,10 @@
+[tools]
+go = "1.27"
+node = "lts"
+"pipx:ryl" = "latest"
+prek = "latest"
+rumdl = "latest"
+rust = "stable"
+tombi = "latest"
+uv = "latest"
+vale = "latest"

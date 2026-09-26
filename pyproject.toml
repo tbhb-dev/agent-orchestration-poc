@@ -1,0 +1,22 @@
+[project]
+name = "agent-orchestration-poc"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Tony Burns", email = "tony@tonyburns.net" }
+]
+requires-python = ">=3.14"
+dependencies = []
+
+[project.scripts]
+agent-orchestration-poc = "agent_orchestration_poc:main"
+
+[build-system]
+requires = ["uv_build>=0.12.10,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.16.9",
+]
