@@ -2,3 +2,13 @@
 __pycache__/
 .DS_Store
 .worktrees/
+.obsidian/
+node_modules/
+dist/
+.astro/
+target/
+bin/
+.vale/styles/
+.rumdl_cache/
+.pytest_cache/
+.ruff_cache/

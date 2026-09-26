@@ -1,10 +1,115 @@
+# Every tool is pinned to an exact version so local runs and CI resolve the same binaries.
+# Move a pin deliberately and record the new version in the PR that moves it.
 [tools]
-go = "1.27"
-node = "lts"
-"pipx:ryl" = "latest"
-prek = "latest"
-rumdl = "latest"
-rust = "stable"
-tombi = "latest"
-uv = "latest"
-vale = "latest"
+go = "1.27.1"
+gofumpt = "0.12.0"
+golangci-lint = "2.14.0"
+node = "24.21.0"
+pnpm = "12.7.0"
+python = "3.14.6"
+rust = { version = "1.98.1", profile = "default" }
+uv = "0.12.10"
+gitleaks = "8.30.1"
+prek = "0.5.1"
+rumdl = "0.2.48"
+tombi = "1.5.0"
+vale = "3.22.0"
+"npm:@biomejs/biome" = "2.5.14"
+"pipx:ryl" = "0.22.0"
+"go:github.com/tbhb/repotools/cmd/guard-markdown" = "0.9.0"
+
+[env]
+# A go.mod toolchain mismatch fails instead of downloading a Go outside mise.
+GOTOOLCHAIN = "local"
+# uv otherwise prefers its own managed interpreters over the Python mise pins above.
+UV_PYTHON_PREFERENCE = "only-system"
+
+# Aggregates. `check` is what CI and workers run; `fmt` applies every formatter.
+[tasks.check]
+description = "Run every check and the tests"
+depends = [
+  "check:ruff",
+  "check:pytest",
+  "check:biome",
+  "check:vale",
+  "check:rumdl",
+  "check:ryl",
+  "check:tombi",
+  "check:guard-markdown",
+  "check:mermaid",
+  "check:experiments",
+  "check:secrets",
+]
+
+[tasks.fmt]
+description = "Apply every formatter"
+depends = ["fmt:ruff", "fmt:biome", "fmt:rumdl", "fmt:tombi"]
+
+# Python
+[tasks."check:ruff"]
+description = "Lint and check formatting of Python with ruff"
+run = ["uv run ruff check .", "uv run ruff format --check ."]
+
+[tasks."fmt:ruff"]
+description = "Fix and format Python with ruff"
+run = ["uv run ruff check --fix .", "uv run ruff format ."]
+
+[tasks."check:pytest"]
+description = "Run the Python tests"
+run = "uv run pytest"
+
+# JavaScript, TypeScript, CSS, JSON, HTML
+[tasks."check:biome"]
+description = "Lint and check formatting with Biome"
+run = "biome check --no-errors-on-unmatched ."
+
+[tasks."fmt:biome"]
+description = "Fix and format with Biome"
+run = "biome check --write --no-errors-on-unmatched ."
+
+# Prose
+[tasks."vale:sync"]
+description = "Download the pinned Vale styles into .vale/styles"
+run = "vale sync"
+
+[tasks."check:vale"]
+description = "Lint prose with Vale (ai-tells)"
+run = "scripts/check-vale.sh"
+
+[tasks."check:rumdl"]
+description = "Lint Markdown with rumdl"
+run = "rumdl check ."
+
+[tasks."fmt:rumdl"]
+description = "Fix Markdown with rumdl"
+run = "rumdl fmt ."
+
+[tasks."check:guard-markdown"]
+description = "Check that no Markdown paragraph is hard-wrapped"
+run = "scripts/markdown-files.sh | xargs -r guard-markdown"
+
+[tasks."check:mermaid"]
+description = "Parse every fenced mermaid block"
+run = "scripts/check-mermaid.sh"
+
+# YAML and TOML
+[tasks."check:ryl"]
+description = "Lint YAML with ryl"
+run = "ryl check ."
+
+[tasks."check:tombi"]
+description = "Lint and check formatting of TOML with tombi"
+run = ["tombi lint", "tombi format --check"]
+
+[tasks."fmt:tombi"]
+description = "Format TOML with tombi"
+run = "tombi format"
+
+# Repository rules
+[tasks."check:experiments"]
+description = "Check that every experiment directory has README.md, evidence/, and versions.md"
+run = "scripts/check-experiments.sh"
+
+[tasks."check:secrets"]
+description = "Scan the git history for secrets with gitleaks"
+run = "gitleaks git --redact --no-banner ."

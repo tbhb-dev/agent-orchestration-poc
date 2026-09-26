@@ -107,7 +107,7 @@ Antigravity encodes a reasoning tier inside most model ids (the `-high`, `-mediu
 
 `agy models` output in full (VERIFIED):
 
-```
+```text
 Fetching available models...
 gemini-3.8-flash-high	Gemini 3.8 Flash (High)
 gemini-3.8-flash-medium	Gemini 3.8 Flash (Medium)

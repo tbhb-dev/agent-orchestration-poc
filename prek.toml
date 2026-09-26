@@ -1,11 +1,113 @@
 # Configuration file for `prek`, a git hook framework written in Rust.
 # See https://prek.j178.dev for more information.
 #:schema https://www.schemastore.org/prek.json
+#
+# Every local hook runs its tool through mise, so the pinned version in mise.toml is the one
+# that gates the commit. `prek install` writes both shims (see default_install_hook_types).
+
+default_install_hook_types = ["pre-commit", "commit-msg"]
+exclude = '^(research/imported/|\.worktrees/|\.venv/|node_modules/)'
 
 [[repos]]
 repo = "builtin"
 hooks = [
-    { id = "trailing-whitespace" },
-    { id = "end-of-file-fixer" },
-    { id = "check-added-large-files" },
+  { id = "trailing-whitespace" },
+  { id = "end-of-file-fixer" },
+  { id = "check-added-large-files" },
 ]
+
+[[repos]]
+repo = "local"
+
+[[repos.hooks]]
+id = "gitleaks"
+name = "gitleaks (staged secrets)"
+language = "system"
+entry = "mise exec -- gitleaks git --pre-commit --redact --staged --verbose --no-banner"
+pass_filenames = false
+always_run = true
+
+[[repos.hooks]]
+id = "ruff"
+name = "ruff check"
+language = "system"
+entry = "mise exec -- uv run ruff check --force-exclude"
+types = ["python"]
+
+[[repos.hooks]]
+id = "ruff-format"
+name = "ruff format --check"
+language = "system"
+entry = "mise exec -- uv run ruff format --check --force-exclude"
+types = ["python"]
+
+[[repos.hooks]]
+id = "biome"
+name = "biome check"
+language = "system"
+entry = "mise exec -- biome check --no-errors-on-unmatched"
+files = '\.(js|mjs|cjs|jsx|ts|mts|cts|tsx|json|jsonc|css|html)$'
+
+[[repos.hooks]]
+id = "tombi-lint"
+name = "tombi lint"
+language = "system"
+entry = "mise exec -- tombi lint"
+types = ["toml"]
+
+[[repos.hooks]]
+id = "tombi-format"
+name = "tombi format --check"
+language = "system"
+entry = "mise exec -- tombi format --check"
+types = ["toml"]
+
+[[repos.hooks]]
+id = "ryl"
+name = "ryl check"
+language = "system"
+entry = "mise exec -- ryl check"
+types = ["yaml"]
+
+[[repos.hooks]]
+id = "rumdl"
+name = "rumdl check"
+language = "system"
+entry = "mise exec -- rumdl check"
+types = ["markdown"]
+
+[[repos.hooks]]
+id = "guard-markdown"
+name = "guard-markdown"
+language = "system"
+entry = "mise exec -- guard-markdown"
+types = ["markdown"]
+
+[[repos.hooks]]
+id = "vale"
+name = "vale (prose)"
+language = "system"
+entry = "mise exec -- scripts/check-vale.sh"
+types = ["markdown"]
+
+[[repos.hooks]]
+id = "mermaid"
+name = "mermaid (fenced blocks)"
+language = "system"
+entry = "mise exec -- scripts/check-mermaid.sh"
+types = ["markdown"]
+
+[[repos.hooks]]
+id = "experiments"
+name = "experiment directory layout"
+language = "system"
+entry = "scripts/check-experiments.sh"
+files = "^experiments/"
+pass_filenames = false
+
+[[repos.hooks]]
+id = "vale-commit-msg"
+name = "vale (commit message)"
+language = "system"
+entry = "mise exec -- vale --ext=.md"
+stages = ["commit-msg"]

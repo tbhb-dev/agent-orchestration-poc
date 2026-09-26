@@ -24,12 +24,12 @@ All under `~/Code/github.com/<owner>/<repo>`. New clones used `git clone --filte
 
 | Path | Remote | Checked out | HEAD SHA | Commit date | Nearest tag | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| ~/Code/github.com/golang/go | https://github.com/golang/go.git | tag `go1.27.1` (detached) | 862c888e612ac346c7c4d99c9392bdfd265f33b0 | 2026-09-01 | go1.27.1 | cloned, sparse |
-| ~/Code/github.com/golang/website | https://github.com/golang/website.git | master | f2661d967b28530da480f0a1da9a4279026d34ca | 2026-09-25 | none | cloned |
-| ~/Code/github.com/dominikh/go-tools | https://github.com/dominikh/go-tools.git | master | 6cb65e58a558452b52f57cb43267ff9df669a77a | 2026-08-24 | v0.7.0-0.dev-143-g6cb65e5 (release tag v0.8.1 = 1285a6a5ec1e0ebb658f49e82b6c566a878cc3cb, 2026-08-21) | cloned |
-| ~/Code/github.com/golangci/golangci-lint | https://github.com/golangci/golangci-lint.git | main | 032d962e0399070bc72d32925e778deaaf2213b9 | 2026-09-25 | v2.14.0-4-g032d962e (release tag v2.14.0 = 114493f9b3e7257d29e4130f2b4a4aadefbb6845, 2026-09-24) | cloned |
-| ~/Code/github.com/mvdan/gofumpt | https://github.com/mvdan/gofumpt.git | master | 3e0cc4edc39797c8ed123f4e0a60e3ad1cdcd3b0 | 2026-09-23 | v0.12.0-33-g3e0cc4e (release tag v0.12.0 = 3e07e7e70ac93761d8e79ca0083a19e3d59f753d, 2026-09-07) | cloned |
-| ~/Code/github.com/openai/codex | https://github.com/openai/codex.git | main | a6bd19261c30ce0a0225fe90e646822d29916f11 | 2026-09-26 | voice-cygwin-108b38cf67cbb731 | existing clone from `experiments/00-system-assessment/dependency-clones.md`, not updated |
+| ~/Code/github.com/golang/go | <https://github.com/golang/go.git> | tag `go1.27.1` (detached) | 862c888e612ac346c7c4d99c9392bdfd265f33b0 | 2026-09-01 | go1.27.1 | cloned, sparse |
+| ~/Code/github.com/golang/website | <https://github.com/golang/website.git> | master | f2661d967b28530da480f0a1da9a4279026d34ca | 2026-09-25 | none | cloned |
+| ~/Code/github.com/dominikh/go-tools | <https://github.com/dominikh/go-tools.git> | master | 6cb65e58a558452b52f57cb43267ff9df669a77a | 2026-08-24 | v0.7.0-0.dev-143-g6cb65e5 (release tag v0.8.1 = 1285a6a5ec1e0ebb658f49e82b6c566a878cc3cb, 2026-08-21) | cloned |
+| ~/Code/github.com/golangci/golangci-lint | <https://github.com/golangci/golangci-lint.git> | main | 032d962e0399070bc72d32925e778deaaf2213b9 | 2026-09-25 | v2.14.0-4-g032d962e (release tag v2.14.0 = 114493f9b3e7257d29e4130f2b4a4aadefbb6845, 2026-09-24) | cloned |
+| ~/Code/github.com/mvdan/gofumpt | <https://github.com/mvdan/gofumpt.git> | master | 3e0cc4edc39797c8ed123f4e0a60e3ad1cdcd3b0 | 2026-09-23 | v0.12.0-33-g3e0cc4e (release tag v0.12.0 = 3e07e7e70ac93761d8e79ca0083a19e3d59f753d, 2026-09-07) | cloned |
+| ~/Code/github.com/openai/codex | <https://github.com/openai/codex.git> | main | a6bd19261c30ce0a0225fe90e646822d29916f11 | 2026-09-26 | voice-cygwin-108b38cf67cbb731 | existing clone from `experiments/00-system-assessment/dependency-clones.md`, not updated |
 
 ## Files read
 
