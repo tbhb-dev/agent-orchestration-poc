@@ -38,6 +38,21 @@ def test_workflow_revision(case: str) -> None:
     )
 
 
+def test_workflow_revision_with_missing_head_path() -> None:
+    assert outdated_workflows({"check.yml": "old"}, {"check.yml": "new"}, {}) == (
+        "check.yml",
+    )
+
+
+def test_workflow_revision_with_updated_head_path() -> None:
+    assert (
+        outdated_workflows(
+            {"check.yml": "old"}, {"check.yml": "new"}, {"check.yml": "new"}
+        )
+        == ()
+    )
+
+
 @pytest.mark.parametrize("fixture", _load("checks.json"), ids=lambda item: item["case"])
 def test_check_outcome(fixture: dict[str, Any]) -> None:
     checks = tuple(CheckState(**check) for check in fixture["checks"])
@@ -78,6 +93,21 @@ def test_duplicate_check_with_queued_run_waits() -> None:
     assert check_outcome("abc", "abc", "check", checks) == CheckOutcome.WAIT
 
 
+@pytest.mark.parametrize(
+    ("status", "expected"),
+    [
+        ("SUCCESS", CheckOutcome.SUCCESS),
+        ("FAILURE", CheckOutcome.FAIL),
+        ("ERROR", CheckOutcome.FAIL),
+    ],
+)
+def test_completed_status_without_conclusion(
+    status: str, expected: CheckOutcome
+) -> None:
+    checks = (CheckState("check", status, None, ""),)
+    assert check_outcome("abc", "abc", "check", checks) == expected
+
+
 def test_duplicate_check_with_tied_start_waits() -> None:
     checks = (
         CheckState("check", "COMPLETED", "SUCCESS", "1"),
@@ -116,6 +146,30 @@ def test_check_normalization_preserves_missing_start() -> None:
         CheckState("check", "COMPLETED", "SUCCESS", "1"),
         CheckState("check", "QUEUED", None, ""),
     )
+
+
+def test_check_normalization_uses_status_context_and_creation_time() -> None:
+    raw: tuple[dict[str, str | None], ...] = (
+        {"context": "check", "state": "SUCCESS", "createdAt": "1"},
+    )
+    assert normalize_checks(raw) == (CheckState("check", "SUCCESS", "SUCCESS", "1"),)
+
+
+def test_decision_closure_requires_decision_label() -> None:
+    issue = IssueState(1, "closed", "Closed by the decision record", ("type/bug",), ())
+    assert needs_closure_review(issue)
+
+
+def test_decision_closure_accepts_case_insensitive_note() -> None:
+    issue = IssueState(
+        1, "closed", "closed by a decision record", ("type/decision",), ()
+    )
+    assert not needs_closure_review(issue)
+
+
+def test_non_code_closure_requires_explanation() -> None:
+    issue = IssueState(1, "closed", "Non-code closure:  ", ("type/bug",), ())
+    assert needs_closure_review(issue)
 
 
 def test_closure_audit_selects_and_counts_work_items() -> None:
