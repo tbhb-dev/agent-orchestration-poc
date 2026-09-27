@@ -141,6 +141,58 @@ def test_gh_request_fails_without_retry_for_non_rate_limit(
         shell._run_gh("missing")
 
 
+@pytest.mark.integration
+def test_gh_request_preserves_nonmissing_http_status(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def run(
+        command: tuple[str, ...], *, capture_output: bool, text: bool, check: bool
+    ) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(command, 1, "", "gh: Forbidden (HTTP 403)")
+
+    monkeypatch.setattr(shell.subprocess, "run", run)
+    with pytest.raises(shell.GitHubRequestError, match="exit 1") as error:
+        shell._run_gh("missing")
+    assert error.value.status == 403
+
+
+@pytest.mark.parametrize(
+    ("created_at", "expected"),
+    [("2026-09-26T00:00:00Z", 0), ("2026-09-28T00:00:00Z", 1)],
+)
+@pytest.mark.integration
+def test_missing_reference_uses_pr_migration_mode(
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    created_at: str,
+    expected: int,
+) -> None:
+    original_api = shell._api
+
+    def run(
+        command: tuple[str, ...], *, capture_output: bool, text: bool, check: bool
+    ) -> subprocess.CompletedProcess[str]:
+        assert command[-1] == "repos/tbhb/agent-orchestration-poc/issues/999999"
+        return subprocess.CompletedProcess(command, 1, "", "gh: Not Found (HTTP 404)")
+
+    def api(path: str, *args: str) -> dict[str, Any]:
+        if path == "pulls/200":
+            return {
+                "created_at": created_at,
+                "title": "tooling(workflow): add forms",
+                "body": "## What\nForms.\nRefs: #999999",
+                "labels": [],
+            }
+        if path == "pulls/137":
+            return {"state": "closed", "merged_at": "2026-09-27T00:00:00Z"}
+        return original_api(path)
+
+    monkeypatch.setattr(shell.subprocess, "run", run)
+    monkeypatch.setattr(shell, "_api", api)
+    assert shell.audit_pr(200, REFERENCE) == expected
+    assert "issue #999999 is not open" in caplog.text
+
+
 @pytest.mark.parametrize(
     ("command", "number", "expected"),
     [

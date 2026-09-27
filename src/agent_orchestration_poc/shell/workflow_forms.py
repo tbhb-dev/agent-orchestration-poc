@@ -3,6 +3,7 @@
 import argparse
 import json
 import logging
+import re
 import subprocess
 import sys
 import time
@@ -30,6 +31,14 @@ REPOSITORY = "tbhb/agent-orchestration-poc"
 LOGGER = logging.getLogger(__name__)
 
 
+class GitHubRequestError(RuntimeError):
+    """Keep an HTTP status when the GitHub CLI reports one."""
+
+    def __init__(self, returncode: int, status: int | None) -> None:
+        super().__init__(f"GitHub REST request failed (exit {returncode})")
+        self.status = status
+
+
 def _reference() -> Reference:
     return tomllib.loads((ROOT / "config/workflow-reference.toml").read_text())
 
@@ -42,7 +51,10 @@ def _run_gh(*args: str) -> str:
         if result.returncode == 0:
             return result.stdout
         if "rate limit" not in result.stderr.lower() or attempt == 3:
-            raise RuntimeError(f"GitHub REST request failed (exit {result.returncode})")
+            match = re.search(r"\bHTTP (\d{3})\b", result.stderr)
+            raise GitHubRequestError(
+                result.returncode, int(match.group(1)) if match else None
+            )
         time.sleep(120)
     raise RuntimeError("unreachable GitHub retry state")
 
@@ -107,9 +119,14 @@ def audit_pr(number: int, reference: Reference) -> int:
     if mode == "invalid":
         return _report(number, ("missing or invalid PR creation or cutoff metadata",))
     body = raw["body"] or ""
-    issue_states = {
-        issue_number: _api(f"issues/{issue_number}") for issue_number in refs(body)
-    }
+    issue_states = {}
+    for issue_number in refs(body):
+        try:
+            issue_states[issue_number] = _api(f"issues/{issue_number}")
+        except GitHubRequestError as exc:
+            if exc.status != 404:
+                raise
+            issue_states[issue_number] = {"state": "missing"}
     open_issues = open_reference_numbers(issue_states)
     return _report(
         number,

@@ -93,6 +93,38 @@ def test_issue_acceptance_checklist(checklist: str, expected: tuple[str, ...]) -
     )
 
 
+@pytest.mark.parametrize(
+    ("dependency", "expected"),
+    [
+        ("After https://github.com/tbhb/agent-orchestration-poc/pull/81.", ()),
+        ("After the template lands.", ("dependencies need an issue or PR reference",)),
+    ],
+)
+def test_issue_dependency_url(dependency: str, expected: tuple[str, ...]) -> None:
+    case = _cases("issue_cases.json")[0]
+    body = case["body"].replace("After PR #81.", dependency)
+    assert (
+        validate_issue(case["title"], body, tuple(case["labels"]), REFERENCE)
+        == expected
+    )
+
+
+@pytest.mark.parametrize(
+    ("command", "expected"),
+    [
+        ("gh query repos/tbhb/agent-orchestration-poc/issues/84", ()),
+        ("check the issue", ("evidence needs a named path and exact command",)),
+    ],
+)
+def test_issue_evidence_command(command: str, expected: tuple[str, ...]) -> None:
+    case = _cases("issue_cases.json")[0]
+    body = case["body"].replace("mise run check:workflow-forms", command)
+    assert (
+        validate_issue(case["title"], body, tuple(case["labels"]), REFERENCE)
+        == expected
+    )
+
+
 @pytest.mark.parametrize("case", _cases("pr_cases.json"), ids=lambda case: case["case"])
 def test_pr_cases(case: dict[str, Any]) -> None:
     assert (

@@ -124,7 +124,9 @@ def validate_issue(
     ):
         findings.append("Acceptance criteria needs a checkbox")
     dependencies = parts.get("Dependencies and paths", "")
-    if not re.search(r"(?:#\d+|https://github\.com/[^\s)]+/issues/\d+)", dependencies):
+    if not re.search(
+        r"(?:#\d+|https://github\.com/[^\s)]+/(?:issues|pull)/\d+)", dependencies
+    ):
         findings.append("dependencies need an issue or PR reference")
     path_text = (
         parts.get("Allowed paths") or dependencies.partition("Allowed paths:")[2]
@@ -147,7 +149,7 @@ def validate_issue(
     )
     evidence = parts.get("Evidence required", "")
     if not re.search(r"`[^`]*[/\.][^`]+`", evidence) or not re.search(
-        r"`(?:mise run|mise exec --|gh api|git )[^`]+`", evidence
+        r"`(?:mise run|mise exec --|gh api|gh query|git )[^`]+`", evidence
     ):
         findings.append("evidence needs a named path and exact command")
     return tuple(findings)
