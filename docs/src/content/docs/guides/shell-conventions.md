@@ -21,7 +21,7 @@ Use `set -eu` in a POSIX script where its failure behavior has been checked, and
 
 ## Hook command interpreters
 
-The harness assessment records three different command paths at its pinned versions. Claude Code command hooks expose a `bash` or `powershell` shell choice and support an `args` form without a shell. Codex CLI 0.157.1 runs command hooks through `$SHELL -lc`, which is `/bin/zsh -lc` on the assessed host. agy 1.2.10 uses `sh -c` on Unix (`experiments/00-system-assessment/harness-research.md`, hook sections). These are versioned findings, so check the active harness before changing hook configuration.
+The harness assessment records three different command paths at its pinned versions. Claude Code command hooks expose a `bash` or `powershell` shell choice and support an `args` form without a shell. Codex CLI 0.157.1 runs command hooks through `$SHELL -lc`, which is `/bin/zsh -lc` on the assessed host. agy 1.2.11 uses `sh -c` on Unix (`experiments/00-system-assessment/harness-research.md`, hook sections). These are versioned findings, so check the active harness before changing hook configuration.
 
 Put nontrivial hook logic in an executable file with an explicit shebang, and have the hook command invoke that file by path. Keep any inline command valid for the harness's actual command interpreter. Give arguments as separate values when the harness supports an exec form. Do not depend on the operator's interactive shell startup files or aliases in a hook.
 
