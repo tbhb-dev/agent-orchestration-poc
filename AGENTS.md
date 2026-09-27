@@ -81,6 +81,8 @@ A research gate precedes first code in each new language or stack. Read pinned r
 
 ## Evidence and dependencies
 
+Analysis notebooks use Quarto `.qmd` with the pinned Jupyter Python engine. Run `mise run notebooks:lint`, `mise run notebooks:render -- <path>`, and `mise run notebooks:verify -- <path>` before publishing claims. Keep raw inputs under the main clone's ignored `.holding/`, and commit only reviewed aggregate tables, claims, and static charts. Follow [data analysis conventions](docs/src/content/docs/guides/data-analysis-conventions.md) for independent recomputation and privacy review.
+
 Clone or update dependency sources under `~/Code/github.com/<owner>/<repo>` and record the commit read with the evidence. Read source and versioned documentation before relying on model knowledge. Preserve imported research verbatim under `research/imported/`, with synthesis in new documents.
 
 Label claims precisely and cite the command, file, or source:

@@ -1,0 +1,16 @@
+row_id,kind,category,minutes
+E01,supporting,A,1
+E02,supporting,A,2
+E03,supporting,A,3
+E04,supporting,A,4
+E05,supporting,A,5
+E06,supporting,A,6
+E07,supporting,B,2
+E08,supporting,B,3
+E09,supporting,B,4
+E10,supporting,B,5
+E11,supporting,B,6
+E12,supporting,B,7
+G-A,group,A,21
+G-B,group,B,27
+TOTAL,headline,all,48

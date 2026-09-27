@@ -61,6 +61,8 @@ If `astro check` is adopted, pin TypeScript to 6.x, currently 6.0.3, because `@a
 
 ## Rules for workers
 
+Analysis charts are Matplotlib SVG assets, distinct from Mermaid and Excalidraw diagrams. The notebook commits a sanitized source table and both light and dark SVG variants, and the docs page displays the variants with a text alternative and table. The docs build validates assets and links, while a different-model review checks the plotted values against every table row. See [data analysis conventions](/guides/data-analysis-conventions/).
+
 The following versioned rules belong in `AGENTS.md` and the Claude docs-stack rules file when those files are updated. A PR that changes a pin updates the affected rule (PLAN.md §Research gates for languages and stacks, research/gates/docs-stack/notes.md §Draft rules for the docs stack).
 
 1. (Astro 7.3.5, Starlight 0.42.4) Configure `docs/astro.config.mjs` with `// @ts-check`, `defineConfig`, and `starlight()` in `integrations`. Check an option against Starlight's configuration reference and omit removed `tagline` (withastro/starlight@3ec633b `docs/src/content/docs/reference/configuration.mdx`, `packages/starlight/CHANGELOG.md`, research/gates/docs-stack/notes.md §1).
