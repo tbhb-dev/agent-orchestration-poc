@@ -1,4 +1,3 @@
-// Package client carries agentctl requests through the authenticated daemon relay.
 package main
 
 import (
