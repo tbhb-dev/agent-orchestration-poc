@@ -34,6 +34,7 @@ type Config struct {
 type Bus struct {
 	server *server.Server
 	state  string
+	relays []*relayServer
 }
 
 // Start creates credentials, starts JetStream, and provisions the group streams.
@@ -75,6 +76,11 @@ func Start(ctx context.Context, cfg Config) (_ *Bus, err error) {
 		if err := bus.createStream(ctx, group, operators[group.Name]); err != nil {
 			return nil, err
 		}
+		relay, err := bus.startRelay(group.Name, operators[group.Name])
+		if err != nil {
+			return nil, err
+		}
+		bus.relays = append(bus.relays, relay)
 	}
 	return bus, nil
 }
@@ -132,6 +138,7 @@ func credential(path string) (string, error) {
 	if errors.Is(err, os.ErrNotExist) {
 		seed, err = createCredential(path)
 	}
+	defer clear(seed)
 	if err != nil {
 		return "", err
 	}
@@ -157,6 +164,7 @@ func createCredential(path string) ([]byte, error) {
 	}
 	defer pair.Wipe()
 	seed, err := pair.Seed()
+	defer clear(seed)
 	if err != nil {
 		return nil, err
 	}
@@ -200,6 +208,7 @@ func (b *Bus) createStream(ctx context.Context, group Group, operatorPath string
 	stream, err := js.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
 		Name: definition.Name, Subjects: definition.Subjects,
 		Storage: streamStorage(definition.Storage), Retention: streamRetention(definition.Retention),
+		NoAck: definition.NoAck,
 	})
 	if err != nil {
 		return err
@@ -249,6 +258,9 @@ func (b *Bus) CredentialPath(group, agent string) (string, error) {
 // Close stops the embedded server.
 func (b *Bus) Close() {
 	if b != nil && b.server != nil {
+		for _, relay := range b.relays {
+			relay.conn.Close()
+		}
 		b.server.Shutdown()
 		b.server.WaitForShutdown()
 	}

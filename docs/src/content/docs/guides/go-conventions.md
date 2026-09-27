@@ -53,6 +53,16 @@ Guard tests needing tmux or an external NATS executable with `//go:build integra
 
 Run unit tests with `go test -race -shuffle=on ./...` and integration tests with `-tags integration -count=1`; store captured logs in Go 1.26 `t.ArtifactDir()` so `go test -artifacts -outputdir` can preserve them (Go 1.27.1 `go help testflag`; golang/website/_content/doc/go1.26.md; research/gates/go/notes.md §3).
 
+## Property testing
+
+Use rapid 1.3.0 for pure core properties. Put each property in a named `t.Run` through `rapid.MakeCheck`, and label generator draws so a failure can be reproduced from the printed seed. Add a shrunk counterexample to a named table test. Required CI uses `RAPID_SEED=20260926` and disables fail files. Local runs explore random seeds, and the nightly workflow uses a random seed and records it on failure (research/gates/testing/notes.md §1; decision 0005).
+
+## Mutation testing
+
+Run `mise run check:mutation:go` for changes under `internal/core/`. Gremlins 0.6.0 scores only that tree, with efficacy and mutant coverage floors of 90 percent. The task caps rapid shrinking at one second per mutant and disables fail files. It also rejects timed-out mutants because gremlins excludes those from both scores. A survivor calls for a stronger test, while an uncovered mutant calls for a case that reaches it. The mutation task stays outside `mise run check` and runs in the always-present mutation CI job when core code or tests change (research/gates/testing/notes.md §3, decision 0005).
+
+Run `mise run check:coverage` on every pull request. Its Go 1.27.1 statement profile gates `internal/core/` at 95 percent and all Go shell packages at 70 percent, counting packages without tests as zero. Gobco 1.3.4 gates Go core branch outcomes at 90 percent. Test each package's decisions with plain values. Put I/O paths in shell tests and include integration tests in the coverage run. Gobco does not see `select` branches or uncalled functions without a condition, so review those paths explicitly (research/gates/testing/coverage-branches-87.md, decision 0005).
+
 ## Harness rule loading
 
 Codex loads `AGENTS.override.md`, `AGENTS.md`, or configured fallback files from the project root down to its working directory, in that priority per directory, within a default 32 KiB total budget; it has directory-scoped instructions rather than Claude Code path globs, so a Codex worker started at the root needs Go rules in root `AGENTS.md` (codex/codex-rs/core/src/agents_md.rs; codex/codex-rs/config/src/config_toml.rs; research/gates/go/notes.md §6).
@@ -61,7 +71,7 @@ agy 1.2.11 describes user and workspace Markdown rules and `rules.json` include 
 
 ## Functional core and imperative shell
 
-Place pure decisions and data transformations under `internal/core/<topic>`. The existing `internal/bus`, `internal/registry`, `internal/backend/*`, `internal/term`, `internal/api`, and `cmd/*` packages are the imperative shell. `internal/core/roster` can return a roster transition from an input value, while `internal/registry` stores the resulting value in SQLite. Keep `internal/version` where it is (research/gates/boundaries/notes.md §§1, 3).
+Place pure decisions and data transformations under `internal/core/<topic>`. The `internal/cli`, `internal/bus`, `internal/registry`, `internal/backend/*`, `internal/term`, `internal/api`, and `cmd/*` packages are the imperative shell. `internal/core/roster` can return a roster transition from an input value, while `internal/registry` stores the resulting value in SQLite. Keep `internal/version` where it is (research/gates/boundaries/notes.md §§1, 3).
 
 golangci-lint 2.14.0 runs depguard on the core tree. Its `.golangci.yml` rule denies imports of `os`, `net`, `syscall`, the NATS modules, and shell packages, while allowing `net/netip` and `net/url` as value types. The test rule targets `**_test.go` files and denies process, socket, broker, and backend imports. Deny the shortest prefix only, since listing both `os` and `os/exec` let other `os` subpackages escape in a trial (research/gates/boundaries/notes.md §3).
 
@@ -80,7 +90,7 @@ depguard:
       files: ["**/internal/core/**_test.go"]
 ```
 
-Run `mise run check:go`. Core tests call functions with plain values and compare results without mocks. Import checks cannot see a write through an `io.Writer` parameter or a call that reads the clock, so review those calls. Add property and mutation tests when #59 and #60 land (research/gates/boundaries/notes.md §4).
+Run `mise run check:go`. Core tests call functions with plain values and compare results without mocks. Import checks cannot see a write through an `io.Writer` parameter or a call that reads the clock, so review those calls. Property and mutation gates test the core (research/gates/boundaries/notes.md §4; decision 0005).
 
 ## Quality gates
 

@@ -15,11 +15,15 @@ rumdl = "0.2.48"
 tombi = "1.5.0"
 vale = "3.22.0"
 actionlint = "1.7.12"
+shellcheck = "0.11.0"
+shfmt = "3.14.0"
 "npm:@biomejs/biome" = "2.5.14"
 "pipx:ryl" = "0.22.0"
 "pipx:jscpd" = "5.3.2"
 "go:golang.org/x/tools/cmd/deadcode" = "0.50.0"
 "go:github.com/tbhb/repotools/cmd/guard-markdown" = "0.9.0"
+"go:github.com/go-gremlins/gremlins/cmd/gremlins" = "0.6.0"
+"go:github.com/rillig/gobco" = "1.3.4"
 
 [env]
 # A go.mod toolchain mismatch fails instead of downloading a Go outside mise.
@@ -32,11 +36,14 @@ UV_PYTHON_PREFERENCE = "only-system"
 description = "Run every check and the tests"
 depends = [
   "check:go",
+  "check:shell",
   "check:ruff",
   "check:imports",
   "check:dupl",
   "check:deadcode",
   "check:pytest",
+  "check:review-identity",
+  "check:coverage",
   "check:pyrefly",
   "check:biome",
   "check:vale",
@@ -46,13 +53,24 @@ depends = [
   "check:guard-markdown",
   "check:mermaid",
   "check:experiments",
+  "check:ignore-collisions",
+  "check:handoff-classifier",
   "check:secrets",
   "check:actions",
 ]
 
 [tasks.fmt]
 description = "Apply every formatter"
-depends = ["fmt:go", "fmt:ruff", "fmt:biome", "fmt:rumdl", "fmt:tombi"]
+depends = ["fmt:go", "fmt:shell", "fmt:ruff", "fmt:biome", "fmt:rumdl", "fmt:tombi"]
+
+# Shell
+[tasks."check:shell"]
+description = "Lint and check formatting of repository shell scripts"
+run = ["shellcheck --severity=style scripts/*.sh", "shfmt -d -i 4 -ci scripts/*.sh"]
+
+[tasks."fmt:shell"]
+description = "Format repository shell scripts"
+run = "shfmt -w -i 4 -ci scripts/*.sh"
 
 # Go
 [tasks."check:go"]
@@ -66,6 +84,10 @@ run = [
   "go build ./...",
   "go test -race -shuffle=on ./...",
 ]
+
+[tasks."check:bus-relay"]
+description = "Run the embedded relay security and lifecycle suite"
+run = "go test -race -v ./internal/bus ./internal/core/relay ./internal/core/perms ./internal/core/layout"
 
 [tasks."fmt:go"]
 description = "Format Go with gofumpt"
@@ -103,9 +125,47 @@ run = ["uv run ruff check --fix .", "uv run ruff format ."]
 description = "Run the Python tests"
 run = "uv run pytest"
 
+[tasks."check:review-identity"]
+description = "Run reviewer policy and wrapper process fixtures"
+run = "uv run pytest tests/fixtures/review_identity/test_policy.py tests/fixtures/review_identity/test_wrapper.py --run-integration"
+
+[tasks."check:coverage"]
+description = "Gate Python lines and branches and Go statements and branches"
+run = [
+  "mkdir -p .coverage-reports",
+  "uv run pytest --run-integration --cov=agent_orchestration_poc --cov-report=json:.coverage-reports/python.json --cov-report=term",
+  "go test -tags=integration -coverprofile=.coverage-reports/go.out ./...",
+  "uv run python scripts/check-coverage.py",
+]
+
 [tasks."check:pyrefly"]
 description = "Type check Python with pyrefly in strict mode"
 run = "uv run pyrefly check"
+
+[tasks."check:mutation"]
+description = "Run the Go and Python core mutation score gates"
+run = ["mise run check:mutation:go", "mise run check:mutation:python"]
+
+[tasks."check:mutation:go"]
+description = "Mutation test the Go core with gremlins"
+env = { RAPID_NOFAILFILE = "1", RAPID_SHRINKTIME = "1s" }
+run = [
+  "rm -f gremlins.json",
+  "gremlins unleash ./internal/core --output-statuses lct --output gremlins.json",
+  "uv run python scripts/check-gremlins-output.py",
+]
+
+[tasks."check:mutation:python"]
+description = "Check Python core mutation score"
+run = "uv run python scripts/check-mutation-score.py"
+
+[tasks."check:property:nightly:go"]
+description = "Run Go core properties with the nightly random seed"
+run = "go test -race -shuffle=on ./internal/core/..."
+
+[tasks."check:property:nightly:python"]
+description = "Run Python tests with the nightly random seed"
+run = 'uv run pytest --hypothesis-profile=default --hypothesis-seed="$HYPOTHESIS_SEED"'
 
 # JavaScript, TypeScript, CSS, JSON, HTML
 [tasks."check:biome"]
@@ -159,6 +219,18 @@ run = "tombi format"
 description = "Check that every experiment directory has README.md, evidence/, and versions.md"
 run = "scripts/check-experiments.sh"
 
+[tasks."check:ignore-collisions"]
+description = "Fail on ignored tracked paths and warn about case-folded directory matches"
+run = ["scripts/check-ignore-collisions.sh", "scripts/test-ignore-collisions.sh"]
+
+[tasks."check:handoff"]
+description = "Verify PRs described as open in the handoff are open on GitHub"
+run = "scripts/check-handoff-prs.sh"
+
+[tasks."check:handoff-classifier"]
+description = "Test open PR classification with handoff line fixtures"
+run = "scripts/test-handoff-pr-classifier.sh"
+
 [tasks."check:secrets"]
 description = "Scan the git history for secrets with gitleaks"
 run = "gitleaks git --redact --no-banner ."
@@ -166,6 +238,19 @@ run = "gitleaks git --redact --no-banner ."
 [tasks."check:actions"]
 description = "Lint the GitHub Actions workflows with actionlint"
 run = "actionlint"
+
+# Coordinator preflight. These read live GitHub or git state and run separately from `check`.
+[tasks."review:preflight"]
+description = "Check that a PR branch includes current main workflows: mise run review:preflight -- <pr>"
+run = "uv run python -m agent_orchestration_poc.shell.coordinator_preflight review"
+
+[tasks."pr:wait-check"]
+description = "Wait for a named check on the current PR head: mise run pr:wait-check -- <pr> <name> <timeout-seconds>"
+run = "uv run python -m agent_orchestration_poc.shell.coordinator_preflight wait-check"
+
+[tasks."checkpoint:closure-audit"]
+description = "Audit closed work-item issues for linked merged PRs or recorded non-code closure"
+run = "uv run python -m agent_orchestration_poc.shell.coordinator_preflight closure-audit"
 
 # Pull request checks. These need a PR title, body, or base ref, so they run in CI (see .github/workflows/)
 # and by hand, never as part of the `check` aggregate.

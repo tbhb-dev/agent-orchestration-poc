@@ -89,7 +89,7 @@ func TestSubjectsAndStream(t *testing.T) {
 
 func TestStreamAndConsumer(t *testing.T) {
 	stream, err := Stream("build")
-	if err != nil || stream.Name != "GROUP_BUILD" || stream.Storage != "file" || stream.Retention != "limits" || !reflect.DeepEqual(stream.Subjects, []string{"grp.build.msg.>", "grp.build.evt.>"}) {
+	if err != nil || stream.Name != "GROUP_BUILD" || stream.Storage != "file" || stream.Retention != "limits" || stream.NoAck || !reflect.DeepEqual(stream.Subjects, []string{"grp.build.msg.>", "grp.build.evt.>"}) {
 		t.Fatalf("stream = %+v, %v", stream, err)
 	}
 	consumer, err := Consumer("build", "alice")
@@ -135,7 +135,7 @@ func TestStreamAndConsumerProperties(t *testing.T) {
 		group := rapid.StringMatching("[a-z][a-z0-9-]{0,8}").Draw(t, "group")
 		agent := rapid.StringMatching("[a-z][a-z0-9-]{0,8}").Draw(t, "agent")
 		stream, err := Stream(group)
-		if err != nil || stream.Storage != "file" || stream.Retention != "limits" || len(stream.Subjects) != 2 || stream.Subjects[0] != "grp."+group+".msg.>" || stream.Subjects[1] != "grp."+group+".evt.>" {
+		if err != nil || stream.Storage != "file" || stream.Retention != "limits" || stream.NoAck || len(stream.Subjects) != 2 || stream.Subjects[0] != "grp."+group+".msg.>" || stream.Subjects[1] != "grp."+group+".evt.>" {
 			t.Fatalf("stream %+v: %v", stream, err)
 		}
 		consumer, err := Consumer(group, agent)

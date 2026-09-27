@@ -65,26 +65,40 @@ Use `<type>/<issue>-<slug>` branches, normally `feat`, `fix`, `docs`, `exp`, `ch
 
 Commit with a Conventional Commit subject, a body explaining why, and `Refs: #<n>` as a trailer. Do not add attribution or co-author trailers. The commit-msg hook checks prose with `ai-tells` and `ai-tells-commits`. Record the harness and model in the Project Worker field and PR evidence section.
 
-The shared stash stack requires explicit ownership. Prefer `git rebase --autostash` or the throwaway work-in-progress procedure in [AGENTS.md](https://github.com/tbhb/agent-orchestration-poc/blob/main/AGENTS.md). Never run bare `git stash pop` or `git stash apply`. A real commit must pass hooks.
+The commit-msg hook rejects attribution and missing `Refs:` trailers except for subject `wip`, and PR-body CI applies the same trailer rules to the squash commit body.
+
+The shared stash stack requires explicit ownership. Merge `main` into a pushed branch, and rebase only unpublished history with `git rebase --autostash` or the throwaway work-in-progress procedure in [AGENTS.md](https://github.com/tbhb/agent-orchestration-poc/blob/main/AGENTS.md). Never force push a pushed branch or run bare `git stash pop` or `git stash apply`. A real commit must pass hooks. A clean update from `main` retains approval, while a hand-resolved merge dismisses it and needs re-review.
 
 ## Pull requests, review, and merges
 
 Open one small PR per issue. Its conventional title and body become the squash commit. Include What, Why, Evidence, Docs, and Checklist sections and end with `Refs: #<n>`. For `feat` and `exp`, the Evidence section needs a link to committed output or a test run. Check green CI, docs updated or an issue filed, no secrets, and evidence committed.
 
-Workers open PRs for coordinator review and do not merge them. A different harness reviews first where practical. The coordinator merges after review and green CI. Changes to security policy or credentials need an operator merge. Egress rules or installations outside the repository also need an operator merge.
+Before review, the coordinator runs `mise run review:preflight -- <pr>` to verify that workflow revisions added on `main` are present at the PR head. Before merge or a completion report, run `mise run pr:wait-check -- <pr> <check-name> <timeout-seconds>`. The waiter succeeds only when the requested check concludes success on the head SHA recorded when waiting began. Its timeout includes GitHub calls, and zero seconds expires immediately. Both tasks address failures in the [phase 1 retrospective](/retros/2026-09-26-phase-1/).
 
-The active [main ruleset](https://github.com/tbhb/agent-orchestration-poc/rules/24053242), read back on 2026-09-26, requires a PR and the `check` job and blocks force pushes and branch deletion. It permits squash merges only and has no bypass actors. Its required approving-review count is zero, so coordinator review remains a process requirement. Repository settings disable merge commits and rebase merges and delete head branches after merge. The provisioner will remove matching worktrees once implemented.
+Workers open PRs for coordinator review and do not merge them. A different harness reviews first where practical. The default implementer account is `tbhb`. Reviewers run each review command through `scripts/reviewer-gh.sh`, which resolves the `tbhbbot` token and checks the effective account without changing the default. Never print, log, or write a token. `tbhbbot` posts request-changes and approvals as PR reviews with inline threads. State the harness, model, and effort on the verdict's first line. Implementers reply in threads, push fixes, and receive another review. One round is one verdict by `tbhbbot`. After three changes-requested verdicts, stop until a newer coordinator `tbhb` comment has the exact body `Arbitration: authorize another round`. The coordinator never approves through `tbhbbot`.
+
+The operator completed reviewer login on 2026-09-26 after the coordinator stopped dispatch and waited for active workers to finish. The operator restored `tbhb` as the default account. Before dispatch resumed, the coordinator checked the default account, the explicit `tbhbbot` token lookup without revealing its value, and the git credential helper's implementer identity. Workers never run `gh auth switch`.
+
+Reviewer identity records the project review process. It does not protect credentials from workers on the same machine. The coordinator merges ordinary product code, including code that handles credentials, after review and green CI. The operator merges changes to project credential issuance, storage, grants, or repository secrets, security policy, egress rules, and host setup or installations.
+
+The active [main ruleset](https://github.com/tbhb/agent-orchestration-poc/rules/24053242), read through REST on 2026-09-27, requires a PR, one approving review, stale approval dismissal on push, resolved conversations, and approval of the latest push by someone other than its pusher. It also requires an up-to-date branch and successful `check`, `docs`, `pr-body`, `imported-research`, and `mutation` checks. Extra approval is required for unattributed changes. Only squash merges are permitted. Deletion and force pushes are blocked, and the bypass list is empty. The active [all-branches ruleset](https://github.com/tbhb/agent-orchestration-poc/rules/24056095) blocks force pushes on every branch. Repository settings disable merge commits and rebase merges for PRs, while feature branches may receive merge commits from `main`. GitHub enforces the rulesets. Review by `tbhbbot` and the round limit are project policy. The provisioner will remove matching worktrees once implemented.
 
 ## CI jobs
 
 | Job | Trigger | Checks |
 | --- | --- | --- |
 | `check` | PRs and pushes to `main` | `mise run check`, including Go build, vet, tests and lint, Ruff and pytest, formatting, prose, secrets, experiment layout, Mermaid, and workflow syntax |
+| `handoff` | Pushes to `main` | Verify that PRs described as open in the handoff are open on GitHub |
+| `mutation` | PRs and pushes to `main` | Always reports a result. Runs `mise run check:mutation` when Go or Python core code or their tests change, and succeeds without running the tools otherwise. |
+| `property-nightly` | Nightly schedule and manual dispatch | Runs Go and Python tests with random seeds and files an issue containing the seeds and output on failure. |
 | `docs` | PRs and pushes to `main` | Chromium setup and `mise run docs:check-links`, which builds the site and checks internal links and hashes |
 | `pr-body` | PR opened, edited, synchronized, or reopened | No attribution trailers, a `Refs:` trailer, and an Evidence link for `feat` or `exp` |
 | `imported-research` | PR opened, edited, synchronized, or reopened | No modification, rename, or deletion under `research/imported/`. Additions need a `research(import)` title. |
+| `closure-audit` | Weekly schedule or manual dispatch | Read-only audit of closed work-item issues without a linked merged PR or an explicit `Non-code closure:` reason. |
 
 These jobs currently run on `ubuntu-latest`. The `check` and `docs` jobs install mise 2026.8.6 with the pinned action. macOS jobs are planned when code needs Apple frameworks or Containers. See [tooling](/workflow/tooling/) for the task and hook inventory.
+
+At a checkpoint, the coordinator also runs `mise run checkpoint:closure-audit`. To record a non-code closure, put `Non-code closure: <reason and evidence>` on its own line in the issue body. The audit only reports issues for review and never changes issue state. Codex documentation dispatches use the [brief template](https://github.com/tbhb/agent-orchestration-poc/blob/main/docs/briefs/documentation-brief-template.md) and require a local Vale pass.
 
 ## Reporting
 

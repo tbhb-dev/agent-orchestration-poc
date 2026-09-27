@@ -12,6 +12,7 @@ type StreamDefinition struct {
 	Subjects  []string
 	Storage   string
 	Retention string
+	NoAck     bool
 }
 
 // ConsumerDefinition is the per-agent durable pull consumer value.
@@ -88,6 +89,7 @@ func Stream(group string) (StreamDefinition, error) {
 		Subjects:  []string{"grp." + group + ".msg.>", "grp." + group + ".evt.>"},
 		Storage:   "file",
 		Retention: "limits",
+		NoAck:     false,
 	}, nil
 }
 

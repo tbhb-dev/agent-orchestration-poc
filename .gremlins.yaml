@@ -1,0 +1,7 @@
+---
+unleash:
+  workers: 2
+  timeout-coefficient: 200
+  threshold:
+    efficacy: 90
+    mutant-coverage: 90

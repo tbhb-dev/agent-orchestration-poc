@@ -28,6 +28,20 @@ pass_filenames = false
 always_run = true
 
 [[repos.hooks]]
+id = "shellcheck"
+name = "ShellCheck"
+language = "system"
+entry = "mise exec -- shellcheck --severity=style"
+files = '^scripts/.*\.sh$'
+
+[[repos.hooks]]
+id = "shfmt"
+name = "shfmt (format check)"
+language = "system"
+entry = "mise exec -- shfmt -d -i 4 -ci"
+files = '^scripts/.*\.sh$'
+
+[[repos.hooks]]
 id = "gofumpt"
 name = "gofumpt (format check)"
 language = "system"
@@ -135,6 +149,21 @@ language = "system"
 entry = "scripts/check-experiments.sh"
 files = "^experiments/"
 pass_filenames = false
+
+[[repos.hooks]]
+id = "ignore-collisions"
+name = "tracked path ignore and case collisions"
+language = "system"
+entry = "scripts/check-ignore-collisions.sh"
+pass_filenames = false
+always_run = true
+
+[[repos.hooks]]
+id = "commit-trailers"
+name = "commit attribution and Refs trailers"
+language = "system"
+entry = "scripts/check-pr-body.sh --commit-msg"
+stages = ["commit-msg"]
 
 [[repos.hooks]]
 id = "vale-commit-msg"

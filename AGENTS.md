@@ -7,21 +7,24 @@ Read the assigned issue and [project plan](docs/src/content/docs/project/plan.md
 - Use one issue per work item in [Project 9](https://github.com/users/tbhb/projects/9). Issues need a goal, context and links, acceptance criteria, evidence required, docs impact, and out of scope.
 - Work on `<type>/<issue>-<slug>` in your own `.worktrees/<type>-<issue>-<slug>/` checkout. Use the coordinator's assigned branch. Never work on `main` or share a checkout with another worker.
 - Commit with `type(scope): imperative subject`, an explanatory body, and a `Refs: #<n>` trailer. Use Conventional Commits. Do not add attribution or co-author trailers to commits or PR bodies.
+- The commit-msg hook rejects attribution and missing `Refs:` trailers except for subject `wip`, the ignore check guards tracked paths, and the handoff check verifies open PR claims.
 - Keep work committed. Push before reporting completion and, once the bus exists, whenever reporting status there. Scan evidence for secrets and redact or hold back sensitive material before committing it.
 - Open one small PR per issue with `gh pr create`. Use the conventional subject as its title. Include what, why, evidence, docs, and checklist sections, ending with `Refs: #<n>`. Include evidence links for `feat` and `exp` changes.
 - The checklist covers green CI, docs updated or an issue filed, no secrets, and evidence committed. The Project Worker field and PR evidence section record the harness and model.
-- The coordinator reviews every PR. A different harness reviews first where practical. Workers do not merge. The coordinator squash-merges after review and green CI. The PR title and body become the squash commit.
-- The operator must merge security policy and credentials changes. Egress rules and installations outside the repository also require an operator merge. Escalate those changes to the operator.
-- The `main` ruleset requires a PR and the `check` job, and blocks force pushes and deletion. Squash is the only enabled merge method.
+- Reviewers use `scripts/reviewer-gh.sh` for each reviewing command. It resolves the `tbhbbot` token and checks the effective account before running `gh`. The default implementer account stays `tbhb`, and workers never switch accounts. Never print, log, or write a token.
+- `tbhbbot` posts request-changes and approval verdicts as PR reviews with inline threads. State the harness, model, and effort on the first line. Implementers reply in threads and push fixes without force pushing, then the reviewer re-reviews. One round is one verdict by `tbhbbot`. After three changes-requested verdicts, stop until a newer coordinator `tbhb` comment has the exact body `Arbitration: authorize another round`. The coordinator never approves through `tbhbbot`.
+- The coordinator reviews every PR. A different harness reviews first where practical. Workers do not merge. The coordinator squash-merges after a current approval and green CI. The PR title and body become the squash commit.
+- Reviewer identity records the project review process. It does not protect credentials from workers on the same machine. The coordinator may merge product code that handles credentials after ordinary review. The operator merges changes to project credential issuance, storage, grants, or repository secrets, security policy, egress rules, and host setup or installations. Escalate those changes to the operator.
+- The `main` ruleset requires a PR, one approval of the latest push by someone other than its pusher, resolved threads, an up-to-date branch, and successful `check`, `docs`, `pr-body`, `imported-research`, and `mutation` checks. It dismisses stale approvals on push and permits only squash merges. Its bypass list is empty. Ruleset `all-branches` blocks force pushes on every branch.
 - CI jobs are `check` (linters, formatting, tests, and repository guards), `docs` (site build and internal links), `pr-body` (trailers and evidence links), and `imported-research` (import immutability). See [workflow](docs/src/content/docs/workflow/index.md).
 - Use `gh query` for read-only GitHub API calls. Reserve `gh api` for mutations.
 
 ## Functional core, imperative shell
 
 - Functional core, imperative shell is a binding operator requirement from 2026-09-26. Put decisions and data transformations in pure functions. Keep side effects in a thin shell at the edges. A PR that puts I/O in the core or decisions in the shell cannot merge.
-- Go core packages live under `internal/core/`. `cmd/`, `internal/bus`, `internal/registry`, `internal/backend/`, `internal/term`, and `internal/api` are shell packages. golangci-lint 2.14.0 `depguard` checks core imports.
+- Go core packages live under `internal/core/`. `cmd/`, `internal/cli`, `internal/bus`, `internal/registry`, `internal/backend/`, `internal/term`, and `internal/api` are shell packages. golangci-lint 2.14.0 `depguard` checks core imports.
 - Python core modules live under `agent_orchestration_poc.core`. I/O lives under `agent_orchestration_poc.shell` and in experiment scripts. import-linter 2.15 checks the layers and forbidden I/O imports, with ruff 0.16.9 `TID251` as a partial call check.
-- Test the core with plain values and no mocks. Add property tests and mutation testing when #59 and #60 land. Put process and socket tests in the shell's integration suite.
+- Test the core with plain values and no mocks. Property and coverage gates run in `check`, with core line or statement floors of 95 percent, core branch floors of 90 percent, and shell line or statement floors of 70 percent when code exists. `check:mutation` enforces 90 percent scores for the core. Put process and socket tests in the shell's integration suite.
 - Review rejects calls that import checkers cannot see, including `pathlib` writes and I/O through writer, connection, or process parameters. Run `check:go`, `check:imports`, and `check:ruff` for the boundary.
 
 ## Mise and checks
@@ -40,7 +43,8 @@ Run project tools through mise tasks, never as bare tools or global installs. Fo
 
 Every worktree shares one global `git stash` stack. An unqualified restore can take another worker's entry.
 
-- Prefer `git rebase --autostash` when rebasing a dirty worktree. It scopes the save to the rebase without using the shared stack.
+- Merge `main` into a pushed branch to update it. A clean update retains approval, while a hand-resolved merge dismisses it and needs a new review. Rebase only unpublished history. Never force push a pushed branch.
+- Prefer `git rebase --autostash` when rebasing dirty unpublished history. It scopes the save to the rebase without using the shared stack.
 - Never run bare `git stash pop` or `git stash apply`. Stack indices change whenever any worktree pushes an entry.
 - If a manual stash is unavoidable, name it with `git stash push -m`. Run `git stash list` immediately before restoring, match your own message, and pop the explicit `stash@{n}`.
 
@@ -48,7 +52,7 @@ Prefer a throwaway work-in-progress commit to preserve state across a rebase or 
 
 ```sh
 git commit -am wip --no-verify
-# Rebase, switch, or perform the required operation.
+# Rebase unpublished history, switch, or perform the required operation.
 git reset --soft HEAD~1
 ```
 
@@ -68,6 +72,7 @@ Before editing a language or stack, read its rules and conventions:
 | --- | --- |
 | Go | [.claude/rules/go.md](.claude/rules/go.md), [Go conventions](docs/src/content/docs/guides/go-conventions.md) |
 | Python | [.claude/rules/python.md](.claude/rules/python.md), [Python conventions](docs/src/content/docs/guides/python-conventions.md) |
+| Shell | [.claude/rules/shell.md](.claude/rules/shell.md), [Shell conventions](docs/src/content/docs/guides/shell-conventions.md) |
 | Docs stack | [Docs stack conventions, including Rules for workers](docs/src/content/docs/guides/docs-stack-conventions.md#rules-for-workers) |
 
 Codex reads this file natively but does not apply Claude's path-scoped rule globs. A Codex worker must read the corresponding file explicitly. Claude imports this file through `CLAUDE.md` and loads language rules from `.claude/rules/`. The docs stack rules currently live in the conventions page. Verify `agy` rule loading before relying on it.
@@ -98,8 +103,6 @@ Sandbox escapes and system changes go to the operator with the exact proposed ch
 
 ## Bus
 
-Set `AGENTCTL_GROUP`, `AGENTCTL_AGENT`, and `AGENTCTL_CREDS_FILE` to the assigned group, identity, and credential file path. Set `AGENTCTL_PORT` when the daemon does not use port `4222`. Keep the credential contents out of arguments, environment values, logs, and evidence.
+Set `AGENTCTL_GROUP`, `AGENTCTL_AGENT`, and `AGENTCTL_CREDS_FILE` to the assigned identity and credential file path. Set `AGENTCTL_PORT` when `agentd` uses a port other than `4222`. Keep credential contents out of arguments, environment values, logs, and evidence.
 
-Run `agentctl join` at startup. Use `agentctl send <to> <text>` for messages, `agentctl receive --timeout 30` to wait for one, and `agentctl ack '<id>'` with the receive result's `id` after handling it. Run `agentctl status --set working|idle|blocked --detail "..."` when work state changes, and `agentctl roster` to see joined agents. See the [agentctl reference](docs/src/content/docs/guides/agentctl.md) for output and exit codes.
-
-The #82 credential policy currently blocks JetStream commands through per-agent credentials. Use the coordinator's dispatch and reporting channel until the reviewed permission or broker-mediation change is merged. Record bus failures as evidence rather than using another agent's credential.
+Use `agentctl send <to> <text>`, `agentctl receive --timeout 30`, and `agentctl ack '<id>'` with the receive result's opaque `id`. See the [agentctl reference](docs/src/content/docs/guides/agentctl.md). Join, status, and roster remain outside this split of issue #27. Use the coordinator's dispatch and reporting channel for those until they are added.

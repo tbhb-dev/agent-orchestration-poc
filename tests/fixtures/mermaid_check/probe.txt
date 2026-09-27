@@ -1,0 +1,6 @@
+```mermaid
+usecase-beta
+actor User
+Report("__proto__ constructor template unset omit")
+User --> Report
+```

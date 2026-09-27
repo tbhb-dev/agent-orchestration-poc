@@ -9,4 +9,8 @@ if [ "$#" -gt 0 ]; then
 else
     out=$(gofumpt -l .)
 fi
-[ -z "$out" ] || { echo "$out"; echo "gofumpt would reformat the files above; run mise run fmt:go"; exit 1; }
+[ -z "$out" ] || {
+    echo "$out"
+    echo "gofumpt would reformat the files above; run mise run fmt:go"
+    exit 1
+}

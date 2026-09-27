@@ -9,8 +9,16 @@ exclude = ["research/imported/**", ".worktrees/", ".venv/", "node_modules/"]
 # Path-scoped rules files open with frontmatter and a prompt paragraph too.
 ".claude/rules/*.md" = ["MD041"]
 # The clone table quotes each README's first line verbatim, so links and HTML in it are data.
-"experiments/00-system-assessment/dependency-clones.md" = ["MD033", "MD042", "MD052", "MD057"]
+"experiments/00-system-assessment/dependency-clones.md" = [
+  "MD033",
+  "MD042",
+  "MD052",
+  "MD057",
+]
 # Two sections legitimately share the heading "What could not be found" under different parents.
 "experiments/00-system-assessment/harness-research.md" = ["MD024"]
 # Claude's root instructions begin with the cross-harness import.
 "CLAUDE.md" = ["MD041"]
+# Preserve the source heading and blank lines in the verbatim rollover archive.
+"docs/src/content/docs/project/handoff-2026-09-26-prompt.md" = ["MD012", "MD025"]
+"docs/src/content/docs/project/handoff-2026-09-26-state.md" = ["MD025"]

@@ -1,0 +1,6 @@
+component,tested_version,proposed_pin,mise_provider,backend,executable,macos_arm64,linux_arm64,installation_and_execution_result
+Grafana,13.2.2,13.2.2,http:grafana,http,grafana,official archive tested,official package documented,"mise install http:grafana@13.2.2 exit 0; mise exec http:grafana@13.2.2 -- grafana --version exit 0: grafana version 13.2.2"
+Alloy,1.20.0,1.20.0,grafana/alloy,github,alloy,release archive tested,release archive listed,"mise install github:grafana/alloy@1.20.0 exit 0; mise exec github:grafana/alloy@1.20.0 -- alloy --version exit 0: v1.20.0"
+Tempo,2.7.2,2.7.2 provisional,grafana/tempo,github,tempo,release archive tested,release archive listed,"mise install github:grafana/tempo@2.7.2 exit 0; mise exec github:grafana/tempo@2.7.2 -- tempo --version exit 0: 2.7.2"
+Loki,3.7.8,3.7.8,grafana/loki,github,loki,release archive tested,release archive listed,"mise install github:grafana/loki@3.7.8 exit 0; mise exec github:grafana/loki@3.7.8 -- loki --version exit 0: 3.7.8"
+Mimir,3.2.1,3.2.1,grafana/mimir,github,mimir,release binary tested,release binary listed,"mise install github:grafana/mimir@mimir-3.2.1 exit 0; mise exec github:grafana/mimir@mimir-3.2.1 -- mimir -version exit 0: 3.2.1"

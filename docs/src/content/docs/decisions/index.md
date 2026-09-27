@@ -11,3 +11,9 @@ Use a numbered `NNNN-slug.md` page with `title` and `description` frontmatter. F
 - [0002, Python type checker is strict pyrefly](/decisions/0002-python-type-checker/), accepted 2026-09-26 for issue #61.
 - [0003, Functional core and imperative shell](/decisions/0003-functional-core-imperative-shell/), accepted 2026-09-26 for issue #58.
 - [0004, Duplicate, dead, and complex code gates](/decisions/0004-quality-gates/), accepted 2026-09-26 for issues #62 and #63.
+- [0005, Property and mutation testing gates](/decisions/0005-property-and-mutation-testing/), accepted 2026-09-26 for issues #59 and #60.
+- [0006, Shell scripts use ShellCheck and shfmt](/decisions/0006-shell-tooling/), accepted 2026-09-26 for issue #30.
+- [0007, Webhook-fed pull request monitor](/decisions/0007-github-event-monitor/), [untested] proposed 2026-09-26 for issue #98.
+- [0008, Analysis notebooks use Quarto text](/decisions/0008-analysis-notebooks/), accepted 2026-09-26 for issue #104.
+- [0009, Analysis charts use Matplotlib SVG](/decisions/0009-analysis-visualization/), accepted 2026-09-26 for issue #104.
+- [0010, Agent bus operations use an authenticated daemon relay](/decisions/0010-agent-bus-relay/), accepted 2026-09-26 for issue #96.

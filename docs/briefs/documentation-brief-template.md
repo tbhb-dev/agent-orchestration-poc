@@ -1,0 +1,23 @@
+# Documentation brief template
+
+Copy this brief into the coordinator's dispatch for Codex documentation work.
+
+## Assignment
+
+State the issue, target pages, source inputs, and expected reader action.
+
+## Branch and review
+
+Merge `main` into a pushed branch and rebase only unpublished history. Never force push a pushed branch. Open the PR and exit after checks conclude. A review round is one verdict by `tbhbbot`. After the third changes-requested verdict, stop until a newer coordinator `tbhb` comment has the exact body `Arbitration: authorize another round`. Reply to inline threads and push fixes before re-review.
+
+## Writing rules
+
+Write each Markdown paragraph on one source line. Use sentence case headings. Keep citation lists free of semicolons. Give site pages `title` and `description` frontmatter, with no body H1.
+
+## Verification
+
+Run `mise run check:vale -- <changed-markdown-paths>` with the repository's pinned Vale 3.22.0 and `ai-tells` style. Fix every new alert before reporting completion. Run `mise run check:rumdl` and `mise run check:guard-markdown` for the full Markdown inventory.
+
+## Report
+
+List the changed pages, the commands and outcomes, and any source claim that remains untested.
