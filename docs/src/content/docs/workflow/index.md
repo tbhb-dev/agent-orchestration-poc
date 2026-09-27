@@ -59,6 +59,8 @@ Use one issue per work item with the following body template. There is no checke
 
 Use exactly one label in each of `area/`, `type/`, `phase/`, and `harness/`. The checked [workflow reference](/guides/workflow-reference/) lists the names, descriptions, colors, title types, scopes, and type mapping. Add `blocked` or `needs-operator` when applicable. Use blocked-by relationships for dependencies and sub-issues to split larger work. Decision issues close with a [decision record](/decisions/).
 
+For a dependency, state the blocking issue number in Dependencies and paths and record the matching native GitHub blocked-by relationship. [Decision 0015](/decisions/0015-sub-issues/) proposes native edges as the script-readable source and assigns body-to-edge checks and open-blocker dispatch refusal to #158. Until that check exists, the coordinator verifies both directions before a fresh #90 verdict and immediately before dispatch, treating an incomplete read or mismatch as a refusal. Parent-child links group work and do not satisfy dependency gates. Each executable child requires a separate issue review and PR. Project 9 parent grouping remains proposed pending the reversible trial, and closing links follow #124's separate decision.
+
 ## Branches and commits
 
 Use the branch type and form in the [workflow reference](/guides/workflow-reference/). The Project setup used the now retired `workflow/12-project-config` type. Worktrees belong under `.worktrees/<type>-<issue>-<slug>/`. Workers have separate checkouts and never work on `main`.
