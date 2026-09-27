@@ -108,6 +108,7 @@ An issue body uses its required form sections followed by the same author block.
 | Unknown effort | Replace `medium` in A with `default` | Fail |
 | False unavailable | Replace `medium` in A with `unavailable` | Fail, control exists |
 | Future unavailable control | New catalog entry with documented absence and literal `effort=unavailable` | Pass only after catalog admission |
+| Configuration change | Reuse A's agent ID after changing its model | Fail, allocate a new ID and retain both contributors |
 | Missing run ID | Remove the `agent=docs-131` field and its preceding space from A | Fail |
 | Noncanonical bytes | Indent A or add a trailing space or fold it | Fail |
 | Wrong field order | Move `agent=docs-131` before `effort=medium` | Fail |
