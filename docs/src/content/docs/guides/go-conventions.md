@@ -59,7 +59,9 @@ Use rapid 1.3.0 for pure core properties. Put each property in a named `t.Run` t
 
 ## Mutation testing
 
-Run `mise run check:mutation:go` for changes under `internal/core/`. Gremlins 0.6.0 scores only that tree, with efficacy and mutant coverage floors of 80 percent. The task caps rapid shrinking at one second per mutant and disables fail files. It also rejects timed-out mutants because gremlins excludes those from both scores. A survivor calls for a stronger test, while an uncovered mutant calls for a case that reaches it. The mutation task stays outside `mise run check` and runs in the always-present mutation CI job when core code or tests change (research/gates/testing/notes.md §3, decision 0005).
+Run `mise run check:mutation:go` for changes under `internal/core/`. Gremlins 0.6.0 scores only that tree, with efficacy and mutant coverage floors of 90 percent. The task caps rapid shrinking at one second per mutant and disables fail files. It also rejects timed-out mutants because gremlins excludes those from both scores. A survivor calls for a stronger test, while an uncovered mutant calls for a case that reaches it. The mutation task stays outside `mise run check` and runs in the always-present mutation CI job when core code or tests change (research/gates/testing/notes.md §3, decision 0005).
+
+Run `mise run check:coverage` on every pull request. Its Go 1.27.1 statement profile gates `internal/core/` at 95 percent and all Go shell packages at 70 percent, counting packages without tests as zero. Gobco 1.3.4 gates Go core branch outcomes at 90 percent. Test each package's decisions with plain values. Put I/O paths in shell tests and include integration tests in the coverage run. Gobco does not see `select` branches or uncalled functions without a condition, so review those paths explicitly (research/gates/testing/coverage-branches-87.md, decision 0005).
 
 ## Harness rule loading
 
@@ -69,7 +71,7 @@ agy 1.2.11 describes user and workspace Markdown rules and `rules.json` include 
 
 ## Functional core and imperative shell
 
-Place pure decisions and data transformations under `internal/core/<topic>`. The existing `internal/bus`, `internal/registry`, `internal/backend/*`, `internal/term`, `internal/api`, and `cmd/*` packages are the imperative shell. `internal/core/roster` can return a roster transition from an input value, while `internal/registry` stores the resulting value in SQLite. Keep `internal/version` where it is (research/gates/boundaries/notes.md §§1, 3).
+Place pure decisions and data transformations under `internal/core/<topic>`. The `internal/cli`, `internal/bus`, `internal/registry`, `internal/backend/*`, `internal/term`, `internal/api`, and `cmd/*` packages are the imperative shell. `internal/core/roster` can return a roster transition from an input value, while `internal/registry` stores the resulting value in SQLite. Keep `internal/version` where it is (research/gates/boundaries/notes.md §§1, 3).
 
 golangci-lint 2.14.0 runs depguard on the core tree. Its `.golangci.yml` rule denies imports of `os`, `net`, `syscall`, the NATS modules, and shell packages, while allowing `net/netip` and `net/url` as value types. The test rule targets `**_test.go` files and denies process, socket, broker, and backend imports. Deny the shortest prefix only, since listing both `os` and `os/exec` let other `os` subpackages escape in a trial (research/gates/boundaries/notes.md §3).
 

@@ -23,6 +23,7 @@ shfmt = "3.14.0"
 "go:golang.org/x/tools/cmd/deadcode" = "0.50.0"
 "go:github.com/tbhb/repotools/cmd/guard-markdown" = "0.9.0"
 "go:github.com/go-gremlins/gremlins/cmd/gremlins" = "0.6.0"
+"go:github.com/rillig/gobco" = "1.3.4"
 
 [env]
 # A go.mod toolchain mismatch fails instead of downloading a Go outside mise.
@@ -41,6 +42,7 @@ depends = [
   "check:dupl",
   "check:deadcode",
   "check:pytest",
+  "check:coverage",
   "check:pyrefly",
   "check:biome",
   "check:vale",
@@ -122,6 +124,15 @@ run = ["uv run ruff check --fix .", "uv run ruff format ."]
 description = "Run the Python tests"
 run = "uv run pytest"
 
+[tasks."check:coverage"]
+description = "Gate Python lines and branches and Go statements and branches"
+run = [
+  "mkdir -p .coverage-reports",
+  "uv run pytest --run-integration --cov=agent_orchestration_poc --cov-report=json:.coverage-reports/python.json --cov-report=term",
+  "go test -tags=integration -coverprofile=.coverage-reports/go.out ./...",
+  "uv run python scripts/check-coverage.py",
+]
+
 [tasks."check:pyrefly"]
 description = "Type check Python with pyrefly in strict mode"
 run = "uv run pyrefly check"
@@ -140,11 +151,8 @@ run = [
 ]
 
 [tasks."check:mutation:python"]
-description = "Check Python core coverage and mutation score"
-run = [
-  "uv run pytest --cov=agent_orchestration_poc.core --cov-report=term --cov-fail-under=90",
-  "uv run python scripts/check-mutation-score.py",
-]
+description = "Check Python core mutation score"
+run = "uv run python scripts/check-mutation-score.py"
 
 [tasks."check:property:nightly:go"]
 description = "Run Go core properties with the nightly random seed"

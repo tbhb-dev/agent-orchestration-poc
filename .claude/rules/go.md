@@ -32,12 +32,13 @@ See [Go conventions](../../docs/src/content/docs/guides/go-conventions.md).
 - Go 1.27: Put external tmux or NATS tests behind `//go:build integration` and skip when the executable is missing; keep embedded NATS tests untagged.
 - Go 1.27: Use named table tests with `t.Run`, `_test.go`, `testdata/`, and Go 1.26 `t.ArtifactDir()` for captured logs.
 - rapid 1.3.0: Put pure core properties in named `t.Run` subtests through `rapid.MakeCheck`; label draws and turn a shrunk failure into a table case.
-- gremlins 0.6.0: Run `mise run check:mutation:go` for core changes. Keep efficacy and mutant coverage at or above 80 percent, with shell packages outside the scope.
+- gremlins 0.6.0: Run `mise run check:mutation:go` for core changes. Keep efficacy and mutant coverage at or above 90 percent, with shell packages outside the scope.
+- Go 1.27.1, gobco 1.3.4: Run `mise run check:coverage` for 95 percent core statements, 90 percent core branches, and 70 percent shell statements, including integration tests.
 
 ## Core and shell
 
 - Go 1.27, golangci-lint 2.14.0: put pure decisions and data transformations under `internal/core/<topic>`. `depguard` denies `os`, `net` except `net/netip` and `net/url`, `syscall`, NATS modules, and shell packages there.
-- Go 1.27: Put side effects in `cmd/*`, `internal/bus`, `internal/registry`, `internal/backend/*`, `internal/term`, and `internal/api`. Pass values into the core, never an `io.Writer`, `*os.File`, or connection.
+- Go 1.27: Put side effects in `cmd/*`, `internal/cli`, `internal/bus`, `internal/registry`, `internal/backend/*`, `internal/term`, and `internal/api`. Pass values into the core, never an `io.Writer`, `*os.File`, or connection.
 - Go 1.27, golangci-lint 2.14.0: fix a depguard finding by moving the I/O. Never use `//nolint:depguard`. Deny only the shortest prefix, and scope test rules with `**_test.go`.
 - Go 1.27: keep core tests untagged, with values in and out and no mocks. Core tests never spawn processes or connect to a broker. Mark shell tests needing external tools with `//go:build integration`.
 
