@@ -38,4 +38,4 @@ Transcript and log records can vary by event type, while GitHub webhook and REST
 | `mise exec -- vale research/gates/data-analysis/*.md` | exit 0 | New research Markdown had zero alerts |
 | `mise exec -- gitleaks dir --redact --no-banner research/gates/data-analysis` | exit 0 | New research evidence had no detected leak |
 
-The `docs:check-links` failure is outside issue #104's allowed paths. It remains a baseline failure to resolve in its owning work item. The ordinary site build still succeeded. Runtime notebook rendering and synthetic analysis belong to #107.
+The `docs:check-links` failure is outside issue #104's allowed paths. It remains a baseline failure to resolve in its owning work item. The ordinary site build still succeeded. The new `main` commit `a551fa5` could not be merged locally because of the sandbox denial. Pull request CI must check this branch with that newer base. Runtime notebook rendering and synthetic analysis belong to #107.
