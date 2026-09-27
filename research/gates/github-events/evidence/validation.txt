@@ -1,0 +1,58 @@
+Commands executed on 2026-09-26. Selected output, not a full transcript.
+mise run fmt: exit 0
+mise run check: exit 0
+[check:pytest] ======================== 31 passed, 1 skipped in 1.24s =========================
+[check:mermaid] mermaid: 9 block(s) in 92 file(s), 0 invalid
+[check:go] 0 issues.
+[check:vale] ✔ 0 errors, 0 warnings and 0 suggestions in 92 files.
+mise run check:mermaid: exit 0
+[check:mermaid] $ scripts/check-mermaid.sh
+mermaid: 9 block(s) in 92 file(s), 0 invalid
+mise exec -- gitleaks dir --redact --no-banner research/gates/github-events: exit 0
+8:46PM INF scanned ~260042 bytes (260.04 KB) in 33.8ms
+8:46PM INF no leaks found
+mise run docs:check-links: exit 1
+[pid=64276][err] [0926/204403.199041:FATAL:base/apple/mach_port_rendezvous_mac.cc:159] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.64276: Permission denied (1100)
+
+Review fixes, 2026-09-27 UTC (2026-09-26 America/New_York).
+Merge base: 9ca2d88, merge of origin/main without conflicts.
+git fetch origin && git merge origin/main: fetch passed; merge refused configured fast-forward-only mode.
+git merge --no-ff origin/main: merged tree, commit hook blocked at ~/.cache/prek/prek.log (Operation not permitted).
+Merge commit completed with full hooks using PREK_HOME in a writable cache.
+A temporary worktree cache triggered Biome formatting; moved that cache to /tmp/98-prek-cache and reran.
+mise run check after merging: exit 0.
+Pre-edit document assertions: exit 1, all five review omissions reproduced.
+Post-edit same assertions: exit 0, all five pass.
+mise run fmt: exit 0.
+mise run check after fixes: exit 0.
+Vale: 0 errors, 0 warnings and 0 suggestions in 99 files.
+Mermaid: 9 blocks in 99 files, 0 invalid.
+Python: 52 passed, 2 integration tests skipped by configuration.
+mise run check:mutation: exit 0.
+Go: 85 mutants classified; required mutation gate passed.
+Python: 83.33%, 200 killed of 240; core coverage 100%.
+mise exec -- gitleaks dir --redact --no-banner research/gates/github-events: exit 0, no leaks.
+mise run docs:check-links: exit 1.
+Chromium failed: bootstrap_check_in ... Permission denied (1100).
+Rendered-page omissions caused downstream link errors; CI must verify site build and links.
+A read-only ps status probe was also denied by the sandbox; test exit statuses were collected through the tool sessions.
+No sandbox changes, host configuration changes or credentials reads were attempted.
+GitHub default authenticated identity verified as tbhb; no account switch.
+
+Main synchronization, 2026-09-27 UTC (2026-09-26 America/New_York).
+Latest tbhbbot review approved 25b4e41 with no findings; existing threads remain resolved.
+Merged origin/main at 1856e7b4ba68916bfb582767aedb8fb133b5e599 (PR #95).
+Initial merge refused configured fast-forward-only mode; explicit non-fast-forward merge reproduced one conflict.
+Conflicted file: docs/src/content/docs/decisions/index.md.
+Preserved accepted shell tooling decision 0006; renamed proposed monitor decision to 0007 and updated its title, index entry and design link.
+Updated the PR description to name decision 0007.
+mise run fmt: exit 0, no additional changes.
+mise run check: exit 0, including the merged ShellCheck and shfmt gates.
+Python: 52 passed, 2 integration tests skipped by configuration.
+Vale: 0 errors, 0 warnings and 0 suggestions in 104 files.
+Mermaid: 9 blocks in 104 files, 0 invalid.
+mise run check:mutation: exit 0.
+Python core mutation score: 83.33% (200 killed of 240); core coverage 100%.
+mise run docs:check-links: exit 1.
+Chromium failed at bootstrap_check_in with Permission denied (1100), causing omitted pages and downstream link errors.
+CI must verify the rendered site and internal links; no sandbox or host settings changed.

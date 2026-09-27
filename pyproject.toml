@@ -23,6 +23,10 @@ dev = [
 requires = ["uv_build>=0.12.10,<0.13.0"]
 build-backend = "uv_build"
 
+[tool.coverage.run]
+branch = true
+patch = ["subprocess"]
+
 [tool.importlinter]
 root_package = "agent_orchestration_poc"
 include_external_packages = true

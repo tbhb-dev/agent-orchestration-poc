@@ -1,0 +1,47 @@
+[
+  {
+    "case": "correct reviewer",
+    "token_status": 0,
+    "token": "fixture-only",
+    "identity_status": 0,
+    "identity": "tbhbbot",
+    "expected_exit": 0,
+    "review_runs": true
+  },
+  {
+    "case": "token failure",
+    "token_status": 1,
+    "token": "",
+    "identity_status": 0,
+    "identity": "tbhbbot",
+    "expected_exit": 90,
+    "review_runs": false
+  },
+  {
+    "case": "empty token",
+    "token_status": 0,
+    "token": "",
+    "identity_status": 0,
+    "identity": "tbhbbot",
+    "expected_exit": 90,
+    "review_runs": false
+  },
+  {
+    "case": "wrong effective identity",
+    "token_status": 0,
+    "token": "fixture-only",
+    "identity_status": 0,
+    "identity": "tbhb",
+    "expected_exit": 91,
+    "review_runs": false
+  },
+  {
+    "case": "identity lookup failure",
+    "token_status": 0,
+    "token": "fixture-only",
+    "identity_status": 1,
+    "identity": "",
+    "expected_exit": 91,
+    "review_runs": false
+  }
+]
