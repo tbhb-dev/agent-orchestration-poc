@@ -11,9 +11,11 @@ Read the assigned issue and [project plan](docs/src/content/docs/project/plan.md
 - Keep work committed. Push before reporting completion and, once the bus exists, whenever reporting status there. Scan evidence for secrets and redact or hold back sensitive material before committing it.
 - Open one small PR per issue with `gh pr create`. Use the conventional subject as its title. Include what, why, evidence, docs, and checklist sections, ending with `Refs: #<n>`. Include evidence links for `feat` and `exp` changes.
 - The checklist covers green CI, docs updated or an issue filed, no secrets, and evidence committed. The Project Worker field and PR evidence section record the harness and model.
-- The coordinator reviews every PR. A different harness reviews first where practical. Workers do not merge. The coordinator squash-merges after review and green CI. The PR title and body become the squash commit.
-- The operator must merge security policy and credentials changes. Egress rules and installations outside the repository also require an operator merge. Escalate those changes to the operator.
-- The `main` ruleset requires a PR and the `check` job, and blocks force pushes and deletion. Squash is the only enabled merge method.
+- Reviewers use `scripts/reviewer-gh.sh` for each reviewing command. It resolves the `tbhbbot` token and checks the effective account before running `gh`. The default implementer account stays `tbhb`, and workers never switch accounts. Never print, log, or write a token.
+- `tbhbbot` posts request-changes and approval verdicts as PR reviews with inline threads. State the harness, model, and effort on the first line. Implementers reply in threads and push fixes without force pushing, then the reviewer re-reviews. One round is one verdict by `tbhbbot`. After three changes-requested verdicts, stop until a newer coordinator `tbhb` comment begins `Arbitration:` and explicitly authorizes another round. The coordinator never approves through `tbhbbot`.
+- The coordinator reviews every PR. A different harness reviews first where practical. Workers do not merge. The coordinator squash-merges after a current approval and green CI. The PR title and body become the squash commit.
+- Reviewer identity records the project review process. It does not protect credentials from workers on the same machine. The coordinator may merge product code that handles credentials after ordinary review. The operator merges changes to project credential issuance, storage, grants, or repository secrets, security policy, egress rules, and host setup or installations. Escalate those changes to the operator.
+- The `main` ruleset requires a PR, one approval of the latest push by someone other than its pusher, resolved threads, an up-to-date branch, and successful `check`, `docs`, `pr-body`, `imported-research`, and `mutation` checks. It dismisses stale approvals on push and permits only squash merges. Its bypass list is empty. Ruleset `all-branches` blocks force pushes on every branch.
 - CI jobs are `check` (linters, formatting, tests, and repository guards), `docs` (site build and internal links), `pr-body` (trailers and evidence links), and `imported-research` (import immutability). See [workflow](docs/src/content/docs/workflow/index.md).
 - Use `gh query` for read-only GitHub API calls. Reserve `gh api` for mutations.
 
@@ -41,7 +43,8 @@ Run project tools through mise tasks, never as bare tools or global installs. Fo
 
 Every worktree shares one global `git stash` stack. An unqualified restore can take another worker's entry.
 
-- Prefer `git rebase --autostash` when rebasing a dirty worktree. It scopes the save to the rebase without using the shared stack.
+- Merge `main` into a pushed branch to update it. A clean update retains approval, while a hand-resolved merge dismisses it and needs a new review. Rebase only unpublished history. Never force push a pushed branch.
+- Prefer `git rebase --autostash` when rebasing dirty unpublished history. It scopes the save to the rebase without using the shared stack.
 - Never run bare `git stash pop` or `git stash apply`. Stack indices change whenever any worktree pushes an entry.
 - If a manual stash is unavoidable, name it with `git stash push -m`. Run `git stash list` immediately before restoring, match your own message, and pop the explicit `stash@{n}`.
 
@@ -49,7 +52,7 @@ Prefer a throwaway work-in-progress commit to preserve state across a rebase or 
 
 ```sh
 git commit -am wip --no-verify
-# Rebase, switch, or perform the required operation.
+# Rebase unpublished history, switch, or perform the required operation.
 git reset --soft HEAD~1
 ```
 

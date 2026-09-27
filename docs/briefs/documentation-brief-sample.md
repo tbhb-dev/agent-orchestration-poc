@@ -4,6 +4,10 @@
 
 Document the coordinator preflight tasks for issues #70 through #73 on the workflow and tooling pages. Use the [phase 1 retrospective](/retros/2026-09-26-phase-1/) as the source for each task's trigger.
 
+## Branch and review
+
+Merge `main` into a pushed branch and rebase only unpublished history. Never force push a pushed branch. Open the PR and exit after checks conclude. A review round is one verdict by `tbhbbot`. After the third changes-requested verdict, stop until a newer coordinator `tbhb` comment starts `Arbitration:` and explicitly authorizes another round. Reply to inline threads and push fixes before re-review.
+
 ## Writing rules
 
 Write one source line per paragraph and capitalize only the first word and proper names in headings. Separate citations with commas or separate sentences. Do not use semicolon citation lists.
