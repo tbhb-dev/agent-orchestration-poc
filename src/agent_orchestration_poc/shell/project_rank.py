@@ -17,6 +17,8 @@ from agent_orchestration_poc.core.project_rank import (
     plan_move,
     plan_order,
     plan_replace,
+    planned_cost,
+    safe_to_continue,
     safe_to_write,
     validate_items,
 )
@@ -40,7 +42,6 @@ QUERY = """query($owner:String!,$number:Int!,$after:String){
 MUTATION = """mutation($project:ID!,$item:ID!,$after:ID){
   updateProjectV2ItemPosition(input:{projectId:$project,itemId:$item,afterId:$after}){
     clientMutationId}
-  rateLimit{remaining cost}
 }"""
 
 
@@ -171,19 +172,19 @@ def _plan(items: tuple[Item, ...], words: tuple[str, ...]) -> tuple[Mutation, ..
             )
 
 
-def _write(project_id: str, mutation: Mutation) -> tuple[int, int]:
+def _write(
+    project_id: str, mutation: Mutation, before_remaining: int
+) -> tuple[int, int]:
     variables = {"project": project_id, "item": mutation.item_id}
     if mutation.after_id is not None:
         variables["after"] = mutation.after_id
     data, header_remaining = _graphql(MUTATION, variables)
     if data.get("updateProjectV2ItemPosition") is None:
         raise ValueError("position mutation result is incomplete")
-    rate = data.get("rateLimit") or {}
-    if not isinstance(rate.get("cost"), int) or not isinstance(
-        rate.get("remaining"), int
-    ):
-        raise TypeError("mutation point cost is missing")
-    return min(header_remaining, rate["remaining"]), rate["cost"]
+    cost = before_remaining - header_remaining
+    if cost <= 0:
+        raise ValueError("mutation point cost cannot be determined from headers")
+    return header_remaining, cost
 
 
 def run(words: tuple[str, ...], fixture: Path | None, apply: bool) -> int:
@@ -194,12 +195,12 @@ def run(words: tuple[str, ...], fixture: Path | None, apply: bool) -> int:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         first = _fixture(fixture) if fixture else read_project()
         mutations = _plan(first.items, words)
-        planned_cost = 2 * first.cost + 5 * len(mutations)
+        estimate = planned_cost(first.cost, 0, len(mutations))
         LOGGER.info(
             "planned mutations: %s; planned requests: %s; estimated points: %s",
             len(mutations),
             2 * first.requests + len(mutations),
-            planned_cost,
+            estimate,
         )
         for mutation in mutations:
             LOGGER.info("itemId=%s afterId=%s", mutation.item_id, mutation.after_id)
@@ -208,20 +209,22 @@ def run(words: tuple[str, ...], fixture: Path | None, apply: bool) -> int:
         if _gh("user", "--jq", ".login").strip() != COORDINATOR:
             raise ValueError("apply requires the coordinator account")
         second = read_project()
-        planned_cost = 2 * max(first.cost, second.cost) + 5 * len(mutations)
+        estimate = planned_cost(first.cost, second.cost, len(mutations))
         if first.project_id != second.project_id or not safe_to_write(
-            first.items, second.items, second.remaining, planned_cost
+            first.items, second.items, second.remaining, estimate
         ):
             raise ValueError(
                 "order changed or remaining points below ten times planned cost"
             )
         spent = first.cost + second.cost
+        remaining = second.remaining
         for index, mutation in enumerate(mutations):
-            remaining, cost = _write(first.project_id, mutation)
+            remaining, cost = _write(first.project_id, mutation, remaining)
             spent += cost
             LOGGER.info("position mutation cost=%s remaining=%s", cost, remaining)
-            pending = 5 * (len(mutations) - index - 1) + max(first.cost, second.cost)
-            if pending and remaining < 10 * pending:
+            if not safe_to_continue(
+                remaining, first.cost, second.cost, len(mutations), index + 1
+            ):
                 raise ValueError("remaining points below ten times pending cost")
         readback = read_project()
         spent += readback.cost

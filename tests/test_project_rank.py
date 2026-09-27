@@ -11,6 +11,8 @@ from agent_orchestration_poc.core.project_rank import (
     plan_move,
     plan_order,
     plan_replace,
+    planned_cost,
+    safe_to_continue,
     safe_to_write,
     standard_issues,
     validate_items,
@@ -105,6 +107,36 @@ def test_safe_to_write(
     before = (_item(1), _item(2))
     after = tuple(reversed(before)) if changed else before
     assert safe_to_write(before, after, remaining, cost) is expected
+
+
+@pytest.mark.parametrize(
+    ("first", "second", "count", "expected"),
+    [(2, 0, 1, 9), (2, 3, 2, 16), (0, 0, 0, 0)],
+)
+def test_planned_cost(first: int, second: int, count: int, expected: int) -> None:
+    assert planned_cost(first, second, count) == expected
+
+
+@pytest.mark.parametrize(
+    ("case", "expected"),
+    [
+        ((120, 2, 3, 2, 1), True),
+        ((79, 2, 3, 2, 1), False),
+        ((30, 2, 3, 2, 2), True),
+        ((29, 2, 3, 2, 2), False),
+        ((0, 0, 0, 1, 1), True),
+    ],
+)
+def test_safe_to_continue(case: tuple[int, int, int, int, int], expected: bool) -> None:
+    assert safe_to_continue(*case) is expected
+
+
+@given(st.integers(1, 50), st.integers(1, 10), st.integers(1, 5))
+def test_continue_budget_threshold(read_cost: int, writes: int, completed: int) -> None:
+    total = writes + completed
+    pending = 5 * writes + read_cost
+    assert safe_to_continue(10 * pending, read_cost, 0, total, completed)
+    assert not safe_to_continue(10 * pending - 1, read_cost, 0, total, completed)
 
 
 @given(st.permutations((1, 2, 3, 4, 5)))

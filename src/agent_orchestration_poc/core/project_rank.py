@@ -148,6 +148,19 @@ def safe_to_write(
     return before == after and cost > 0 and remaining >= 10 * cost
 
 
+def planned_cost(first_read: int, second_read: int, mutations: int) -> int:
+    """Estimate two complete reads and all planned mutation requests."""
+    return 2 * max(first_read, second_read) + 5 * mutations
+
+
+def safe_to_continue(
+    remaining: int, first_read: int, second_read: int, total: int, completed: int
+) -> bool:
+    """Reserve ten times the cost of pending writes and the read-back."""
+    pending = 5 * (total - completed) + max(first_read, second_read)
+    return pending == 0 or remaining >= 10 * pending
+
+
 def apply_mutations(
     items: tuple[Item, ...], mutations: tuple[Mutation, ...]
 ) -> tuple[Item, ...]:

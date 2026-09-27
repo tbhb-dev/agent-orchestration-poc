@@ -119,10 +119,9 @@ def _mutation_response() -> str:
     body: dict[str, Any] = {
         "data": {
             "updateProjectV2ItemPosition": {"clientMutationId": None},
-            "rateLimit": {"remaining": 490, "cost": 1},
         }
     }
-    return f"HTTP/2 200 OK\nx-ratelimit-remaining: 490\n\n{json.dumps(body)}\n"
+    return f"HTTP/2 200 OK\nx-ratelimit-remaining: 497\n\n{json.dumps(body)}\n"
 
 
 def _first_page() -> str:
@@ -141,7 +140,9 @@ def _last_page() -> str:
     return f"HTTP/2 200 OK\nx-ratelimit-remaining: 498\n\n{json.dumps(body)}\n"
 
 
-def _fake_gh(tmp_path: Path, responses: list[str], *, fail: bool = False) -> None:
+def _fake_gh(
+    tmp_path: Path, responses: list[str], *, fail: bool = False, validate: bool = False
+) -> None:
     files = []
     for index, response in enumerate(responses):
         path = tmp_path / f"response-{index}"
@@ -151,6 +152,11 @@ def _fake_gh(tmp_path: Path, responses: list[str], *, fail: bool = False) -> Non
     gh.write_text(
         "#!/bin/sh\n"
         'if [ "$2" = user ]; then printf "%s\\n" tbhbagent; exit 0; fi\n'
+        + (
+            'case "$*" in *"mutation("*"rateLimit"*) exit 1 ;; esac\n'
+            if validate
+            else ""
+        )
         + ("exit 1\n" if fail else "")
         + 'count_file="$0.count"\n'
         + 'count=$(cat "$count_file" 2>/dev/null || printf 0)\n'
@@ -211,10 +217,11 @@ def test_apply_with_local_fake_reads_back_and_records_cost(tmp_path: Path) -> No
             _response(original, 500),
             _response(original, 498),
             _mutation_response(),
-            _response(moved, 488),
+            _response(moved, 495),
         ],
+        validate=True,
     )
     result = _invoke(tmp_path, "--apply", "move", "3", "above", "1")
     assert result.returncode == 0
-    assert "position mutation cost=1 remaining=490" in result.stderr
+    assert "position mutation cost=1 remaining=497" in result.stderr
     assert "read-back confirmed; observed total points=7" in result.stderr
