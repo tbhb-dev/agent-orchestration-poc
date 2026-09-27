@@ -135,6 +135,10 @@ ok   github.com/tbhb/agent-orchestration-poc/internal/provision 1.125s
 
 **Verified:** `mise run check` passed after formatting, including lint, import boundaries, race-enabled Go tests, Python tests, the repository guards, and the six coverage floors listed above. `mise run build` passed. The built binary printed `agentd dev` for `version`, and `agentd group` returned `group requires start, stop, or status`, confirming that the conflict resolution preserved both the shared version dispatcher and provisioner command routing.
 
+**Observed:** While those checks ran, `main` advanced to `b041b06`. Merge commit `7e5e3ad` brought in the event monitor design, data analysis gate, and reviewer identity policy without another file conflict. The remote `main` tip still matched `b041b06` before the final push.
+
+**Verified:** `mise run check` passed again after the second merge, including the new reviewer identity task. Coverage was Python core lines 100.00%, Python core branches 94.00%, Python shell lines 77.54%, Go core statements 98.32%, Go core branches 91.41%, and Go shell statements 70.55%. `mise run check:mutation` also passed again: Go killed 155 of 157 mutants for 98.73% efficacy and 100% mutant coverage, with no uncovered or timed-out mutants; Python killed 454 of 467 mutants for 97.22%.
+
 ## Operator acceptance procedure
 
 **Untested:** the following commands need the operator's subscriptions, user-scope sandbox settings, and a host location outside this worker sandbox. Run them from a trusted checkout of the feature branch. Use three prepared brief files that each ask the worker to read the file, make a small issue-scoped change, stage it, and commit it. The commands use distinct issue #28 acceptance branches so they cannot share a worktree.
