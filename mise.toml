@@ -120,7 +120,7 @@ run = "scripts/record-check.sh task:check:pytest -- sh -c 'uv run pytest'"
 
 [tasks."check:review-identity"]
 description = "Run reviewer policy and wrapper process fixtures"
-run = "uv run pytest tests/fixtures/review_identity/test_policy.py tests/fixtures/review_identity/test_wrapper.py --run-integration"
+run = "scripts/record-check.sh task:check:review-identity -- uv run pytest tests/fixtures/review_identity/test_policy.py tests/fixtures/review_identity/test_wrapper.py --run-integration"
 
 [tasks."check:coverage"]
 description = "Gate Python lines and branches and Go statements and branches"
@@ -167,7 +167,7 @@ run = "scripts/record-check.sh task:vale:sync -- sh -c 'vale sync'"
 
 [tasks."check:vale"]
 description = "Lint prose with Vale (ai-tells)"
-run = "scripts/record-check.sh task:check:vale -- sh -c scripts/check-vale.sh"
+run = "scripts/record-check.sh task:check:vale -- scripts/check-vale.sh"
 
 [tasks."check:rumdl"]
 description = "Lint Markdown with rumdl"

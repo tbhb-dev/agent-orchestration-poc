@@ -150,7 +150,7 @@ The [documentation brief template](https://github.com/tbhb/agent-orchestration-p
 
 ## Prek hooks
 
-The built-in hooks remove trailing whitespace, fix the final newline, and reject added large files. Local pre-commit hooks check staged secrets with gitleaks, Go formatting and golangci-lint, ShellCheck and shfmt on `scripts/*.sh`, Ruff lint and formatting, import-linter, strict pyrefly, Biome, tombi lint and formatting, ryl, rumdl, paragraph wrapping, Vale prose, Mermaid fences, and experiment layout. Tool hooks run through mise, with the shell-only experiment check invoked directly. The import-linter and pyrefly hooks pass no file names so whole-project configuration applies.
+The built-in hooks remove trailing whitespace, fix the final newline, and reject added large files. Local pre-commit hooks check staged secrets with gitleaks, Go formatting and golangci-lint, ShellCheck and shfmt on `scripts/*.sh`, Ruff lint and formatting, import-linter, strict pyrefly, Biome, tombi lint and formatting, ryl, rumdl, paragraph wrapping, Vale prose, Mermaid fences, and experiment layout. Every hook runs through mise and the timing wrapper. The import-linter and pyrefly hooks pass no file names so whole-project configuration applies.
 
 The commit-msg hook runs Vale with `ai-tells` and `ai-tells-commits`. Real commits cannot bypass hooks. The exception is an incomplete throwaway work-in-progress commit that is removed before shared history, as described in `AGENTS.md`.
 

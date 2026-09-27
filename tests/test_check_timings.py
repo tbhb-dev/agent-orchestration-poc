@@ -1,9 +1,11 @@
 """Pure timing decisions and the process and SQLite boundary."""
 
+import shlex
 import signal
 import sqlite3
 import subprocess
 import sys
+import tomllib
 from collections.abc import Callable, Sequence
 from contextlib import closing
 from pathlib import Path
@@ -211,6 +213,42 @@ def test_inventory_requires_wrappers() -> None:
     assert inventory_missing({"check": None}, {}, ()) == ()
 
 
+@pytest.mark.integration
+def test_configured_tasks_and_hooks_have_timing_wrappers() -> None:
+    """Every configured mechanical invocation can write its own timing row."""
+    root = Path(__file__).resolve().parent.parent
+    tasks_config = tomllib.loads((root / "mise.toml").read_text())
+    hooks_config = tomllib.loads((root / "prek.toml").read_text())
+    tasks = {name: task.get("run") for name, task in tasks_config["tasks"].items()}
+    hooks = {
+        hook["id"]: hook["entry"]
+        for repo in hooks_config["repos"]
+        for hook in repo["hooks"]
+    }
+    records = (*(f"task:{name}" for name in tasks), *(f"hook:{name}" for name in hooks))
+    assert inventory_missing(tasks, hooks, records) == ()
+
+
+@pytest.mark.integration
+def test_vale_task_forwards_supplied_filenames(tmp_path: Path) -> None:
+    """The configured child command passes both file arguments unchanged."""
+    root = Path(__file__).resolve().parent.parent
+    run = tomllib.loads((root / "mise.toml").read_text())["tasks"]["check:vale"]["run"]
+    child = shlex.split(run)[3:]
+    script = tmp_path / "scripts" / "check-vale.sh"
+    script.parent.mkdir()
+    script.write_text('#!/bin/sh\nprintf "%s\\n" "$@"\n')
+    script.chmod(0o755)
+    result = subprocess.run(
+        [*child, "one.md", "two.md"],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert result.stdout == "one.md\ntwo.md\n"
+
+
 def test_append_record(tmp_path: Path) -> None:
     """SQLite retains the explicit safe columns and two independent rows."""
     path = tmp_path / "check-timings" / "timings.sqlite3"
@@ -225,17 +263,54 @@ def test_append_record(tmp_path: Path) -> None:
 
 
 @pytest.mark.integration
-def test_store_path_is_ignored_in_main_clone() -> None:
-    """A worktree resolves the ignored store through Git's common directory."""
-    common = subprocess.run(
-        ["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
-        capture_output=True,
-        text=True,
+def test_store_path_is_ignored_in_main_clone(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Normal clones and linked worktrees both resolve the main clone's ignored store."""
+    main = tmp_path / "main"
+    linked = tmp_path / "linked"
+    main.mkdir()
+    subprocess.run(["git", "init", "-q", str(main)], check=True)
+    (main / ".gitignore").write_text(".local-cache/\n")
+    subprocess.run(["git", "-C", str(main), "add", ".gitignore"], check=True)
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            str(main),
+            "-c",
+            "user.name=Test",
+            "-c",
+            "user.email=test@example.invalid",
+            "commit",
+            "-qm",
+            "fixture",
+        ],
         check=True,
-    ).stdout.strip()
-    path = _shell().store_path()
-    assert path == Path(common).parent / ".local-cache/check-timings/timings.sqlite3"
-    assert path.parent.parent.parent != Path.cwd()
+    )
+    subprocess.run(
+        ["git", "-C", str(main), "worktree", "add", "-q", "--detach", str(linked)],
+        check=True,
+    )
+    expected = main / ".local-cache/check-timings/timings.sqlite3"
+    for checkout in (main, linked):
+        monkeypatch.chdir(checkout)
+        assert _shell().store_path() == expected
+        assert (
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(main),
+                    "check-ignore",
+                    "-q",
+                    ".local-cache/check-timings/timings.sqlite3",
+                ],
+                check=False,
+            ).returncode
+            == 0
+        )
+        assert not (linked / ".local-cache").exists()
 
 
 @pytest.mark.integration
