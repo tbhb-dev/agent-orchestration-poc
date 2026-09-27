@@ -360,6 +360,10 @@ run = "uv run python scaffolding/worker-messaging/cli.py status"
 description = "Recheck temporary worker readiness"
 run = "uv run python scaffolding/worker-messaging/cli.py readiness"
 
+[tasks."worker:cleanup"]
+description = "Remove a temporary worker run's exact Codex folder trust"
+run = "uv run python scaffolding/worker-messaging/cli.py cleanup"
+
 [tasks."worker:test-launcher"]
 description = "Test temporary worker launch decisions"
 env = { PYTHONPATH = "scaffolding/worker-messaging" }

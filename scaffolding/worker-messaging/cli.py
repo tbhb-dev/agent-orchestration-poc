@@ -30,6 +30,7 @@ def parser() -> argparse.ArgumentParser:
     launch.add_argument("--endpoint")
     commands.add_parser("status").add_argument("run_id")
     commands.add_parser("readiness").add_argument("run_id")
+    commands.add_parser("cleanup").add_argument("run_id")
     return result
 
 
@@ -58,7 +59,7 @@ def main() -> int:
         }
         output["status"] = status
     sys.stdout.write(json.dumps(output) + "\n")
-    return {"ready": 0, "busy": 0, "blocked": 2, "unknown": 3}[state]
+    return {"ready": 0, "busy": 0, "removed": 0, "blocked": 2, "unknown": 3}[state]
 
 
 def _dispatch(args: argparse.Namespace) -> tuple[dict[str, object], str, str]:
@@ -83,6 +84,8 @@ def _dispatch(args: argparse.Namespace) -> tuple[dict[str, object], str, str]:
             "tmux_name": args.name,
         }
         return launcher.launch(request)
+    if args.command == "cleanup":
+        return launcher.cleanup(args.run_id)
     return launcher.status(args.run_id)
 
 

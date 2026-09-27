@@ -3,6 +3,7 @@
 import hashlib
 import shlex
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 
@@ -155,6 +156,138 @@ def codex_endpoint(endpoint: str | None) -> str:
     if "\x00" in path or path == "/" or "//" in path or "/../" in f"{path}/":
         raise ValueError("invalid Codex Unix endpoint")
     return path
+
+
+def trust_target(worktree: str, root: str, created: bool) -> str:
+    """Limit a trust edit to a newly created, direct child worktree."""
+    path = Path(worktree)
+    if (
+        not created
+        or not path.is_absolute()
+        or path.parent != Path(root) / ".worktrees"
+    ):
+        raise ValueError("trust target is not a launcher-created worktree")
+    trust_key_path(worktree)
+    return str(path)
+
+
+def trust_key_path(worktree: str) -> str:
+    """Encode a quoted key for the pinned app-server key-path parser."""
+    if "\x00" in worktree:
+        raise ValueError("trust path contains a NUL")
+    try:
+        worktree.encode("utf-8")
+    except UnicodeEncodeError as error:
+        raise ValueError("trust path is not valid UTF-8") from error
+    quoted = worktree.replace("\\", "\\\\").replace('"', '\\"')
+    return f'projects."{quoted}".trust_level'
+
+
+def trust_write_params(worktree: str, value: str | None) -> dict[str, Any]:
+    """Match the tagged TUI's replace edit for one quoted project key."""
+    if value not in {"trusted", None}:
+        raise ValueError("invalid trust value")
+    return {
+        "edits": [
+            {
+                "keyPath": trust_key_path(worktree),
+                "value": value,
+                "mergeStrategy": "replace",
+            }
+        ],
+        "filePath": None,
+        "expectedVersion": None,
+        "reloadUserConfig": True,
+    }
+
+
+def trust_transition(
+    row: dict[str, Any], outcome: str, now: str, *, action: str = "", reason: str = ""
+) -> dict[str, Any]:
+    """Derive the owned trust state and event from an operation outcome."""
+    updated = {**row, "trust_events": [*row.get("trust_events", [])]}
+    if outcome == "attempted":
+        updated["trust_events"].append(
+            {"action": action, "at": now, "result": "attempted"}
+        )
+        return updated
+    event = {**updated["trust_events"][-1]}
+    updated["trust_events"][-1] = event
+    action = event["action"]
+    if outcome == "writing":
+        event["result"] = "writing"
+        updated.update(
+            trust_write_attempted=True,
+            trust_blocked=True,
+            state="blocked",
+            reason=f"folder trust {action} outcome unknown",
+            observed_at=now,
+        )
+    elif outcome == "confirmed":
+        event["result"] = "confirmed"
+        updated.update(trust_registered=action == "register", trust_blocked=False)
+        if action == "remove":
+            updated.update(
+                state="removed", reason="folder trust removed", observed_at=now
+            )
+    elif outcome in {"preflight", "conflict", "write_failed"}:
+        event.update(result="failed", reason=reason)
+        updated.update(
+            trust_blocked=True,
+            state="blocked",
+            reason=f"folder trust {action} failed: {reason}"
+            if outcome == "write_failed"
+            else reason,
+            observed_at=now,
+        )
+        if outcome == "conflict":
+            updated["trust_conflict"] = True
+    else:
+        raise ValueError("invalid trust outcome")
+    return updated
+
+
+def trust_cleanup_error(row: dict[str, Any]) -> str | None:
+    """Permit recovery only for a run with a pending or confirmed owned edit."""
+    if (
+        row.get("harness") != "codex"
+        or not row.get("trust_events")
+        or not row.get("trust_write_attempted")
+    ):
+        return "run has no launcher-owned Codex trust write"
+    if row.get("trust_registered") is False:
+        return "run trust entry was already removed"
+    return None
+
+
+def trust_write_confirmed(response: dict[str, Any]) -> bool:
+    """Accept only an unoverridden user-config write result."""
+    return response.get("status") == "ok"
+
+
+def trust_readback(response: dict[str, Any], worktree: str, value: str | None) -> bool:
+    """Require the exact project key in a layered config read."""
+    if not isinstance(response.get("layers"), list):
+        return False
+    config = response.get("config")
+    if not isinstance(config, dict):
+        return False
+    projects = config.get("projects")
+    if projects is not None and not isinstance(projects, dict):
+        return False
+    entry = projects.get(worktree) if isinstance(projects, dict) else None
+    if value is None:
+        return entry is None or isinstance(entry, dict) and "trust_level" not in entry
+    return isinstance(entry, dict) and entry.get("trust_level") == value
+
+
+def trust_gate(row: dict[str, Any]) -> tuple[str, str] | None:
+    """Keep failed trust operations and completed cleanup ineligible for sends."""
+    if row.get("trust_blocked"):
+        return "blocked", row["reason"]
+    if row.get("trust_registered") is False:
+        return "blocked", "folder trust removed"
+    return None
 
 
 def claude_facts(
