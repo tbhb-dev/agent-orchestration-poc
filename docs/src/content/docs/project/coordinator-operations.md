@@ -15,7 +15,7 @@ Keep the Astro background docs daemon available to the operator at `http://local
 
 ## Retrospectives and devlog
 
-Run a retrospective at every phase checkpoint and after every ten merged PRs in a phase. Include bus response times when available, review and CI failures, permission denials, restarts, blocked items, and coordinator interventions. Each retrospective proposes a mechanical check or explains why none applies. File action items as issues. Codex writes the retrospective and the dated devlog from raw inputs. Write a devlog entry on working days with merges, experiment results, or decisions and at checkpoints. See [plan, Retrospectives](/project/plan/#retrospectives-devlog-and-mechanical-checks), [phase 1 retro](/retros/2026-09-26-phase-1/), and [devlog](/devlog/).
+Run a retrospective at every phase checkpoint and after every ten merged PRs in a phase. Include bus response times when available, review and CI failures, permission denials, restarts, blocked items, and coordinator interventions. Each retrospective proposes a mechanical check or explains why none applies. File action items as issues. Codex writes the retrospective and the dated devlog from raw inputs. Write a devlog entry on working days with merges, experiment results, or decisions and at checkpoints. See [plan, Retrospectives](/project/plan/#retrospectives-devlog-and-mechanical-checks), [phase 1 retro](/retros/2026-09-26-phase-1/), and [phase 1 devlog](/devlog/2026-09-26-phase-1-foundation/).
 
 ## Session continuity
 
