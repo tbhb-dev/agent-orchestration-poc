@@ -16,7 +16,6 @@ from adapters import claude_launch, codex_launch
 ROOT = Path(__file__).resolve().parents[2]
 STORE = ROOT / ".local-cache/worker-messaging/registry.json"
 SESSION = "worker-messaging"
-CODEX_ENDPOINT = str(Path.home() / ".codex/app-server-control/app-server-control.sock")
 
 
 def _run(argv: list[str]) -> str:
@@ -92,7 +91,7 @@ def _command(row: dict[str, Any], brief: str) -> str:
         _run(["git", "rev-parse", "--path-format=absolute", "--git-common-dir"])
     )
     shim = common_git.parent / ".holding/shim"
-    return identity.command(row, brief, str(shim), str(common_git), os.environ["PATH"])
+    return identity.command(row, brief, str(shim), os.environ["PATH"])
 
 
 def _new_pane(row: dict[str, Any], brief: str) -> dict[str, Any]:
@@ -135,15 +134,10 @@ def _observe(row: dict[str, Any]) -> dict[str, Any]:
     if seen["trust_prompt"] or not seen["process_start"]:
         return seen
     if row["harness"] == "codex":
-        paths = codex_launch.open_rollouts(seen["pid"])
-        rollouts = [codex_launch.rollout(path) for path in paths]
-        seen.update(identity.codex_facts(row, rollouts, paths))
-        found = seen["native_id"]
+        found, loaded, thread = codex_launch.discover_thread(row["endpoint"], row)
+        seen.update(native_id=found, brief_uptake=bool(found))
         if found:
-            loaded, thread = codex_launch.runtime_thread(row["endpoint"], found)
-            seen.update(
-                identity.codex_runtime_facts(found, row["worktree"], loaded, thread)
-            )
+            seen.update(identity.codex_runtime_facts(found, row, loaded, thread))
     elif row["harness"] == "claude":
         seen.update(
             identity.claude_facts(claude_launch.live_entries(), seen, row["worktree"])
@@ -179,10 +173,17 @@ def inspect(row: dict[str, Any]) -> tuple[dict[str, Any], str, str]:
 
 def launch(request: dict[str, Any]) -> tuple[dict[str, Any], str, str]:
     """Reserve ownership, launch one TUI, and make a bounded readiness check."""
+    if request["harness"] == "codex":
+        identity.codex_endpoint(request.get("endpoint"))
     brief = Path(request["brief_file"]).read_text()
     if not brief.strip():
         raise ValueError("brief is empty")
-    request = {**request, "brief_digest": hashlib.sha256(brief.encode()).hexdigest()}
+    digest = (
+        identity.codex_brief_digest(brief)
+        if request["harness"] == "codex"
+        else hashlib.sha256(brief.encode()).hexdigest()
+    )
+    request = {**request, "brief_digest": digest}
     rows = registry.read(STORE)
     decision = identity.reservation(rows, request)
     if decision == "inspect":
@@ -209,7 +210,7 @@ def launch(request: dict[str, Any]) -> tuple[dict[str, Any], str, str]:
         **request,
         "run_id": str(uuid.uuid7()),
         "launch_time": _now(),
-        "endpoint": CODEX_ENDPOINT if request["harness"] == "codex" else None,
+        "endpoint": request.get("endpoint") if request["harness"] == "codex" else None,
         "native_id": None,
         "state": "starting",
         "observed_at": _now(),
@@ -247,3 +248,13 @@ def status(run_id: str) -> tuple[dict[str, Any], str, str]:
     result = inspect(row)
     registry.write(STORE, rows)
     return result
+
+
+def status_record(row: dict[str, Any]) -> dict[str, Any]:
+    """Read the separate #178 status snapshot as advisory information."""
+    source = ROOT / ".local-cache/worker-messaging/status" / f"{row['run_id']}.json"
+    try:
+        record = registry.read_status(source)
+    except OSError, ValueError, TypeError:
+        record = {}
+    return identity.status_view(row, record, str(source), _now())

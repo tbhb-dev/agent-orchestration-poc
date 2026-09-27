@@ -2,6 +2,7 @@
 
 import hashlib
 import shlex
+from datetime import datetime
 from typing import Any
 
 
@@ -22,40 +23,29 @@ def reservation(rows: list[dict[str, Any]], request: dict[str, Any]) -> str:
     return "duplicate ownership"
 
 
-def codex_candidate(
-    rollouts: list[dict[str, Any]], worktree: str, open_files: list[str]
-) -> str | None:
-    """Accept only a rollout held open by the exact tmux process in this cwd."""
+def codex_brief_digest(brief: str) -> str:
+    """Hash the preview text exposed by Codex for the startup message."""
+    marker = "## My request for Codex:"
+    preview = brief.split(marker, 1)[1] if marker in brief else brief
+    return hashlib.sha256(preview.strip().encode()).hexdigest()
+
+
+def codex_candidate(threads: list[dict[str, Any]], row: dict[str, Any]) -> str | None:
+    """Identify one remote startup by worktree, launch time, and first brief."""
+    launched = int(datetime.fromisoformat(row["launch_time"]).timestamp())
     matches = [
-        row["id"]
-        for row in rollouts
-        if row.get("cwd") == worktree and row.get("path") in open_files
+        thread["id"]
+        for thread in threads
+        if isinstance(thread.get("id"), str)
+        and thread.get("cwd") == row["worktree"]
+        and isinstance(thread.get("createdAt"), int)
+        and thread["createdAt"] >= launched
+        and isinstance(thread.get("preview"), str)
+        and hashlib.sha256(thread["preview"].encode()).hexdigest()
+        == row["brief_digest"]
+        and (not row.get("native_id") or thread["id"] == row["native_id"])
     ]
     return matches[0] if len(matches) == 1 else None
-
-
-def codex_rollout(rows: list[dict[str, Any]], path: str) -> dict[str, Any]:
-    """Interpret captured rollout rows without reading the transcript file."""
-    meta = next((row["payload"] for row in rows if row["type"] == "session_meta"), {})
-    prompts = [
-        part["text"]
-        for row in rows
-        if row["type"] == "response_item" and row["payload"].get("role") == "user"
-        for part in row["payload"].get("content", [])
-        if part.get("type") == "input_text"
-    ]
-    return {
-        "id": meta.get("id"),
-        "cwd": meta.get("cwd"),
-        "path": path,
-        "brief_digests": [
-            hashlib.sha256(prompt.encode()).hexdigest() for prompt in prompts
-        ],
-        "started": any(
-            row["type"] == "event_msg" and row["payload"].get("type") == "task_started"
-            for row in rows
-        ),
-    }
 
 
 def claude_brief_uptake(
@@ -127,32 +117,31 @@ def missing_tmux_target(stderr: str) -> bool:
     )
 
 
-def codex_facts(
-    row: dict[str, Any], rollouts: list[dict[str, Any]], paths: list[str]
-) -> dict[str, Any]:
-    """Derive native identity and brief uptake from process-held rollouts."""
-    found = codex_candidate(rollouts, row["worktree"], paths)
-    match = next((item for item in rollouts if item.get("id") == found), {})
-    return {
-        "native_id": found,
-        "brief_uptake": bool(match.get("started"))
-        and row["brief_digest"] in match.get("brief_digests", []),
-    }
-
-
 def codex_runtime_facts(
-    found: str, worktree: str, loaded: bool, thread: dict[str, Any]
+    found: str, row: dict[str, Any], loaded: bool, thread: dict[str, Any]
 ) -> dict[str, bool]:
-    """Require loaded inventory and the matching runtime thread and cwd."""
+    """Require loaded inventory and matching runtime identity and configuration."""
     status = thread.get("status")
     return {
         "loaded": loaded
         and thread.get("id") == found
-        and thread.get("cwd") == worktree
+        and thread.get("cwd") == row["worktree"]
+        and thread.get("model") == row["model"]
+        and thread.get("reasoningEffort") == row["effort"]
         and isinstance(status, dict)
         and status.get("type") in {"idle", "active"},
         "busy": codex_busy(thread),
     }
+
+
+def codex_endpoint(endpoint: str | None) -> str:
+    """Require a recorded absolute Unix socket address for remote Codex."""
+    if not endpoint or not endpoint.startswith("unix:///"):
+        raise ValueError("Codex requires an explicit absolute unix:// endpoint")
+    path = endpoint.removeprefix("unix://")
+    if "\x00" in path or path == "/" or "//" in path or "/../" in f"{path}/":
+        raise ValueError("invalid Codex Unix endpoint")
+    return path
 
 
 def claude_facts(
@@ -215,13 +204,14 @@ def session_missing(code: int, stderr: str) -> bool:
     raise ValueError("tmux session observation failed")
 
 
-def command(
-    row: dict[str, Any], brief: str, shim: str, common_git: str, path_env: str
-) -> str:
+def command(row: dict[str, Any], brief: str, shim: str, path_env: str) -> str:
     """Build a harness command from captured values without reading the host."""
     if row["harness"] == "codex":
+        codex_endpoint(row.get("endpoint"))
         argv = [
             "codex",
+            "--remote",
+            row["endpoint"],
             "-m",
             row["model"],
             "-c",
@@ -232,8 +222,6 @@ def command(
             "workspace-write",
             "-C",
             row["worktree"],
-            "--add-dir",
-            common_git,
             brief,
         ]
     elif row["harness"] == "claude":
@@ -315,3 +303,34 @@ def readiness(record: dict[str, Any], seen: dict[str, Any]) -> tuple[str, str]:
     return (
         "busy" if seen.get("busy") else "ready"
     ), "native identity and brief confirmed"
+
+
+def status_view(
+    row: dict[str, Any], record: dict[str, Any] | None, source: str, now: str
+) -> dict[str, Any]:
+    """Classify a captured status record without changing native readiness."""
+    result: dict[str, Any] = {
+        "record": None,
+        "source": source,
+        "age_seconds": None,
+        "availability": "missing" if record is None else "invalid",
+    }
+    if record is None:
+        return result
+    if record.get("run_id") != row["run_id"] or record.get("generation") != row.get(
+        "pane_generation"
+    ):
+        return result
+    try:
+        age = (
+            datetime.fromisoformat(now)
+            - datetime.fromisoformat(record["last_seen_utc"])
+        ).total_seconds()
+    except KeyError, TypeError, ValueError:
+        return result
+    if age < 0:
+        return result
+    result.update(
+        record=record, age_seconds=age, availability="fresh" if age <= 120 else "stale"
+    )
+    return result

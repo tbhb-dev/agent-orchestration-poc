@@ -27,6 +27,7 @@ def parser() -> argparse.ArgumentParser:
         "brief-file",
     ]:
         launch.add_argument(f"--{key}", required=True)
+    launch.add_argument("--endpoint")
     commands.add_parser("status").add_argument("run_id")
     commands.add_parser("readiness").add_argument("run_id")
     return result
@@ -40,12 +41,23 @@ def main() -> int:
         with (launcher.STORE.parent / "registry.lock").open("w") as lock:
             fcntl.flock(lock, fcntl.LOCK_EX)
             row, state, reason = _dispatch(args)
+            status = launcher.status_record(row) if args.command == "status" else None
     except (OSError, ValueError, KeyError, subprocess.CalledProcessError) as error:
         sys.stdout.write(json.dumps({"state": "unknown", "reason": str(error)}) + "\n")
         return 3
-    sys.stdout.write(
-        json.dumps({"run_id": row["run_id"], "state": state, "reason": reason}) + "\n"
-    )
+    output = {
+        "run_id": row["run_id"],
+        "state": state,
+        "reason": reason,
+        "endpoint": row.get("endpoint"),
+        "observed_at": row.get("observed_at"),
+    }
+    if status is not None:
+        output["readiness"] = {
+            key: output[key] for key in ("state", "reason", "endpoint", "observed_at")
+        }
+        output["status"] = status
+    sys.stdout.write(json.dumps(output) + "\n")
     return {"ready": 0, "busy": 0, "blocked": 2, "unknown": 3}[state]
 
 
@@ -67,6 +79,7 @@ def _dispatch(args: argparse.Namespace) -> tuple[dict[str, object], str, str]:
             "branch": args.branch,
             "worktree": str(Path(args.worktree).resolve()),
             "brief_file": str(Path(args.brief_file).resolve()),
+            "endpoint": args.endpoint,
             "tmux_name": args.name,
         }
         return launcher.launch(request)

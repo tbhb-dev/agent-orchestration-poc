@@ -2,11 +2,15 @@
 # ruff: noqa: S101
 
 import json
+import socket
 import subprocess
 import sys
+import tempfile
+import threading
 from pathlib import Path
 
 import cli
+import identity
 import launcher
 import pytest
 import registry
@@ -57,6 +61,31 @@ def test_no_tmux_server_is_first_launch(monkeypatch: pytest.MonkeyPatch) -> None
     request.update(harness="agy", model="m", effort="low", brief_file="/brief")
     launcher.launch(request)
     assert calls == ["pane"]
+
+
+def test_codex_launch_requires_endpoint_before_side_effects() -> None:
+    """An omitted remote endpoint cannot create a worktree or tmux pane."""
+    with pytest.raises(ValueError, match="explicit absolute"):
+        launcher.launch({"harness": "codex", "brief_file": "/missing"})
+
+
+def test_status_snapshot_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The shell reads a local status file, then pure code classifies it."""
+    monkeypatch.setattr(launcher, "ROOT", tmp_path)
+    monkeypatch.setattr(launcher, "_now", lambda: "2026-09-27T00:00:10+00:00")
+    row = {"run_id": "one", "pane_generation": "generation"}
+    path = tmp_path / ".local-cache/worker-messaging/status/one.json"
+    path.parent.mkdir(parents=True)
+    path.write_text(
+        json.dumps(
+            {
+                "run_id": "one",
+                "generation": "generation",
+                "last_seen_utc": "2026-09-27T00:00:00+00:00",
+            }
+        )
+    )
+    assert launcher.status_record(row)["availability"] == "fresh"
 
 
 def test_first_pane_initializes_only_worker_session(
@@ -133,9 +162,16 @@ def test_command_from_main_or_linked_checkout(
     """Git's common directory supplies the same shim and metadata path."""
     monkeypatch.setattr(launcher, "ROOT", Path(checkout))
     monkeypatch.setattr(launcher, "_run", lambda _argv: "/repo/.git")
-    row = {"harness": "codex", "model": "m", "effort": "high", "worktree": "/new"}
+    row = {
+        "harness": "codex",
+        "model": "m",
+        "effort": "high",
+        "worktree": "/new",
+        "endpoint": "unix:///private/tmp/worker.sock",
+    }
     command = launcher._command(row, "brief")
-    assert "--add-dir /repo/.git" in command
+    assert "--remote unix:///private/tmp/worker.sock" in command
+    assert "--add-dir" not in command
     assert "PATH=/repo/.holding/shim:" in command
 
 
@@ -192,10 +228,224 @@ def test_loaded_inventory_pages(monkeypatch: pytest.MonkeyPatch) -> None:
         codex_launch.socket, "socket", lambda _family: HandshakeConnection()
     )
     monkeypatch.setattr(codex_launch, "_call", answer)
-    loaded, thread = codex_launch.runtime_thread("/sock", "thread-1")
+    loaded, thread = codex_launch.runtime_thread("unix:///sock", "thread-1")
     assert loaded
     assert thread["status"]["type"] == "active"
     assert calls[2] == ("thread/loaded/list", {"limit": 100, "cursor": "page-2"})
+
+
+@pytest.mark.parametrize("loaded", [True, False])
+def test_remote_inventory_on_temporary_unix_socket(loaded: bool) -> None:
+    """The adapter queries the selected endpoint using the real socket protocol."""
+    with tempfile.TemporaryDirectory(prefix="worker176-", dir="/private/tmp") as folder:
+        path = f"{folder}/app.sock"
+        server = socket.socket(socket.AF_UNIX)
+        server.bind(path)
+        server.listen(1)
+        errors: list[Exception] = []
+        methods: list[str] = []
+
+        def serve() -> None:
+            try:
+                conn, _ = server.accept()
+                with conn:
+                    handshake = bytearray()
+                    while not handshake.endswith(b"\r\n\r\n"):
+                        handshake.extend(conn.recv(1))
+                    conn.sendall(b"HTTP/1.1 101 Switching Protocols\r\n\r\n")
+                    while len(methods) < 4:
+                        request = codex_launch._receive(conn)
+                        method = request["method"]
+                        methods.append(method)
+                        if "id" not in request:
+                            continue
+                        result: dict[str, object] = {}
+                        if method == "thread/loaded/list":
+                            result = {
+                                "data": ["thread-1"] if loaded else [],
+                                "nextCursor": None,
+                            }
+                        if method == "thread/read":
+                            result = {
+                                "thread": {
+                                    "id": "thread-1",
+                                    "cwd": "/worker",
+                                    "model": "gpt-6-sol",
+                                    "reasoningEffort": "high",
+                                    "status": {"type": "idle"},
+                                }
+                            }
+                        conn.sendall(
+                            codex_launch._frame({"id": request["id"], "result": result})
+                        )
+            except (OSError, EOFError, ValueError, KeyError) as error:
+                errors.append(error)
+
+        thread = threading.Thread(target=serve)
+        thread.start()
+        try:
+            actual, readback = codex_launch.runtime_thread(f"unix://{path}", "thread-1")
+        finally:
+            server.close()
+            thread.join(timeout=5)
+        assert not thread.is_alive()
+        assert not errors
+        assert actual is loaded
+        assert readback["cwd"] == "/worker"
+        assert methods == [
+            "initialize",
+            "initialized",
+            "thread/loaded/list",
+            "thread/read",
+        ]
+
+
+def _serve_fake_endpoint(
+    server: socket.socket,
+    replies: dict[str, dict[str, object]],
+    methods: list[str],
+    errors: list[Exception],
+) -> None:
+    """Answer requests on a disposable Unix socket with fixed results."""
+    try:
+        conn, _ = server.accept()
+        with conn:
+            handshake = bytearray()
+            while not handshake.endswith(b"\r\n\r\n"):
+                handshake.extend(conn.recv(1))
+            conn.sendall(b"HTTP/1.1 101 Switching Protocols\r\n\r\n")
+            while True:
+                try:
+                    request = codex_launch._receive(conn)
+                except EOFError:
+                    break
+                method = request["method"]
+                methods.append(method)
+                if "id" in request:
+                    conn.sendall(
+                        codex_launch._frame(
+                            {"id": request["id"], "result": replies[method]}
+                        )
+                    )
+    except (OSError, ValueError, KeyError) as error:
+        errors.append(error)
+
+
+@pytest.mark.parametrize(
+    ("change", "state"),
+    [
+        ("matching", "ready"),
+        ("wrong_id", "unknown"),
+        ("wrong_cwd", "unknown"),
+        ("wrong_read_cwd", "unknown"),
+        ("unloaded", "unknown"),
+        ("wrong_brief", "unknown"),
+        ("newline_brief", "ready"),
+        ("prefixed_brief", "ready"),
+    ],
+)
+def test_remote_discovery_without_tui_rollout(
+    monkeypatch: pytest.MonkeyPatch, change: str, state: str
+) -> None:
+    """Readiness discovers the remote startup thread through its owning endpoint."""
+    with tempfile.TemporaryDirectory(prefix="worker176-", dir="/private/tmp") as folder:
+        path = f"{folder}/app.sock"
+        server = socket.socket(socket.AF_UNIX)
+        server.bind(path)
+        server.listen(1)
+        server.settimeout(2)
+        methods: list[str] = []
+        errors: list[Exception] = []
+        brief = (
+            "context\n## My request for Codex:\nfirst brief\n"
+            if change == "prefixed_brief"
+            else "first brief\n"
+            if change == "newline_brief"
+            else "first brief"
+        )
+        listed_id = "other" if change == "wrong_id" else "thread-1"
+        cwd = "/other" if change == "wrong_cwd" else "/worker"
+        read_cwd = "/other" if change == "wrong_read_cwd" else cwd
+        preview = "other brief" if change == "wrong_brief" else "first brief"
+
+        replies: dict[str, dict[str, object]] = {
+            "initialize": {},
+            "thread/list": {
+                "data": [
+                    {
+                        "id": listed_id,
+                        "cwd": cwd,
+                        "createdAt": 1790470800,
+                        "preview": preview,
+                    }
+                ],
+                "nextCursor": None,
+            },
+            "thread/loaded/list": {
+                "data": [] if change == "unloaded" else ["thread-1"],
+                "nextCursor": None,
+            },
+            "thread/read": {
+                "thread": {
+                    "id": "thread-1",
+                    "cwd": read_cwd,
+                    "preview": preview,
+                    "model": "gpt-6-sol",
+                    "reasoningEffort": "high",
+                    "status": {"type": "idle"},
+                }
+            },
+        }
+
+        row = {
+            "harness": "codex",
+            "run_id": "run-1",
+            "worktree": "/worker",
+            "model": "gpt-6-sol",
+            "effort": "high",
+            "native_id": None,
+            "brief_digest": identity.codex_brief_digest(brief),
+            "launch_time": "2026-09-27T01:00:00+00:00",
+            "endpoint": f"unix://{path}",
+            "tmux_session": "worker-messaging",
+            "tmux_window": "@7",
+            "tmux_pane": "%13",
+            "pane_generation": "%13:100:start",
+            "pid": 100,
+            "process_start": "start",
+        }
+        monkeypatch.setattr(
+            launcher,
+            "_pane",
+            lambda _pane: {
+                key: row[key]
+                for key in (
+                    "tmux_session",
+                    "tmux_window",
+                    "tmux_pane",
+                    "pane_generation",
+                    "pid",
+                    "process_start",
+                )
+            },
+        )
+        monkeypatch.setattr(launcher, "_run", lambda _argv: "")
+        thread = threading.Thread(
+            target=_serve_fake_endpoint, args=(server, replies, methods, errors)
+        )
+        thread.start()
+        try:
+            _, actual, _ = launcher.inspect(row)
+        finally:
+            server.close()
+            thread.join(timeout=5)
+        assert not thread.is_alive()
+        assert not errors
+        assert actual == state
+        assert "thread/list" in methods
+        if state == "ready":
+            assert row["native_id"] == "thread-1"
+            assert methods[-2:] == ["thread/loaded/list", "thread/read"]
 
 
 @pytest.mark.parametrize("reply", [b"", b"HTTP/1.1 101 Switching Protocols\r\n\r\n"])
@@ -220,7 +470,7 @@ def test_socket_eof_persists_unknown_json(
     monkeypatch.setattr(
         launcher,
         "_observe",
-        lambda _row: codex_launch.runtime_thread("/sock", "thread-1"),
+        lambda _row: codex_launch.runtime_thread("unix:///sock", "thread-1"),
     )
     monkeypatch.setattr(
         codex_launch.socket, "socket", lambda _family: HandshakeConnection(reply)
@@ -228,11 +478,13 @@ def test_socket_eof_persists_unknown_json(
     monkeypatch.setattr(sys, "argv", ["worker", "status", "run-1"])
     assert cli.main() == 3
     output = json.loads(capsys.readouterr().out)
-    assert output == {
+    assert {key: output[key] for key in ("run_id", "state", "reason")} == {
         "run_id": "run-1",
         "state": "unknown",
         "reason": "observation failed: EOFError",
     }
+    assert output["endpoint"] is None
+    assert output["observed_at"]
     assert registry.read(store)[0]["state"] == "unknown"
 
 
