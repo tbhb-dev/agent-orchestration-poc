@@ -11,12 +11,12 @@ from typing import cast
 
 from agent_orchestration_poc.core.coordinator_preflight import (
     CheckOutcome,
-    CheckState,
     IssueState,
     MergedPullRequest,
+    audit_closures,
     check_outcome,
     linked_merged_prs,
-    needs_closure_review,
+    normalize_checks,
     outdated_workflows,
 )
 
@@ -29,11 +29,13 @@ class PullRequest:
     status_check_rollup: tuple[dict[str, str | None], ...]
 
 
-def _run(*argv: str) -> str:
-    return subprocess.run(argv, check=True, capture_output=True, text=True).stdout
+def _run(*argv: str, timeout: float | None = None) -> str:
+    return subprocess.run(
+        argv, check=True, capture_output=True, text=True, timeout=timeout
+    ).stdout
 
 
-def _pull_request(number: int) -> PullRequest:
+def _pull_request(number: int, timeout: float | None = None) -> PullRequest:
     raw = cast(
         "dict[str, object]",
         json.loads(
@@ -44,6 +46,7 @@ def _pull_request(number: int) -> PullRequest:
                 str(number),
                 "--json",
                 "headRefOid,statusCheckRollup",
+                timeout=timeout,
             )
         ),
     )
@@ -85,42 +88,47 @@ def _review_preflight(number: int) -> int:
     return 0
 
 
-def _check_states(raw: PullRequest) -> tuple[CheckState, ...]:
-    return tuple(
-        CheckState(
-            name=str(check.get("name") or check.get("context")),
-            status=str(check.get("status") or check.get("state")),
-            conclusion=check.get("conclusion") or check.get("state"),
-            started_at=check.get("startedAt") or check.get("createdAt") or "",
-        )
-        for check in raw.status_check_rollup
-    )
+def _pull_request_until(number: int, deadline: float) -> PullRequest:
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        raise subprocess.TimeoutExpired(("gh", "pr", "view"), 0)
+    return _pull_request(number, timeout=remaining)
 
 
 def _wait_check(number: int, name: str, timeout: int) -> int:
     if timeout < 0:
         sys.stderr.write("timeout must be nonnegative seconds\n")
         return 2
-    expected = _pull_request(number).head_ref_oid
     deadline = time.monotonic() + timeout
-    while True:
-        current = _pull_request(number)
-        outcome = check_outcome(
-            expected, current.head_ref_oid, name, _check_states(current)
-        )
-        if outcome == CheckOutcome.SUCCESS:
-            sys.stdout.write(f"PR #{number}: {name} succeeded on {expected}\n")
-            return 0
-        if outcome in (CheckOutcome.FAIL, CheckOutcome.CHANGED_HEAD):
-            sys.stderr.write(f"PR #{number}: {name} {outcome.value} on {expected}\n")
-            return 1
-        remaining = deadline - time.monotonic()
-        if remaining <= 0:
-            sys.stderr.write(
-                f"PR #{number}: {name} did not succeed on {expected} within {timeout}s\n"
+    expected = "the recorded head"
+    try:
+        expected = _pull_request_until(number, deadline).head_ref_oid
+        while True:
+            current = _pull_request_until(number, deadline)
+            outcome = check_outcome(
+                expected,
+                current.head_ref_oid,
+                name,
+                normalize_checks(current.status_check_rollup),
             )
-            return 1
-        time.sleep(min(5, remaining))
+            if outcome == CheckOutcome.SUCCESS:
+                sys.stdout.write(f"PR #{number}: {name} succeeded on {expected}\n")
+                return 0
+            if outcome in (CheckOutcome.FAIL, CheckOutcome.CHANGED_HEAD):
+                sys.stderr.write(
+                    f"PR #{number}: {name} {outcome.value} on {expected}\n"
+                )
+                return 1
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            time.sleep(min(5, remaining))
+    except subprocess.TimeoutExpired:
+        pass
+    sys.stderr.write(
+        f"PR #{number}: {name} did not succeed on {expected} within {timeout}s\n"
+    )
+    return 1
 
 
 def _closure_audit() -> int:
@@ -172,15 +180,12 @@ def _closure_audit() -> int:
         )
         for raw in raw_prs
     )
-    flagged: list[int] = []
-    checked = 0
+    issues: list[IssueState] = []
     for raw in raw_issues:
         labels = tuple(
             cast("str", label["name"])
             for label in cast("list[dict[str, object]]", raw["labels"])
         )
-        if not any(label.startswith("type/") for label in labels):
-            continue
         number = cast("int", raw["number"])
         issue = IssueState(
             number=number,
@@ -189,9 +194,8 @@ def _closure_audit() -> int:
             labels=labels,
             merged_prs=linked_merged_prs(number, pull_requests),
         )
-        checked += 1
-        if needs_closure_review(issue):
-            flagged.append(number)
+        issues.append(issue)
+    checked, flagged = audit_closures(tuple(issues))
     for number in flagged:
         sys.stderr.write(
             f"issue #{number}: closed without a linked merged PR or recorded non-code closure\n"

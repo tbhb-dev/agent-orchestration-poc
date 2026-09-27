@@ -67,14 +67,39 @@ def check_outcome(
     matches = [check for check in checks if check.name == check_name]
     if not matches:
         return CheckOutcome.WAIT
-    latest = max(matches, key=lambda check: check.started_at)
-    if latest.status not in ("COMPLETED", "SUCCESS", "FAILURE", "ERROR"):
+    if any(
+        check.status not in ("COMPLETED", "SUCCESS", "FAILURE", "ERROR")
+        for check in matches
+    ):
         return CheckOutcome.WAIT
+    if len(matches) > 1 and (
+        any(not check.started_at for check in matches)
+        or len({check.started_at for check in matches}) != len(matches)
+    ):
+        outcomes = {check.conclusion or check.status for check in matches}
+        if len(outcomes) != 1:
+            return CheckOutcome.WAIT
+    latest = max(matches, key=lambda check: check.started_at)
     if latest.status == "SUCCESS" or (
         latest.status == "COMPLETED" and latest.conclusion == "SUCCESS"
     ):
         return CheckOutcome.SUCCESS
     return CheckOutcome.FAIL
+
+
+def normalize_checks(
+    raw_checks: tuple[dict[str, str | None], ...],
+) -> tuple[CheckState, ...]:
+    """Convert GitHub rollup values into check observations."""
+    return tuple(
+        CheckState(
+            name=str(check.get("name") or check.get("context")),
+            status=str(check.get("status") or check.get("state")),
+            conclusion=check.get("conclusion") or check.get("state"),
+            started_at=check.get("startedAt") or check.get("createdAt") or "",
+        )
+        for check in raw_checks
+    )
 
 
 def needs_closure_review(issue: IssueState) -> bool:
@@ -108,4 +133,17 @@ def linked_merged_prs(
             int(match) == issue_number
             for match in re.findall(r"(?m)^Refs: #(\d+)\s*$", pr.body)
         )
+    )
+
+
+def audit_closures(issues: tuple[IssueState, ...]) -> tuple[int, tuple[int, ...]]:
+    """Count closed work items and identify those needing review."""
+    selected = tuple(
+        issue
+        for issue in issues
+        if issue.state == "closed"
+        and any(label.startswith("type/") for label in issue.labels)
+    )
+    return len(selected), tuple(
+        issue.number for issue in selected if needs_closure_review(issue)
     )

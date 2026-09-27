@@ -53,6 +53,8 @@ Observed live failure with `mise run pr:wait-check -- 80 nonexistent-check 0`, e
 PR #80: nonexistent-check did not succeed on 7bb09bfe7ed6e60fa097854342e3fd6343609487 within 0s
 ```
 
+The zero-second live success above records the original implementation. After review, the deadline starts before the first GitHub call, so a zero-second wait now expires without querying GitHub. The core regression cases cover a queued check with no start time alongside an older success, tied start times, and a later completed run. The shell integration test used a temporary `gh` executable that sleeps two seconds; before the fix, a one-second wait took 4.69 seconds and failed its time assertion. After the fix, `mise exec -- uv run pytest tests/test_coordinator_preflight.py tests/test_coordinator_preflight_shell.py --run-integration -q` passed all 22 tests in 1.17 seconds, including that test.
+
 ## Closure fixtures and live audit
 
 The committed `tests/fixtures/coordinator_preflight/closures.json` produced these outcomes. The legacy decision case uses issue #14's recorded decision-record closure sentence:
@@ -74,8 +76,12 @@ Audited 18 closed work-item issues; 0 need review
 
 The audit reads closed issues and merged PRs through standard `gh` list commands. It matches `Refs: #<issue>` trailers and GitHub closing references, and never changes issue state. It fails if either list reaches its 10,000-item query limit.
 
+The review fix moved rollup normalization and work-item selection, count, and flag decisions into pure core functions. Value-based tests cover the normalized queued record and a mix of work-item, non-work-item, and recorded non-code closures.
+
 ## Repository gates and limits
 
 Verified `mise run check` exit 0 with 16 Python tests passed, one existing integration test skipped, two import contracts kept, zero Vale alerts across 89 Markdown files, 7 Mermaid blocks valid, no gitleaks findings in 30 commits, and Go vet, lint, build, and race tests passing. `mise run build` also exited 0. `mise run fmt` made no changes outside this work item.
+
+After the review fixes, `mise run fmt` exited 0 and `mise run check` exited 0 with 22 Python tests passed, two integration tests skipped, both import contracts kept, zero Vale alerts, and no secret findings. The stalled CLI integration test was also run explicitly with `--run-integration` and passed. There is no `check:mutation` task in this branch's `mise.toml`. The local Go build printed a stat-cache write warning for `/Users/tony/go/pkg/mod` outside this sandbox; the aggregate still exited 0.
 
 Observed `mise run docs:check-links` rendered the sample page but exited 1 in the local sandbox after Chromium failed with `MachPortRendezvousServer: Permission denied (1100)`. The link validator reported three links under `index.md`, `project/history.md`, and `workflow/tooling.md`. The GitHub `docs` job will be the render and link gate for this PR.
