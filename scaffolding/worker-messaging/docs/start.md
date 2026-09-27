@@ -10,7 +10,7 @@ The command reserves the name, branch, worktree, and tmux window, creates the wo
 
 Run `mise run worker:status -- <run-id>` or `mise run worker:readiness -- <run-id>` to recheck a recorded run. Each run checks tmux and process generations, then confirms native identity and first brief uptake at the endpoint. Missing observations return `unknown`. If the UI displays a prompt to trust the folder, readiness is `blocked` until the operator resolves it.
 
-Codex follow-up input uses `codex queue --thread <native-id> --message <text>` only after readiness is `ready` or `busy`. A queue request starts a later turn when the current one ends. This scaffold has no send command. Claude peer send readiness requires a `ListAgents` observation that the external coordinator cannot obtain through the installed CLI, so this launcher reports `unknown`. Agy is restricted to bounded work without clean-pause promises and reports `blocked` for an external send path until a bounded live control test establishes one.
+Codex follow-up input uses `codex queue --thread <native-id> --message <text>` only after readiness is `ready` or `busy`. A queue request starts a later turn when the current one ends. This scaffold has no send command. At Codex 0.157.1, this launch recipe selects an embedded app server whose owning thread is not externally addressable, so Codex readiness remains `unknown` even after first-brief uptake. The [source and live-trial evidence](../evidence/launcher.md#second-delivery-runtime-investigation) explains the launch flag conflict. Claude peer send readiness requires a `ListAgents` observation that the external coordinator cannot obtain through the installed CLI, so this launcher reports `unknown`. Agy is restricted to bounded work without clean-pause promises and reports `blocked` for an external send path until a bounded live control test establishes one.
 
 ## Registry and recovery
 
@@ -61,7 +61,7 @@ printf 'idle exit=%s\n' "$?"
 cat "$TRIAL_DIR/idle.json"
 ```
 
-Expect the native command to exit 0. `idle.json` should report `ready` with exit 0 after the first brief is confirmed and the loaded runtime matches the recorded process and pane. For a controlled busy state, run the following while the disposable worker is ready. Queue exit 0 means acceptance, not delivery. Capture the busy snapshot before the task ends. If it ends first, record the busy case as missed.
+The 2026-09-27 coordinator trial found `loaded: false` and `status.type: notLoaded` from this socket while the interactive worker had answered the brief. With the current launch flags, expect `idle.json` to remain `unknown` with exit 3. Do not run the busy case as a readiness acceptance test until an addressable owning endpoint is available. Queue exit 0 means acceptance, not delivery. The commands below are retained for a later, separately authorized trial once the runtime ownership problem is resolved.
 
 ```sh
 NATIVE_ID=$(mise exec -- python -c 'import json,sys; print(json.load(open(sys.argv[1]))["native_id"])' "$TRIAL_DIR/identity.json")

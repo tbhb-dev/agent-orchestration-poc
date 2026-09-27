@@ -234,3 +234,44 @@ def test_socket_eof_persists_unknown_json(
         "reason": "observation failed: EOFError",
     }
     assert registry.read(store)[0]["state"] == "unknown"
+
+
+@pytest.mark.parametrize(
+    ("raw", "decoded"),
+    [("b'plain'", "plain"), ("bytes([0xff, 0xfe])", "\ufffd\ufffd")],
+)
+def test_subprocess_output_replaces_invalid_bytes(raw: str, decoded: str) -> None:
+    """Non-UTF-8 process output remains an observation rather than an exception."""
+    assert (
+        launcher._run(
+            [sys.executable, "-c", f"import sys; sys.stdout.buffer.write({raw})"]
+        )
+        == decoded
+    )
+
+
+@pytest.mark.parametrize(
+    "stderr",
+    [
+        "can't find pane: %50",
+        "can't find window: @2",
+        "can't find session: worker-messaging",
+        "no server running on /private/tmp/tmux-501/default",
+        "error connecting to /private/tmp/tmux-501/default (No such file or directory)",
+    ],
+)
+def test_missing_tmux_target_precedes_process_observation(
+    monkeypatch: pytest.MonkeyPatch, stderr: str
+) -> None:
+    """A stopped target gets a specific reason without asking ps for a reused PID."""
+    calls: list[list[str]] = []
+
+    def run(argv: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        calls.append(argv)
+        return subprocess.CompletedProcess(argv, 1, "", stderr)
+
+    monkeypatch.setattr(launcher.subprocess, "run", run)
+    row = {"tmux_pane": "%50", "endpoint": "/sock", "native_id": "thread-1"}
+    _, state, reason = launcher.inspect(row)
+    assert (state, reason) == ("unknown", "missing tmux target")
+    assert [call[0] for call in calls] == ["tmux"]

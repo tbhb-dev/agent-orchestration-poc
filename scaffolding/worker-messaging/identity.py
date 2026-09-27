@@ -113,6 +113,20 @@ def trust_prompt(capture: str) -> bool:
     return "trust this folder" in lower or "trust this directory" in lower
 
 
+def missing_tmux_target(stderr: str) -> bool:
+    """Recognize tmux's missing pane, window, session, or server replies."""
+    return any(
+        marker in stderr
+        for marker in (
+            "can't find pane:",
+            "can't find window:",
+            "can't find session:",
+            "no server running",
+            "No such file or directory",
+        )
+    )
+
+
 def codex_facts(
     row: dict[str, Any], rollouts: list[dict[str, Any]], paths: list[str]
 ) -> dict[str, Any]:
@@ -253,16 +267,27 @@ def readiness(record: dict[str, Any], seen: dict[str, Any]) -> tuple[str, str]:
     """Fail closed on stale generations, identities, and absent brief uptake."""
     if seen.get("trust_prompt"):
         return "blocked", "folder trust prompt"
-    stale = next(
-        (
-            key
-            for key in ("tmux_session", "tmux_window", "tmux_pane", "pane_generation")
-            if not seen.get(key) or seen[key] != record.get(key)
-        ),
-        None,
+    stale = (
+        "target"
+        if seen.get("tmux_missing")
+        else next(
+            (
+                key
+                for key in (
+                    "tmux_session",
+                    "tmux_window",
+                    "tmux_pane",
+                    "pane_generation",
+                )
+                if not seen.get(key) or seen[key] != record.get(key)
+            ),
+            None,
+        )
     )
     if stale:
-        return "unknown", f"stale tmux {stale}"
+        return "unknown", (
+            "missing tmux target" if stale == "target" else f"stale tmux {stale}"
+        )
     stale = next(
         (
             key
