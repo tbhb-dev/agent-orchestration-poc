@@ -1,0 +1,259 @@
+[
+  {
+    "number": "1",
+    "targets": ["1", "2"],
+    "calls": [
+      "GET paginated R/issues and R/labels",
+      "GET OLD/fields and OLD/items",
+      "GET P/fields and P/items",
+      "GET org issue types and issue fields",
+      "GET R/issues/{n}/issue-field-values, parent, blocked_by",
+      "GET R/pulls/97 and retained branch ref",
+      "GraphQL query P POSITION"
+    ],
+    "saved_inputs": [
+      "complete CP1, source digests, IDs, bodies, fields, order, PR and branch"
+    ],
+    "check": "CP1 complete and matches assignments before any closure",
+    "reversal": ["retain immutable CP1"]
+  },
+  {
+    "number": "0",
+    "targets": ["2"],
+    "calls": [
+      "POST R/issues/{n}/comments",
+      "PATCH R/issues/{n} closed/not_planned",
+      "POST R/issues/97/comments",
+      "PATCH R/pulls/97 closed",
+      "GET changed issues, comments, PR and retained branch ref"
+    ],
+    "saved_inputs": [
+      "original states, reasons, comment IDs, PR state, branch SHA"
+    ],
+    "check": "only selected closures and PR closed unmerged; branch retained",
+    "reversal": [
+      "PATCH saved states and PR state",
+      "DELETE only created comments",
+      "GET branch"
+    ]
+  },
+  {
+    "number": "2",
+    "targets": [],
+    "calls": [],
+    "saved_inputs": ["reviewed and prior workflow commits"],
+    "check": "external implementation and enforcement prerequisites checked",
+    "reversal": ["restore prior commit through review"]
+  },
+  {
+    "number": "3",
+    "targets": ["149 <- 96"],
+    "calls": [
+      "POST R/issues/149/dependencies/blocked_by with issue_id=id(96)",
+      "GET R/issues/149/dependencies/blocked_by",
+      "DELETE only trial link",
+      "GET blockers again"
+    ],
+    "saved_inputs": ["original #149 blocker set and trial result"],
+    "check": "exact original blocker set restored",
+    "reversal": ["DELETE only newly added trial link", "GET blockers"]
+  },
+  {
+    "number": "4",
+    "targets": [],
+    "calls": [
+      "GET R/labels",
+      "POST R/labels only for missing reviewed definitions",
+      "GET R/labels"
+    ],
+    "saved_inputs": ["definition IDs, values and previous absence"],
+    "check": "created definitions match and old definitions unchanged",
+    "reversal": [
+      "DELETE only created unused definitions after attachments reverse"
+    ]
+  },
+  {
+    "number": "5",
+    "targets": [],
+    "calls": [
+      "GET orgs/tbhb-dev/issue-types",
+      "GET orgs/tbhb-dev/issue-fields",
+      "GET P/fields"
+    ],
+    "saved_inputs": ["definition IDs/options and delegated view export"],
+    "check": "seven types, native options and retained fields match",
+    "reversal": ["owner restores prior view settings"]
+  },
+  {
+    "number": "6",
+    "targets": ["1", "2", "title:Draft A", "title:Draft B"],
+    "calls": [
+      "GET P/items before writes",
+      "POST P/items for absent issue items",
+      "POST P/drafts for unmatched drafts",
+      "PATCH P/items/{item-id} supported fields",
+      "PATCH R/issues/{n} native type",
+      "POST R/issues/{n}/issue-field-values",
+      "GraphQL updateProjectV2DraftIssue for copied D2 body",
+      "GET P/items, R/issues and issue-field-values"
+    ],
+    "saved_inputs": [
+      "per-row existing/created IDs, full native fields, P values, draft bodies"
+    ],
+    "check": "CP6 native and P values, draft identities and bodies match",
+    "reversal": [
+      "restore saved type/native/P values and D2 body",
+      "delete only created P items after exporting drafts"
+    ]
+  },
+  {
+    "number": "6T",
+    "targets": ["1"],
+    "calls": [
+      "PATCH R/issues/{n} title only",
+      "GET each changed issue",
+      "GET scope-change refinement verdict comments"
+    ],
+    "saved_inputs": [
+      "original titles, bodies, verdict records, CP0 closure proof"
+    ],
+    "check": "replacements and verdicts match; exemptions unchanged",
+    "reversal": [
+      "with enforcement held, restore only changed titles",
+      "GET titles"
+    ]
+  },
+  {
+    "number": "7",
+    "targets": [],
+    "calls": [
+      "GraphQL query P POSITION",
+      "GraphQL updateProjectV2ItemPosition trial move",
+      "GraphQL query POSITION",
+      "GET P/items REST order",
+      "GraphQL restore predecessor",
+      "GraphQL query POSITION",
+      "GET P/items REST order and rate budget"
+    ],
+    "saved_inputs": ["trial item, predecessor, full order, positions and cost"],
+    "check": "changed and restored order exact",
+    "reversal": ["restore saved predecessor and verify order"]
+  },
+  {
+    "number": "8",
+    "targets": ["#1", "title:Draft A", "title:Draft B"],
+    "calls": [
+      "GraphQL query P POSITION",
+      "GraphQL sequential updateProjectV2ItemPosition by approved afterId",
+      "GraphQL query P POSITION"
+    ],
+    "saved_inputs": ["operator-approved seed and complete prior order"],
+    "check": "exact approved relative Standard order",
+    "reversal": ["restore complete saved sequence and compare"]
+  },
+  {
+    "number": "9",
+    "targets": ["epic: migration"],
+    "calls": [
+      "POST R/issues initiatives then epics",
+      "POST R/issues/{n}/issue-field-values Work type",
+      "POST P/items",
+      "PATCH P/items/{item-id} Status",
+      "PATCH completed parents closed/completed",
+      "GET issues, issue-field-values and P/items"
+    ],
+    "saved_inputs": ["created issue and item IDs, bodies, closure results"],
+    "check": "all parents unique with target state, type, Work type and Status",
+    "reversal": [
+      "reverse downstream links",
+      "close created issues not_planned",
+      "remove only created P items"
+    ]
+  },
+  {
+    "number": "10",
+    "targets": ["#1", "#2"],
+    "calls": [
+      "POST R/issues/{parent}/sub_issues with resolved sub_issue_id",
+      "GET R/issues/{parent}/sub_issues for every parent"
+    ],
+    "saved_inputs": ["original parent or absence and successful attachments"],
+    "check": "exact numbered hierarchy; no draft native memberships",
+    "reversal": [
+      "DELETE only new memberships",
+      "restore saved old parent links"
+    ]
+  },
+  {
+    "number": "11",
+    "targets": ["1 <- 2"],
+    "calls": [
+      "DELETE R/issues/{dependent}/dependencies/blocked_by/{blocker-id} for reviewed removals",
+      "POST R/issues/{dependent}/dependencies/blocked_by for accepted writes",
+      "PATCH seven reviewed R/issues/{n} bodies",
+      "GET affected blockers and revised issues"
+    ],
+    "saved_inputs": ["original blocker sets, bodies and each operation result"],
+    "check": "exact accepted links, no cycle, seven body digests",
+    "reversal": [
+      "remove only added links",
+      "restore only removed old links and saved bodies"
+    ]
+  },
+  {
+    "number": "12",
+    "targets": [],
+    "calls": [
+      "POST R/issues for incidents",
+      "POST R/issues/{n}/issue-field-values",
+      "POST P/items",
+      "PATCH P/items/{item-id} supported fields",
+      "GET issues, issue-field-values and P/items"
+    ],
+    "saved_inputs": ["created issue and item IDs, bodies and fields"],
+    "check": "incident identity, SEV2, type, Work type and P values",
+    "reversal": [
+      "close only created incidents not_planned",
+      "remove only created P items"
+    ]
+  },
+  {
+    "number": "13",
+    "targets": ["1", "2", "epic: migration", "title:Draft A", "title:Draft B"],
+    "calls": [
+      "GET complete R/issues and P/items",
+      "GET R/issues/{n}/issue-field-values, sub_issues and blocked_by for every numbered issue"
+    ],
+    "saved_inputs": ["CP13, CP1-CP12, title manifest and operator decision"],
+    "check": "complete target equality and explicit operator confirmation",
+    "reversal": [
+      "withdraw confirmation",
+      "pause dispatch",
+      "use prior checkpoint inverses"
+    ]
+  },
+  {
+    "number": "14",
+    "targets": ["1"],
+    "calls": [],
+    "saved_inputs": [
+      "prior workflow commit, exemptions, revocations and scheduled-run IDs"
+    ],
+    "check": "external activation after two clean runs and procedure review",
+    "reversal": [
+      "restore prior activation through review",
+      "retain revocations"
+    ]
+  },
+  {
+    "number": "15",
+    "targets": [],
+    "calls": [
+      "DELETE R/issues/{n}/labels/{encoded-type-label} only for saved issue labels",
+      "GET complete R/issues labels"
+    ],
+    "saved_inputs": ["removed label IDs and remaining labels"],
+    "check": "no issue duplicate type labels; unrelated and PR labels retained",
+    "reversal": ["POST only saved removed issue labels"]
+  }
+]

@@ -1,24 +1,41 @@
 """Synthetic table and initial snapshot tests for the work model."""
 
-from dataclasses import replace
+import json
+import tomllib
+from dataclasses import asdict, replace
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
 from agent_orchestration_poc.core.work_model_backfill import (
+    SOURCE_PROJECT_FIELDS,
+    Difference,
     Item,
     Page,
     Snapshot,
     Tables,
+    TargetInputs,
+    compare_cp13,
     complete,
     cycle_nodes,
+    expected_cp13,
+    operation_plan,
     parse_tables,
+    rollback_values,
+    title_exemptions,
+    title_repairs,
     validate_cp1,
 )
 
 FIXTURES = Path(__file__).parent / "fixtures/work_model_backfill/plan"
+ROOT = Path(__file__).resolve().parents[1]
+CONFIG_ROOT = (
+    ROOT if (ROOT / "config/workflow-reference.toml").is_file() else ROOT.parent
+)
+REFERENCE = tomllib.loads((CONFIG_ROOT / "config/workflow-reference.toml").read_text())
 
 
 def texts() -> tuple[str, str, str]:
@@ -65,6 +82,433 @@ def snapshot() -> Snapshot:
         )
     )
     return Snapshot(1, (*issues, *drafts), pages, "sha")
+
+
+def creation_inputs() -> TargetInputs:
+    """Represent only returned identities and saved content from creation calls."""
+    return TargetInputs(
+        {
+            "title:Draft A": Item(
+                "title:Draft A",
+                "Draft A",
+                "draft",
+                draft_id="draft-a",
+                item_id="item-a",
+            ),
+            "title:epic: migration": Item(
+                "#3",
+                "epic: migration",
+                "open",
+                issue_id="3",
+                item_id="item-3",
+                body="Goal and finish line",
+            ),
+        },
+        {},
+        frozenset({"2"}),
+        frozenset(),
+        REFERENCE,
+    )
+
+
+def final_snapshot(items: tuple[Item, ...]) -> Snapshot:
+    """Build independently counted complete CP13 pagination receipts."""
+    issues = sum(bool(item.issue_id) for item in items)
+    drafts = sum(bool(item.draft_id) for item in items)
+    project = sum(bool(item.item_id) for item in items)
+    pages = tuple(
+        Page(name, 1, count, 1, count)
+        for name, count in (
+            ("issues", issues),
+            ("project", project),
+            ("drafts", drafts),
+            ("native", issues),
+            ("parents", issues),
+            ("blockers", issues),
+        )
+    )
+    return Snapshot(1, items, pages, "after", "final")
+
+
+def approved_tables() -> Tables:
+    """Read the committed final revision by supplied paths."""
+    inputs = next(
+        path / "reports/inputs/work-model-tables"
+        for path in Path(__file__).resolve().parents
+        if (path / "reports/inputs/work-model-tables").is_dir()
+    )
+    return parse_tables(
+        (inputs / "2026-09-27-work-model-v3-final.tsv").read_text(),
+        (inputs / "2026-09-27-work-model-v3-final-parents.tsv").read_text(),
+        (inputs / "2026-09-27-work-model-v3-final-edges.tsv").read_text(),
+    )
+
+
+def approved_cp1_and_tables() -> tuple[Tables, Snapshot]:
+    """Construct a complete plain-value CP1 from approved saved row values."""
+    approved = approved_tables()
+    items = []
+    for row in approved.assignments:
+        if row["number"]:
+            old: dict[str, str | None] = (
+                json.loads(row["old project fields"])
+                if row["old project fields"]
+                else {}
+            )
+            source = (
+                tuple(
+                    sorted(
+                        (name, old.get(name) or "") for name in SOURCE_PROJECT_FIELDS
+                    )
+                )
+                if old
+                else ()
+            )
+            items.append(
+                Item(
+                    f"#{row['number']}",
+                    row["title"],
+                    row["live state"],
+                    row["state reason"],
+                    source_project=source,
+                    issue_id=row["target content id"] or row["number"],
+                    item_id=row["target project item"] or f"copied-{row['number']}",
+                )
+            )
+        elif row["backfill mode"] == "existing draft":
+            items.append(
+                Item(
+                    f"title:{row['title']}",
+                    row["title"],
+                    "draft",
+                    draft_id=row["target content id"],
+                    item_id=row["target project item"],
+                )
+            )
+    cp1 = replace(
+        final_snapshot(tuple(items)),
+        branch_sha="approved-input-cp1",
+        run_state="initial",
+    )
+    return approved, cp1
+
+
+def test_approved_table_counts_and_numbered_exemptions() -> None:
+    """Derive the final revision's counts and manifest from its supplied rows."""
+    approved, cp1 = approved_cp1_and_tables()
+    assert (len(approved.assignments), len(approved.parents), len(approved.edges)) == (
+        191,
+        22,
+        387,
+    )
+    validate_cp1(approved, cp1)
+    closures = frozenset(
+        row["number"]
+        for row in approved.assignments
+        if row["number"] and row["live state"] == "open" and row["state"] == "closed"
+    )
+    exemptions = title_exemptions(approved, cp1, closures, frozenset(), REFERENCE)
+    assert exemptions == (
+        "4",
+        "5",
+        "6",
+        "8",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "26",
+        "30",
+        "58",
+        "59",
+        "60",
+        "61",
+        "62",
+        "63",
+        "69",
+        "71",
+        "72",
+        "77",
+        "78",
+        "83",
+        "96",
+        "104",
+        "110",
+        "114",
+        "125",
+        "132",
+        "154",
+        "161",
+        "167",
+        "168",
+        "169",
+        "173",
+        "177",
+        "178",
+        "184",
+        "185",
+        "187",
+    )
+    repairs = title_repairs(approved, REFERENCE)
+    assert len(repairs) == 70
+    assert sum(changed for _, changed in repairs) == 18
+    plan = {step.number: step for step in operation_plan(approved, cp1)}
+    assert len(plan["0"].targets) == 13
+    assert len(plan["6T"].targets) == 70
+    assert len(plan["9"].targets) == 22
+    assert all(title.startswith("initiative:") for title in plan["9"].targets[:5])
+    assert len(plan["12"].targets) == 2
+
+
+def test_ordered_plan_covers_every_stage_and_saved_reversal() -> None:
+    """Keep every approved step, target disposition, checkpoint, and reversal."""
+    steps = operation_plan(tables(), snapshot())
+    assert tuple(step.number for step in steps) == (
+        "1",
+        "0",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "6T",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+    )
+    assert all(step.saved_inputs and step.check and step.reversal for step in steps)
+    assert {step.number for step in steps if not step.calls} == {"2", "14"}
+    by_number = {step.number: step for step in steps}
+    assert by_number["0"].targets == ("2",)
+    assert by_number["6"].targets == ("1", "2", "title:Draft A", "title:Draft B")
+    assert by_number["6T"].targets == ("1",)
+    assert by_number["9"].targets == ("epic: migration",)
+    assert by_number["10"].targets == ("#1", "#2")
+    assert by_number["11"].targets == ("1 <- 2",)
+    assert "no link" not in repr(by_number["11"].targets)
+    assert "judgment" not in repr(by_number["11"].targets)
+    assert by_number["13"].calls
+    assert "operator confirmation" in by_number["13"].check
+
+
+def test_operation_contract_matches_reviewed_fixture() -> None:
+    """Freeze every stage's calls, saved values, check, and reversal."""
+    saved = json.loads((FIXTURES / "operations.json").read_text())
+    actual = [asdict(step) for step in operation_plan(tables(), snapshot())]
+    assert json.loads(json.dumps(actual)) == saved
+
+
+def test_exemptions_require_closure_and_reopen_revokes_permanently() -> None:
+    """A target-closed invalid title is keyed by number only after CP0."""
+    with pytest.raises(ValueError, match="planned closure is not confirmed"):
+        title_exemptions(tables(), snapshot(), frozenset(), frozenset(), REFERENCE)
+    assert title_exemptions(
+        tables(), snapshot(), frozenset({"2"}), frozenset(), REFERENCE
+    ) == ("2",)
+    assert (
+        title_exemptions(
+            tables(), snapshot(), frozenset({"2"}), frozenset({"2"}), REFERENCE
+        )
+        == ()
+    )
+    assert title_repairs(tables(), REFERENCE) == (("1", False),)
+
+
+@given(st.sets(st.sampled_from(["1", "2", "999"])))
+def test_exemption_revocation_never_adds_a_number(revoked: set[str]) -> None:
+    """Any persisted reopen history only removes eligible exemptions."""
+    result = title_exemptions(
+        tables(), snapshot(), frozenset({"2"}), frozenset(revoked), REFERENCE
+    )
+    assert set(result) <= {"2"} - revoked
+
+
+def test_scope_change_requires_new_verdict_and_replacement_validity() -> None:
+    """Only a changed scope token needs a new refinement verdict."""
+    parsed = tables()
+    first = dict(parsed.assignments[0])
+    first["proposed title"] = "tooling(workflow): build a model"
+    first["refinement verdict"] = "new verdict required"
+    changed = replace(parsed, assignments=(first, *parsed.assignments[1:]))
+    assert title_repairs(changed, REFERENCE) == (("1", True),)
+    first["refinement verdict"] = "preserve prior verdict if body unchanged"
+    with pytest.raises(ValueError, match="scope-change verdict disposition differs"):
+        title_repairs(changed, REFERENCE)
+    first["proposed title"] = "invalid"
+    with pytest.raises(ValueError, match="invalid replacement title"):
+        title_repairs(changed, REFERENCE)
+
+
+def test_cp13_uses_created_ids_and_compares_every_saved_value() -> None:
+    """Build from table and CP1 values, then detect read-back drift by identity."""
+    target = expected_cp13(tables(), snapshot(), creation_inputs())
+    by_key = {item.key: item for item in target}
+    assert by_key["#2"].title == "legacy title"
+    assert by_key["#2"].state_reason == "not_planned"
+    assert by_key["#1"].parent == "#3"
+    assert by_key["#1"].blockers == ("#2",)
+    assert by_key["#3"].issue_type == "Epic"
+    assert dict(by_key["#1"].native)["Priority"] == "Standard"
+    assert dict(by_key["#1"].project)["Type"] == "Chore"
+    assert dict(by_key["title:Draft A"].project)["Priority"] == ""
+    assert by_key["title:Held"].draft_id == "draft-held"
+    assert compare_cp13(target, final_snapshot(target), "after") == ()
+    assert compare_cp13(target, final_snapshot(target), "before") == (
+        Difference("branch", "sha", "before", "after"),
+    )
+    changed = replace(by_key["#1"], native=(("Priority", "Intangible"),), parent="")
+    after = final_snapshot(
+        tuple(changed if item.key == "#1" else item for item in target)
+    )
+    assert {
+        difference.field for difference in compare_cp13(target, after, "after")
+    } == {
+        "native",
+        "parent",
+    }
+
+
+def test_target_matches_reviewed_snapshot_fixture() -> None:
+    """Freeze every expected synthetic value, including held draft identity."""
+    saved = json.loads((FIXTURES / "expected-cp13.json").read_text())
+    actual = [
+        asdict(item) for item in expected_cp13(tables(), snapshot(), creation_inputs())
+    ]
+    assert json.loads(json.dumps(actual)) == saved
+
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        "title",
+        "state",
+        "issue_type",
+        "native",
+        "project",
+        "parent",
+        "blockers",
+        "body",
+        "labels",
+        "issue_id",
+        "item_id",
+    ],
+)
+def test_cp13_reports_each_changed_field(field: str) -> None:
+    """No expected issue read-back value is silently omitted."""
+    target = expected_cp13(tables(), snapshot(), creation_inputs())
+    before = target[0]
+    value = getattr(before, field)
+    changed = cast("Any", replace)(
+        before,
+        **{
+            field: value + ("unexpected",)
+            if isinstance(value, tuple)
+            else str(value) + "unexpected"
+        },
+    )
+    actual = final_snapshot((changed, *target[1:]))
+    assert any(
+        difference.key == before.key and difference.field == field
+        for difference in compare_cp13(target, actual, "after")
+    )
+
+
+def test_cp13_refuses_missing_page_or_item() -> None:
+    """A partial collection cannot compare equal to a full target."""
+    target = expected_cp13(tables(), snapshot(), creation_inputs())
+    actual = final_snapshot(target)
+    with pytest.raises(ValueError, match="incomplete or incompatible CP13"):
+        compare_cp13(target, replace(actual, pages=actual.pages[:-1]), "after")
+    missing = target[:-1]
+    assert compare_cp13(target, final_snapshot(missing), "after")[0].field == "presence"
+
+
+def test_cp13_refuses_missing_creation_or_reviewed_body() -> None:
+    """Do not infer returned IDs or revised body text from a title."""
+    inputs = creation_inputs()
+    with pytest.raises(ValueError, match="creation map is incomplete or unexpected"):
+        expected_cp13(tables(), snapshot(), replace(inputs, created={}))
+    first = dict(tables().assignments[0])
+    first["body revision"] = "required"
+    changed = replace(tables(), assignments=(first, *tables().assignments[1:]))
+    with pytest.raises(ValueError, match="reviewed body is missing"):
+        expected_cp13(changed, snapshot(), inputs)
+    supplied = expected_cp13(
+        changed, snapshot(), replace(inputs, bodies={"#1": "reviewed"})
+    )
+    assert supplied[0].body == "reviewed"
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("issue_id", "1"),
+        ("item_id", "item-1"),
+        ("key", "#1"),
+        ("key", "wrong"),
+    ],
+)
+def test_created_parent_identity_must_be_new(field: str, value: str) -> None:
+    """Returned parent IDs cannot alias CP1 or lose their numbered identity."""
+    inputs = creation_inputs()
+    parent = inputs.created["title:epic: migration"]
+    changed = replace(parent, **cast("Any", {field: value}))
+    created = {**inputs.created, "title:epic: migration": changed}
+    with pytest.raises(ValueError, match="created identity collides with CP1"):
+        expected_cp13(tables(), snapshot(), replace(inputs, created=created))
+
+
+def test_comparison_refuses_duplicate_returned_identity() -> None:
+    """Two CP13 records with the same key are ambiguous even with full pages."""
+    target = expected_cp13(tables(), snapshot(), creation_inputs())
+    duplicated = final_snapshot((target[0], *target[:-1]))
+    with pytest.raises(ValueError, match="duplicate CP13 identity"):
+        compare_cp13(target, duplicated, "after")
+
+
+def test_rollback_uses_exact_saved_values_and_created_ids() -> None:
+    """Retain prior fields, labels, links, body, state, title, and order."""
+    cp1 = snapshot()
+    old = replace(
+        cp1.items[0],
+        body="prior",
+        labels=("type/tooling", "keep"),
+        blockers=("#2",),
+        native=(("Priority", "Standard"),),
+        project=(("Status", "Ready"),),
+    )
+    cp1 = replace(cp1, items=(old, *cp1.items[1:]))
+    created = creation_inputs().created
+    order = tuple(item.item_id for item in cp1.items)
+    rollback = rollback_values(cp1, created, order, "open", ("2",))
+    assert rollback.prior[0] == old
+    assert set(rollback.created) == set(created.values())
+    assert rollback.order == order
+    assert rollback.pr_state == "open"
+    assert rollback.branch_sha == "sha"
+    assert rollback.exemptions == ("2",)
+    with pytest.raises(ValueError, match="incomplete saved Project order"):
+        rollback_values(cp1, created, order[:-1], "open")
+    with pytest.raises(ValueError, match="created identity is incomplete"):
+        rollback_values(
+            cp1,
+            {"parent": replace(next(iter(created.values())), item_id="")},
+            order,
+            "open",
+        )
+
+
+@given(st.permutations(["item-1", "item-2", "item-b", "item-held"]))
+def test_rollback_preserves_any_complete_order(order: list[str]) -> None:
+    """A reviewed reversal can restore the exact original sequence."""
+    assert rollback_values(snapshot(), {}, tuple(order), "open").order == tuple(order)
 
 
 def test_parse_preserves_dispositions() -> None:
@@ -185,16 +629,7 @@ def test_stale_issue_fails(
 
 def test_approved_closure_uses_source_project_values() -> None:
     """Accept #168 before closure, then reject drift from its saved old Project values."""
-    inputs = next(
-        path / "reports/inputs/work-model-tables"
-        for path in Path(__file__).resolve().parents
-        if (path / "reports/inputs/work-model-tables").is_dir()
-    )
-    approved = parse_tables(
-        (inputs / "2026-09-27-work-model-v3-final.tsv").read_text(),
-        (inputs / "2026-09-27-work-model-v3-final-parents.tsv").read_text(),
-        (inputs / "2026-09-27-work-model-v3-final-edges.tsv").read_text(),
-    )
+    approved = approved_tables()
     row = next(row for row in approved.assignments if row["number"] == "168")
     source = tuple(
         sorted(
