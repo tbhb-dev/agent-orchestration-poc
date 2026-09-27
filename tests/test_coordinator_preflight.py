@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
@@ -22,13 +22,16 @@ from agent_orchestration_poc.core.coordinator_preflight import (
 FIXTURES = Path(__file__).parent / "fixtures" / "coordinator_preflight"
 
 
-def _load(name: str):
-    return json.loads((FIXTURES / name).read_text())
+def _load(name: str) -> dict[str, Any] | list[dict[str, Any]]:
+    return cast(
+        "dict[str, Any] | list[dict[str, Any]]",
+        json.loads((FIXTURES / name).read_text()),
+    )
 
 
 @pytest.mark.parametrize("case", ["outdated", "current"])
 def test_workflow_revision(case: str) -> None:
-    fixture = _load("workflows.json")[case]
+    fixture = cast("dict[str, dict[str, Any]]", _load("workflows.json"))[case]
     assert (
         list(outdated_workflows(fixture["base"], fixture["main"], fixture["head"]))
         == fixture["expected"]

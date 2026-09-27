@@ -14,4 +14,7 @@ bin/
 .ruff_cache/
 .import_linter_cache/
 .local-cache/
+.coverage
+mutants/
+gremlins.json
 .pnpm-store/
