@@ -44,12 +44,21 @@ def test_item_request_preserves_opaque_cursor() -> None:
         (
             200,
             [
+                {"name": "Status", "id": 417711744},
+                {"name": "Priority", "id": 417752960},
+                {"name": "Worker", "id": 417711775},
+            ],
+            ("417711744,417752960,417711775", True),
+        ),
+        (
+            200,
+            [
                 {"name": name, "id": index}
                 for index, name in enumerate(
                     ("Status", "Priority", "Phase", "Worker"), 1
                 )
             ],
-            ("1,2,3,4", True),
+            ("1,2,4", True),
         ),
         (200, [{"name": "Status", "id": 1}], ("1", False)),
         (500, [{"name": "Status", "id": 1}], ("", False)),
@@ -176,6 +185,20 @@ def test_source_complete(
     assert MODULE["source_complete"](account, definitions, pages) is expected
 
 
+def test_current_project_schema_confirms_complete_read() -> None:
+    fields = [
+        {"name": "Status", "id": 417711744},
+        {"name": "Priority", "id": 417752960},
+        {"name": "Worker", "id": 417711775},
+    ]
+    query, definitions_complete = MODULE["field_selection"](200, fields)
+    retain, cursor, pages_complete = MODULE["page_decision"](200, [], "", 1)
+    assert query == "417711744,417752960,417711775"
+    assert retain
+    assert cursor is None
+    assert MODULE["source_complete"](200, definitions_complete, pages_complete)
+
+
 def test_observation_reads_deliveries_after_window(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -243,6 +266,14 @@ def test_observation_reads_deliveries_after_window(
             "abc",
         ),
         (
+            '<https://api.github.com/organizations/288164213/projectsV2/1/items?after=abc>; rel="next"',
+            "abc",
+        ),
+        (
+            '<https://api.github.com/organizations/1/projectsV2/1/items?after=abc>; rel="next"',
+            None,
+        ),
+        (
             '<https://example.com/orgs/tbhb-dev/projectsV2/1/items?after=abc>; rel="next"',
             None,
         ),
@@ -275,28 +306,24 @@ def test_classify_items_partial_pages(complete: bool) -> None:
     pages = cast(
         "dict[str, list[list[dict[str, Any]]]]", json.loads(FIXTURE.read_text())
     )["pages"]
-    result = classify_items(pages, ("Status", "Priority", "Phase", "Worker"), complete)
+    result = classify_items(pages, ("Status", "Priority", "Worker"), complete)
     assert result["items_seen"] == 2
     assert result["item_identity_count"] == 2
     assert result["field_value_counts"] == {
         "Status": 2,
         "Priority": 1,
-        "Phase": 1,
         "Worker": 0,
     }
     assert result["missing_field_value_counts"] == {
         "Status": 0,
         "Priority": 1,
-        "Phase": 1,
         "Worker": 2,
     }
     assert result["ready_count"] == 1
     assert result["complete"] is complete
 
 
-@given(
-    st.lists(st.sampled_from(["Status", "Priority", "Phase", "Worker"]), max_size=20)
-)
+@given(st.lists(st.sampled_from(["Status", "Priority", "Worker"]), max_size=20))
 def test_classify_items_count_never_exceeds_items(names: list[str]) -> None:
     pages = [
         [
@@ -308,7 +335,7 @@ def test_classify_items_count_never_exceeds_items(names: list[str]) -> None:
         ]
         for number, name in enumerate(names)
     ]
-    result = classify_items(pages, ("Status", "Priority", "Phase", "Worker"), True)
+    result = classify_items(pages, ("Status", "Priority", "Worker"), True)
     assert all(count <= len(names) for count in result["field_value_counts"].values())
 
 
@@ -368,7 +395,7 @@ def test_unauthorized_delivery_stays_unknown(actions: list[tuple[str, int]]) -> 
 
 @pytest.mark.parametrize("complete", [True, False])
 def test_source_rows_keep_fields_separate_from_labels(complete: bool) -> None:
-    summary = classify_items([], ("Status", "Priority", "Phase", "Worker"), complete)
+    summary = classify_items([], ("Status", "Priority", "Worker"), complete)
     definitions = {"path": "fields", "status": 200}
     items = {
         "path": "items",
@@ -386,7 +413,6 @@ def test_source_rows_keep_fields_separate_from_labels(complete: bool) -> None:
     assert set(rows) == {
         "Ready",
         "Priority",
-        "Phase",
         "Worker",
         "item_identity",
         "issue_labels",
@@ -395,11 +421,12 @@ def test_source_rows_keep_fields_separate_from_labels(complete: bool) -> None:
     assert rows["Ready"]["source_complete"] is complete
     assert rows["issue_labels"]["separate_from_project_fields"] is True
     assert rows["Priority"]["account"] == "account"
+    assert rows["Ready"]["path"].endswith("fields=<three field IDs>")
 
 
 @given(st.integers(min_value=0, max_value=100))
 def test_source_rows_preserve_missing_count(missing: int) -> None:
-    summary = classify_items([], ("Status", "Priority", "Phase", "Worker"), False)
+    summary = classify_items([], ("Status", "Priority", "Worker"), False)
     summary["missing_field_value_counts"]["Worker"] = missing
     definitions = {"path": "fields", "status": 200}
     items = {

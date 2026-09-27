@@ -13,9 +13,13 @@ from typing import Any
 from urllib.parse import parse_qs, urlencode, urlparse
 
 PROJECT = "orgs/tbhb-dev/projectsV2/1"
+PROJECT_ITEMS_PATHS = {
+    f"/{PROJECT}/items",
+    "/organizations/288164213/projectsV2/1/items",
+}
 REPO = "repos/tbhb-dev/agent-orchestration-poc"
 VERSION = "2026-03-10"
-FIELDS = ("Status", "Priority", "Phase", "Worker")
+FIELDS = ("Status", "Priority", "Worker")
 MAX_PAGES = 5
 PAGE_SIZE = 100
 MAX_DELIVERY_DETAILS = 10
@@ -30,7 +34,10 @@ def next_cursor(link: str) -> str | None:
         if match is None:
             return None
         parsed = urlparse(match.group(1))
-        if parsed.hostname != "api.github.com" or parsed.path != f"/{PROJECT}/items":
+        if (
+            parsed.hostname != "api.github.com"
+            or parsed.path not in PROJECT_ITEMS_PATHS
+        ):
             return None
         cursors = parse_qs(parsed.query).get("after", [])
         return cursors[0] if len(cursors) == 1 else None
@@ -187,11 +194,10 @@ def source_rows(
     for requested, field in (
         ("Ready", "Status"),
         ("Priority", "Priority"),
-        ("Phase", "Phase"),
         ("Worker", "Worker"),
     ):
         rows[requested] = {
-            "path": f"{PROJECT}/items?per_page={PAGE_SIZE}&fields=<four field IDs>",
+            "path": f"{PROJECT}/items?per_page={PAGE_SIZE}&fields=<three field IDs>",
             "definition_path": definitions["path"],
             "definition_status": definitions["status"],
             "api_version": items["api_version"],
