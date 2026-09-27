@@ -6,6 +6,10 @@ Copy this brief into the coordinator's dispatch for Codex documentation work.
 
 State the issue, target pages, source inputs, and expected reader action.
 
+## Branch and review
+
+Merge `main` into a pushed branch and rebase only unpublished history. Never force push a pushed branch. Open the PR and exit after checks conclude. A review round is one verdict by `tbhbbot`. After the third changes-requested verdict, stop until a newer coordinator `tbhb` comment has the exact body `Arbitration: authorize another round`. Reply to inline threads and push fixes before re-review.
+
 ## Writing rules
 
 Write each Markdown paragraph on one source line. Use sentence case headings. Keep citation lists free of semicolons. Give site pages `title` and `description` frontmatter, with no body H1.

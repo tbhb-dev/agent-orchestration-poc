@@ -11,7 +11,7 @@ Written 2026-09-26 for the phase 0 checkpoint, this plan records the coordinator
 
 These requirements were added on 2026-09-26. `reports/inputs/phase-1-coordinator-notes.md` preserves the inputs. Phase 1 approval, confirmation of the revised model assignments, and the pyrefly exceptions remain checkpoint questions.
 
-- The coordinator may merge ordinary reviewed PRs after green CI. The operator adjusted local Claude permissions after merge and settings denials. Security policy, credentials, egress, and changes outside the repository remain operator boundaries.
+- The coordinator may merge ordinary reviewed PRs after a current approval and green CI, including product code that handles credentials. Reviewer identity is a project process record, not a credential security boundary. The operator adjusted local Claude permissions after merge and settings denials. Changes to project credential issuance, storage, grants, or repository secrets, security policy, egress, and host setup or installations remain operator boundaries.
 - Send permission requests through AskUserQuestion so the mobile app notifies the operator. Report Codex and agy permission blocks that project configuration would fix.
 - Give Codex network access per launch with `-c sandbox_workspace_write.network_access=true`.
 - Keep the Astro background docs daemon available to the operator at `http://localhost:4322`.
@@ -110,7 +110,7 @@ One issue per work item. Every issue carries: goal (one paragraph), context and 
 
 ### Branches and worktrees
 
-Branch names are `<type>/<issue>-<slug>`, where type is one of `feat`, `fix`, `docs`, `exp`, `chore`, `research`, for example `feat/12-bus-consumer`. Every worker gets its own branch and its own worktree at `.worktrees/<type>-<issue>-<slug>/`. Workers never share a checkout and never work on `main`.
+Branch names are `<type>/<issue>-<slug>`, where type is one of `feat`, `fix`, `docs`, `exp`, `chore`, `research`, for example `feat/12-bus-consumer`. Every worker gets its own branch and its own worktree at `.worktrees/<type>-<issue>-<slug>/`. Workers never share a checkout and never work on `main`. Merge `main` into a pushed branch when updating it. Rebase only unpublished history and never force push a pushed branch. A clean update from `main` retains approval, while a hand-resolved merge dismisses it and needs re-review.
 
 ### Commits
 
@@ -128,7 +128,7 @@ Refs: #12
 
 ### Pull requests
 
-One PR per issue, small. Title is the conventional subject. Body: what, why, evidence (links to `experiments/` output or test runs), docs (what Codex wrote or what still needs writing), and a checklist (CI green, docs updated or issue filed, no secrets, evidence committed). Squash merge only: the repository settings allow squash merges and disable merge commits and rebase merges (set by the coordinator on 2026-09-26 at the operator's direction), the squash commit takes the PR title as its subject and the PR body as its body, so the PR body is written to the commit convention, and head branches are deleted on merge (the provisioner removes the matching worktree). Review policy: the coordinator reviews every PR. Where practical a worker from a different harness than the author reviews first (a Claude worker reviews Codex PRs and the reverse), and the coordinator merges after review and green CI. The operator merges anything that changes security policy, credentials handling, egress rules, or anything installed outside the repository. Branch protection on `main` once CI exists in phase 1, as a repository ruleset (require a pull request, require the CI job by name, block force pushes and deletion), enabled by the coordinator. Rulesets and classic branch protection on a private personal repository both need GitHub Pro, and the API does not expose the account plan, so the operator confirms the plan first. Without Pro the merge gate stays coordinator review plus CI status, unenforced by GitHub.
+One PR per issue, small. Title is the conventional subject. Body: what, why, evidence (links to `experiments/` output or test runs), docs (what Codex wrote or what still needs writing), and a checklist (CI green, docs updated or issue filed, no secrets, evidence committed). Repository settings permit only squash PR merges, and the squash commit takes the PR title and body. Merge commits on feature branches remain permitted. The default implementer account is `tbhb`, and reviewers run each review command through `scripts/reviewer-gh.sh` as `tbhbbot` without switching accounts or exposing tokens. `tbhbbot` posts request-changes and approval verdicts as PR reviews with inline threads. The first verdict line names harness, model, and effort. The implementer replies in threads and pushes fixes before re-review. One round is one `tbhbbot` verdict. After three changes-requested verdicts, another round needs a newer coordinator `tbhb` comment with the exact body `Arbitration: authorize another round`. The coordinator never approves through `tbhbbot`. The active main ruleset 24053242 requires one current approval by someone other than the latest pusher, resolved threads, an up-to-date branch, and successful `check`, `docs`, `pr-body`, `imported-research`, and `mutation` checks. It dismisses stale approvals, requires extra approval for unattributed changes, allows only squash merges, and has no bypass actors. Ruleset 24056095 blocks force pushes on every branch. The coordinator merges ordinary reviewed product code, including code that handles credentials. The operator merges changes to project credential issuance, storage, grants, or repository secrets, security policy, egress, and host setup or installations.
 
 ### CI
 
@@ -525,7 +525,7 @@ These come from the handoff and the tbhb workspace and go into `AGENTS.md` and `
 - Diagrams: Mermaid or hand-drawn SVG. Mermaid sources are validated before they land: the coordinator's session has the Mermaid Chart MCP for interactive validation and rendering, and a Mermaid CLI check over every fenced `mermaid` block joins the CI checks (a phase 1 tooling candidate). Hand-drawn diagrams are made in Excalidraw (the coordinator's session has the Excalidraw MCP), exported to SVG for the docs site, and committed together with their `.excalidraw` source so they stay editable. Codex writes the Mermaid source as part of a page. Drawings are produced on the coordinator's side from the page's content and handed to Codex to place.
 - Markdown: one line per paragraph, sentence case headings. `guard-markdown` enforces the first.
 - Everything committed and pushed. Parallel work in worktrees, one per worker.
-- Shared stash stack: never a bare `git stash pop`. Prefer `git rebase --autostash` or a throwaway `wip` commit (the only sanctioned `--no-verify`), unwound with `git reset --soft HEAD~1`.
+- Shared stash stack: never a bare `git stash pop`. Merge `main` into pushed branches, and rebase only unpublished history with `git rebase --autostash` or a throwaway `wip` commit (the only sanctioned `--no-verify`), unwound with `git reset --soft HEAD~1`.
 - Sandbox escapes and system changes go to the operator.
 
 ## Open questions for the operator
