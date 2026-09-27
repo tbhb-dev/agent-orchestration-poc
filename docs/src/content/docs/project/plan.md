@@ -108,6 +108,8 @@ What the phase 1 worker can script, per `experiments/00-system-assessment/github
 
 One issue per work item. Every issue carries: goal (one paragraph), context and links (docs pages, sketch pages, research), acceptance criteria (checkboxes), evidence required (what raw material the worker must produce), docs impact (what Codex has to write or update when this lands), and out of scope. Labels: `area/<area>`, `type/<feature|experiment|research|docs|tooling|process|bug|decision>`, `phase/<n>`, `harness/<claude|codex|agy|any>`, `blocked`, `needs-operator`. A `decision` issue records a design decision and is closed by the decision record in the docs site.
 
+The [checked workflow reference](/guides/workflow-reference/) now owns the exact issue fields, title types, scopes, labels, branch prefixes, and PR size contract. Its issue forms include Dependencies and paths and an Allowed paths list.
+
 ### Branches and worktrees
 
 Branch names are `<type>/<issue>-<slug>`, where type is one of `feat`, `fix`, `docs`, `exp`, `chore`, `research`, for example `feat/12-bus-consumer`. Every worker gets its own branch and its own worktree at `.worktrees/<type>-<issue>-<slug>/`. Workers never share a checkout and never work on `main`. Merge `main` into a pushed branch when updating it. Rebase only unpublished history and never force push a pushed branch. A clean update from `main` retains approval, while a hand-resolved merge dismisses it and needs re-review.

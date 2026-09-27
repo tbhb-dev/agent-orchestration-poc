@@ -1,0 +1,44 @@
+accessibility	Barrier affecting people with disabilities	f143ab
+area/bus	Area: bus	1d76db
+area/containers	Area: containers	1d76db
+area/daemon	Area: daemon	1d76db
+area/desktop	Area: desktop	1d76db
+area/docs	Area: docs	1d76db
+area/experiment	Area: experiment	1d76db
+area/remote	Area: remote	1d76db
+area/research	Area: research	1d76db
+area/security	Area: security	1d76db
+area/terminal	Area: terminal	1d76db
+area/tooling	Area: tooling	1d76db
+area/ui	Area: ui	1d76db
+area/workflow	Area: workflow	1d76db
+blocked	Blocked on another item or a finding	b60205
+bug	Something isn't working	d73a4a
+documentation	Improvements or additions to documentation	0075ca
+duplicate	This issue or pull request already exists	cfd3d7
+enhancement	New feature or request	a2eeef
+good first issue	Good for newcomers	7057ff
+harness/agy	Intended harness: agy	fbca04
+harness/any	Intended harness: any	fbca04
+harness/claude	Intended harness: claude	fbca04
+harness/codex	Intended harness: codex	fbca04
+help wanted	Extra attention is needed	008672
+invalid	This doesn't seem right	e4e669
+needs-operator	Needs the operator's decision or approval	d93f0b
+phase/0	Phase 0	5319e7
+phase/1	Phase 1	5319e7
+phase/2	Phase 2	5319e7
+phase/3	Phase 3	5319e7
+phase/4	Phase 4	5319e7
+phase/5	Phase 5	5319e7
+phase/6	Phase 6	5319e7
+question	Further information is requested	d876e3
+type/bug	Type: bug	0e8a16
+type/decision	Type: decision	0e8a16
+type/docs	Type: docs	0e8a16
+type/experiment	Type: experiment	0e8a16
+type/feature	Type: feature	0e8a16
+type/process	Type: process	0e8a16
+type/research	Type: research	0e8a16
+type/tooling	Type: tooling	0e8a16
+wontfix	This will not be worked on	ffffff
