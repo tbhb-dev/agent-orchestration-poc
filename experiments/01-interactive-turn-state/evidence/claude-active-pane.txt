@@ -1,0 +1,17 @@
+ ▐▛███▛█   Claude Code v2.1.283
+▝▜██████▀  Fable 5.1 · Claude Max
+ ▝▝   ▝▝   ~/…/agent-orchestration-poc/.worktrees/exp-214-detect-idle-turns
+
+
+❯ Use Bash to run sleep 20, then reply EXP214-DONE.
+
+⏺ Bash(sleep 20)
+  ⎿  Running… (12s)
+     (ctrl+b ctrl+b (twice) to run in background)
+
+✽ Transmuting… (15s · ↓ 80 tokens)
+
+─────────────────────────────────────────────────────────────── exp214-claude2 ─
+❯ 
+────────────────────────────────────────────────────────────────────────────────
+  ⏸ manual mode on · esc to interrupt · ← for agents

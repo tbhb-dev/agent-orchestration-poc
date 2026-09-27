@@ -1,0 +1,19 @@
+ ▐▛███▛█   Claude Code v2.1.283
+▝▜██████▀  Fable 5.1 · Claude Max
+ ▝▝   ▝▝   ~/…/agent-orchestration-poc/.worktrees/exp-214-detect-idle-turns
+
+
+❯ Use Bash to run sleep 20, then reply EXP214-DONE.
+
+⏺ Bash(sleep 20)
+  ⎿  (No output)
+
+⏺ EXP214-DONE
+
+✻ Baked for 25s · done 2:17 PM
+
+─────────────────────────────────────────────────────────────── exp214-claude2 ─
+❯ 
+────────────────────────────────────────────────────────────────────────────────
+  ⏸ manual mode on · ? for shortcuts · ← for agents
+  You've used 75% of your Fable limit · resets Sep 30 at 10pm (America/New_Yo…
