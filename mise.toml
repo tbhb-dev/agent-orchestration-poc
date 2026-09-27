@@ -134,6 +134,14 @@ run = "uv run python scaffolding/github-monitor/project_probe.py"
 description = "Test the disposable Project 9 probe"
 run = "uv run pytest tests/test_project_probe.py"
 
+[tasks."monitor:repair"]
+description = "Repair explicitly tracked temporary monitor objects through REST"
+run = "uv run python scaffolding/github-monitor/rest_client.py"
+
+[tasks."monitor:test-repair"]
+description = "Test fixture-backed temporary REST repair"
+run = "PYTHONPATH=scaffolding/github-monitor uv run pytest scaffolding/github-monitor/tests/test_repair.py"
+
 [tasks."check:review-identity"]
 description = "Run reviewer policy and wrapper process fixtures"
 run = "uv run pytest tests/fixtures/review_identity/test_policy.py tests/fixtures/review_identity/test_wrapper.py --run-integration"

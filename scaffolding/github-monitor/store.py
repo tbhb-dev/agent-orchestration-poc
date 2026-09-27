@@ -197,6 +197,25 @@ class Store:
             self._revision(db)
         return True
 
+    def stale_component(
+        self, kind: str, number: int, name: str, captured_generation: int, reason: str
+    ) -> bool:
+        """Retract a disproved observation only at its captured generation."""
+        with closing(self._connect()) as db, db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute(
+                "SELECT generation FROM components WHERE kind=? AND number=? AND name=?",
+                (kind, number, name),
+            ).fetchone()
+            if row is None or not can_complete(captured_generation, row[0]):
+                return False
+            db.execute(
+                "UPDATE components SET complete=0, stale_reason=? WHERE kind=? AND number=? AND name=?",
+                (reason, kind, number, name),
+            )
+            self._revision(db)
+        return True
+
     @staticmethod
     def _snapshot(db: sqlite3.Connection, now: datetime) -> dict[str, Any]:
         meta = db.execute("SELECT * FROM meta WHERE id=1").fetchone()

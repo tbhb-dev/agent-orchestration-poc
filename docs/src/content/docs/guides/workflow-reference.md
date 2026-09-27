@@ -11,7 +11,7 @@ Types: `feat`, `fix`, `docs`, `exp`, `research`, `tooling`, `process`, `decision
 
 Scopes: `bus`, `containers`, `daemon`, `desktop`, `docs`, `experiment`, `remote`, `research`, `security`, `terminal`, `tooling`, `ui`, `workflow`, `go`, `python`, `shell`, `github`, `git`, `ci`, `testing`, `coverage`, `mutation`, `gates`, `review`, `preflight`, `handoff`, `project`, `workers`, `checkpoint`, `retro`, `sync`, `import`, `subject`, `skeleton`, `boundaries`, `design`, `process`.
 
-Subject verbs: `add`, `allow`, `audit`, `build`, `check`, `clarify`, `define`, `detect`, `document`, `enforce`, `fix`, `gate`, `keep`, `make`, `measure`, `move`, `pin`, `record`, `refine`, `reject`, `remove`, `report`, `require`, `resolve`, `restore`, `retire`, `run`, `split`, `sync`, `test`, `track`, `update`, `validate`, `verify`.
+Subject verbs: `add`, `allow`, `audit`, `build`, `check`, `clarify`, `define`, `detect`, `document`, `enforce`, `fix`, `gate`, `keep`, `make`, `measure`, `move`, `pin`, `record`, `refine`, `reject`, `remove`, `repair`, `report`, `require`, `resolve`, `restore`, `retire`, `run`, `split`, `sync`, `test`, `track`, `update`, `validate`, `verify`.
 
 Titles use `type(scope): verb object` without a final period. Commit subjects have at most 72 characters. Branches use `<type>/<issue>[-<issue>...]-<slug>`. A new scope needs a reference edit in the same PR.
 
