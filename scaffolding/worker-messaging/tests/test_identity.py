@@ -20,6 +20,283 @@ def fixture(name: str) -> dict[str, Any]:
 
 
 @pytest.mark.parametrize(
+    ("path", "created", "allowed"),
+    [
+        ("/repo/.worktrees/worker", True, True),
+        ("/repo/.worktrees/worker", False, False),
+        ("/repo", True, False),
+        ("/repo/.worktrees", True, False),
+        ("/repo/.worktrees/worker/nested", True, False),
+        ("/other/worker", True, False),
+    ],
+)
+def test_trust_target(path: str, created: bool, allowed: bool) -> None:
+    """Only a launcher-created exact child of the worktree directory is eligible."""
+    if allowed:
+        assert identity.trust_target(path, "/repo", created) == path
+    else:
+        with pytest.raises(ValueError, match="launcher-created"):
+            identity.trust_target(path, "/repo", created)
+
+
+@given(
+    st.text(min_size=1).filter(
+        lambda name: (
+            "/" not in name
+            and "\x00" not in name
+            and name not in {".", ".."}
+            and all(not 0xD800 <= ord(char) <= 0xDFFF for char in name)
+        )
+    )
+)
+def test_trust_target_property(name: str) -> None:
+    """A direct child is eligible only when creation belongs to this run."""
+    path = f"/repo/.worktrees/{name}"
+    assert identity.trust_target(path, "/repo", True) == path
+    with pytest.raises(ValueError, match="launcher-created"):
+        identity.trust_target(path, "/repo", False)
+
+
+@pytest.mark.parametrize("value", ["trusted", None])
+def test_trust_write_params(value: str | None) -> None:
+    """Both registration and removal use the tagged replace request shape."""
+    params = identity.trust_write_params('/repo/.worktrees/a"b', value)
+    assert params == {
+        "edits": [
+            {
+                "keyPath": 'projects."/repo/.worktrees/a\\"b".trust_level',
+                "value": value,
+                "mergeStrategy": "replace",
+            }
+        ],
+        "filePath": None,
+        "expectedVersion": None,
+        "reloadUserConfig": True,
+    }
+
+
+def server_key_segments(key: str) -> list[str]:
+    """Mirror the pinned config manager's quoted-key parser for this test."""
+    segments: list[str] = []
+    segment = ""
+    quoted = False
+    index = 0
+    while index < len(key):
+        char = key[index]
+        if char == '"' and not segment and not quoted:
+            quoted = True
+        elif char == '"' and quoted:
+            quoted = False
+        elif char == "\\" and quoted:
+            index += 1
+            if index == len(key):
+                raise ValueError("unterminated escape")
+            segment += key[index]
+        elif char == "." and not quoted:
+            if not segment:
+                raise ValueError("empty segment")
+            segments.append(segment)
+            segment = ""
+        elif char == '"':
+            raise ValueError("invalid quote")
+        else:
+            segment += char
+        index += 1
+    if quoted or not segment:
+        raise ValueError("incomplete key")
+    return [*segments, segment]
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/repo/.worktrees/a\nb",
+        "/repo/.worktrees/a\\b",
+        '/repo/.worktrees/a"b',
+        "/repo/.worktrees/a.b",
+    ],
+)
+def test_trust_key_server_roundtrip(path: str) -> None:
+    """The server parser must select exactly the requested worktree."""
+    key = identity.trust_write_params(path, "trusted")["edits"][0]["keyPath"]
+    assert server_key_segments(key) == ["projects", path, "trust_level"]
+
+
+@given(
+    st.text(min_size=1).filter(
+        lambda path: (
+            "\x00" not in path
+            and all(not 0xD800 <= ord(char) <= 0xDFFF for char in path)
+        )
+    )
+)
+def test_trust_write_params_property(path: str) -> None:
+    """Every escaped key decodes to exactly the path supplied."""
+    params = identity.trust_write_params(path, "trusted")
+    key = params["edits"][0]["keyPath"]
+    assert server_key_segments(key) == ["projects", path, "trust_level"]
+
+
+@pytest.mark.parametrize("path", ["a\x00b", "a\ud800b"])
+def test_trust_key_rejects_unrepresentable_path(path: str) -> None:
+    """Reject bytes the config path cannot persist before any write."""
+    with pytest.raises(ValueError, match="trust path"):
+        identity.trust_write_params(path, "trusted")
+
+
+@pytest.mark.parametrize(
+    ("response", "confirmed"),
+    [({"status": "ok"}, True), ({"status": "okOverridden"}, False), ({}, False)],
+)
+def test_trust_write_confirmed(response: dict[str, Any], confirmed: bool) -> None:
+    """An overridden or missing status cannot establish the edit."""
+    assert identity.trust_write_confirmed(response) is confirmed
+
+
+@given(st.text().filter(lambda status: status != "ok"))
+def test_trust_write_confirmed_property(status: str) -> None:
+    """Every other write status fails the confirmation gate."""
+    assert not identity.trust_write_confirmed({"status": status})
+
+
+@pytest.mark.parametrize(
+    ("entry", "expected", "confirmed"),
+    [
+        ({"trust_level": "trusted"}, "trusted", True),
+        ({"trust_level": "untrusted"}, "trusted", False),
+        (None, "trusted", False),
+        (None, None, True),
+        ({}, None, True),
+        ({"trust_level": "trusted"}, None, False),
+    ],
+)
+def test_trust_readback(entry: object, expected: str | None, confirmed: bool) -> None:
+    """Only the exact project key establishes registration or removal."""
+    projects = {} if entry is None else {"/worker": entry}
+    response = {"config": {"projects": projects}, "layers": []}
+    assert identity.trust_readback(response, "/worker", expected) is confirmed
+    assert not identity.trust_readback(response, "/other", "trusted")
+
+
+@given(st.text(min_size=1))
+def test_trust_readback_property(other: str) -> None:
+    """A different project key cannot satisfy exact-path registration."""
+    if other == "/worker":
+        return
+    response = {
+        "config": {"projects": {other: {"trust_level": "trusted"}}},
+        "layers": [],
+    }
+    assert not identity.trust_readback(response, "/worker", "trusted")
+
+
+@pytest.mark.parametrize(
+    "response",
+    [
+        {},
+        {"layers": []},
+        {"config": {}, "layers": None},
+        {"config": {"projects": []}, "layers": []},
+    ],
+)
+def test_trust_readback_rejects_invalid_response(response: dict[str, Any]) -> None:
+    """Malformed read-backs cannot confirm even an absent entry."""
+    assert not identity.trust_readback(response, "/worker", None)
+
+
+@pytest.mark.parametrize(
+    ("row", "result"),
+    [
+        ({}, None),
+        ({"trust_registered": True}, None),
+        ({"trust_registered": False}, ("blocked", "folder trust removed")),
+        (
+            {"trust_blocked": True, "reason": "write failed"},
+            ("blocked", "write failed"),
+        ),
+    ],
+)
+def test_trust_gate(row: dict[str, Any], result: tuple[str, str] | None) -> None:
+    """A blocked edit or completed cleanup remains ineligible for sends."""
+    assert identity.trust_gate(row) == result
+
+
+@given(st.text())
+def test_trust_gate_property(reason: str) -> None:
+    """Every recorded trust failure retains its reason on reinspection."""
+    assert identity.trust_gate({"trust_blocked": True, "reason": reason}) == (
+        "blocked",
+        reason,
+    )
+
+
+@pytest.mark.parametrize(
+    ("action", "outcome", "expected"),
+    [
+        ("register", "confirmed", (True, False, "confirmed")),
+        ("register", "preflight", (None, True, "failed")),
+        ("register", "conflict", (None, True, "failed")),
+        ("register", "write_failed", (None, True, "failed")),
+        ("remove", "confirmed", (False, False, "confirmed")),
+        ("remove", "write_failed", (True, True, "failed")),
+    ],
+)
+def test_trust_transition_values(
+    action: str, outcome: str, expected: tuple[bool | None, bool, str]
+) -> None:
+    """Trust state, ownership, and event results come from plain values."""
+    original: dict[str, Any] = {"state": "starting"}
+    if action == "remove":
+        original["trust_registered"] = True
+    snapshot = original.copy()
+    started = identity.trust_transition(original, "attempted", "time-1", action=action)
+    if outcome not in {"preflight", "conflict"}:
+        started = identity.trust_transition(started, "writing", "time-2")
+        assert started["trust_write_attempted"] is True
+        assert started["reason"] == f"folder trust {action} outcome unknown"
+    final = identity.trust_transition(started, outcome, "time-3", reason="denied")
+    assert original == snapshot
+    assert final.get("trust_registered") is expected[0]
+    assert final["trust_blocked"] is expected[1]
+    assert final["trust_events"][-1]["result"] == expected[2]
+    if outcome == "conflict":
+        assert final["trust_conflict"] is True
+    if outcome == "write_failed":
+        assert final["reason"] == f"folder trust {action} failed: denied"
+
+
+@pytest.mark.parametrize(
+    ("row", "error"),
+    [
+        (
+            {"harness": "codex", "trust_events": [{}], "trust_write_attempted": True},
+            None,
+        ),
+        (
+            {"harness": "codex", "trust_events": [{}]},
+            "run has no launcher-owned Codex trust write",
+        ),
+        (
+            {"harness": "claude", "trust_events": [{}], "trust_write_attempted": True},
+            "run has no launcher-owned Codex trust write",
+        ),
+        (
+            {
+                "harness": "codex",
+                "trust_events": [{}],
+                "trust_write_attempted": True,
+                "trust_registered": False,
+            },
+            "run trust entry was already removed",
+        ),
+    ],
+)
+def test_trust_cleanup_eligibility(row: dict[str, Any], error: str | None) -> None:
+    """An ambiguous owned write is eligible; preflight and removed rows are not."""
+    assert identity.trust_cleanup_error(row) == error
+
+
+@pytest.mark.parametrize(
     ("change", "value", "state"), fixture("cases.json")["observations"]
 )
 def test_readiness_cases(change: str, value: object, state: str) -> None:

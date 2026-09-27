@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+from collections.abc import Callable
 from pathlib import Path
 
 import cli
@@ -359,6 +360,343 @@ def _serve_fake_endpoint(
                     )
     except (OSError, ValueError, KeyError) as error:
         errors.append(error)
+
+
+@pytest.mark.parametrize(
+    ("value", "failure"),
+    [
+        ("trusted", None),
+        (None, None),
+        ("trusted", "write_error"),
+        ("trusted", "write_status"),
+        ("trusted", "read_error"),
+        ("trusted", "read_mismatch"),
+        ("trusted", "preexisting"),
+        ("trusted", "preflight_error"),
+        (None, "read_mismatch"),
+        (None, "read_error"),
+    ],
+)
+def test_trust_write_and_readback_on_fake_endpoint(  # noqa: C901, PLR0915
+    value: str | None, failure: str | None
+) -> None:
+    """Only the fake Unix endpoint receives exact trust edits and read-backs."""
+    with tempfile.TemporaryDirectory(
+        prefix="worker176-trust-", dir="/private/tmp"
+    ) as folder:
+        path = f"{folder}/app.sock"
+        server = socket.socket(socket.AF_UNIX)
+        server.bind(path)
+        server.listen(1)
+        server.settimeout(2)
+        requests: list[dict[str, object]] = []
+        errors: list[Exception] = []
+        worktree = "/repo/.worktrees/worker"
+        reads = 0
+        pending: list[str] = []
+
+        def serve() -> None:  # noqa: C901, PLR0912
+            nonlocal reads
+            try:
+                conn, _ = server.accept()
+                with conn:
+                    handshake = bytearray()
+                    while not handshake.endswith(b"\r\n\r\n"):
+                        handshake.extend(conn.recv(1))
+                    conn.sendall(b"HTTP/1.1 101 Switching Protocols\r\n\r\n")
+                    while True:
+                        try:
+                            request = codex_launch._receive(conn)
+                        except EOFError:
+                            break
+                        requests.append(request)
+                        if "id" not in request:
+                            continue
+                        method = request["method"]
+                        if method == "config/batchWrite":
+                            if pending != ["writing"]:
+                                raise ValueError(
+                                    "write reached server before registry phase"
+                                )
+                            response: dict[str, object] = {"status": "ok"}
+                            if failure == "write_status":
+                                response = {"status": "okOverridden"}
+                        elif method == "config/read":
+                            reads += 1
+                            actual = (
+                                "trusted"
+                                if failure == "preexisting"
+                                else None
+                                if value is not None and reads == 1
+                                else "untrusted"
+                                if failure == "read_mismatch"
+                                else value
+                            )
+                            projects = (
+                                {worktree: {"trust_level": actual}}
+                                if actual is not None
+                                else {}
+                            )
+                            response = {"config": {"projects": projects}, "layers": []}
+                        else:
+                            response = {}
+                        reply = {"id": request["id"], "result": response}
+                        if failure == "write_error" and method == "config/batchWrite":
+                            reply = {
+                                "id": request["id"],
+                                "error": {"message": "denied"},
+                            }
+                        if (
+                            failure == "read_error"
+                            and method == "config/read"
+                            and reads == (2 if value is not None else 1)
+                        ):
+                            reply = {
+                                "id": request["id"],
+                                "error": {"message": "denied"},
+                            }
+                        if failure == "preflight_error" and method == "config/read":
+                            reply = {
+                                "id": request["id"],
+                                "error": {"message": "denied"},
+                            }
+                        conn.sendall(codex_launch._frame(reply))
+            except (OSError, ValueError, KeyError) as error:
+                errors.append(error)
+
+        thread = threading.Thread(target=serve)
+        thread.start()
+        try:
+            if failure:
+                with pytest.raises(ValueError, match="config/|trust entry|preflight"):
+                    codex_launch.change_trust(
+                        f"unix://{path}",
+                        worktree,
+                        value,
+                        lambda: pending.append("writing"),
+                    )
+            else:
+                codex_launch.change_trust(
+                    f"unix://{path}", worktree, value, lambda: pending.append("writing")
+                )
+        finally:
+            server.close()
+            thread.join(timeout=5)
+        assert not thread.is_alive()
+        assert not errors
+        writes = [item for item in requests if item["method"] == "config/batchWrite"]
+        if failure in {"preexisting", "preflight_error"}:
+            assert writes == []
+            assert pending == []
+        else:
+            assert writes[0]["params"] == identity.trust_write_params(worktree, value)
+            assert pending == ["writing"]
+        read_requests = [item for item in requests if item["method"] == "config/read"]
+        assert all(
+            item["params"] == {"cwd": worktree, "includeLayers": True}
+            for item in read_requests
+        )
+        assert len(read_requests) == (
+            (1 if value is not None else 0)
+            + (
+                0
+                if failure
+                in {"write_error", "write_status", "preexisting", "preflight_error"}
+                else 1
+            )
+        )
+
+
+@pytest.mark.parametrize("failure", [False, True])
+def test_launch_trust_gate_precedes_pane(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, failure: bool
+) -> None:
+    """A failed registration persists blocked state without starting a TUI."""
+    store = tmp_path / "registry.json"
+    calls: list[str] = []
+    monkeypatch.setattr(launcher, "STORE", store)
+    monkeypatch.setattr(launcher, "_worktree", lambda *_args: True)
+    monkeypatch.setattr(launcher, "_run", lambda _argv: "/repo/.git")
+    brief = tmp_path / "brief.md"
+    brief.write_text("brief")
+    monkeypatch.setattr(
+        launcher.subprocess,
+        "run",
+        lambda *args, **_kwargs: subprocess.CompletedProcess(
+            args[0], 1, "", "no server running"
+        ),
+    )
+
+    def change_trust(
+        _endpoint: str,
+        _worktree: str,
+        _value: str | None,
+        before_write: Callable[[], None],
+    ) -> None:
+        before_write()
+        calls.append("trust")
+        if failure:
+            raise ValueError("write denied")
+
+    monkeypatch.setattr(codex_launch, "change_trust", change_trust)
+    monkeypatch.setattr(
+        launcher, "_new_pane", lambda *_args: calls.append("pane") or {}
+    )
+    monkeypatch.setattr(launcher, "inspect", lambda row: (row, "ready", "test"))
+    request = {
+        "name": "worker",
+        "issue": 176,
+        "harness": "codex",
+        "model": "gpt-6-sol",
+        "effort": "high",
+        "branch": "tooling/176-worker",
+        "worktree": "/repo/.worktrees/worker",
+        "tmux_name": "worker",
+        "brief_file": str(brief),
+        "endpoint": "unix:///private/tmp/fake.sock",
+    }
+    row, state, _ = launcher.launch(request)
+    assert calls == (["trust"] if failure else ["trust", "pane"])
+    assert state == ("blocked" if failure else "ready")
+    assert row["trust_events"][0]["result"] == ("failed" if failure else "confirmed")
+    assert registry.read(store)[0]["trust_events"] == row["trust_events"]
+
+
+@pytest.mark.parametrize("path", ["/repo", "/repo/.worktrees", "/elsewhere/worker"])
+def test_launch_rejects_non_worktree_trust_before_side_effects(path: str) -> None:
+    """A main checkout, parent, or unrelated path cannot reach the endpoint."""
+    request = {
+        "harness": "codex",
+        "endpoint": "unix:///private/tmp/fake.sock",
+        "worktree": path,
+    }
+    with pytest.raises(ValueError, match="launcher-created"):
+        launcher.launch(request)
+
+
+@pytest.mark.parametrize("failure", [False, True])
+def test_cleanup_removes_only_recorded_trust(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, failure: bool
+) -> None:
+    """Cleanup records an exact removal attempt and blocks on readback failure."""
+    path = "/repo/.worktrees/worker"
+    row = {
+        "run_id": "run-1",
+        "harness": "codex",
+        "worktree": path,
+        "endpoint": "unix:///private/tmp/fake.sock",
+        "trust_created": True,
+        "trust_write_attempted": True,
+        "git_common_dir": "/repo/.git",
+        "trust_registered": True,
+        "trust_events": [{"action": "register", "result": "confirmed"}],
+    }
+    store = tmp_path / "registry.json"
+    registry.write(store, [row])
+    monkeypatch.setattr(launcher, "STORE", store)
+    calls: list[tuple[str, str, str | None]] = []
+
+    def change(
+        endpoint: str,
+        worktree: str,
+        value: str | None,
+        before_write: Callable[[], None],
+    ) -> None:
+        before_write()
+        calls.append((endpoint, worktree, value))
+        if failure:
+            raise ValueError("readback failed")
+
+    monkeypatch.setattr(codex_launch, "change_trust", change)
+    saved, state, _ = launcher.cleanup("run-1")
+    assert calls == [(row["endpoint"], path, None)]
+    assert state == ("blocked" if failure else "removed")
+    assert saved["trust_events"][-1]["result"] == ("failed" if failure else "confirmed")
+    assert registry.read(store)[0]["trust_events"][-1] == saved["trust_events"][-1]
+    assert launcher.inspect(saved)[1] == "blocked"
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        codex_launch.TrustConflictError("existing"),
+        codex_launch.TrustPreflightError("unavailable"),
+    ],
+)
+def test_prewrite_failure_is_never_removed(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, error: ValueError
+) -> None:
+    """An existing entry or failed preflight grants no removal ownership."""
+    row = {
+        "run_id": "run-1",
+        "harness": "codex",
+        "worktree": "/repo/.worktrees/worker",
+        "endpoint": "unix:///private/tmp/fake.sock",
+        "trust_created": True,
+        "git_common_dir": "/repo/.git",
+    }
+    store = tmp_path / "registry.json"
+    monkeypatch.setattr(launcher, "STORE", store)
+    monkeypatch.setattr(
+        codex_launch,
+        "change_trust",
+        lambda *_args: (_ for _ in ()).throw(error),
+    )
+    assert not launcher._change_trust(row, [row], remove=False)
+    assert not registry.read(store)[0].get("trust_write_attempted")
+    with pytest.raises(ValueError, match="no launcher-owned"):
+        launcher.cleanup("run-1")
+
+
+@pytest.mark.parametrize("stage", ["preflight", "pending", "applied", "readback"])
+def test_interrupted_trust_write_recovery(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, stage: str
+) -> None:
+    """Only a persisted pending edit can be cleaned up after interruption."""
+    row = {
+        "run_id": "run-1",
+        "harness": "codex",
+        "worktree": "/repo/.worktrees/worker",
+        "endpoint": "unix:///private/tmp/fake.sock",
+        "trust_created": True,
+        "git_common_dir": "/repo/.git",
+    }
+    store = tmp_path / "registry.json"
+    monkeypatch.setattr(launcher, "STORE", store)
+    applied: list[str | None] = []
+
+    def change(
+        _endpoint: str,
+        _worktree: str,
+        value: str | None,
+        before_write: Callable[[], None] | None = None,
+    ) -> None:
+        if value is None:
+            applied.append(None)
+            return
+        if stage == "preflight":
+            raise KeyboardInterrupt
+        if before_write is not None:
+            before_write()
+        if stage == "pending":
+            raise KeyboardInterrupt
+        applied.append(value)
+        if stage in {"applied", "readback"}:
+            raise KeyboardInterrupt
+
+    monkeypatch.setattr(codex_launch, "change_trust", change)
+    with pytest.raises(KeyboardInterrupt):
+        launcher._change_trust(row, [row], remove=False)
+    saved = registry.read(store)[0]
+    if stage == "preflight":
+        assert not saved.get("trust_write_attempted")
+        with pytest.raises(ValueError, match="no launcher-owned"):
+            launcher.cleanup("run-1")
+    else:
+        assert saved["trust_write_attempted"] is True
+        assert saved["trust_events"][-1]["result"] == "writing"
+        assert launcher.cleanup("run-1")[1] == "removed"
+        assert applied[-1] is None
 
 
 @pytest.mark.parametrize(
