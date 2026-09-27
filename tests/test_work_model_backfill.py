@@ -134,6 +134,22 @@ def test_invalid_tables_fail(index: int, change: str, message: str) -> None:
 
 
 @pytest.mark.parametrize(
+    ("table", "old", "new"),
+    [
+        (0, "Draft A", "epic: migration"),
+        (0, "Draft A", "1"),
+        (1, "epic: migration", "1"),
+    ],
+)
+def test_shared_edge_keys_must_be_unique(table: int, old: str, new: str) -> None:
+    """A draft, parent, and numbered issue cannot share an edge key."""
+    values = list(texts())
+    values[table] = values[table].replace(old, new)
+    with pytest.raises(ValueError, match="^duplicate edge key$"):
+        parse_tables(*values)
+
+
+@pytest.mark.parametrize(
     ("field", "value", "message"),
     [
         ("title", "drift", "missing or changed source issue title"),
@@ -220,6 +236,15 @@ def test_complete_and_draft_guards() -> None:
     assert cp1.items[0].blockers == ()
     assert cp1.items[0].body == ""
     assert cp1.items[0].labels == ()
+
+
+def test_new_draft_already_in_cp1_fails() -> None:
+    """Reject creation intent when a held draft now has the proposed title."""
+    cp1 = snapshot()
+    found = replace(cp1.items[-1], key="title:Draft A", title="Draft A")
+    cp1 = replace(cp1, items=(*cp1.items[:-1], found))
+    with pytest.raises(ValueError, match="^proposed new draft already exists$"):
+        validate_cp1(tables(), cp1)
 
 
 @given(st.integers(min_value=1, max_value=50))

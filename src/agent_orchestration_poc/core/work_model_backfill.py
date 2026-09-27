@@ -137,6 +137,9 @@ def parse_tables(assignments: str, parents: str, edges: str) -> Tables:
         raise ValueError("duplicate or missing parent title")
     if len(draft_titles) != len(set(draft_titles)):
         raise ValueError("duplicate draft title")
+    keys = set(numbers) | set(draft_titles) | set(titles)
+    if len(keys) != len(numbers) + len(draft_titles) + len(titles):
+        raise ValueError("duplicate edge key")
     if any(row["issue type"] not in ISSUE_TYPES for row in (*a, *p)):
         raise ValueError("unknown native issue type")
     if any(
@@ -150,7 +153,6 @@ def parse_tables(assignments: str, parents: str, edges: str) -> Tables:
         if column in row
     ):
         raise ValueError("unknown native field option")
-    keys = set(numbers) | set(draft_titles) | set(titles)
     if any(
         row["parent title"] and row["parent title"] not in titles for row in p
     ) or any(row["epic"] and row["epic"] not in titles for row in a):
@@ -278,17 +280,23 @@ def validate_cp1(tables: Tables, snapshot: Snapshot) -> None:
         if not row["number"]:
             continue
         _validate_source_issue(row, items[_key(row)])
+    _validate_drafts(tables, snapshot)
+    if cycle := cycle_nodes(tables):
+        raise ValueError(f"accepted graph contains a cycle: {cycle}")
+
+
+def _validate_drafts(tables: Tables, snapshot: Snapshot) -> None:
     draft_titles = [item.title for item in snapshot.items if item.draft_id]
     if len(draft_titles) != len(set(draft_titles)):
         raise ValueError("duplicate existing draft title")
     for row in tables.assignments:
-        if (
-            row["backfill mode"] == "existing draft"
-            and row["title"] not in draft_titles
-        ):
+        if row["number"]:
+            continue
+        present = row["title"] in draft_titles
+        if row["backfill mode"] == "existing draft" and not present:
             raise ValueError("unresolved existing draft")
-    if cycle := cycle_nodes(tables):
-        raise ValueError(f"accepted graph contains a cycle: {cycle}")
+        if row["backfill mode"] != "existing draft" and present:
+            raise ValueError("proposed new draft already exists")
 
 
 def _validate_source_issue(row: dict[str, str], item: Item) -> None:
