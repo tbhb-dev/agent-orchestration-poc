@@ -2,6 +2,7 @@
 
 import csv
 import io
+import json
 from dataclasses import dataclass
 
 VERSION = 1
@@ -13,37 +14,54 @@ NATIVE_OPTIONS = {
     "Severity": frozenset({"", "SEV1", "SEV2", "SEV3"}),
     "Work type": frozenset({"Planned", "Unplanned"}),
 }
-PROJECT_FIELDS = (
+SOURCE_PROJECT_FIELDS = (
     "Status",
     "Size",
-    "Phase",
     "Area",
     "Harness",
     "Worker",
-    "Validation",
-    "Validation detail",
+    "Phase",
+    "Priority",
 )
 ASSIGNMENT_COLUMNS = (
     "number",
     "state",
     "title",
+    "class",
     "epic",
     "initiative",
     "priority",
     "severity",
     "work type",
+    "confidence",
+    "note",
+    "plan reference",
+    "origin",
+    "work type v1",
     "issue type",
     "live state",
     "state reason",
+    "program",
     "backfill mode",
+    "old project item",
+    "old project fields",
     "project status",
-    "project size",
-    "project phase",
+    "size",
     "project area",
     "project harness",
     "project worker",
-    "proposed title",
+    "source",
+    "claim status",
+    "old type labels",
+    "body revision",
+    "request snapshot",
     "fold into",
+    "proposed title",
+    "target project item",
+    "target content id",
+    "target content node",
+    "snapshot disposition",
+    "refinement verdict",
 )
 PARENT_COLUMNS = (
     "kind",
@@ -111,9 +129,15 @@ class Snapshot:
     run_state: str = "initial"
 
 
-def _rows(text: str, required: tuple[str, ...]) -> tuple[dict[str, str], ...]:
+def _rows(
+    text: str, required: tuple[str, ...], *, exact: bool = False
+) -> tuple[dict[str, str], ...]:
     reader = csv.DictReader(io.StringIO(text), delimiter="\t", strict=True)
-    if reader.fieldnames is None or not set(required) <= set(reader.fieldnames):
+    if reader.fieldnames is None or (
+        tuple(reader.fieldnames) != required
+        if exact
+        else not set(required) <= set(reader.fieldnames)
+    ):
         raise ValueError("table header is incomplete")
     if len(reader.fieldnames) != len(set(reader.fieldnames)):
         raise ValueError("duplicate table column")
@@ -125,7 +149,7 @@ def _rows(text: str, required: tuple[str, ...]) -> tuple[dict[str, str], ...]:
 
 def parse_tables(assignments: str, parents: str, edges: str) -> Tables:
     """Parse all three supplied TSV values without dropping audit rows."""
-    a = _rows(assignments, ASSIGNMENT_COLUMNS)
+    a = _rows(assignments, ASSIGNMENT_COLUMNS, exact=True)
     p = _rows(parents, PARENT_COLUMNS)
     e = _rows(edges, EDGE_COLUMNS)
     numbers = [row["number"] for row in a if row["number"]]
@@ -286,7 +310,8 @@ def validate_cp1(tables: Tables, snapshot: Snapshot) -> None:
 
 
 def _validate_drafts(tables: Tables, snapshot: Snapshot) -> None:
-    draft_titles = [item.title for item in snapshot.items if item.draft_id]
+    drafts = [item for item in snapshot.items if item.draft_id]
+    draft_titles = [item.title for item in drafts]
     if len(draft_titles) != len(set(draft_titles)):
         raise ValueError("duplicate existing draft title")
     for row in tables.assignments:
@@ -295,21 +320,31 @@ def _validate_drafts(tables: Tables, snapshot: Snapshot) -> None:
         present = row["title"] in draft_titles
         if row["backfill mode"] == "existing draft" and not present:
             raise ValueError("unresolved existing draft")
-        if row["backfill mode"] != "existing draft" and present:
-            raise ValueError("proposed new draft already exists")
+        if (
+            present
+            and row["target project item"]
+            and next(item.item_id for item in drafts if item.title == row["title"])
+            != row["target project item"]
+        ):
+            raise ValueError("changed existing draft identity")
 
 
 def _validate_source_issue(row: dict[str, str], item: Item) -> None:
     if not item.issue_id:
         raise ValueError("unresolved source issue id")
-    if item.title != row["title"]:
+    if item.title not in {row["title"], row["proposed title"]}:
         raise ValueError("missing or changed source issue title")
     if item.state != row["live state"] or item.state_reason != row["state reason"]:
         raise ValueError("changed source issue state")
     if item.parent:
         raise ValueError("initial child already has a parent")
-    expected = _pairs(
-        {field: row.get("project " + field.lower(), "") for field in PROJECT_FIELDS}
+    old_fields: dict[str, str | None] = (
+        json.loads(row["old project fields"]) if row["old project fields"] else {}
+    )
+    expected = (
+        _pairs({field: old_fields.get(field) or "" for field in SOURCE_PROJECT_FIELDS})
+        if old_fields
+        else ()
     )
     if item.source_project != expected:
         raise ValueError("changed source Project values")
