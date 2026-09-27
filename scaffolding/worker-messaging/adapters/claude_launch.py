@@ -1,9 +1,10 @@
 """Temporary #176 Claude observation adapter; #28 replaces this scaffold."""
 
-import hashlib
 import json
 from pathlib import Path
 from typing import Any
+
+import identity
 
 
 def live_entries() -> list[dict[str, Any]]:
@@ -17,15 +18,7 @@ def brief_uptake(session_id: str, worktree: str, digest: str) -> bool:
     root = Path.home() / ".claude/projects"
     paths = root.glob(f"**/{session_id}.jsonl")
     for path in paths:
-        for line in path.read_text().splitlines():
-            row = json.loads(line)
-            if row.get("sessionId") != session_id or row.get("cwd") != worktree:
-                continue
-            if row.get("type") == "user":
-                content = row.get("message", {}).get("content")
-                if (
-                    isinstance(content, str)
-                    and hashlib.sha256(content.encode()).hexdigest() == digest
-                ):
-                    return True
+        rows = [json.loads(line) for line in path.read_text().splitlines() if line]
+        if identity.claude_brief_uptake(rows, session_id, worktree, digest):
+            return True
     return False

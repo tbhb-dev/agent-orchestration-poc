@@ -1,9 +1,12 @@
 """Temporary #176 registry and command tests; #28 replaces this scaffold."""
 # ruff: noqa: S101
 
+import json
 import subprocess
+import sys
 from pathlib import Path
 
+import cli
 import launcher
 import pytest
 import registry
@@ -139,8 +142,10 @@ def test_command_from_main_or_linked_checkout(
 class HandshakeConnection:
     """Supply only the WebSocket handshake to the adapter test."""
 
-    def __init__(self) -> None:
-        self.reply = bytearray(b"HTTP/1.1 101 Switching Protocols\r\n\r\n")
+    def __init__(
+        self, reply: bytes = b"HTTP/1.1 101 Switching Protocols\r\n\r\n"
+    ) -> None:
+        self.reply = bytearray(reply)
 
     def settimeout(self, _timeout: int) -> None:
         """Accept the adapter timeout."""
@@ -191,3 +196,41 @@ def test_loaded_inventory_pages(monkeypatch: pytest.MonkeyPatch) -> None:
     assert loaded
     assert thread["status"]["type"] == "active"
     assert calls[2] == ("thread/loaded/list", {"limit": 100, "cursor": "page-2"})
+
+
+@pytest.mark.parametrize("reply", [b"", b"HTTP/1.1 101 Switching Protocols\r\n\r\n"])
+def test_socket_eof_persists_unknown_json(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    reply: bytes,
+) -> None:
+    """A closed handshake or frame produces a persisted machine-readable unknown."""
+    store = tmp_path / "registry.json"
+    row = {
+        "run_id": "run-1",
+        "state": "ready",
+        "native_id": "thread-1",
+        "worktree": "/worker",
+        "branch": "tooling/176-worker",
+    }
+    registry.write(store, [row])
+    monkeypatch.setattr(launcher, "STORE", store)
+    monkeypatch.setattr(launcher, "_worktree", lambda *_args: None)
+    monkeypatch.setattr(
+        launcher,
+        "_observe",
+        lambda _row: codex_launch.runtime_thread("/sock", "thread-1"),
+    )
+    monkeypatch.setattr(
+        codex_launch.socket, "socket", lambda _family: HandshakeConnection(reply)
+    )
+    monkeypatch.setattr(sys, "argv", ["worker", "status", "run-1"])
+    assert cli.main() == 3
+    output = json.loads(capsys.readouterr().out)
+    assert output == {
+        "run_id": "run-1",
+        "state": "unknown",
+        "reason": "observation failed: EOFError",
+    }
+    assert registry.read(store)[0]["state"] == "unknown"

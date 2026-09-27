@@ -1,5 +1,6 @@
 """Temporary #176 identity decisions; #28 replaces this scaffold."""
 
+import hashlib
 import shlex
 from typing import Any
 
@@ -31,6 +32,47 @@ def codex_candidate(
         if row.get("cwd") == worktree and row.get("path") in open_files
     ]
     return matches[0] if len(matches) == 1 else None
+
+
+def codex_rollout(rows: list[dict[str, Any]], path: str) -> dict[str, Any]:
+    """Interpret captured rollout rows without reading the transcript file."""
+    meta = next((row["payload"] for row in rows if row["type"] == "session_meta"), {})
+    prompts = [
+        part["text"]
+        for row in rows
+        if row["type"] == "response_item" and row["payload"].get("role") == "user"
+        for part in row["payload"].get("content", [])
+        if part.get("type") == "input_text"
+    ]
+    return {
+        "id": meta.get("id"),
+        "cwd": meta.get("cwd"),
+        "path": path,
+        "brief_digests": [
+            hashlib.sha256(prompt.encode()).hexdigest() for prompt in prompts
+        ],
+        "started": any(
+            row["type"] == "event_msg" and row["payload"].get("type") == "task_started"
+            for row in rows
+        ),
+    }
+
+
+def claude_brief_uptake(
+    rows: list[dict[str, Any]], session_id: str, worktree: str, digest: str
+) -> bool:
+    """Accept the exact first prompt in the identified Claude session and cwd."""
+    for row in rows:
+        if row.get("sessionId") != session_id or row.get("cwd") != worktree:
+            continue
+        if row.get("type") == "user":
+            content = row.get("message", {}).get("content")
+            if (
+                isinstance(content, str)
+                and hashlib.sha256(content.encode()).hexdigest() == digest
+            ):
+                return True
+    return False
 
 
 def claude_candidate(

@@ -1,7 +1,6 @@
 """Temporary #176 Codex observation adapter; #28 replaces this scaffold."""
 
 import base64
-import hashlib
 import json
 import os
 import socket
@@ -28,26 +27,7 @@ def open_rollouts(pid: int) -> list[str]:
 def rollout(path: str) -> dict[str, Any]:
     """Read only identity and first-prompt evidence from a persisted rollout."""
     rows = [json.loads(line) for line in Path(path).read_text().splitlines() if line]
-    meta = next((row["payload"] for row in rows if row["type"] == "session_meta"), {})
-    prompts = [
-        part["text"]
-        for row in rows
-        if row["type"] == "response_item" and row["payload"].get("role") == "user"
-        for part in row["payload"].get("content", [])
-        if part.get("type") == "input_text"
-    ]
-    return {
-        "id": meta.get("id"),
-        "cwd": meta.get("cwd"),
-        "path": path,
-        "brief_digests": [
-            hashlib.sha256(prompt.encode()).hexdigest() for prompt in prompts
-        ],
-        "started": any(
-            row["type"] == "event_msg" and row["payload"].get("type") == "task_started"
-            for row in rows
-        ),
-    }
+    return identity.codex_rollout(rows, path)
 
 
 def _frame(payload: dict[str, Any]) -> bytes:

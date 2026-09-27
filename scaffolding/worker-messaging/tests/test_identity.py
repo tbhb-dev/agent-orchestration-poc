@@ -1,6 +1,7 @@
 """Temporary #176 plain value identity tests; #28 replaces this scaffold."""
 # ruff: noqa: S101
 
+import hashlib
 import json
 from pathlib import Path
 from typing import Any, cast
@@ -178,3 +179,73 @@ def test_main_is_rejected_even_with_recorded_owner() -> None:
     """A saved row never permits work on main."""
     request = dict.fromkeys(("name", "branch", "worktree", "tmux_name"), "main")
     assert identity.reservation([request], request) == "main branch is forbidden"
+
+
+def test_codex_rollout_interpretation() -> None:
+    """Native transcript rows supply metadata, prompt digest, and task start."""
+    rows = [
+        {"type": "session_meta", "payload": {"id": "thread-1", "cwd": "/worker"}},
+        {
+            "type": "response_item",
+            "payload": {
+                "role": "user",
+                "content": [{"type": "input_text", "text": "first brief"}],
+            },
+        },
+        {"type": "event_msg", "payload": {"type": "task_started"}},
+    ]
+    result = identity.codex_rollout(rows, "/rollout")
+    assert result == {
+        "id": "thread-1",
+        "cwd": "/worker",
+        "path": "/rollout",
+        "brief_digests": [hashlib.sha256(b"first brief").hexdigest()],
+        "started": True,
+    }
+    assert identity.codex_facts(
+        {"worktree": "/worker", "brief_digest": result["brief_digests"][0]},
+        [result],
+        ["/rollout"],
+    )["brief_uptake"]
+    assert not identity.codex_facts(
+        {"worktree": "/other", "brief_digest": result["brief_digests"][0]},
+        [result],
+        ["/rollout"],
+    )["brief_uptake"]
+    assert not identity.codex_facts(
+        {"worktree": "/worker", "brief_digest": "wrong"}, [result], ["/rollout"]
+    )["brief_uptake"]
+
+
+def test_claude_transcript_brief_acceptance() -> None:
+    """Session, cwd, and exact first user content must agree."""
+    rows = [
+        {
+            "sessionId": "other",
+            "cwd": "/worker",
+            "type": "user",
+            "message": {"content": "first brief"},
+        },
+        {
+            "sessionId": "session-1",
+            "cwd": "/other",
+            "type": "user",
+            "message": {"content": "first brief"},
+        },
+        {
+            "sessionId": "session-1",
+            "cwd": "/worker",
+            "type": "assistant",
+            "message": {"content": "first brief"},
+        },
+        {
+            "sessionId": "session-1",
+            "cwd": "/worker",
+            "type": "user",
+            "message": {"content": "first brief"},
+        },
+    ]
+    digest = hashlib.sha256(b"first brief").hexdigest()
+    assert identity.claude_brief_uptake(rows, "session-1", "/worker", digest)
+    assert not identity.claude_brief_uptake(rows[:3], "session-1", "/worker", digest)
+    assert not identity.claude_brief_uptake(rows, "session-1", "/worker", "wrong")

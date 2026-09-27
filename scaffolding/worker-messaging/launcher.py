@@ -148,7 +148,13 @@ def inspect(row: dict[str, Any]) -> tuple[dict[str, Any], str, str]:
     """Re-observe rather than trusting a saved row."""
     try:
         seen = _observe(row)
-    except (OSError, ValueError, KeyError, subprocess.CalledProcessError) as error:
+    except (
+        OSError,
+        ValueError,
+        KeyError,
+        EOFError,
+        subprocess.CalledProcessError,
+    ) as error:
         state, reason = "unknown", f"observation failed: {type(error).__name__}"
     else:
         if not row["native_id"] and seen.get("native_id"):
