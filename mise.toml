@@ -85,6 +85,10 @@ run = "scripts/record-check.sh task:fmt:shell -- sh -c 'shfmt -w -i 4 -ci script
 description = "Format check, vet, module checks, lint, build, and test the Go module"
 run = "scripts/record-check.sh task:check:go -- sh -ec 'scripts/check-gofumpt.sh\ngo vet ./...\ngo mod tidy -diff\ngo mod verify\ngolangci-lint run ./...\ngo build ./...\ngo test -race -shuffle=on ./...'"
 
+[tasks."check:bus-relay"]
+description = "Run the embedded relay security and lifecycle suite"
+run = "go test -race -v ./internal/bus ./internal/core/relay ./internal/core/perms ./internal/core/layout"
+
 [tasks."fmt:go"]
 description = "Format Go with gofumpt"
 run = "scripts/record-check.sh task:fmt:go -- sh -c 'gofumpt -w .'"
