@@ -139,7 +139,7 @@ ok   github.com/tbhb/agent-orchestration-poc/internal/provision 1.125s
 
 **Verified:** `mise run check` passed again after the second merge, including the new reviewer identity task. Coverage was Python core lines 100.00%, Python core branches 94.00%, Python shell lines 77.54%, Go core statements 98.32%, Go core branches 91.41%, and Go shell statements 70.55%. `mise run check:mutation` also passed again: Go killed 155 of 157 mutants for 98.73% efficacy and 100% mutant coverage, with no uncovered or timed-out mutants; Python killed 454 of 467 mutants for 97.22%.
 
-**Observed:** The first pushed Linux `check` job failed before scoring Go coverage because the shared private-tmux integration helper created test state under macOS-only `/private/tmp`. The job log showed `stat /private/tmp: no such file or directory` for the provisioner integration tests. The helper now asks Go for the system temp directory. `go test -tags=integration -count=1 ./internal/provision` passed locally with the portable path; the next Linux check will verify it on the runner.
+**Observed:** The first pushed Linux `check` job failed before scoring Go coverage because the shared private-tmux integration helper created test state under macOS-only `/private/tmp`. The job log showed `stat /private/tmp: no such file or directory` for the provisioner integration tests. The helper now asks Go for the system temp directory. `go test -tags=integration -count=1 ./internal/provision` and the full `mise run check` passed locally with the portable path. The [next Linux check job](https://github.com/tbhb/agent-orchestration-poc/actions/runs/36291285299/job/108541740099) passed, as did docs, imported research, mutation, and PR body checks.
 
 ## Operator acceptance procedure
 
