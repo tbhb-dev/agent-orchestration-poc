@@ -15,10 +15,22 @@ for dir in experiments/*/; do
     [ "$skip" -eq 1 ] && continue
     case "$name" in
         [0-9][0-9]-*) ;;
-        *) echo "experiments/$name: directory name must be NN-slug"; status=1 ;;
+        *)
+            echo "experiments/$name: directory name must be NN-slug"
+            status=1
+            ;;
     esac
-    [ -f "$dir/README.md" ] || { echo "experiments/$name: missing README.md"; status=1; }
-    [ -d "$dir/evidence" ] || { echo "experiments/$name: missing evidence/ directory"; status=1; }
-    [ -f "$dir/versions.md" ] || { echo "experiments/$name: missing versions.md"; status=1; }
+    [ -f "$dir/README.md" ] || {
+        echo "experiments/$name: missing README.md"
+        status=1
+    }
+    [ -d "$dir/evidence" ] || {
+        echo "experiments/$name: missing evidence/ directory"
+        status=1
+    }
+    [ -f "$dir/versions.md" ] || {
+        echo "experiments/$name: missing versions.md"
+        status=1
+    }
 done
 exit "$status"

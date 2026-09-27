@@ -65,6 +65,38 @@ func TestSettings(t *testing.T) {
 	}
 }
 
+func TestBuildRejectsInvalidSpecs(t *testing.T) {
+	base := Spec{
+		Harness: "claude", Model: "claude-opus", Effort: "high", WorktreePath: "/repo/work",
+		BriefPath: "/brief", CredentialPath: "/seed", SettingsPath: "/settings",
+		Group: "build", Name: "worker", BusURL: "nats://127.0.0.1:4222",
+		WritableRoots: []string{"/repo/.git"},
+	}
+	cases := []struct {
+		name string
+		edit func(*Spec)
+	}{
+		{"missing model", func(s *Spec) { s.Model = "" }},
+		{"missing effort", func(s *Spec) { s.Effort = "" }},
+		{"relative worktree", func(s *Spec) { s.WorktreePath = "repo/work" }},
+		{"relative brief", func(s *Spec) { s.BriefPath = "brief" }},
+		{"relative credential", func(s *Spec) { s.CredentialPath = "seed" }},
+		{"relative writable root", func(s *Spec) { s.WritableRoots = []string{"repo/.git"} }},
+		{"invalid effort", func(s *Spec) { s.Effort = "ultra" }},
+		{"relative Claude settings", func(s *Spec) { s.SettingsPath = "settings" }},
+		{"unknown harness", func(s *Spec) { s.Harness = "unknown" }},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			spec := base
+			tc.edit(&spec)
+			if _, err := Build(spec); err == nil {
+				t.Fatalf("Build(%+v) accepted invalid spec", spec)
+			}
+		})
+	}
+}
+
 func TestBuildProperty(t *testing.T) {
 	rapid.Check(t, func(t *rapid.T) {
 		name := rapid.StringMatching("[a-z]{1,12}").Draw(t, "name")

@@ -11,7 +11,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/tbhb/agent-orchestration-poc/internal/version"
+	"github.com/tbhb/agent-orchestration-poc/internal/cli"
 )
 
 type agentsFlag []string
@@ -23,29 +23,24 @@ func (a *agentsFlag) Set(name string) error {
 }
 
 func main() {
-	if len(os.Args) == 2 && os.Args[1] == "version" {
-		fmt.Println("agentd", version.String())
-		return
-	}
-	if len(os.Args) > 1 {
-		var err error
-		switch os.Args[1] {
-		case "serve":
-			err = serve(os.Args[2:])
-		case "spawn", "list", "capture", "nudge", "stop", "group":
-			err = runOperation(context.Background(), os.Args[1:])
-		default:
-			fmt.Fprintln(os.Stderr, "usage: agentd version | serve --state-dir DIR [--port PORT] [--agent NAME ...] | spawn|list|capture|nudge|stop|group ...")
-			os.Exit(2)
-		}
-		if err != nil {
+	if len(os.Args) > 1 && os.Args[1] == "serve" {
+		if err := serve(os.Args[2:]); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
 		return
 	}
-	fmt.Fprintln(os.Stderr, "usage: agentd version | serve --state-dir DIR [--port PORT] [--agent NAME ...] | spawn|list|capture|nudge|stop|group ...")
-	os.Exit(2)
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "spawn", "list", "capture", "nudge", "stop", "group":
+			if err := runOperation(context.Background(), os.Args[1:]); err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				os.Exit(1)
+			}
+			return
+		}
+	}
+	os.Exit(cli.Run("agentd", os.Args[1:], "usage: agentd version | serve --state-dir DIR [--port PORT] [--agent NAME ...] | spawn|list|capture|nudge|stop|group ...", os.Stdout, os.Stderr))
 }
 
 func serve(args []string) error {

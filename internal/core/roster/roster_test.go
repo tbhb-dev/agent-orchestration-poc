@@ -36,6 +36,17 @@ func TestWorktree(t *testing.T) {
 	if _, err := Worktree("/repo", "../escape"); err == nil {
 		t.Fatal("accepted path escape")
 	}
+	for _, tc := range []struct{ repo, branch string }{
+		{"/repo", "feat"},
+		{"/repo", "feat/invalid"},
+		{"/repo", "feat/abc-slug"},
+		{"/repo", "feat/28-Bad"},
+		{"relative", "feat/28-registry"},
+	} {
+		if _, err := Worktree(tc.repo, tc.branch); err == nil {
+			t.Errorf("Worktree(%q, %q) accepted invalid input", tc.repo, tc.branch)
+		}
+	}
 }
 
 func TestTransition(t *testing.T) {
@@ -106,6 +117,24 @@ func TestValidateWorker(t *testing.T) {
 	w.Name = "operator"
 	if err := ValidateWorker(w); err == nil {
 		t.Fatal("accepted reserved name")
+	}
+	w.Name = "codex-impl"
+	for _, tc := range []struct {
+		name string
+		edit func(*Worker)
+	}{
+		{"missing identity", func(w *Worker) { w.ID = "" }},
+		{"invalid branch", func(w *Worker) { w.Branch = "feat/28-other" }},
+		{"relative path", func(w *Worker) { w.BriefPath = "brief" }},
+		{"unknown harness", func(w *Worker) { w.Harness = "unknown" }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			candidate := w
+			tc.edit(&candidate)
+			if err := ValidateWorker(candidate); err == nil {
+				t.Fatalf("ValidateWorker(%+v) accepted invalid record", candidate)
+			}
+		})
 	}
 }
 

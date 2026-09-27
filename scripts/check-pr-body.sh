@@ -10,11 +10,14 @@ set -euo pipefail
 if [[ ${1:-} == --commit-msg ]]; then
     mode=commit
     message=${2:?usage: check-pr-body.sh --commit-msg <message file>}
-    body=$(tr -d '\r' < "$message")
+    body=$(tr -d '\r' <"$message")
     title=${body%%$'\n'*}
-    [[ $title == wip ]] && { echo "wip commit exempt"; exit 0; }
+    [[ $title == wip ]] && {
+        echo "wip commit exempt"
+        exit 0
+    }
 else
-    mode=pr
+    mode='pr'
     title=${1:?usage: check-pr-body.sh '<PR title>' < body}
     body=$(tr -d '\r')
 fi
@@ -23,7 +26,7 @@ status=0
 attribution=$(printf '%s\n' "$body" | grep -inE '^[[:space:]>*-]*(assisted-by|co-authored-by|generated-by|generated with|made with|written-by|authored-by)' || true)
 if [ -n "$attribution" ]; then
     echo "attribution trailer found; the plan forbids them in commits and PR bodies:"
-    echo "$attribution" | sed 's/^/  /'
+    printf '  %s\n' "${attribution//$'\n'/$'\n  '}"
     status=1
 fi
 
@@ -33,7 +36,7 @@ if ! printf '%s\n' "$body" | grep -qE '^Refs: #[0-9]+[[:space:]]*$'; then
 fi
 
 case "$mode:$title" in
-    pr:feat:*|pr:feat\(*|pr:feat!:*|pr:exp:*|pr:exp\(*|pr:exp!:*)
+    pr:feat:* | pr:feat\(* | pr:feat!:* | pr:exp:* | pr:exp\(* | pr:exp!:*)
         # The evidence section runs from a heading containing "evidence" to the next heading.
         evidence=$(printf '%s\n' "$body" | awk '
             /^#+ /            { in_section = tolower($0) ~ /evidence/; next }

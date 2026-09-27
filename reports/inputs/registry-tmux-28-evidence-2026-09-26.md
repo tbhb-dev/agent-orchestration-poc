@@ -117,11 +117,23 @@ ok   github.com/tbhb/agent-orchestration-poc/internal/provision 1.125s
 
 **Observed:** `mise run build` passed. A temporary-directory smoke run started `bin/agentd serve` on a free loopback port, waited for `<state-dir>/agentd.sock`, then called `bin/agentd group status` and `bin/agentd list`. The first response reported the `build` group as stopped and included its private tmux socket; the second returned an empty worker list. The daemon printed its NATS URL and `<state-dir>/bus` credential root. The temporary state and process were removed at the end of the run. This checks the binary dispatch and local socket, not a real harness spawn.
 
-**Observed:** `mise run check:mutation` passed. The Go core run killed 135 of 139 mutants, with four survivors, zero uncovered mutants, zero timeouts, 97.12% test efficacy, and 100% mutant coverage. The Python core run killed 200 of 240 mutants for 83.33% and reported 100% line coverage. The four Go survivors are in the launch and roster core; both scores exceed the configured 80% gates.
+**Observed:** `mise run check:mutation` passed at the then-configured floors. The Go core run killed 135 of 139 mutants, with four survivors, zero uncovered mutants, zero timeouts, 97.12% test efficacy, and 100% mutant coverage. The Python core run killed 200 of 240 mutants for 83.33% and reported 100% line coverage. The four Go survivors are in the launch and roster core.
 
 **Observed:** `mise run docs:check-links` again failed in this sandbox. Chromium could not register `org.chromium.Chromium.MachPortRendezvousServer` (`Permission denied (1100)`), and the link validator reported three existing `/workflow/` links in `index.md`, `project/history.md`, and `workflow/tooling.md`. The edited bus and provisioner pages rendered; this local run does not establish a green docs check.
 
 **Observed:** `origin/main` advanced again to `1c745ff` before push. Merge commit `83698b0` brought in its workflow checks without file conflicts. After that merge, `mise run check` passed, including the added ignore-collision and handoff-classifier checks. `mise run check:mutation` passed again with the same 135/139 Go and 200/240 Python killed-mutant results recorded above.
+
+## Raised floors after PR #105
+
+**Observed:** `git fetch origin && git merge origin/main` stopped at the branch's fast-forward-only merge setting. `git merge --no-ff origin/main` conflicted only in `cmd/agentd/main.go`. The resolution keeps this branch's provisioner operations and main's shared version and usage dispatcher.
+
+**Observed:** The first completed `mise run check:coverage` after that resolution measured Python core lines 100.00% against 95%, Python core branches 93.75% against 90%, Python shell lines 75.93% against 70%, Go core statements 89.94% against 95%, Go core branches 85.94% against 90%, and Go shell statements 59.94% against 70%. The first direct task attempt could not install the newly pinned gobco tool under the sandbox-protected home directory. A disposable mise data directory and Go sum database under `/tmp` allowed the pinned task to run without changing repository configuration.
+
+**Verified:** Added plain-value tests for invalid launch specifications and roster records, CLI operation argument tests, and a private-tmux stand-in test of worktree creation, brief and settings writes, bus registration, live window ownership, and registry update. The subsequent `mise run check:coverage` passed: Python core lines 100.00%, Python core branches 93.75%, Python shell lines 75.93%, Go core statements 98.32%, Go core branches 91.41%, and Go shell statements 70.55%. No real harness was launched.
+
+**Verified:** `mise run check:mutation` passed with 155 of 157 Go mutants killed, two survivors, zero uncovered or timed-out mutants, 98.73% efficacy, and 100% mutant coverage. Python killed 418 of 427 mutants for 97.89%. Both core mutation scores exceed the raised 90% floor.
+
+**Verified:** `mise run check` passed after formatting, including lint, import boundaries, race-enabled Go tests, Python tests, the repository guards, and the six coverage floors listed above. `mise run build` passed. The built binary printed `agentd dev` for `version`, and `agentd group` returned `group requires start, stop, or status`, confirming that the conflict resolution preserved both the shared version dispatcher and provisioner command routing.
 
 ## Operator acceptance procedure
 
