@@ -30,7 +30,10 @@ The endpoint and final-reread matrix is in `scaffolding/github-monitor/docs/repa
 | `mise run fmt` | 0 | No unrelated path changed. |
 | `mise run check` | 0 | Repository checks and coverage floors passed. |
 | `mise run check:mutation` | 0 | Go core 145 killed of 149, Python core 994 killed of 1068. Scaffolding has no mutation floor. |
+| `mise run workflow:pr -- 195` | 0 | PR form valid after the required `repair` verb and issue-matching labels were added. |
 
-[observed] `mise exec -- go run github.com/boyter/scc/v4@v4.1.0 --by-file --format json ...` counted 811 Python code lines across the three new Python files. The task adds eight TOML lines and the repair note adds 22 nonblank prose lines, for 841 #84 units before excluded evidence. This exceeds the stated 800-unit limit by 41. The split proposal is to move the provisional bootstrap, lock, and handoff contract into #170's owned budget slice. The page collector and repair decisions stay in #179. The worker did not create an issue.
+[observed] `mise exec -- go run github.com/boyter/scc/v4@v4.1.0 --by-file --format json ...` counted 811 Python code lines across the three new Python files. The #84 calculation adds eight task lines to that code count. The repair note contributes 22 nonblank lines, while the workflow-verb replacement contributes two. The resulting 843 units exceed the stated 800-unit limit by 43 before excluded evidence. The split proposal is to move the provisional bootstrap, lock, and handoff contract into #170's owned budget slice. The page collector and repair decisions stay in #179. The worker did not create an issue.
+
+[verified] The exact required PR title uses `repair`, which was missing from `config/workflow-reference.toml` after the latest main merge. The PR form check initially reported that verb and four missing labels. The small config addition admits the required title. The PR has issue #179's `area/tooling`, `type/tooling`, `phase/2`, and `harness/codex` labels. This is the one path outside the originally reserved repair files needed to satisfy the title and required CI gate.
 
 [untested] Live GitHub App reads, real pagination and 304 behavior, live restart repair, installation-token acquisition, and App read-scope confirmation remain outside this fixture run. No private response body, credential, token, or key is committed.
