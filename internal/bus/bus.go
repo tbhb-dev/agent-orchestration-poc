@@ -200,6 +200,7 @@ func (b *Bus) createStream(ctx context.Context, group Group, operatorPath string
 	stream, err := js.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
 		Name: definition.Name, Subjects: definition.Subjects,
 		Storage: streamStorage(definition.Storage), Retention: streamRetention(definition.Retention),
+		NoAck: definition.NoAck,
 	})
 	if err != nil {
 		return err

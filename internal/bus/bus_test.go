@@ -156,7 +156,7 @@ func TestStreamProvisioning(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if info.Config.Storage != jetstream.FileStorage || info.Config.Retention != jetstream.LimitsPolicy || !reflect.DeepEqual(info.Config.Subjects, []string{"grp.build.msg.>", "grp.build.evt.>"}) {
+	if info.Config.Storage != jetstream.FileStorage || info.Config.Retention != jetstream.LimitsPolicy || !info.Config.NoAck || !reflect.DeepEqual(info.Config.Subjects, []string{"grp.build.msg.>", "grp.build.evt.>"}) {
 		t.Fatalf("stream config %+v", info.Config)
 	}
 	consumer, err := stream.Consumer(t.Context(), "alice")
@@ -175,6 +175,124 @@ func TestStreamProvisioning(t *testing.T) {
 	}
 }
 
+func TestAgentCannotUseBrokerRepliesAsAnotherSender(t *testing.T) {
+	broker := testBus(t)
+	operator := connectTest(t, broker, "build", "operator")
+	alice := connectTest(t, broker, "build", "alice")
+	for _, reply := range bobReplySubjects() {
+		t.Run(reply, func(t *testing.T) {
+			sub := subscribeReply(t, operator.conn, reply)
+			defer func() {
+				if err := sub.Unsubscribe(); err != nil {
+					t.Error(err)
+				}
+			}()
+			checkStreamReplies(t, alice.conn, sub, reply)
+			checkAPIRouteReplies(t, alice, sub, reply)
+		})
+	}
+}
+
+func checkStreamReplies(t *testing.T, alice *nats.Conn, sub *nats.Subscription, reply string) {
+	t.Helper()
+	for _, subject := range []string{
+		"grp.build.msg.all.alice",
+		"grp.build.msg.dm.bob.alice",
+		"grp.build.msg.op.alice",
+		"grp.build.evt.ready.alice",
+	} {
+		if err := alice.PublishRequest(subject, reply, []byte("probe")); err != nil {
+			t.Fatal(err)
+		}
+		if err := alice.Flush(); err != nil {
+			t.Fatal(err)
+		}
+		if msg, err := sub.NextMsg(100 * time.Millisecond); err != nats.ErrTimeout {
+			t.Fatalf("broker published as bob after %s: message=%v error=%v", subject, msg, err)
+		}
+	}
+}
+
+func checkAPIRouteReplies(t *testing.T, alice testClient, sub *nats.Subscription, reply string) {
+	t.Helper()
+	for _, route := range []string{
+		"$JS.API.INFO",
+		"$JS.API.STREAM.CREATE.GROUP_BUILD",
+		"$JS.API.STREAM.UPDATE.GROUP_BUILD",
+		"$JS.API.STREAM.NAMES",
+		"$JS.API.STREAM.LIST",
+		"$JS.API.STREAM.INFO.GROUP_BUILD",
+		"$JS.API.STREAM.DELETE.GROUP_BUILD",
+		"$JS.API.STREAM.PURGE.GROUP_BUILD",
+		"$JS.API.STREAM.SNAPSHOT.GROUP_BUILD",
+		"$JS.API.STREAM.RESTORE.GROUP_BUILD",
+		"$JS.API.STREAM.MSG.DELETE.GROUP_BUILD",
+		"$JS.API.STREAM.MSG.GET.GROUP_BUILD",
+		"$JS.API.DIRECT.GET.GROUP_BUILD",
+		"$JS.API.DIRECT.GET.GROUP_BUILD.grp.build.msg.all.alice",
+		"$JS.API.CONSUMER.CREATE.GROUP_BUILD",
+		"$JS.API.CONSUMER.CREATE.GROUP_BUILD.alice.grp.build.msg.all.alice",
+		"$JS.API.CONSUMER.DURABLE.CREATE.GROUP_BUILD.alice",
+		"$JS.API.CONSUMER.NAMES.GROUP_BUILD",
+		"$JS.API.CONSUMER.LIST.GROUP_BUILD",
+		"$JS.API.CONSUMER.INFO.GROUP_BUILD.alice",
+		"$JS.API.CONSUMER.DELETE.GROUP_BUILD.alice",
+		"$JS.API.CONSUMER.PAUSE.GROUP_BUILD.alice",
+		"$JS.API.CONSUMER.MSG.NEXT.GROUP_BUILD.alice",
+		"$JS.API.CONSUMER.RESET.GROUP_BUILD.alice",
+		"$JS.API.CONSUMER.UNPIN.GROUP_BUILD.alice",
+		"$JS.API.STREAM.PEER.REMOVE.GROUP_BUILD",
+		"$JS.API.STREAM.PEER.EVACUATE.GROUP_BUILD",
+		"$JS.API.STREAM.CANCEL_MOVE.GROUP_BUILD",
+		"$JS.API.STREAM.LEADER.STEPDOWN.GROUP_BUILD",
+		"$JS.API.CONSUMER.LEADER.STEPDOWN.GROUP_BUILD.alice",
+		"$JS.API.CONSUMER.PEER.REMOVE.GROUP_BUILD.alice",
+		"$JS.API.CONSUMER.PEER.EVACUATE.GROUP_BUILD.alice",
+		"$JS.API.META.LEADER.STEPDOWN",
+		"$JS.API.SERVER.REMOVE",
+		"$JS.API.SERVER.EVACUATE",
+		"$JS.API.META.RESCUE",
+		"$JS.API.ACCOUNT.PURGE.build",
+		"$JS.API.ACCOUNT.STREAM.MOVE.build.GROUP_BUILD",
+		"$JS.API.ACCOUNT.STREAM.CANCEL_MOVE.build.GROUP_BUILD",
+		"$JS.ACK.GROUP_BUILD.alice.1.1.1.1.1",
+		"$JS.SNAPSHOT.ACK.GROUP_BUILD.1",
+	} {
+		if err := alice.conn.PublishRequest(route, reply, []byte("{}")); err != nil {
+			t.Fatal(err)
+		}
+		if err := alice.conn.Flush(); err != nil {
+			t.Fatal(err)
+		}
+		expectPermissionError(t, alice.errs)
+		if msg, err := sub.NextMsg(25 * time.Millisecond); err != nats.ErrTimeout {
+			t.Fatalf("route %s published as bob: message=%v error=%v", route, msg, err)
+		}
+	}
+}
+
+func bobReplySubjects() []string {
+	return []string{
+		"grp.build.msg.all.bob",
+		"grp.build.msg.dm.alice.bob",
+		"grp.build.msg.dm.bob.bob",
+		"grp.build.msg.op.bob",
+		"grp.build.evt.ready.bob",
+	}
+}
+
+func subscribeReply(t *testing.T, conn *nats.Conn, reply string) *nats.Subscription {
+	t.Helper()
+	sub, err := conn.SubscribeSync(reply)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := conn.Flush(); err != nil {
+		t.Fatal(err)
+	}
+	return sub
+}
+
 func TestRestartKeepsCredentialsAndStream(t *testing.T) {
 	state := t.TempDir()
 	cfg := Config{StateDir: state, Port: -1, Groups: []Group{{Name: "build", Agents: []string{"alice"}}}}
@@ -190,6 +308,7 @@ func TestRestartKeepsCredentialsAndStream(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	publishAndAck(t, first)
 	first.Close()
 	second, err := Start(t.Context(), cfg)
 	if err != nil {
@@ -203,9 +322,53 @@ func TestRestartKeepsCredentialsAndStream(t *testing.T) {
 	if !reflect.DeepEqual(before, after) {
 		t.Fatal("credential changed across restart")
 	}
-	_, stream := openTestStream(t, second)
-	if _, err := stream.Consumer(t.Context(), "alice"); err != nil {
+	assertPersistedMessageAndAck(t, second)
+}
+
+func publishAndAck(t *testing.T, broker *Bus) {
+	t.Helper()
+	alice := connectTest(t, broker, "build", "alice")
+	_, firstStream := openTestStream(t, broker)
+	if err := alice.conn.Publish("grp.build.msg.all.alice", []byte("persisted")); err != nil {
 		t.Fatal(err)
+	}
+	if err := alice.conn.Flush(); err != nil {
+		t.Fatal(err)
+	}
+	consumer, err := firstStream.Consumer(t.Context(), "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	batch, err := consumer.Fetch(1, jetstream.FetchMaxWait(time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+	msg := <-batch.Messages()
+	if msg == nil {
+		t.Fatalf("fetch: %v", batch.Error())
+	}
+	if err := msg.DoubleAck(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func assertPersistedMessageAndAck(t *testing.T, broker *Bus) {
+	t.Helper()
+	_, stream := openTestStream(t, broker)
+	saved, err := stream.GetMsg(t.Context(), 1)
+	if err != nil || string(saved.Data) != "persisted" {
+		t.Fatalf("saved message: %v, %v", saved, err)
+	}
+	consumer, err := stream.Consumer(t.Context(), "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	info, err := consumer.Info(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.AckFloor.Stream != 1 || info.NumAckPending != 0 {
+		t.Fatalf("consumer progress after restart: %+v", info)
 	}
 }
 

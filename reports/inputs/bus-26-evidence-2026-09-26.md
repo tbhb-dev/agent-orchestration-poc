@@ -29,6 +29,7 @@ Stream: GROUP_BUILD
 Subjects: [grp.build.msg.>, grp.build.evt.>]
 Storage: file
 Retention: limits
+Publish acknowledgments: disabled
 Consumer: alice
 Consumer filters: [grp.build.msg.all.*, grp.build.msg.dm.alice.*]
 Consumer ack policy: explicit
@@ -63,6 +64,28 @@ PASS
 ok  	github.com/tbhb/agent-orchestration-poc/internal/bus	0.565s
 ```
 
+## Review regressions
+
+[Observed] Before the fix, `GOCACHE=/tmp/bus-26-go-cache GOPATH=/tmp/bus-26-gopath mise exec -- go test -run '^TestAgentCannotUseBrokerRepliesAsAnotherSender$' -count=1 -v ./internal/bus` failed for five Bob-attributed reply subjects: broadcast, direct to Alice, direct to Bob, operator, and event. Alice published an allowed broadcast with each reply subject; the operator observed a broker-generated JetStream acknowledgment under Bob's name. The payload was a stream acknowledgment, not arbitrary agent data.
+
+[Verified] The pure `layout.Stream` value now sets `NoAck: true`, and `internal/bus/bus.go` passes it to the JetStream stream config. In the pinned nats-server v2.15.0 module source, `server/stream.go:6483,6494` gates stream replies on `!mset.cfg.NoAck`. The later server source clone inspected was commit `3e8ddaa7fcdf2c6a0688f8872ca465eab08f1221`; the client source clone was commit `5adc9d5d34ce8e3b7b8b002c5bd502a8b7a323d3`.
+
+[Observed] After the fix, the same targeted command passed. For each of the five Bob-attributed reply subjects, Alice tried all four allowed publish patterns and 41 JetStream control, pull, ack, and snapshot routes drawn from the v2.15.0 server API subject list; no Bob-attributed publication arrived. Every tested `$JS.API.>` and `$JS.ACK.>` publication produced a permission error. The concrete route samples cover the API families in the pinned source; literal account and agent permissions exclude the entire `$JS.API.>` and `$JS.ACK.>` prefixes.
+
+```text
+--- PASS: TestAgentCannotUseBrokerRepliesAsAnotherSender (7.37s)
+    --- PASS: TestAgentCannotUseBrokerRepliesAsAnotherSender/grp.build.msg.all.bob (1.47s)
+    --- PASS: TestAgentCannotUseBrokerRepliesAsAnotherSender/grp.build.msg.dm.alice.bob (1.47s)
+    --- PASS: TestAgentCannotUseBrokerRepliesAsAnotherSender/grp.build.msg.dm.bob.bob (1.47s)
+    --- PASS: TestAgentCannotUseBrokerRepliesAsAnotherSender/grp.build.msg.op.bob (1.47s)
+    --- PASS: TestAgentCannotUseBrokerRepliesAsAnotherSender/grp.build.evt.ready.bob (1.47s)
+PASS
+```
+
+[Observed] The strengthened restart test published a message, pulled and acknowledged it through the operator credential, restarted the embedded server, then checked the saved payload and consumer ack floor. It passed with the intact store. A temporary Go overlay that inserted `os.RemoveAll(state + "/store")` immediately after `first.Close()` caused `TestRestartKeepsCredentialsAndStream` to fail with `nats: API error: code=404 err_code=10037 description=message not found`. The overlay lived under `/tmp` and did not change the checkout.
+
+[Verified] `UV_CACHE_DIR=/tmp/bus-26-uv-cache GOCACHE=/tmp/bus-26-go-cache GOPATH=/tmp/bus-26-gopath GOLANGCI_LINT_CACHE=/tmp/bus-26-golangci-cache mise run check` passed after the changes, including race-enabled shuffled Go tests. The temporary cache paths were needed because the sandbox denied writes to the default user caches.
+
 ## Preliminary core mutation run
 
 [Observed] Before PR #80 merged, the Go core was mutation tested with gremlins v0.6.0 through `mise exec -- go run github.com/go-gremlins/gremlins/cmd/gremlins@v0.6.0 unleash ./internal/core --output-statuses lct --output /tmp/bus-26-gremlins.json`. The temporary configuration matched PR #80's `.gremlins.yaml` with two workers, a timeout coefficient of 200, and score floors of 80. The run used `RAPID_NOFAILFILE=1` and `RAPID_SHRINKTIME=1s`. It covered this branch's `internal/core/layout` and `internal/core/perms` before the incoming `internal/core/subject` package exists here.
@@ -75,4 +98,4 @@ Test efficacy: 100.00%
 Mutator coverage: 100.00%
 ```
 
-[Untested] `mise run check:mutation` remains pending PR #80's merge and the required rebase. Its final scores will include the incoming subject package.
+[Untested] `mise run check:mutation` is absent from this branch's `mise tasks ls --no-header`; no post-merge mutation run was possible without rebasing, which this review run excludes. The preliminary scores above cover only this branch's core packages.
