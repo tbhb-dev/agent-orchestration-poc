@@ -191,6 +191,7 @@ def test_unreported_common_git_root_property(root: str) -> None:
     ("output", "expected"),
     [
         ("session|@4|%5|123\n", ("session", "@4", "%5", "123")),
+        ("session|@4|%5|0\n", ("session", "@4", "%5", "0")),
         ("|||\n", None),
         ("session|@4|%5|", None),
         ("session|@4|%5|abc", None),
@@ -201,9 +202,9 @@ def test_tmux_pane_fields(output: str, expected: tuple[str, ...] | None) -> None
     assert identity.tmux_pane_fields(output) == expected
 
 
-@given(st.text().filter(lambda value: not value.isdecimal()))
+@given(st.text().filter(lambda value: not value.rstrip().isdecimal()))
 def test_tmux_pane_pid_property(value: str) -> None:
-    """No nonnumeric pane PID reaches process observation."""
+    """No PID that remains nonnumeric after output trimming reaches observation."""
     assert identity.tmux_pane_fields(f"session|@4|%5|{value}") is None
 
 
