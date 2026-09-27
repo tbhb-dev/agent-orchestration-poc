@@ -1,0 +1,129 @@
+path,class,words,openai_tokens,anthropic_tokens,google_tokens,token_status_reason
+.claude/agents/impl.md,worker briefs,255,unavailable,unavailable,unavailable,operator keys not provided
+.claude/agents/mechanical.md,worker briefs,90,unavailable,unavailable,unavailable,operator keys not provided
+.claude/agents/research.md,worker briefs,213,unavailable,unavailable,unavailable,operator keys not provided
+.claude/agents/review.md,worker briefs,98,unavailable,unavailable,unavailable,operator keys not provided
+.claude/agents/utility.md,worker briefs,93,unavailable,unavailable,unavailable,operator keys not provided
+.claude/rules/go.md,always-loaded instructions,687,unavailable,unavailable,unavailable,operator keys not provided
+.claude/rules/python.md,always-loaded instructions,971,unavailable,unavailable,unavailable,operator keys not provided
+.claude/rules/shell.md,always-loaded instructions,361,unavailable,unavailable,unavailable,operator keys not provided
+AGENTS.md,always-loaded instructions,1469,unavailable,unavailable,unavailable,operator keys not provided
+CLAUDE.md,always-loaded instructions,24,unavailable,unavailable,unavailable,operator keys not provided
+FABLE_HANDOFF.md,plan and handoff,3513,unavailable,unavailable,unavailable,operator keys not provided
+HANDOFF.md,plan and handoff,22,unavailable,unavailable,unavailable,operator keys not provided
+PLAN.md,plan and handoff,17,unavailable,unavailable,unavailable,operator keys not provided
+README.md,on-demand reference pages,175,unavailable,unavailable,unavailable,operator keys not provided
+design-sketch/01-overview.md,design pages,653,unavailable,unavailable,unavailable,operator keys not provided
+design-sketch/02-architecture.md,design pages,867,unavailable,unavailable,unavailable,operator keys not provided
+design-sketch/03-groups-and-sessions.md,design pages,836,unavailable,unavailable,unavailable,operator keys not provided
+design-sketch/04-messaging-and-shared-context.md,design pages,1814,unavailable,unavailable,unavailable,operator keys not provided
+design-sketch/05-terminal-data-path.md,design pages,941,unavailable,unavailable,unavailable,operator keys not provided
+design-sketch/06-containers.md,design pages,1472,unavailable,unavailable,unavailable,operator keys not provided
+design-sketch/07-ui.md,design pages,539,unavailable,unavailable,unavailable,operator keys not provided
+design-sketch/08-remote-access.md,design pages,341,unavailable,unavailable,unavailable,operator keys not provided
+design-sketch/09-security.md,design pages,701,unavailable,unavailable,unavailable,operator keys not provided
+design-sketch/10-bootstrap-orchestration.md,design pages,738,unavailable,unavailable,unavailable,operator keys not provided
+design-sketch/11-repo-workflow-and-tooling.md,design pages,750,unavailable,unavailable,unavailable,operator keys not provided
+design-sketch/12-experiments-and-open-questions.md,design pages,962,unavailable,unavailable,unavailable,operator keys not provided
+design-sketch/README.md,design pages,428,unavailable,unavailable,unavailable,operator keys not provided
+docs/briefs/documentation-brief-sample.md,worker briefs,107,unavailable,unavailable,unavailable,operator keys not provided
+docs/briefs/documentation-brief-template.md,worker briefs,113,unavailable,unavailable,unavailable,operator keys not provided
+docs/src/content/docs/decisions/0001-go-linter.md,decisions,423,unavailable,unavailable,unavailable,operator keys not provided
+docs/src/content/docs/decisions/0002-python-type-checker.md,decisions,389,unavailable,unavailable,unavailable,operator keys not provided
+docs/src/content/docs/decisions/0003-functional-core-imperative-shell.md,decisions,390,unavailable,unavailable,unavailable,operator keys not provided
+docs/src/content/docs/decisions/0004-quality-gates.md,decisions,368,unavailable,unavailable,unavailable,operator keys not provided
+docs/src/content/docs/decisions/0005-property-and-mutation-testing.md,decisions,481,unavailable,unavailable,unavailable,operator keys not provided
+docs/src/content/docs/decisions/0006-shell-tooling.md,decisions,401,unavailable,unavailable,unavailable,operator keys not provided
+docs/src/content/docs/decisions/index.md,decisions,143,unavailable,unavailable,unavailable,operator keys not provided
+docs/src/content/docs/design/bus.md,design pages,756,unavailable,unavailable,unavailable,operator keys not provided
+docs/src/content/docs/design/index.md,design pages,92,unavailable,unavailable,unavailable,operator keys not provided
+docs/src/content/docs/devlog/2026-09-26-phase-0-done-phase-1-started.md,research notes and evidence,460,unavailable,unavailable,unavailable,operator keys not provided
+docs/src/content/docs/devlog/2026-09-26-phase-1-foundation.md,research notes and evidence,543,unavailable,unavailable,unavailable,operator keys not provided
+docs/src/content/docs/experiments/index.md,research notes and evidence,144,unavailable,unavailable,unavailable,operator keys not provided
+docs/src/content/docs/guides/docs-stack-conventions.md,on-demand reference pages,2229,unavailable,unavailable,unavailable,operator keys not provided
+docs/src/content/docs/guides/go-conventions.md,on-demand reference pages,1728,unavailable,unavailable,unavailable,operator keys not provided
+docs/src/content/docs/guides/index.md,on-demand reference pages,132,unavailable,unavailable,unavailable,operator keys not provided
+docs/src/content/docs/guides/python-conventions.md,on-demand reference pages,2573,unavailable,unavailable,unavailable,operator keys not provided
+docs/src/content/docs/guides/shell-conventions.md,on-demand reference pages,1054,unavailable,unavailable,unavailable,operator keys not provided
+docs/src/content/docs/index.md,on-demand reference pages,77,unavailable,unavailable,unavailable,operator keys not provided
+docs/src/content/docs/project/handoff.md,plan and handoff,1260,unavailable,unavailable,unavailable,operator keys not provided
+docs/src/content/docs/project/history.md,plan and handoff,602,unavailable,unavailable,unavailable,operator keys not provided
+docs/src/content/docs/project/index.md,plan and handoff,237,unavailable,unavailable,unavailable,operator keys not provided
+docs/src/content/docs/project/phase-0-checkpoint.md,plan and handoff,868,unavailable,unavailable,unavailable,operator keys not provided
+docs/src/content/docs/project/phase-1-checkpoint.md,plan and handoff,912,unavailable,unavailable,unavailable,operator keys not provided
+docs/src/content/docs/project/plan.md,plan and handoff,10172,unavailable,unavailable,unavailable,operator keys not provided
+docs/src/content/docs/research/index.md,research notes and evidence,122,unavailable,unavailable,unavailable,operator keys not provided
+docs/src/content/docs/retros/2026-09-26-phase-0.md,research notes and evidence,689,unavailable,unavailable,unavailable,operator keys not provided
+docs/src/content/docs/retros/2026-09-26-phase-1.md,research notes and evidence,1000,unavailable,unavailable,unavailable,operator keys not provided
+docs/src/content/docs/retros/index.md,research notes and evidence,112,unavailable,unavailable,unavailable,operator keys not provided
+docs/src/content/docs/workflow/documentation-brief-sample.md,worker briefs,113,unavailable,unavailable,unavailable,operator keys not provided
+docs/src/content/docs/workflow/index.md,on-demand reference pages,1141,unavailable,unavailable,unavailable,operator keys not provided
+docs/src/content/docs/workflow/repository-layout.md,on-demand reference pages,360,unavailable,unavailable,unavailable,operator keys not provided
+docs/src/content/docs/workflow/tooling.md,on-demand reference pages,1888,unavailable,unavailable,unavailable,operator keys not provided
+experiments/00-system-assessment/dependency-clones.md,research notes and evidence,751,unavailable,unavailable,unavailable,operator keys not provided
+experiments/00-system-assessment/evidence.md,research notes and evidence,4418,unavailable,unavailable,unavailable,operator keys not provided
+experiments/00-system-assessment/github-projects-research.md,research notes and evidence,3814,unavailable,unavailable,unavailable,operator keys not provided
+experiments/00-system-assessment/harness-research.md,research notes and evidence,26189,unavailable,unavailable,unavailable,operator keys not provided
+experiments/00-system-assessment/model-inventory.md,research notes and evidence,1725,unavailable,unavailable,unavailable,operator keys not provided
+experiments/00-system-assessment/model-research.md,research notes and evidence,6202,unavailable,unavailable,unavailable,operator keys not provided
+experiments/00-system-assessment/nats-research.md,research notes and evidence,5418,unavailable,unavailable,unavailable,operator keys not provided
+experiments/00-system-assessment/permission-facts.md,research notes and evidence,577,unavailable,unavailable,unavailable,operator keys not provided
+experiments/00-system-assessment/versions.md,research notes and evidence,101,unavailable,unavailable,unavailable,operator keys not provided
+experiments/README.md,research notes and evidence,30,unavailable,unavailable,unavailable,operator keys not provided
+images/agent/README.md,on-demand reference pages,20,unavailable,unavailable,unavailable,operator keys not provided
+reports/inputs/bus-26-evidence-2026-09-26.md,research notes and evidence,1638,unavailable,unavailable,unavailable,operator keys not provided
+reports/inputs/coordinator-preflight-70-73-evidence-2026-09-26.md,research notes and evidence,892,unavailable,unavailable,unavailable,operator keys not provided
+reports/inputs/gates-failing-examples-2026-09-26.md,research notes and evidence,756,unavailable,unavailable,unavailable,operator keys not provided
+reports/inputs/lodash-es-alert-evidence.md,research notes and evidence,1229,unavailable,unavailable,unavailable,operator keys not provided
+reports/inputs/phase-0-decisions.md,research notes and evidence,8719,unavailable,unavailable,unavailable,operator keys not provided
+reports/inputs/phase-0-retro-findings.md,research notes and evidence,3657,unavailable,unavailable,unavailable,operator keys not provided
+reports/inputs/phase-1-coordinator-notes.md,research notes and evidence,990,unavailable,unavailable,unavailable,operator keys not provided
+reports/inputs/phase-1-history/README.md,research notes and evidence,588,unavailable,unavailable,unavailable,operator keys not provided
+reports/inputs/project-configuration-2026-09-26.md,research notes and evidence,1890,unavailable,unavailable,unavailable,operator keys not provided
+reports/inputs/retro-checks-15-16-17-evidence-2026-09-26.md,research notes and evidence,811,unavailable,unavailable,unavailable,operator keys not provided
+reports/inputs/strict-typing-check-2026-09-26.md,research notes and evidence,220,unavailable,unavailable,unavailable,operator keys not provided
+reports/inputs/testing-gates-failing-examples-2026-09-26.md,research notes and evidence,800,unavailable,unavailable,unavailable,operator keys not provided
+research/gates/boundaries/notes.md,research notes and evidence,6502,unavailable,unavailable,unavailable,operator keys not provided
+research/gates/boundaries/versions.md,research notes and evidence,838,unavailable,unavailable,unavailable,operator keys not provided
+research/gates/docs-stack/notes.md,research notes and evidence,5806,unavailable,unavailable,unavailable,operator keys not provided
+research/gates/docs-stack/versions.md,research notes and evidence,1025,unavailable,unavailable,unavailable,operator keys not provided
+research/gates/go/notes.md,research notes and evidence,6178,unavailable,unavailable,unavailable,operator keys not provided
+research/gates/go/versions.md,research notes and evidence,745,unavailable,unavailable,unavailable,operator keys not provided
+research/gates/pyrefly/notes.md,research notes and evidence,3821,unavailable,unavailable,unavailable,operator keys not provided
+research/gates/pyrefly/versions.md,research notes and evidence,468,unavailable,unavailable,unavailable,operator keys not provided
+research/gates/python/notes.md,research notes and evidence,8661,unavailable,unavailable,unavailable,operator keys not provided
+research/gates/python/versions.md,research notes and evidence,676,unavailable,unavailable,unavailable,operator keys not provided
+research/gates/quality-gates/notes.md,research notes and evidence,6349,unavailable,unavailable,unavailable,operator keys not provided
+research/gates/quality-gates/versions.md,research notes and evidence,922,unavailable,unavailable,unavailable,operator keys not provided
+research/gates/shell/notes.md,research notes and evidence,2375,unavailable,unavailable,unavailable,operator keys not provided
+research/gates/shell/versions.md,research notes and evidence,553,unavailable,unavailable,unavailable,operator keys not provided
+research/gates/testing/notes.md,research notes and evidence,6452,unavailable,unavailable,unavailable,operator keys not provided
+research/gates/testing/versions.md,research notes and evidence,888,unavailable,unavailable,unavailable,operator keys not provided
+research/imported/MANIFEST.md,research notes and evidence,25798,unavailable,unavailable,unavailable,operator keys not provided
+research/imported/agent-peering-tests/AGY_HANDOFF.md,research notes and evidence,2433,unavailable,unavailable,unavailable,operator keys not provided
+research/imported/agent-peering-tests/AGY_PEERING.md,research notes and evidence,670,unavailable,unavailable,unavailable,operator keys not provided
+research/imported/agent-peering-tests/CLAUDE_CODE_PEERING.md,research notes and evidence,2260,unavailable,unavailable,unavailable,operator keys not provided
+research/imported/agent-peering-tests/CLAUDE_HANDOFF.md,research notes and evidence,1746,unavailable,unavailable,unavailable,operator keys not provided
+research/imported/agent-peering-tests/CODEX_HANDOFF.md,research notes and evidence,809,unavailable,unavailable,unavailable,operator keys not provided
+research/imported/agent-peering-tests/CODEX_PEERING.md,research notes and evidence,4545,unavailable,unavailable,unavailable,operator keys not provided
+research/imported/agent-peering-tests/DESIGN.md,research notes and evidence,2253,unavailable,unavailable,unavailable,operator keys not provided
+research/imported/agent-peering-tests/DESIGN_REVIEW_ASTRA.md,research notes and evidence,3146,unavailable,unavailable,unavailable,operator keys not provided
+research/imported/agent-peering-tests/DESIGN_REVIEW_ASTRA_V2.md,research notes and evidence,3192,unavailable,unavailable,unavailable,operator keys not provided
+research/imported/agent-peering-tests/DESIGN_REVIEW_FABLE_5_1.md,research notes and evidence,7350,unavailable,unavailable,unavailable,operator keys not provided
+research/imported/agent-peering-tests/DESIGN_REVIEW_GEMINI_3_1_PRO_HIGH.md,research notes and evidence,1005,unavailable,unavailable,unavailable,operator keys not provided
+research/imported/agent-peering-tests/DESIGN_V2.md,research notes and evidence,4551,unavailable,unavailable,unavailable,operator keys not provided
+research/imported/agent-peering-tests/DESIGN_V2_REVIEW_FABLE_5_1.md,research notes and evidence,3144,unavailable,unavailable,unavailable,operator keys not provided
+research/imported/agent-peering-tests/DESIGN_V2_REVIEW_GEMINI_3_1_PRO_HIGH.md,research notes and evidence,878,unavailable,unavailable,unavailable,operator keys not provided
+research/imported/agent-peering-tests/OPEN_ITEMS.md,research notes and evidence,1006,unavailable,unavailable,unavailable,operator keys not provided
+research/imported/agent-peering-tests/SANDBOX_TESTS.md,research notes and evidence,1267,unavailable,unavailable,unavailable,operator keys not provided
+research/imported/agent-peering-tests/agy-peering-results.md,research notes and evidence,624,unavailable,unavailable,unavailable,operator keys not provided
+research/imported/agent-peering-tests/claude-to-codex-results.md,research notes and evidence,698,unavailable,unavailable,unavailable,operator keys not provided
+research/imported/agent-peering-tests/codex-peering-results.md,research notes and evidence,5052,unavailable,unavailable,unavailable,operator keys not provided
+research/imported/agent-session-tests/ANTIGRAVITY_SESSION_MANAGEMENT.md,research notes and evidence,772,unavailable,unavailable,unavailable,operator keys not provided
+research/imported/agent-session-tests/CLAUDE_CODE_SESSION_MANAGEMENT.md,research notes and evidence,7419,unavailable,unavailable,unavailable,operator keys not provided
+research/imported/agent-session-tests/CODEX_SESSION_MANAGEMENT.md,research notes and evidence,7092,unavailable,unavailable,unavailable,operator keys not provided
+research/imported/agent-session-tests/antigravity/antigravity.md,research notes and evidence,479,unavailable,unavailable,unavailable,operator keys not provided
+research/imported/agent-session-tests/codex.md,research notes and evidence,2621,unavailable,unavailable,unavailable,operator keys not provided
+research/imported/agent-session-tests/codex/README.md,research notes and evidence,495,unavailable,unavailable,unavailable,operator keys not provided
+research/imported/agent-session-tests/session_experiments/codex/README.md,research notes and evidence,586,unavailable,unavailable,unavailable,operator keys not provided
+schema/README.md,on-demand reference pages,22,unavailable,unavailable,unavailable,operator keys not provided

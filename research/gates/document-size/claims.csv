@@ -1,0 +1,13 @@
+id,label,claim,evidence,limit
+C01,documented,OpenAI GPT-6 Sol and Astra list 1050000 token context windows,https://developers.openai.com/api/docs/models/gpt-6-sol and https://developers.openai.com/api/docs/models/gpt-6-astra,API model specification does not prove CLI usable context
+C02,documented,Claude Fable 5.1 and Sonnet 5 list 1000000 token context windows,https://platform.claude.com/docs/en/models/overview,API model specification does not prove Claude Code effective context
+C03,documented,Gemini 3.8 Flash lists 1048576 input tokens,https://ai.google.dev/gemini-api/docs/models/gemini-3.8-flash/,Agy high suffix mapping is untested
+C04,documented,Claude Code recommends CLAUDE.md below 200 lines,https://code.claude.com/docs/en/features-overview,Line recommendation is not a word threshold
+C05,schema,Codex source sets default project instruction budget to 32 KiB,openai/codex@a6bd19261c30ce0a0225fe90e646822d29916f11 codex-rs/core/src/config/mod.rs:252,Source behavior not re-probed at runtime
+C06,documented,Long-context answer retrieval changed with relevant passage position,https://aclanthology.org/2024.tacl-1.9/,Tasks and models differ from this project
+C07,documented,Web users in Nielsen study mostly scanned pages,https://www.nngroup.com/articles/how-users-read-on-the-web/,1997 web study does not establish technical-doc thresholds
+C08,verified,Snapshot has 128 tracked documents and 266716 words,research/gates/document-size/method.md,Word method includes markup and code
+C09,verified,Independent scanner matched all 128 word counts,research/gates/document-size/method.md,Same normalized UTF-8 input
+C10,inference,Proposed class budgets are policy choices,research/gates/document-size/notes.md,No direct model-performance threshold test
+C11,untested,Vendor token counts await operator keys and collector,research/gates/document-size/method.md,No token endpoint was called
+C12,documented,PR prose sizing counts changed nonblank lines,https://github.com/tbhb/agent-orchestration-poc/issues/84,Whole-document budgets are separate
