@@ -12,7 +12,7 @@ import (
 	"syscall"
 
 	"github.com/tbhb/agent-orchestration-poc/internal/bus"
-	"github.com/tbhb/agent-orchestration-poc/internal/version"
+	"github.com/tbhb/agent-orchestration-poc/internal/cli"
 )
 
 type agentsFlag []string
@@ -24,10 +24,6 @@ func (a *agentsFlag) Set(name string) error {
 }
 
 func main() {
-	if len(os.Args) == 2 && os.Args[1] == "version" {
-		fmt.Println("agentd", version.String())
-		return
-	}
 	if len(os.Args) > 1 && os.Args[1] == "serve" {
 		if err := serve(os.Args[2:]); err != nil {
 			fmt.Fprintln(os.Stderr, err)
@@ -35,8 +31,7 @@ func main() {
 		}
 		return
 	}
-	fmt.Fprintln(os.Stderr, "usage: agentd version | serve --state-dir DIR [--port PORT] [--agent NAME ...]")
-	os.Exit(2)
+	os.Exit(cli.Run("agentd", os.Args[1:], "usage: agentd version | serve --state-dir DIR [--port PORT] [--agent NAME ...]", os.Stdout, os.Stderr))
 }
 
 func serve(args []string) error {
