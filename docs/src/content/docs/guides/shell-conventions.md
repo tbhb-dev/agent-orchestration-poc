@@ -5,7 +5,7 @@ description: Interpreter, portability, hook, userland, and tooling rules for rep
 
 ## Versions and scope
 
-The [shell research gate](https://github.com/tbhb/agent-orchestration-poc/tree/main/research/gates/shell) was run on 2026-09-26 for issue #30. The host has Apple Bash 3.2.57 and zsh 5.9. Bash 5.3.0 was built from its release source in a temporary directory for comparison. Fish 4.0.8 was read from source but was not installed or run. `research/gates/shell/versions.md` records executable versions, source commits, and clone paths, while `research/gates/shell/notes.md` records probes and evidence labels.
+The [shell research gate](https://github.com/tbhb-dev/agent-orchestration-poc/tree/main/research/gates/shell) was run on 2026-09-26 for issue #30. The host has Apple Bash 3.2.57 and zsh 5.9. Bash 5.3.0 was built from its release source in a temporary directory for comparison. Fish 4.0.8 was read from source but was not installed or run. `research/gates/shell/versions.md` records executable versions, source commits, and clone paths, while `research/gates/shell/notes.md` records probes and evidence labels.
 
 The original eight repository scripts under `scripts/` use `#!/usr/bin/env sh`. PR #81 added four scripts that use `#!/usr/bin/env bash`. Keep the sh shebang for scripts that need POSIX syntax on both the host and the Linux agent image. Choose Bash explicitly for a script that needs Bash features and test it under both `/bin/bash` 3.2 and the image's pinned Bash before calling it host compatible. A script intended only for the image may require Bash 5, with that scope stated next to its entrypoint.
 
