@@ -125,3 +125,27 @@ Issue #124 still has no selected decision in the inspected records. The examples
 ## Revision validation
 
 Results below supersede the original validation table for this revision. Local rendered-link validation remains limited by Chromium's sandbox denial. This documentation change preserves the existing functional core and imperative shell boundaries.
+
+| Command | Exit | Revision result |
+| --- | --- | --- |
+| `mise run vale:sync` | 0 | Pinned styles synchronized |
+| `mise run fmt` | 0 | Formatting passed and diff inspected |
+| Document-presence probe above | 1 before, 0 after | Reproduced and repaired missing artifacts |
+| Catalog expansion through `mise exec -- python` | 0 | 124 unique tuples, Sol-medium and Opus-high admitted, Luna-ultra refused |
+| `mise run check` (post-merge and post-edit runs) | 130 | Interrupted after prolonged silence in coverage. Completed lint and test stages passed, but local aggregate completion is unverified |
+| `mise run check:mutation` | 0 | Go killed 145 of 149 mutants, none uncovered. Python killed 454 of 467 (97.22 percent) |
+| `mise run build` | 0 | Both Go binaries built |
+| `mise run docs:build` | 0 | 48 pages built |
+| `mise run docs:check-links` | 1 | Existing Mermaid rendering blocked by Chromium Mach port permission denial |
+| Rendered target probe through `mise exec -- python` | 0 | New `agent-provenance`, `admitted-combinations`, and `reference-values` anchors exist in built HTML |
+| `mise exec -- rumdl check` on the five changed Markdown files | 0 | No issues |
+| `mise exec -- vale` on the decision, reference, and index | 0 | No alerts |
+| `mise exec -- vale --ext=.md --path=docs/assisted-evidence.md < research/gates/assisted-by/evidence.md` | 0 | Evidence prose clean |
+| `mise exec -- vale --ext=.md --path=docs/assisted-examples.md < research/gates/assisted-by/examples.md` | 0 | Example prose clean |
+| `mise exec -- gitleaks dir research/gates/assisted-by --redact --no-banner` | 0 | No leaks |
+| `mise exec -- gitleaks dir docs/src/content/docs/decisions --redact --no-banner` | 0 | No leaks |
+| `git diff --check` | 0 | No whitespace errors |
+
+[Observed] `ps` process inspection was denied by the sandbox. The worker used task logs and session completion results instead. The Chromium denial was `bootstrap_check_in ... Permission denied (1100)`. The worker kept the sandbox restrictions in place.
+
+[Verified in CI] At commit `dcece1f`, all five required jobs passed: `check`, `docs`, `pr-body`, `imported-research`, and `mutation`. Job `108546389448` ran `mise run check` successfully from 03:59:02 through 04:02:06 UTC on 2026-09-27. The worker confirmed the result through `gh query repos/tbhb/agent-orchestration-poc/actions/jobs/108546389448`. Local coverage stopped producing output in both aggregate runs, which were interrupted with exit 130. Their cause is undiagnosed. The separate mutation run completed successfully. Final-head CI is checked again after this evidence commit.

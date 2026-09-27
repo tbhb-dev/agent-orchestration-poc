@@ -62,7 +62,7 @@ Refs: #131
 Passing review verdict after cutover, preserving the existing first-line identity:
 
 ```text
-Harness: Claude Code 2.1.283. Model: claude-sonnet-5. Effort: medium.
+Reviewer: Claude Code 2.1.283, claude-sonnet-5, medium effort.
 
 The revised cases meet the convention.
 
