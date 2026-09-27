@@ -47,6 +47,7 @@ The decisions below were made on 2026-09-26. The coordinator's local memory dire
 | Merge authority | Coordinator merges PRs for the product, including credential handling. Operator merges changes to this project's credentials or security policy, egress, host setup, and installations outside the repository. Workers do not merge. |
 | PR size and history | Target 400 changed code lines, limit 800, excluding lockfiles, generated files, fixtures, and evidence. Consider stacked PRs if a split appears mid-build. Never rebase or force push a pushed branch. The host tmux backend is bootstrap scaffolding. |
 | Data and observability | “Choose a data viz library and stick to it.” Double-check every number, claim, and chart, use a linted notebook, and publish a docs summary. Research a local Grafana LGTM stack and track check duration. Keep raw transcripts out of Git. |
+| Document size | Set page budgets in words and tokens after the research in #100, then add the check in #101. Token counting uses the Anthropic, OpenAI, and Gemini APIs with credentials held in 1Password and CI secrets. Keep the values out of briefs, logs, and commits. |
 | Instrumentation | The operator requires telemetry for each new component and tool, plus planned backfill for existing code. Use consistent metric, trace, and log conventions after #110 establishes the local stack. Issue #116 records the conventions work. |
 | VMs and Project views | The operator approved creating VMs and images as needed and required careful measurement of resource use. The coordinator may set Project views. The Phase, Ready, Blocked, and Experiments views were configured in this session. |
 | Repo and writing | In-repo hooks and checks are authorized. Codex writes docs and devlog. Commit useful evidence after a secret scan. No attribution or co-author trailers. Permission requests to the operator use AskUserQuestion. |
@@ -67,15 +68,18 @@ The decisions below were made on 2026-09-26. The coordinator's local memory dire
 
 The outgoing scratchpad is `/private/tmp/claude-501/-Users-tony-Code-github-com-tbhb-agent-orchestration-poc/a8fde4b6-9f82-4188-b1f5-ccc20413cf6f/scratchpad/`. Its `briefs/` directory contains issue, coding, fix, review, and reviewer templates. Inspect these scripts before reuse:
 
+- `chain-channel.sh` waits for the channel issue author, then launches its follow-up author run.
 - `chain-obs.sh` runs observability authoring followed by refinement.
 - `dispatch-issue.sh` creates a worktree and brief from a refined issue.
 - `fix-pr.sh` renders and launches a numbered PR fix round.
+- `gh-as-reviewer` runs GitHub commands with a checked reviewer identity.
 - `launch-codex.sh` starts a bounded detached Codex run with writable roots.
 - `ratecheck.sh` summarizes Codex rate and API failures from logs.
 - `review-as-bot.sh` checks out a PR head and starts a reviewer run.
 - `review-codex.sh` starts a local `codex exec review` pass.
 - `set-status.sh` updates Project status and worker fields by issue.
 - `st.sh` sets Project status by issue URL.
+- `webhook-capture.py` captures temporary webhook deliveries in the local holding area.
 
 ## Gotchas
 
