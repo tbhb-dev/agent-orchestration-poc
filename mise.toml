@@ -42,6 +42,7 @@ depends = [
   "check:dupl",
   "check:deadcode",
   "check:pytest",
+  "check:review-identity",
   "check:coverage",
   "check:pyrefly",
   "check:biome",
@@ -116,6 +117,10 @@ run = "scripts/record-check.sh task:fmt:ruff -- sh -ec 'uv run ruff check --fix 
 [tasks."check:pytest"]
 description = "Run the Python tests"
 run = "scripts/record-check.sh task:check:pytest -- sh -c 'uv run pytest'"
+
+[tasks."check:review-identity"]
+description = "Run reviewer policy and wrapper process fixtures"
+run = "uv run pytest tests/fixtures/review_identity/test_policy.py tests/fixtures/review_identity/test_wrapper.py --run-integration"
 
 [tasks."check:coverage"]
 description = "Gate Python lines and branches and Go statements and branches"
