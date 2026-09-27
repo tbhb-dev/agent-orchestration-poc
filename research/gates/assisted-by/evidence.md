@@ -71,7 +71,8 @@ At the baseline, the workflow reference page is absent. PR #137 is open and gene
 | `mise run fmt` | 0 | Formatters passed, changes reviewed |
 | `mise run check` (first run) | 123 | Vale rejected draft prose, corrected afterward |
 | `mise run check` (second run) | 0 | Aggregate passed after prose fixes |
-| `mise run check:mutation` | 2 | gremlins v0.6.0 panicked in `mutantExecutor.Start` while obtaining a working directory |
+| `mise run check:mutation` (first run) | 2 | gremlins v0.6.0 panicked in `mutantExecutor.Start` while obtaining a working directory |
+| `mise run check:mutation` (second run) | 0 | Go killed 89 of 89 mutants. Python killed 454 of 467, scoring 97.22 percent |
 | `mise run docs:build` | 0 | 46 pages built |
 | `mise run docs:check-links` | 1 | Chromium Mach port registration denied by the sandbox on existing Mermaid pages |
 | `mise exec -- vale docs/src/content/docs/decisions/0131-assisted-by-provenance.md` | 0 | Decision prose clean |
@@ -83,6 +84,6 @@ At the baseline, the workflow reference page is absent. PR #137 is open and gene
 
 [Observed] Chromium reported `bootstrap_check_in` with `Permission denied (1100)` while rendering existing workflow and monitor diagrams. The link checker then reported links into those unavailable pages. The new decision's links were not reported. A process inventory for diagnosing the stalled checks was also denied by the sandbox (`ps`, exit 1). No sandbox bypass was attempted.
 
-[Inference] The first mutation attempt overlapped tasks that generated files. A second run started after those tasks finished and progressed beyond the earlier panic. The tool discards the underlying working-directory error, so the first result alone does not establish a sandbox denial or prove the cause.
+[Inference] The first mutation attempt overlapped tasks that generated files. A second run started after those tasks finished and passed both mutation gates. The tool discards the underlying working-directory error, so the first result alone does not establish a sandbox denial or prove the cause.
 
 The first decision commit passed the normal hooks, including staged secret scanning and the existing attribution prohibition. The proposed trailers appear only in documentation examples.
