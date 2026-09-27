@@ -92,7 +92,7 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "PLR2004", "D", "ARG", "INP001"]
-"experiments/**" = ["T20", "INP001", "D", "ANN"]
+"experiments/**" = ["T20", "INP001", "D"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["agent_orchestration_poc"]

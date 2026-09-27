@@ -118,7 +118,7 @@ env = { RAPID_NOFAILFILE = "1", RAPID_SHRINKTIME = "1s" }
 run = [
   "rm -f gremlins.json",
   "gremlins unleash ./internal/core --output-statuses lct --output gremlins.json",
-  "python scripts/check-gremlins-output.py",
+  "uv run python scripts/check-gremlins-output.py",
 ]
 
 [tasks."check:mutation:python"]
