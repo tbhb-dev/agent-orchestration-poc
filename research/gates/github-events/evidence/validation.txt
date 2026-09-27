@@ -13,3 +13,28 @@ mise exec -- gitleaks dir --redact --no-banner research/gates/github-events: exi
 8:46PM INF no leaks found
 mise run docs:check-links: exit 1
 [pid=64276][err] [0926/204403.199041:FATAL:base/apple/mach_port_rendezvous_mac.cc:159] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.64276: Permission denied (1100)
+
+Review fixes, 2026-09-27 UTC (2026-09-26 America/New_York).
+Merge base: 9ca2d88, merge of origin/main without conflicts.
+git fetch origin && git merge origin/main: fetch passed; merge refused configured fast-forward-only mode.
+git merge --no-ff origin/main: merged tree, commit hook blocked at ~/.cache/prek/prek.log (Operation not permitted).
+Merge commit completed with full hooks using PREK_HOME in a writable cache.
+A temporary worktree cache triggered Biome formatting; moved that cache to /tmp/98-prek-cache and reran.
+mise run check after merging: exit 0.
+Pre-edit document assertions: exit 1, all five review omissions reproduced.
+Post-edit same assertions: exit 0, all five pass.
+mise run fmt: exit 0.
+mise run check after fixes: exit 0.
+Vale: 0 errors, 0 warnings and 0 suggestions in 99 files.
+Mermaid: 9 blocks in 99 files, 0 invalid.
+Python: 52 passed, 2 integration tests skipped by configuration.
+mise run check:mutation: exit 0.
+Go: 85 mutants classified; required mutation gate passed.
+Python: 83.33%, 200 killed of 240; core coverage 100%.
+mise exec -- gitleaks dir --redact --no-banner research/gates/github-events: exit 0, no leaks.
+mise run docs:check-links: exit 1.
+Chromium failed: bootstrap_check_in ... Permission denied (1100).
+Rendered-page omissions caused downstream link errors; CI must verify site build and links.
+A read-only ps status probe was also denied by the sandbox; test exit statuses were collected through the tool sessions.
+No sandbox changes, host configuration changes or credentials reads were attempted.
+GitHub default authenticated identity verified as tbhb; no account switch.
