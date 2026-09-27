@@ -7,7 +7,7 @@ execute:
 
 ## Population and method
 
-This notebook counts the tracked Markdown, MDX, and QMD files at commit `d2add70d5ce58d89c188b7944f561ab9b30477b9` without reading the mutable worktree. The output files are `inventory.csv` and `counts.csv` beside this notebook. It includes imported research as read-only input. The method and its limits are in `method.md`.
+This notebook counts the tracked Markdown, MDX, and QMD files at commit `d2add70d5ce58d89c188b7944f561ab9b30477b9` without reading the mutable worktree. The output files are `inventory.csv`, `counts.csv`, and `summary.csv` beside this notebook. It includes imported research as read-only input. The method and its limits are in `method.md`.
 
 ```{python}
 #| label: document-counts
@@ -109,21 +109,28 @@ for name, header, rows in (
 distribution = defaultdict(list)
 for _, kind, words, *_ in counts:
     distribution[kind].append(words)
+summary = []
 for kind, values in sorted(distribution.items()):
     ordered = sorted(values)
+    summary.append((kind, len(ordered), sum(ordered)))
     print(kind, len(ordered), sum(ordered), ordered[(len(ordered) - 1) // 2], ordered[-1])
+summary.append(("TOTAL", len(counts), sum(row[2] for row in counts)))
+with (OUT / "summary.csv").open("w", encoding="utf-8", newline="") as stream:
+    writer = csv.writer(stream, lineterminator="\n")
+    writer.writerow(("row_id", "documents", "words"))
+    writer.writerows(summary)
 print("documents", len(counts), "words", sum(row[2] for row in counts))
 ```
 
 ## Independent sample
 
-The second method scans characters rather than applying the first cell's regular expression. It checks every row, every class total, the headline total, and the ten rows with the lowest SHA-256 of their path bytes. A different-model review remains pending with #107.
+The second method scans characters rather than applying the first cell's regular expression. It checks every row, every class total, the headline total, and the ten rows with the lowest SHA-256 of `100|` plus their path bytes. A different-model review remains pending with #107.
 
 ```{python}
 #| label: independent-word-check
 sample = set(
     row[0]
-    for row in sorted(counts, key=lambda row: hashlib.sha256(row[0].encode()).hexdigest())[:10]
+    for row in sorted(counts, key=lambda row: (hashlib.sha256(("100|" + row[0]).encode()).hexdigest(), row[0]))[:10]
 )
 independent_totals = defaultdict(lambda: [0, 0])
 for path, kind, expected, *_ in counts:
