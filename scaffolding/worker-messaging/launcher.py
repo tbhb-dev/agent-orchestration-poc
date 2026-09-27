@@ -21,7 +21,7 @@ CODEX_ENDPOINT = str(Path.home() / ".codex/app-server-control/app-server-control
 
 def _run(argv: list[str]) -> str:
     return subprocess.run(
-        argv, capture_output=True, text=True, check=True
+        argv, capture_output=True, text=True, errors="replace", check=True
     ).stdout.strip()
 
 
@@ -30,7 +30,7 @@ def _now() -> str:
 
 
 def _pane(pane: str) -> dict[str, Any]:
-    line = _run(
+    target = subprocess.run(
         [
             "tmux",
             "display-message",
@@ -38,8 +38,17 @@ def _pane(pane: str) -> dict[str, Any]:
             "-t",
             pane,
             "#{session_name}|#{window_id}|#{pane_id}|#{pane_pid}",
-        ]
+        ],
+        capture_output=True,
+        text=True,
+        errors="replace",
+        check=False,
     )
+    if target.returncode:
+        if identity.missing_tmux_target(target.stderr):
+            return {"tmux_missing": True}
+        raise ValueError("tmux target observation failed")
+    line = target.stdout.strip()
     session, window, pane_id, pid = line.split("|")
     try:
         started = _run(["ps", "-o", "lstart=", "-p", pid])
@@ -91,6 +100,7 @@ def _new_pane(row: dict[str, Any], brief: str) -> dict[str, Any]:
         ["tmux", "has-session", "-t", SESSION],
         capture_output=True,
         text=True,
+        errors="replace",
         check=False,
     )
     if identity.session_missing(present.returncode, present.stderr):
@@ -118,6 +128,8 @@ def _new_pane(row: dict[str, Any], brief: str) -> dict[str, Any]:
 def _observe(row: dict[str, Any]) -> dict[str, Any]:
     seen: dict[str, Any] = {"endpoint": row["endpoint"], "native_id": row["native_id"]}
     seen.update(_pane(row["tmux_pane"]))
+    if seen.get("tmux_missing"):
+        return seen
     capture = _run(["tmux", "capture-pane", "-p", "-S", "-80", "-t", row["tmux_pane"]])
     seen["trust_prompt"] = identity.trust_prompt(capture)
     if seen["trust_prompt"] or not seen["process_start"]:
@@ -185,6 +197,7 @@ def launch(request: dict[str, Any]) -> tuple[dict[str, Any], str, str]:
         ["tmux", "list-windows", "-a", "-F", "#{window_name}"],
         capture_output=True,
         text=True,
+        errors="replace",
         check=False,
     )
     if request["name"] in identity.window_names(

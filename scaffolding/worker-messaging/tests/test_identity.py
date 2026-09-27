@@ -126,6 +126,29 @@ def test_codex_native_response_decisions() -> None:
     )["loaded"]
 
 
+@pytest.mark.parametrize(
+    ("stderr", "missing"),
+    [
+        ("can't find pane: %1", True),
+        ("can't find window: @1", True),
+        ("can't find session: workers", True),
+        ("no server running", True),
+        ("error connecting to socket (No such file or directory)", True),
+        ("Operation not permitted", False),
+        ("unexpected tmux failure", False),
+    ],
+)
+def test_missing_tmux_target(stderr: str, missing: bool) -> None:
+    """Only tmux's absent-target replies get the specific missing reason."""
+    assert identity.missing_tmux_target(stderr) is missing
+
+
+@given(st.text())
+def test_missing_tmux_target_property(surrounding: str) -> None:
+    """A missing pane marker remains recognizable amid other tmux text."""
+    assert identity.missing_tmux_target(f"{surrounding}can't find pane: %1")
+
+
 def test_worktree_ownership_decisions() -> None:
     """Only a recorded run may inspect an existing checkout."""
     listed = "worktree /existing\nbranch refs/heads/tooling/176-worker\n"

@@ -15,7 +15,11 @@ import identity
 def open_rollouts(pid: int) -> list[str]:
     """Find rollout files held by the exact TUI process."""
     result = subprocess.run(
-        ["lsof", "-Fn", "-p", str(pid)], capture_output=True, text=True, check=True
+        ["lsof", "-Fn", "-p", str(pid)],
+        capture_output=True,
+        text=True,
+        errors="replace",
+        check=True,
     )
     return [
         line[1:]
