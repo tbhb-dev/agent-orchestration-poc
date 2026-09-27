@@ -5,6 +5,8 @@ description: Issues, Project fields, review, merge policy, and CI.
 
 Work starts with an issue in [Project 9](https://github.com/users/tbhb/projects/9). The coordinator dispatches a worker into its own branch and worktree. Review and green CI precede a squash merge.
 
+New unrefined work starts as a [Project draft stub](/workflow/stub-refinement/) in Backlog. An approved issue enters Refined. Ready means dispatchable now and is capped at eight. The later [coordinator direction](https://github.com/tbhb/agent-orchestration-poc/issues/161#issuecomment-5853040703) governs these states while this page's historical Project table awaits the coordinator's shared-file integration.
+
 ```mermaid
 flowchart LR
     I[Issue] --> W[Branch and worktree]

@@ -5,6 +5,7 @@ Read the assigned issue and [project plan](docs/src/content/docs/project/plan.md
 ## Workflow
 
 - Use one issue per work item in [Project 9](https://github.com/users/tbhb/projects/9). Issues need a goal, context and links, acceptance criteria, evidence required, docs impact, and out of scope.
+- For new unrefined work, search open issues and all Project 9 drafts before recording a short draft stub in Backlog. Report `Stub: <canonical GitHub URL>` in the final message and source PR body or issue comment. Do not create an issue until its exact refinement is approved. See [stub refinement](docs/src/content/docs/workflow/stub-refinement.md). Approved issues enter Refined. Ready means dispatchable now and is capped at eight. In review is retired.
 - Work on `<type>/<issue>-<slug>` in your own `.worktrees/<type>-<issue>-<slug>/` checkout. Use the coordinator's assigned branch. Never work on `main` or share a checkout with another worker.
 - Commit with `type(scope): imperative subject`, an explanatory body, and a `Refs: #<n>` trailer. Use Conventional Commits. Do not add attribution or co-author trailers to commits or PR bodies.
 - The commit-msg hook rejects attribution and missing `Refs:` trailers except for subject `wip`, the ignore check guards tracked paths, and the handoff check verifies open PR claims.
