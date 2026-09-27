@@ -3,9 +3,11 @@
 set -euo pipefail
 
 classify_open_pr_lines() {
-    local line clause rest reference before after number
+    local line clause rest reference before after number list_open
     local before_pattern='(^|[^[:alpha:]])open[[:space:]]*\[?$'
     local no_open_pattern='(^|[^[:alpha:]])no[[:space:]]+open[[:space:]]*\[?$'
+    local open_list_pattern='(^|[^[:alpha:]])open[[:space:]]+prs[[:space:]]*:'
+    local no_open_list_pattern='(^|[^[:alpha:]])no[[:space:]]+open[[:space:]]+prs[[:space:]]*:'
     local after_pattern='^[[:space:]):|,-]*(is[[:space:]]+still[[:space:]]+|is[[:space:]]+|remains[[:space:]]+|still[[:space:]]+)?open([^[:alpha:]]|$)'
     shopt -s nocasematch
     while IFS= read -r line || [[ -n $line ]]; do
@@ -17,12 +19,17 @@ classify_open_pr_lines() {
                 line=${line#*'. '}
             fi
             rest=$clause
+            list_open=0
             while [[ $rest =~ (pull/[0-9]+|[Pp][Rr][[:space:]]*#[0-9]+) ]]; do
                 reference=${BASH_REMATCH[1]}
                 before=${rest%%"$reference"*}
                 after=${rest#*"$reference"}
+                if [[ $before =~ $open_list_pattern ]] && [[ ! $before =~ $no_open_list_pattern ]]; then
+                    list_open=1
+                fi
                 [[ ${#before} -gt 60 ]] && before=${before: -60}
-                if { [[ $before =~ $before_pattern ]] && [[ ! $before =~ $no_open_pattern ]]; } ||
+                if (( list_open )) ||
+                    { [[ $before =~ $before_pattern ]] && [[ ! $before =~ $no_open_pattern ]]; } ||
                     [[ ${after:0:60} =~ $after_pattern ]]; then
                     number=${reference//[^0-9]/}
                     printf '%s\n' "$number"

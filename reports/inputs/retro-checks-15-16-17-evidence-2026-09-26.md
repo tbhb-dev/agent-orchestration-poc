@@ -98,9 +98,19 @@ A temporary handoff claiming `Open PR #2` produced exit 1 after the script queri
 handoff calls PR #2 open, but GitHub reports MERGED
 ```
 
+`mise run fmt` and `mise run check` both exited 0 with uv, Go, and golangci-lint caches directed to writable temporary paths. The `check` aggregate included `check:handoff-classifier`, and the branch has no `check:mutation` task.
+
 The current root pointer and docs handoff produced exit 0:
 
 ```text
 [check:handoff] $ scripts/check-handoff-prs.sh
 handoff has no PR references described as open
+```
+
+The review's plural-list case exposed a missed claim. After adding linked PRs #11 and #12, plain PRs #13 and #14, and a negative `No open PRs:` fixture, `mise run check:handoff-classifier` exited 1 before the fix. The expected output contained #11 through #14, while the actual output stopped at #10. After the classifier fix, the same task exited 0 with `handoff classifier fixtures ok`.
+
+With GitHub CLI 2.100.0 and `GH_REPO=tbhb/agent-orchestration-poc`, a temporary root handoff containing `Open PRs: [PR #2](https://github.com/tbhb/agent-orchestration-poc/pull/2).` and an empty site handoff produced exit 1:
+
+```text
+handoff calls PR #2 open, but GitHub reports MERGED
 ```
