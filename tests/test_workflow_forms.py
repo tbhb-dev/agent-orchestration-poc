@@ -183,6 +183,10 @@ def test_generated_file_mapping_comes_from_core() -> None:
     assert expected["docs/src/content/docs/guides/workflow-reference.md"] == (
         render_reference_page(REFERENCE)
     )
+    assert (
+        "## Agent provenance"
+        in expected["docs/src/content/docs/guides/workflow-reference.md"]
+    )
 
 
 @pytest.mark.parametrize(

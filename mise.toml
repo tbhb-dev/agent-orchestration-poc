@@ -86,6 +86,10 @@ run = [
   "go test -race -shuffle=on ./...",
 ]
 
+[tasks."check:bus-relay"]
+description = "Run the embedded relay security and lifecycle suite"
+run = "go test -race -v ./internal/bus ./internal/core/relay ./internal/core/perms ./internal/core/layout"
+
 [tasks."fmt:go"]
 description = "Format Go with gofumpt"
 run = "gofumpt -w ."
