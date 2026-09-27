@@ -22,6 +22,8 @@ Transcript and log records can vary by event type, while GitHub webhook and REST
 
 ## Research and documentation checks
 
+These commands ran before the merge from `main`:
+
 | Command | Result | Meaning |
 | --- | --- | --- |
 | `gh api repos/tbhb/agent-orchestration-poc/issues/104 --jq .body` | exit 0 | Issue specification read |
@@ -38,4 +40,8 @@ Transcript and log records can vary by event type, while GitHub webhook and REST
 | `mise exec -- vale research/gates/data-analysis/*.md` | exit 0 | New research Markdown had zero alerts |
 | `mise exec -- gitleaks dir --redact --no-banner research/gates/data-analysis` | exit 0 | New research evidence had no detected leak |
 
-The `docs:check-links` failure is outside issue #104's allowed paths. It remains a baseline failure to resolve in its owning work item. The ordinary site build still succeeded. The new `main` commit `a551fa5` could not be merged locally because of the sandbox denial. Pull request CI must check this branch with that newer base. Runtime notebook rendering and synthetic analysis belong to #107.
+The `docs:check-links` failure is outside issue #104's allowed paths. It remains a baseline failure to resolve in its owning work item. The ordinary site build still succeeded. The first merge attempt with `main` failed when mise tried to install `gobco` outside the sandbox. The tool was installed under the worktree's ignored `.venv/mise-installs/` with `MISE_DATA_DIR` and `MISE_INSTALLS_DIR` set to worktree paths, then `main` was merged and the decision index conflict was resolved.
+
+Post-merge commands used `GOPATH=$PWD/.venv/gopath`, `GOMODCACHE=/Users/tony/go/pkg/mod`, `MISE_DATA_DIR=$PWD/.venv/mise-data`, and `MISE_INSTALLS_DIR=$PWD/.venv/mise-installs`. The first local `mise run check` exited 1 because `gobco` had not been installed in the redirected path. Its second run exited 2 during concurrent downloads to the new Go module cache. Its third run exited 1 because gofumpt walked that ignored cache under `.venv`. The retry loop stopped under the `AGENTS.md` limit. The first post-merge `mise run check:mutation` exited 2 after a Gremlins temporary-workdir panic while copying the cache. After that generated cache was moved out of the worktree, `mise run check:mutation` exited 0. `mise run fmt`, `mise run build`, and `mise run docs:build` each exited 0 after the merge.
+
+**Verified:** At merge commit `1edea11d8ba84511b9a7102a6c12b41ed7c56710`, `gh api repos/tbhb/agent-orchestration-poc/commits/1edea11d8ba84511b9a7102a6c12b41ed7c56710/check-runs` reported `success` for `check`, `docs`, `mutation`, `pr-body`, and `imported-research`. Runtime notebook rendering and synthetic analysis belong to #107.
