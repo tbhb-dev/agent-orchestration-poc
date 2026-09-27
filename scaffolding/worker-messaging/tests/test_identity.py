@@ -670,6 +670,8 @@ def test_command_uses_captured_paths() -> None:
     assert "--add-dir" not in command
     assert "writable_roots" not in command
     assert "PATH=/repo/.holding/shim:/usr/bin" in command
+    assert "GIT_AUTHOR_NAME=tbhb-agent" in command
+    assert "GIT_COMMITTER_NAME=tbhb-agent" in command
 
 
 def test_main_is_rejected_even_with_recorded_owner() -> None:

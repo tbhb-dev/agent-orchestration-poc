@@ -70,21 +70,21 @@ def test_field_selection(
         (
             200,
             [],
-            '<https://api.github.com/users/tbhb/projectsV2/9/items?after=abc>; rel="next"',
+            '<https://api.github.com/orgs/tbhb-dev/projectsV2/1/items?after=abc>; rel="next"',
             1,
             (True, "abc", False),
         ),
         (
             200,
             [],
-            '<https://api.github.com/users/tbhb/projectsV2/9/items?after=>; rel="next"',
+            '<https://api.github.com/orgs/tbhb-dev/projectsV2/1/items?after=>; rel="next"',
             1,
             (True, None, False),
         ),
         (
             200,
             [],
-            '<https://api.github.com/users/tbhb/projectsV2/9/items?after=abc>; rel="next"',
+            '<https://api.github.com/orgs/tbhb-dev/projectsV2/1/items?after=abc>; rel="next"',
             5,
             (True, None, False),
         ),
@@ -188,7 +188,7 @@ def test_observation_reads_deliveries_after_window(
             return 200, {}, {"login": "tester"}
         if path == "app":
             return 200, {}, {"events": ["projects_v2_item"]}
-        if path == "users/tbhb/projectsV2/9":
+        if path == "orgs/tbhb-dev/projectsV2/1":
             return 200, {}, {"node_id": "PVT_123"}
         if path == "app/hook/deliveries?per_page=100":
             return (
@@ -239,19 +239,23 @@ def test_observation_reads_deliveries_after_window(
     ("link", "expected"),
     [
         (
-            '<https://api.github.com/users/tbhb/projectsV2/9/items?after=abc>; rel="next"',
+            '<https://api.github.com/orgs/tbhb-dev/projectsV2/1/items?after=abc>; rel="next"',
             "abc",
         ),
         (
-            '<https://example.com/users/tbhb/projectsV2/9/items?after=abc>; rel="next"',
+            '<https://example.com/orgs/tbhb-dev/projectsV2/1/items?after=abc>; rel="next"',
             None,
         ),
         (
-            '<https://api.github.com/users/tbhb/projectsV2/9/items?after=a&after=b>; rel="next"',
+            '<https://api.github.com/users/tbhb/projectsV2/9/items?after=abc>; rel="next"',
             None,
         ),
         (
-            '<https://api.github.com/users/tbhb/projectsV2/9/items?after=abc>; rel="prev"',
+            '<https://api.github.com/orgs/tbhb-dev/projectsV2/1/items?after=a&after=b>; rel="next"',
+            None,
+        ),
+        (
+            '<https://api.github.com/orgs/tbhb-dev/projectsV2/1/items?after=abc>; rel="prev"',
             None,
         ),
     ],
@@ -262,7 +266,7 @@ def test_next_cursor(link: str, expected: str | None) -> None:
 
 @given(st.text(min_size=1).filter(lambda value: all(char.isalnum() for char in value)))
 def test_next_cursor_round_trip(cursor: str) -> None:
-    link = f'<https://api.github.com/users/tbhb/projectsV2/9/items?after={cursor}>; rel="next"'
+    link = f'<https://api.github.com/orgs/tbhb-dev/projectsV2/1/items?after={cursor}>; rel="next"'
     assert next_cursor(link) == cursor
 
 

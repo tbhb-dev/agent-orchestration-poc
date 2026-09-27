@@ -1,4 +1,4 @@
-"""Disposable, read-only Project 9 feasibility probe. Replaced by issue #186."""
+"""Disposable, read-only organization Project probe. Replaced by issue #186."""
 
 # ruff: noqa: INP001  Standalone disposable script in the reserved scaffold path.
 
@@ -12,8 +12,8 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urlparse
 
-PROJECT = "users/tbhb/projectsV2/9"
-REPO = "repos/tbhb/agent-orchestration-poc"
+PROJECT = "orgs/tbhb-dev/projectsV2/1"
+REPO = "repos/tbhb-dev/agent-orchestration-poc"
 VERSION = "2026-03-10"
 FIELDS = ("Status", "Priority", "Phase", "Worker")
 MAX_PAGES = 5
@@ -30,9 +30,7 @@ def next_cursor(link: str) -> str | None:
         if match is None:
             return None
         parsed = urlparse(match.group(1))
-        if parsed.hostname != "api.github.com" or not parsed.path.endswith(
-            "/projectsV2/9/items"
-        ):
+        if parsed.hostname != "api.github.com" or parsed.path != f"/{PROJECT}/items":
             return None
         cursors = parse_qs(parsed.query).get("after", [])
         return cursors[0] if len(cursors) == 1 else None
@@ -374,7 +372,7 @@ def observe(seconds: int) -> dict[str, Any]:
             *detail_records,
         ],
         "documented_availability": "organization-level projects_v2_item only",
-        "user_owned_project_availability": "unknown",
+        "organization_project_availability": "unknown",
         "subscription": subscription_state(app_status, app),
         "delivery": classify_delivery(actions, 0, seconds, True),
         "live_target_authorized": False,
