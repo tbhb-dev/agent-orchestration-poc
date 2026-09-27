@@ -55,9 +55,9 @@ func TestPrivateServerStandIn(t *testing.T) {
 		t.Fatalf("window owner = %q, %t, %v", got, present, err)
 	}
 	var capture string
-	for range 20 {
+	for range 100 {
 		capture, err = b.Capture(ctx, id, 20)
-		if err == nil && strings.Contains(capture, "STANDIN BRIEF") {
+		if err == nil && strings.Contains(capture, "STANDIN BRIEF") && strings.Contains(capture, "GROUP:build") {
 			break
 		}
 		time.Sleep(50 * time.Millisecond)
@@ -68,7 +68,7 @@ func TestPrivateServerStandIn(t *testing.T) {
 	if err := b.Nudge(ctx, id, "standin-pointer"); err != nil {
 		t.Fatal(err)
 	}
-	for range 20 {
+	for range 100 {
 		capture, err = b.Capture(ctx, id, 20)
 		if err == nil && strings.Contains(capture, "Check agentctl for pending messages.") {
 			break
