@@ -57,11 +57,11 @@ Use one issue per work item with the following body template. There is no checke
 ## Out of scope
 ```
 
-Use `area/<area>`, `phase/<n>`, and `harness/<claude|codex|agy|any>`. Type labels are `type/feature`, `type/experiment`, `type/research`, `type/docs`, `type/tooling`, `type/process`, `type/bug`, and `type/decision`. Add `blocked` or `needs-operator` when applicable. Use blocked-by relationships for dependencies and sub-issues to split larger work. Decision issues close with a [decision record](/decisions/).
+Use exactly one label in each of `area/`, `type/`, `phase/`, and `harness/`. The checked [workflow reference](/guides/workflow-reference/) lists the names, descriptions, colors, title types, scopes, and type mapping. Add `blocked` or `needs-operator` when applicable. Use blocked-by relationships for dependencies and sub-issues to split larger work. Decision issues close with a [decision record](/decisions/).
 
 ## Branches and commits
 
-Use `<type>/<issue>-<slug>` branches, normally `feat`, `fix`, `docs`, `exp`, `chore`, or `research`. The Project setup used `workflow/12-project-config`. Worktrees belong under `.worktrees/<type>-<issue>-<slug>/`. Workers have separate checkouts and never work on `main`.
+Use the branch type and form in the [workflow reference](/guides/workflow-reference/). The Project setup used the now retired `workflow/12-project-config` type. Worktrees belong under `.worktrees/<type>-<issue>-<slug>/`. Workers have separate checkouts and never work on `main`.
 
 Commit with a Conventional Commit subject, a body explaining why, and `Refs: #<n>` as a trailer. Do not add attribution or co-author trailers. The commit-msg hook checks prose with `ai-tells` and `ai-tells-commits`. Record the harness and model in the Project Worker field and PR evidence section.
 
@@ -72,6 +72,10 @@ The shared stash stack requires explicit ownership. Prefer `git rebase --autosta
 ## Pull requests, review, and merges
 
 Open one small PR per issue. Its conventional title and body become the squash commit. Include What, Why, Evidence, Docs, and Checklist sections and end with `Refs: #<n>`. For `feat` and `exp`, the Evidence section needs a link to committed output or a test run. Check green CI, docs updated or an issue filed, no secrets, and evidence committed.
+
+The PR template also has Size justification and Gate justifications sections. Several final `Refs:` trailers may name open issues when one PR edits shared files. The [workflow reference](/guides/workflow-reference/) defines the 400-unit target, 800-unit limit, exclusions, and Project Size bands.
+
+The PR form check uses the PR's `created_at` and the validator PR's retained merge time. It reports pre-cutoff PRs for coordinator repair and blocks newer PRs, including those from older branches. Missing creation metadata fails closed. Local-only refs appear in a separate report and do not block CI.
 
 Before review, the coordinator runs `mise run review:preflight -- <pr>` to verify that workflow revisions added on `main` are present at the PR head. Before merge or a completion report, run `mise run pr:wait-check -- <pr> <check-name> <timeout-seconds>`. The waiter succeeds only when the requested check concludes success on the head SHA recorded when waiting began. Its timeout includes GitHub calls, and zero seconds expires immediately. Both tasks address failures in the [phase 1 retrospective](/retros/2026-09-26-phase-1/).
 

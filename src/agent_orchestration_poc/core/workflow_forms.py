@@ -1,0 +1,368 @@
+"""Pure workflow reference, form, and validation decisions."""
+
+import re
+from datetime import datetime
+from typing import Any
+
+type Reference = dict[str, Any]
+type Label = tuple[str, str]
+
+TITLE = re.compile(r"^([a-z]+)\(([a-z][a-z0-9-]*)\): ([a-z]+) (.+)$")
+HEADING = re.compile(r"(?m)^#{2,3} ([^\n]+)\s*$")
+REF = re.compile(r"^Refs: #(\d+)$")
+
+
+def validate_title(title: str, reference: Reference) -> tuple[str, ...]:
+    """Check a conventional subject against the closed reference."""
+    match = TITLE.fullmatch(title)
+    if not match:
+        return ("title must be type(scope): verb object",)
+    kind, scope, verb, obj = match.groups()
+    findings = []
+    if kind not in reference["titles"]["types"]:
+        findings.append(f"unknown type: {kind}")
+    if scope not in reference["titles"]["scopes"]:
+        findings.append(f"unknown scope: {scope}")
+    if verb not in reference["titles"]["verbs"] or not obj.strip():
+        findings.append("subject needs a listed imperative verb and an object")
+    if title.endswith("."):
+        findings.append("subject ends in a period")
+    return tuple(findings)
+
+
+def sections(body: str) -> dict[str, str]:
+    """Extract second-level Markdown sections without I/O."""
+    headings = list(HEADING.finditer(body))
+    return {
+        match.group(1): body[match.end() : headings[index + 1].start()].strip()
+        if index + 1 < len(headings)
+        else body[match.end() :].strip()
+        for index, match in enumerate(headings)
+    }
+
+
+def valid_allowed_path(path: str) -> bool:
+    """Accept anchored repository paths with whole-segment glob tokens."""
+    if not path or path.startswith(("/", "!", "~")) or "\\" in path:
+        return False
+    return all(
+        segment not in ("", ".", "..")
+        and (
+            segment in ("*", "**") or bool(re.fullmatch(r"[A-Za-z0-9_.@+-]+", segment))
+        )
+        for segment in path.split("/")
+    )
+
+
+def expected_labels(reference: Reference) -> dict[str, Label]:
+    """Expand label families and their reference-defined metadata."""
+    labels = reference["labels"]
+    expected = {
+        f"{prefix}/{value}": (
+            labels[f"{prefix}_description"].format(value=value),
+            labels[f"{prefix}_color"],
+        )
+        for prefix, values in (
+            ("area", labels["areas"]),
+            ("phase", labels["phases"]),
+            ("harness", labels["harnesses"]),
+            ("type", {name.split("/", 1)[1] for name in reference["types"].values()}),
+        )
+        for value in values
+    }
+    expected["blocked"] = (labels["blocked_description"], labels["blocked_color"])
+    expected["needs-operator"] = (
+        labels["operator_description"],
+        labels["operator_color"],
+    )
+    return expected
+
+
+def validate_labels(names: tuple[str, ...], reference: Reference) -> tuple[str, ...]:
+    """Require one known label in each workflow family."""
+    expected = expected_labels(reference)
+    findings = []
+    for prefix in ("area/", "type/", "phase/", "harness/"):
+        family = [name for name in names if name.startswith(prefix)]
+        if len(family) != 1:
+            findings.append(f"expected exactly one {prefix} label")
+        findings.extend(
+            f"unknown label: {name}" for name in family if name not in expected
+        )
+    return tuple(findings)
+
+
+def validate_type_label(
+    title: str, labels: tuple[str, ...], reference: Reference
+) -> tuple[str, ...]:
+    """Match the title type to its required type label."""
+    match = TITLE.fullmatch(title)
+    return (
+        ("title type does not match type/ label",)
+        if match and reference["types"].get(match.group(1)) not in labels
+        else ()
+    )
+
+
+def validate_issue(
+    title: str, body: str, labels: tuple[str, ...], reference: Reference
+) -> tuple[str, ...]:
+    """Report all issue form findings from supplied values."""
+    findings = list(
+        validate_title(title, reference)
+        + validate_labels(labels, reference)
+        + validate_type_label(title, labels, reference)
+    )
+    parts = sections(body)
+    findings.extend(
+        f"missing or empty section: {name}"
+        for name in reference["forms"]["issue_fields"]
+        if not parts.get(name)
+    )
+    if parts.get("Acceptance criteria") and "- [ ]" not in parts["Acceptance criteria"]:
+        findings.append("Acceptance criteria needs a checkbox")
+    dependencies = parts.get("Dependencies and paths", "")
+    if not re.search(r"(?:#\d+|https://github\.com/[^\s)]+/issues/\d+)", dependencies):
+        findings.append("dependencies need an issue or PR reference")
+    path_text = (
+        parts.get("Allowed paths") or dependencies.partition("Allowed paths:")[2]
+    )
+    paths = (
+        [
+            line.strip().removeprefix("- ").strip("`")
+            for line in path_text.splitlines()
+            if line.strip()
+        ]
+        if parts.get("Allowed paths")
+        else re.findall(r"`([^`]+)`", path_text)
+    )
+    if not path_text or not paths:
+        findings.append("issue needs an Allowed paths list")
+    findings.extend(
+        f"invalid allowed path: {path}"
+        for path in paths
+        if not valid_allowed_path(path)
+    )
+    evidence = parts.get("Evidence required", "")
+    if not re.search(r"`[^`]*[/\.][^`]+`", evidence) or not re.search(
+        r"`(?:mise run|mise exec --|gh api|git )[^`]+`", evidence
+    ):
+        findings.append("evidence needs a named path and exact command")
+    return tuple(findings)
+
+
+def refs(body: str) -> tuple[int, ...]:
+    """Read a contiguous final block of one or more Refs trailers."""
+    lines = body.rstrip().splitlines()
+    numbers = []
+    for line in reversed(lines):
+        match = REF.fullmatch(line)
+        if not match:
+            break
+        numbers.append(int(match.group(1)))
+    return tuple(reversed(numbers))
+
+
+def validate_pr(
+    title: str,
+    body: str,
+    labels: tuple[str, ...],
+    open_issues: frozenset[int],
+    reference: Reference,
+) -> tuple[str, ...]:
+    """Validate the remote PR form and its open issue references."""
+    findings = list(
+        validate_title(title, reference)
+        + validate_labels(labels, reference)
+        + validate_type_label(title, labels, reference)
+    )
+    parts = sections(body)
+    findings.extend(
+        f"missing section: {name}"
+        for name in reference["forms"]["pr_sections"]
+        if name not in parts
+    )
+    if title.startswith(("feat(", "feat:", "exp(", "exp:")) and not re.search(
+        r"https?://|\]\([^)]*\)", parts.get("Evidence", "")
+    ):
+        findings.append("feat and exp need an Evidence link")
+    numbers = refs(body)
+    if not numbers:
+        findings.append("body must end with Refs: #<n> trailers")
+    if len(numbers) != len(set(numbers)):
+        findings.append("duplicate Refs trailer")
+    findings.extend(
+        f"issue #{number} is not open"
+        for number in numbers
+        if number not in open_issues
+    )
+    return tuple(findings)
+
+
+def enforcement_mode(created_at: str | None, cutoff: str | None) -> str:
+    """Decide whether a remote PR is enforced, reported, or invalid."""
+    if not created_at or not cutoff:
+        return "invalid"
+    try:
+        created = datetime.fromisoformat(created_at)
+        merged = datetime.fromisoformat(cutoff)
+        if created.tzinfo is None or merged.tzinfo is None:
+            return "invalid"
+        return "enforce" if created >= merged else "report"
+    except ValueError:
+        return "invalid"
+
+
+def remote_mode(
+    created_at: str | None, cutoff: str | None, validator_state: str
+) -> str:
+    """Report while the activation PR is open, then use its merge time."""
+    if enforcement_mode(created_at, created_at) == "invalid":
+        return "invalid"
+    if cutoff:
+        return enforcement_mode(created_at, cutoff)
+    return "report" if validator_state == "open" else "invalid"
+
+
+def blocking_findings(findings: tuple[str, ...], mode: str) -> bool:
+    """Decide whether findings block an enforced check."""
+    return bool(findings) and mode != "report"
+
+
+def label_names(raw: tuple[dict[str, str], ...]) -> tuple[str, ...]:
+    """Keep only label names from REST values."""
+    return tuple(label["name"] for label in raw)
+
+
+def page_items(
+    pages: tuple[tuple[dict[str, Any], ...], ...],
+) -> tuple[dict[str, Any], ...]:
+    """Flatten paginated REST collections without dropping a page."""
+    return tuple(item for page in pages for item in page)
+
+
+def issue_records(raw: tuple[dict[str, Any], ...]) -> tuple[dict[str, Any], ...]:
+    """Exclude pull requests from the issues REST collection."""
+    return tuple(item for item in raw if "pull_request" not in item)
+
+
+def open_reference_numbers(raw: dict[int, dict[str, Any]]) -> frozenset[int]:
+    """Select open issues while excluding pull requests."""
+    return frozenset(
+        number
+        for number, item in raw.items()
+        if item.get("state") == "open" and "pull_request" not in item
+    )
+
+
+def changed_forms(
+    expected: dict[str, str], actual: dict[str, str | None]
+) -> tuple[str, ...]:
+    """Find generated paths whose recorded contents differ."""
+    return tuple(
+        path for path, content in expected.items() if actual.get(path) != content
+    )
+
+
+def render_issue_form(kind: str, reference: Reference) -> str:
+    """Render one generated GitHub issue form from the reference."""
+    fields = reference["forms"]["issue_fields"]
+    lines = [
+        "---",
+        "# do not edit: generated from config/workflow-reference.toml",
+        f'name: "{kind} work item"',
+        f'description: "Open a {kind} work item"',
+        f'title: "{kind}(scope): "',
+        f'labels: ["{reference["types"][kind]}"]',
+        "body:",
+    ]
+    for name in fields[:3] + [reference["forms"]["allowed_paths_field"]] + fields[3:]:
+        lines.extend(
+            ("  - type: textarea", "    attributes:", f'      label: "{name}"')
+        )
+        if name == "Dependencies and paths":
+            lines.extend(
+                (
+                    "      description: >-",
+                    "        Name dependent issues and pull requests.",
+                )
+            )
+        if name == reference["forms"]["allowed_paths_field"]:
+            lines.extend(
+                (
+                    "      description: >-",
+                    "        List repo-relative literals or anchored globs, one per line.",
+                )
+            )
+        if name == "Evidence required":
+            lines.append('      description: "Name evidence paths and exact commands."')
+        lines.extend(("    validations:", "      required: true"))
+    return "\n".join(lines) + "\n"
+
+
+def render_reference_page(reference: Reference) -> str:
+    """Render the checked conventions page from the reference."""
+    titles = reference["titles"]
+    size = reference["size"]
+    types = ", ".join(f"`{item}`" for item in titles["types"])
+    scopes = ", ".join(f"`{item}`" for item in titles["scopes"])
+    verbs = ", ".join(f"`{item}`" for item in titles["verbs"])
+    fields = ", ".join(f"`{item}`" for item in reference["forms"]["issue_fields"])
+    pr_sections = ", ".join(f"`{item}`" for item in reference["forms"]["pr_sections"])
+    exclusions = ", ".join(f"`{item}`" for item in size["excluded"])
+    labels_table = "\n".join(
+        f"| `{name}` | {description} | `#{color}` |"
+        for name, (description, color) in sorted(expected_labels(reference).items())
+    )
+    type_table = "\n".join(
+        f"| `{kind}` | `{label}` |" for kind, label in reference["types"].items()
+    )
+    return f"""---
+title: Workflow reference
+description: Checked types, scopes, labels, forms, and pull request size rules.
+---
+
+<!-- do not edit: generated from config/workflow-reference.toml -->
+
+## Titles and branches
+
+Types: {types}.
+
+Scopes: {scopes}.
+
+Subject verbs: {verbs}.
+
+Titles use `type(scope): verb object` without a final period. Commit subjects have at most {titles["max_length"]} characters. Branches use `{titles["branch_pattern"]}`. A new scope needs a reference edit in the same PR.
+
+`workflow` remains an area and scope, but is retired as a commit type because `process` and `tooling` describe the two kinds of workflow changes without a separate overlapping type.
+
+## Labels
+
+| Name | Description | Color |
+| --- | --- | --- |
+{labels_table}
+
+Each issue and PR has exactly one `area/`, `type/`, `phase/`, and `harness/` label. Type-to-label mapping:
+
+| Type | Label |
+| --- | --- |
+{type_table}
+
+## Forms and references
+
+Issue fields: {fields}. `Allowed paths` is a separate form field.
+
+Allowed paths use {reference["forms"]["allowed_path_syntax"]}.
+
+Evidence requires {reference["forms"]["evidence_requires"]}. PR sections: {pr_sections}. A PR ends with one or more `Refs: #<n>` lines naming open issues.
+
+## Pull request size
+
+Pin `{size["tool"]}` at {size["version"]}. Code counts {size["code_unit"]}. Prose counts {size["prose_unit"]}. Compare from the {size["base"]}.
+
+Target {size["target"]} and limit {size["limit"]} units. Project Size S is at most {size["small"]}, M at most {size["medium"]}, and L at most {size["large"]}. Split larger estimates during refinement.
+
+Excluded paths: {exclusions}. Also exclude `scc` detected generated and minified files, vendored code, test fixtures, evidence directories, and exported diagrams. Keep excluded files in per-file output with raw added and deleted counts and a reason.
+
+The counter and CI enforcement are separate work. Issue #93 owns enforcement.
+"""

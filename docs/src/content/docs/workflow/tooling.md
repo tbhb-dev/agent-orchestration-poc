@@ -39,6 +39,7 @@ These are the exact pins in `mise.toml`. Rust uses the default profile. CI separ
 | `go:golang.org/x/tools/cmd/deadcode` | 0.50.0 |
 | `go:github.com/tbhb/repotools/cmd/guard-markdown` | 0.9.0 |
 | `go:github.com/go-gremlins/gremlins/cmd/gremlins` | 0.6.0 |
+| `go:github.com/boyter/scc/v4` | 4.1.0, scoped to `scc:version` until the size-contract task lands |
 
 Python development dependencies are locked in `uv.lock` and declared in `pyproject.toml`, including Ruff 0.16.9, pytest 9.1.1, pyrefly 1.3.1, import-linter 2.15, vulture 2.16, Hypothesis 6.168.1, mutmut 3.8.0, and pytest-cov 7.0.0. Go properties use rapid 1.3.0 from `go.mod`. Site package versions are in `docs/package.json` and `pnpm-lock.yaml`, with their rationale in [docs stack conventions](/guides/docs-stack-conventions/). Vale downloads `ai-tells` and `ai-tells-commits` v1.37.0 through the release URLs in `.vale.ini`.
 
@@ -119,6 +120,9 @@ The `check` aggregate also runs `check:imports`, `check:dupl`, and `check:deadco
 | `pr:wait-check` | Wait for one named check to succeed on the PR head recorded at start |
 | `checkpoint:closure-audit` | Report closed work-item issues lacking a linked merged PR or a recorded non-code reason |
 | `check:pr-body` | Check a PR body on stdin against the commit convention: `mise run check:pr-body -- '<title>' < body.md` |
+| `check:workflow-forms` | Test the reference decisions and compare generated issue forms and the workflow guide |
+| `forms:write` | Regenerate issue forms and the workflow guide from `config/workflow-reference.toml` |
+| `workflow:issue`, `workflow:issues`, `workflow:pr` | Read and validate one issue, all open issues, or one PR |
 | `check:imported-research` | Check that research/imported/ is unchanged against a base ref: `mise run check:imported-research -- <base> '<title>'` |
 | `docs:install` | Install the docs site dependencies from the committed lockfile |
 | `docs:browsers` | Install the Playwright Chromium that rehype-mermaid renders diagrams with |
