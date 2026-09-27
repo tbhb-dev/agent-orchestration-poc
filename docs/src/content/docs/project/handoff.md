@@ -3,18 +3,17 @@ title: Coordinator handoff
 description: Phase 2 rollover state, decisions, infrastructure, and next actions.
 ---
 
-Snapshot: 2026-09-26 22:36 America/New_York (2026-09-27 02:36 UTC). Outgoing coordinator session: `a8fde4b6-9f82-4188-b1f5-ccc20413cf6f`. Start the new Fable session with `@HANDOFF.md`. **Verify live state before acting.** This page records the roster at the snapshot time.
+Snapshot: 2026-09-26 22:48 America/New_York (2026-09-27 02:48 UTC). Outgoing coordinator session: `a8fde4b6-9f82-4188-b1f5-ccc20413cf6f`. Start the new Fable session with `@HANDOFF.md`. **Verify live state before acting.** This page records the roster at the snapshot time.
 
 ## Phase 2 state
 
-Embedded NATS, testing gates, retro checks, the shell gate, coordinator preflight, coverage floors, and the Monitor design merged in [#80](https://github.com/tbhb/agent-orchestration-poc/pull/80), [#81](https://github.com/tbhb/agent-orchestration-poc/pull/81), [#82](https://github.com/tbhb/agent-orchestration-poc/pull/82), [#85](https://github.com/tbhb/agent-orchestration-poc/pull/85), [#95](https://github.com/tbhb/agent-orchestration-poc/pull/95), [#105](https://github.com/tbhb/agent-orchestration-poc/pull/105), and [#99](https://github.com/tbhb/agent-orchestration-poc/pull/99). The bus relay, `agentctl`, and host provisioner remain in review or draft. The bus roster and status bucket are not yet usable.
+Embedded NATS, testing gates, retro checks, the shell gate, coordinator preflight, coverage floors, the Monitor design, and data analysis research merged in [#80](https://github.com/tbhb/agent-orchestration-poc/pull/80), [#81](https://github.com/tbhb/agent-orchestration-poc/pull/81), [#82](https://github.com/tbhb/agent-orchestration-poc/pull/82), [#85](https://github.com/tbhb/agent-orchestration-poc/pull/85), [#95](https://github.com/tbhb/agent-orchestration-poc/pull/95), [#105](https://github.com/tbhb/agent-orchestration-poc/pull/105), [#99](https://github.com/tbhb/agent-orchestration-poc/pull/99), and [#122](https://github.com/tbhb/agent-orchestration-poc/pull/122). The bus relay, `agentctl`, and host provisioner remain in review or draft. The bus roster and status bucket are not yet usable.
 
-**REST evidence:** the refresh at 2026-09-27 02:36 UTC found seven open PRs and 55 open issues, excluding PRs from the issues response. [PR #112](https://github.com/tbhb/agent-orchestration-poc/pull/112) merged at 02:03:44 UTC, [PR #105](https://github.com/tbhb/agent-orchestration-poc/pull/105) at 02:17:09 UTC, and [PR #99](https://github.com/tbhb/agent-orchestration-poc/pull/99) at 02:25:35 UTC. Issues #117, #118, #120, and #123 opened after the earlier snapshot. The refresh used `gh api 'repos/tbhb/agent-orchestration-poc/pulls?state=open&per_page=100'` and `gh api 'repos/tbhb/agent-orchestration-poc/issues?state=open&per_page=100'`. The issue count filters out entries with a `pull_request` field. PR details and reviews and `git worktree list --porcelain` were read immediately afterward. The ruleset statement below comes from the earlier 02:02 UTC REST read. Requery before merge or dispatch.
+**REST evidence:** the refresh at 2026-09-27 02:48 UTC found six open PRs and 59 open issues, excluding PRs from the issues response. [PR #112](https://github.com/tbhb/agent-orchestration-poc/pull/112) merged at 02:03:44 UTC, [PR #105](https://github.com/tbhb/agent-orchestration-poc/pull/105) at 02:17:09 UTC, [PR #99](https://github.com/tbhb/agent-orchestration-poc/pull/99) at 02:25:35 UTC, and [PR #122](https://github.com/tbhb/agent-orchestration-poc/pull/122) at 02:44:39 UTC. Issues #117, #118, #120, and #123 through #128 opened after the earlier snapshot. The refresh used `gh api 'repos/tbhb/agent-orchestration-poc/pulls?state=open&per_page=100'` and `gh api 'repos/tbhb/agent-orchestration-poc/issues?state=open&per_page=100'`. The issue count filters out entries with a `pull_request` field. PR details and reviews and `git worktree list --porcelain` were read immediately afterward. The ruleset statement below comes from the earlier 02:02 UTC REST read. Requery before merge or dispatch.
 
 | Open PR | Branch and worktree under `.worktrees/` | Review at snapshot | Waits on |
 | --- | --- | --- | --- |
-| [#122](https://github.com/tbhb/agent-orchestration-poc/pull/122), data analysis research | `research/104-data-analysis-stack`, `research-104-data-analysis-stack` | No submitted review | Reviewer and required checks. |
-| [#121](https://github.com/tbhb/agent-orchestration-poc/pull/121), document size research | `research/100-document-size-limits`, `research-100-document-size-limits` | No submitted review | Reviewer and required checks. |
+| [#121](https://github.com/tbhb/agent-orchestration-poc/pull/121), document size research | `research/100-document-size-limits`, `research-100-document-size-limits` | `tbhbbot` requested changes | Fix review findings, re-review, and checks. |
 | [#119](https://github.com/tbhb/agent-orchestration-poc/pull/119), this handoff | `docs/114-handoff-phase-2-rollover`, `docs-114-handoff-phase-2-rollover` | `tbhbbot` requested changes | Fix the heartbeat and delegation findings, re-review, then merge. |
 | [#115](https://github.com/tbhb/agent-orchestration-poc/pull/115), relay | `feat/96-bus-relay`, `feat-96-bus-relay` | `tbhbbot` requested changes | Fix review findings, re-review and checks, then #86 integration. |
 | [#113](https://github.com/tbhb/agent-orchestration-poc/pull/113), review process | `process/83-review-process`, `process-83-review-process` | `tbhbbot` approved | Update the branch from main, conclude checks, then merge. |
@@ -25,13 +24,13 @@ The handoff itself is in PR #119. A clean update from main can preserve approval
 
 ## Open issues by status
 
-REST found 55 open issues at 02:36 UTC. These groups describe observable work state and dependencies, not the Project 9 Status field, which the REST query does not expose. Verify the Project field separately before dispatch.
+REST found 59 open issues at 02:48 UTC. These groups describe observable work state and dependencies, not the Project 9 Status field, which the REST query does not expose. Verify the Project field separately before dispatch.
 
 | Snapshot status | Open issues |
 | --- | --- |
-| Open PR or draft | [#27](https://github.com/tbhb/agent-orchestration-poc/issues/27), [#28](https://github.com/tbhb/agent-orchestration-poc/issues/28), [#83](https://github.com/tbhb/agent-orchestration-poc/issues/83), [#96](https://github.com/tbhb/agent-orchestration-poc/issues/96), [#100](https://github.com/tbhb/agent-orchestration-poc/issues/100), [#104](https://github.com/tbhb/agent-orchestration-poc/issues/104). |
+| Open PR or draft | [#27](https://github.com/tbhb/agent-orchestration-poc/issues/27), [#28](https://github.com/tbhb/agent-orchestration-poc/issues/28), [#83](https://github.com/tbhb/agent-orchestration-poc/issues/83), [#96](https://github.com/tbhb/agent-orchestration-poc/issues/96), [#100](https://github.com/tbhb/agent-orchestration-poc/issues/100). |
 | Rollover in this branch | [#114](https://github.com/tbhb/agent-orchestration-poc/issues/114). |
-| Phase 2 queue, dependencies, or refinement | #18, #29, #31, #32, #33, #74, #84, #88, #89, #90, #91, #92, #93, #94, #101, #103, #106, #107, #108, #109, #110, #111, #116, #117, #118, #120, #123. #84 reached arbitration after three changes-needed verdicts. #88 through #93 depend on its contract. #101 and #110 need operator input. #117 and #118 cover wake research and the coordinator event channel. #120 covers automated merge passes, and #123 covers handoff review and archiving. |
+| Phase 2 queue, dependencies, or refinement | #18, #29, #31, #32, #33, #74, #84, #88, #89, #90, #91, #92, #93, #94, #101, #103, #106, #107, #108, #109, #110, #111, #116, #117, #118, #120, #123, #124, #125, #126, #127, #128. #84 reached arbitration after three changes-needed verdicts. #88 through #93 depend on its contract. #101 and #110 need operator input. #117 and #118 cover wake research and the coordinator event channel. #120 covers automated merge passes, #123 covers handoff review and archiving, and #124 through #128 cover issue closure, sub-issues, and telemetry. |
 | Phase 3 backlog | #34, #35, #36, #37, #38, #39, #40, #41, #42, #43, #44, #45, #46, #47, #48, #49, #50, #51, #52, #53, #54. |
 
 ## Operator decisions and process
@@ -102,7 +101,7 @@ The digest and merge scripts are temporary local prototypes under the main check
 ## Next three actions
 
 1. Verify REST PR, issue, review, ruleset, and check state. Arm Monitor on `.holding/bin/coordinator-digest.sh 120`, re-arm after 30 minutes, check the background merge train, and retain one approximately hourly fallback heartbeat. Inspect the docs daemon, funnel, capture probe, holding area, and transcript hooks. Report discrepancies before dispatch.
-2. Update approved #113 from main, wait for its checks, and merge when ready. Address #119 review findings and #97 real harness acceptance. Review new research PRs #121 and #122. The coordinator retains merge authority while delegating routine checks and issue or brief writing.
+2. Update approved #113 from main, wait for its checks, and merge when ready. Address #119 review findings and #97 real harness acceptance. Address #121 review findings. The coordinator retains merge authority while delegating routine checks and issue or brief writing.
 3. Address #115 review findings with a bus and security cross-check. Once the relay is approved and merged, resume #86 against it, then proceed with #29, #31 through #33, and the refined workflow queue in dependency order. Use #117, #118, and #120 to validate and replace the temporary wake and merge prototypes.
 
 ## Verify before acting
