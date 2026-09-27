@@ -21,6 +21,7 @@
     "endpoint": "/tmp/codex.sock",
     "loaded": true,
     "brief_uptake": true,
+    "roots_confirmed": true,
     "trust_prompt": false,
     "busy": false
   }

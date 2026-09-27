@@ -8,6 +8,7 @@
     ["native_id", "wrong", "unknown"],
     ["loaded", false, "unknown"],
     ["brief_uptake", false, "unknown"],
+    ["roots_confirmed", false, "unknown"],
     ["busy", true, "busy"]
   ],
   "restart": { "pane_generation": "new", "pid": 200 }

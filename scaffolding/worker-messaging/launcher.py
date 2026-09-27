@@ -47,8 +47,10 @@ def _pane(pane: str) -> dict[str, Any]:
         if identity.missing_tmux_target(target.stderr):
             return {"tmux_missing": True}
         raise ValueError("tmux target observation failed")
-    line = target.stdout.strip()
-    session, window, pane_id, pid = line.split("|")
+    fields = identity.tmux_pane_fields(target.stdout)
+    if fields is None:
+        return {"tmux_missing": True}
+    session, window, pane_id, pid = fields
     try:
         started = _run(["ps", "-o", "lstart=", "-p", pid])
     except OSError, subprocess.CalledProcessError:
@@ -83,7 +85,8 @@ def _worktree(path: Path, branch: str, owned: bool) -> None:
     if _run(["git", "branch", "--list", branch]):
         raise ValueError("branch exists without requested worktree")
     path.parent.mkdir(parents=True, exist_ok=True)
-    _run(["git", "worktree", "add", "-b", branch, str(path), "main"])
+    _run(["git", "fetch", "origin", "main"])
+    _run(["git", "worktree", "add", "-b", branch, str(path), "origin/main"])
 
 
 def _command(row: dict[str, Any], brief: str) -> str:
@@ -138,6 +141,12 @@ def _observe(row: dict[str, Any]) -> dict[str, Any]:
         seen.update(native_id=found, brief_uptake=bool(found))
         if found:
             seen.update(identity.codex_runtime_facts(found, row, loaded, thread))
+            roots = thread.get("runtimeWorkspaceRoots")
+            if isinstance(roots, list) and all(isinstance(root, str) for root in roots):
+                row["runtime_workspace_roots"] = roots
+                seen["roots_confirmed"] = identity.common_git_root(
+                    row.get("git_common_dir", ""), roots
+                )
     elif row["harness"] == "claude":
         seen.update(
             identity.claude_facts(claude_launch.live_entries(), seen, row["worktree"])
@@ -215,6 +224,10 @@ def launch(request: dict[str, Any]) -> tuple[dict[str, Any], str, str]:
         "state": "starting",
         "observed_at": _now(),
     }
+    if request["harness"] == "codex":
+        row["git_common_dir"] = _run(
+            ["git", "rev-parse", "--path-format=absolute", "--git-common-dir"]
+        )
     row.pop("brief_file")
     rows.append(row)
     registry.write(STORE, rows)
@@ -252,9 +265,10 @@ def status(run_id: str) -> tuple[dict[str, Any], str, str]:
 
 def status_record(row: dict[str, Any]) -> dict[str, Any]:
     """Read the separate #178 status snapshot as advisory information."""
-    source = ROOT / ".local-cache/worker-messaging/status" / f"{row['run_id']}.json"
+    source_name = f".local-cache/worker-messaging/status/{row['run_id']}.json"
+    source = ROOT / source_name
     try:
         record = registry.read_status(source)
     except OSError, ValueError, TypeError:
         record = {}
-    return identity.status_view(row, record, str(source), _now())
+    return identity.status_view(row, record, source_name, _now())

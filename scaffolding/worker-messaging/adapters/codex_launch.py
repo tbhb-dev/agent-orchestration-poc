@@ -108,6 +108,21 @@ def discover_thread(
         if found is None:
             return None, False, {}
         loaded, thread = _runtime_thread(connection, found, number + 1)
+        if loaded and thread.get("id") == found:
+            resumed = _call(
+                connection,
+                number + 3,
+                "thread/resume",
+                {"threadId": found, "excludeTurns": True},
+            )
+            if resumed.get("thread", {}).get("id") != found:
+                raise ValueError("resumed thread identity mismatch")
+            roots = resumed.get("runtimeWorkspaceRoots")
+            if not isinstance(roots, list) or not all(
+                isinstance(root, str) for root in roots
+            ):
+                raise ValueError("thread workspace roots unavailable")
+            thread["runtimeWorkspaceRoots"] = roots
         return found, loaded, thread
     finally:
         connection.close()
@@ -136,7 +151,10 @@ def _connect(endpoint: str) -> socket.socket:
             connection,
             1,
             "initialize",
-            {"clientInfo": {"name": "worker-launcher", "version": "1"}},
+            {
+                "clientInfo": {"name": "worker-launcher", "version": "1"},
+                "capabilities": {"experimentalApi": True},
+            },
         )
         connection.sendall(_frame({"method": "initialized"}))
         return connection

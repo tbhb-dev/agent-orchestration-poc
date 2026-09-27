@@ -42,6 +42,22 @@ def test_clean_restart() -> None:
     )
 
 
+@pytest.mark.parametrize("changed", ["pane_generation", "pid", "process_start"])
+def test_stale_trust_pane_is_unknown(changed: str) -> None:
+    """Trust text in a replaced pane cannot identify the recorded worker."""
+    case = fixture("readiness.json")
+    seen = {**case["seen"], "trust_prompt": True, changed: "replaced"}
+    assert identity.readiness(case["record"], seen)[0] == "unknown"
+
+
+@given(st.text(min_size=1).filter(lambda value: value != "Sun Sep 27 01:00:00 2026"))
+def test_stale_process_with_trust_property(start: str) -> None:
+    """Any changed process start outranks text left in the pane."""
+    case = fixture("readiness.json")
+    seen = {**case["seen"], "trust_prompt": True, "process_start": start}
+    assert identity.readiness(case["record"], seen)[0] == "unknown"
+
+
 @given(st.integers(min_value=1).filter(lambda pid: pid != 100))
 def test_pid_reuse_property(pid: int) -> None:
     """Any other PID is never ready."""
@@ -154,6 +170,41 @@ def test_codex_native_response_decisions() -> None:
     assert not identity.codex_runtime_facts(
         "thread-1", row, True, {**thread, "status": {"type": "notLoaded"}}
     )["loaded"]
+
+
+@pytest.mark.parametrize(
+    ("roots", "expected"),
+    [(["/repo/.git"], True), (["/other"], False), ([], False)],
+)
+def test_reported_common_git_root(roots: list[str], expected: bool) -> None:
+    """The server must report the exact common Git directory for the thread."""
+    assert identity.common_git_root("/repo/.git", roots) is expected
+
+
+@given(st.text(min_size=1).filter(lambda root: root != "/repo/.git"))
+def test_unreported_common_git_root_property(root: str) -> None:
+    """Any different reported root cannot stand in for the common Git root."""
+    assert not identity.common_git_root("/repo/.git", [root])
+
+
+@pytest.mark.parametrize(
+    ("output", "expected"),
+    [
+        ("session|@4|%5|123\n", ("session", "@4", "%5", "123")),
+        ("|||\n", None),
+        ("session|@4|%5|", None),
+        ("session|@4|%5|abc", None),
+    ],
+)
+def test_tmux_pane_fields(output: str, expected: tuple[str, ...] | None) -> None:
+    """Only a complete display response names a live target."""
+    assert identity.tmux_pane_fields(output) == expected
+
+
+@given(st.text().filter(lambda value: not value.isdecimal()))
+def test_tmux_pane_pid_property(value: str) -> None:
+    """No nonnumeric pane PID reaches process observation."""
+    assert identity.tmux_pane_fields(f"session|@4|%5|{value}") is None
 
 
 @pytest.mark.parametrize(

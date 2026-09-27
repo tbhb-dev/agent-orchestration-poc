@@ -85,7 +85,37 @@ def test_status_snapshot_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
             }
         )
     )
-    assert launcher.status_record(row)["availability"] == "fresh"
+    status = launcher.status_record(row)
+    assert status["availability"] == "fresh"
+    assert status["source"] == ".local-cache/worker-messaging/status/one.json"
+
+
+def test_new_worktree_fetches_before_branching_from_origin_main(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A stale local main cannot become the new worker branch point."""
+    commands: list[list[str]] = []
+
+    def run(argv: list[str]) -> str:
+        commands.append(argv)
+        return "" if argv[1:3] == ["branch", "--list"] else "worktree /repo"
+
+    monkeypatch.setattr(launcher, "_run", run)
+    launcher._worktree(tmp_path / "worker", "tooling/176-worker", owned=False)
+    assert commands[-2] == ["git", "fetch", "origin", "main"]
+    assert commands[-1][-1] == "origin/main"
+
+
+def test_missing_tmux_target_with_empty_success_fields(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Tmux 3.7b may return a successful reply with four empty fields."""
+    monkeypatch.setattr(
+        launcher.subprocess,
+        "run",
+        lambda argv, **_kwargs: subprocess.CompletedProcess(argv, 0, "|||\n", ""),
+    )
+    assert launcher._pane("%missing") == {"tmux_missing": True}
 
 
 def test_first_pane_initializes_only_worker_session(
@@ -342,6 +372,7 @@ def _serve_fake_endpoint(
         ("wrong_brief", "unknown"),
         ("newline_brief", "ready"),
         ("prefixed_brief", "ready"),
+        ("missing_git_root", "unknown"),
     ],
 )
 def test_remote_discovery_without_tui_rollout(
@@ -395,12 +426,19 @@ def test_remote_discovery_without_tui_rollout(
                     "status": {"type": "idle"},
                 }
             },
+            "thread/resume": {
+                "thread": {"id": "thread-1"},
+                "runtimeWorkspaceRoots": (
+                    ["/other"] if change == "missing_git_root" else ["/repo/.git"]
+                ),
+            },
         }
 
         row = {
             "harness": "codex",
             "run_id": "run-1",
             "worktree": "/worker",
+            "git_common_dir": "/repo/.git",
             "model": "gpt-6-sol",
             "effort": "high",
             "native_id": None,
@@ -445,7 +483,12 @@ def test_remote_discovery_without_tui_rollout(
         assert "thread/list" in methods
         if state == "ready":
             assert row["native_id"] == "thread-1"
-            assert methods[-2:] == ["thread/loaded/list", "thread/read"]
+            assert methods[-3:] == [
+                "thread/loaded/list",
+                "thread/read",
+                "thread/resume",
+            ]
+            assert row["runtime_workspace_roots"] == ["/repo/.git"]
 
 
 @pytest.mark.parametrize("reply", [b"", b"HTTP/1.1 101 Switching Protocols\r\n\r\n"])
