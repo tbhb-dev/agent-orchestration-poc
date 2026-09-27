@@ -82,7 +82,7 @@ pass_filenames = false
 id = "pyrefly"
 name = "pyrefly check"
 language = "system"
-entry = "mise exec -- uv run pyrefly check"
+entry = "mise run check:pyrefly"
 types = ["python"]
 pass_filenames = false
 

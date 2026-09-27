@@ -1,0 +1,12 @@
+{
+  "repository": {
+    "id": 1389534135,
+    "full_name": "tbhb/agent-orchestration-poc"
+  },
+  "installation": { "id": 42 },
+  "action": "synchronize",
+  "pull_request": {
+    "number": 7,
+    "head": { "sha": "0123456789abcdef0123456789abcdef01234567" }
+  }
+}
