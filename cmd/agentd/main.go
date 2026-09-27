@@ -11,7 +11,6 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/tbhb/agent-orchestration-poc/internal/bus"
 	"github.com/tbhb/agent-orchestration-poc/internal/version"
 )
 
@@ -28,14 +27,24 @@ func main() {
 		fmt.Println("agentd", version.String())
 		return
 	}
-	if len(os.Args) > 1 && os.Args[1] == "serve" {
-		if err := serve(os.Args[2:]); err != nil {
+	if len(os.Args) > 1 {
+		var err error
+		switch os.Args[1] {
+		case "serve":
+			err = serve(os.Args[2:])
+		case "spawn", "list", "capture", "nudge", "stop", "group":
+			err = runOperation(context.Background(), os.Args[1:])
+		default:
+			fmt.Fprintln(os.Stderr, "usage: agentd version | serve --state-dir DIR [--port PORT] [--agent NAME ...] | spawn|list|capture|nudge|stop|group ...")
+			os.Exit(2)
+		}
+		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
 		return
 	}
-	fmt.Fprintln(os.Stderr, "usage: agentd version | serve --state-dir DIR [--port PORT] [--agent NAME ...]")
+	fmt.Fprintln(os.Stderr, "usage: agentd version | serve --state-dir DIR [--port PORT] [--agent NAME ...] | spawn|list|capture|nudge|stop|group ...")
 	os.Exit(2)
 }
 
@@ -53,15 +62,5 @@ func serve(args []string) error {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	broker, err := bus.Start(ctx, bus.Config{
-		StateDir: *state, Port: *port, Groups: []bus.Group{{Name: "build", Agents: agents}},
-	})
-	if err != nil {
-		return err
-	}
-	defer broker.Close()
-	fmt.Println("bus ready at", broker.URL())
-	fmt.Println("credentials under", *state)
-	<-ctx.Done()
-	return nil
+	return serveWithOperations(ctx, *state, *port, agents)
 }

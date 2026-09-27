@@ -1,0 +1,17 @@
+{
+  "outdated": {
+    "base": { ".github/workflows/check.yml": "old" },
+    "main": {
+      ".github/workflows/check.yml": "new",
+      ".github/workflows/docs.yml": "new"
+    },
+    "head": { ".github/workflows/check.yml": "old" },
+    "expected": [".github/workflows/check.yml", ".github/workflows/docs.yml"]
+  },
+  "current": {
+    "base": { ".github/workflows/check.yml": "new" },
+    "main": { ".github/workflows/check.yml": "new" },
+    "head": { ".github/workflows/check.yml": "intentional-edit" },
+    "expected": []
+  }
+}

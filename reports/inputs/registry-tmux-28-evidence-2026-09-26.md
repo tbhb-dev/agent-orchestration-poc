@@ -94,6 +94,18 @@ ok   github.com/tbhb/agent-orchestration-poc/internal/provision 1.125s
 
 **Observed:** `mise run docs:check-links` could not complete in this sandbox because Playwright's Chromium exited at `bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer: Permission denied (1100)`. The rendered route list included the new provisioner, decision, and build group pages, but the pre-existing Mermaid content in `workflow/index.md` failed to render and the link validator then reported missing `/workflow/` links. CI must confirm the full docs build outside this sandbox.
 
+## Main merge and entry point
+
+**Observed:** `git fetch origin && git merge origin/main` stopped because this branch has fast-forward-only merge configuration. `git merge --no-ff origin/main` reached add/add conflicts from the squash of PR #82. The resolution kept the merged `main` bus, layout, tests, and evidence, while retaining this branch's SQLite additions to `go.mod` and `go.sum`.
+
+**Observed:** Before mounting the provisioner, `mise run check` failed at `check:deadcode`: `serveWithOperations`, `runOperation`, and the provisioner, registry, and tmux functions were unreachable from a binary. After `cmd/agentd/main.go` dispatched the provisioner commands and used `serveWithOperations`, the same aggregate check passed. Its Go boundary and dead code checks passed, the race-enabled Go tests passed, and Python reported 52 passed and two integration tests skipped.
+
+**Observed:** `mise run build` passed. A temporary-directory smoke run started `bin/agentd serve` on a free loopback port, waited for `<state-dir>/agentd.sock`, then called `bin/agentd group status` and `bin/agentd list`. The first response reported the `build` group as stopped and included its private tmux socket; the second returned an empty worker list. The daemon printed its NATS URL and `<state-dir>/bus` credential root. The temporary state and process were removed at the end of the run. This checks the binary dispatch and local socket, not a real harness spawn.
+
+**Observed:** `mise run check:mutation` passed. The Go core run killed 135 of 139 mutants, with four survivors, zero uncovered mutants, zero timeouts, 97.12% test efficacy, and 100% mutant coverage. The Python core run killed 200 of 240 mutants for 83.33% and reported 100% line coverage. The four Go survivors are in the launch and roster core; both scores exceed the configured 80% gates.
+
+**Observed:** `mise run docs:check-links` again failed in this sandbox. Chromium could not register `org.chromium.Chromium.MachPortRendezvousServer` (`Permission denied (1100)`), and the link validator reported three existing `/workflow/` links in `index.md`, `project/history.md`, and `workflow/tooling.md`. The edited bus and provisioner pages rendered; this local run does not establish a green docs check.
+
 ## Operator acceptance procedure
 
 **Untested:** the following commands need the operator's subscriptions, user-scope sandbox settings, and a host location outside this worker sandbox. Run them from a trusted checkout of the feature branch. Use three prepared brief files that each ask the worker to read the file, make a small issue-scoped change, stage it, and commit it. The commands use distinct issue #28 acceptance branches so they cannot share a worktree.

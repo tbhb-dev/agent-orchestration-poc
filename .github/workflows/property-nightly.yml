@@ -1,0 +1,67 @@
+---
+name: property-nightly
+
+"on":
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  property-nightly:
+    name: property-nightly
+    runs-on: ubuntu-latest
+    env:
+      MISE_RUSTUP_HOME: /home/runner/.local/share/mise/rustup
+      MISE_CARGO_HOME: /home/runner/.local/share/mise/cargo
+      RAPID_NOFAILFILE: "1"
+    steps:
+      # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      # v4.3.0
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c
+        with:
+          version: 2026.8.6
+          install: true
+          cache: true
+      - name: Choose random seeds
+        run: |
+          rapid_seed=$(od -An -N8 -tu8 /dev/urandom | tr -d ' ')
+          hypothesis_seed=$(od -An -N8 -tu8 /dev/urandom | tr -d ' ')
+          echo "RAPID_SEED=$rapid_seed" >> "$GITHUB_ENV"
+          echo "HYPOTHESIS_SEED=$hypothesis_seed" >> "$GITHUB_ENV"
+      - id: property
+        name: Run property tests
+        run: |
+          set +e
+          mise run check:property:nightly:go > go-output.txt 2>&1
+          go_status=$?
+          mise run check:property:nightly:python > python-output.txt 2>&1
+          python_status=$?
+          cat go-output.txt python-output.txt
+          test "$go_status" -eq 0 && test "$python_status" -eq 0
+      - name: File a failure issue
+        if: failure() && steps.property.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo 'Nightly property tests failed.'
+            echo
+            printf 'Run: %s/%s/actions/runs/%s\n' \
+              "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID"
+            echo "Commit: $GITHUB_SHA"
+            echo "RAPID_SEED: $RAPID_SEED"
+            echo "HYPOTHESIS_SEED: $HYPOTHESIS_SEED"
+            echo
+            echo '```text'
+            tail -n 150 go-output.txt
+            tail -n 150 python-output.txt
+            echo '```'
+          } > nightly-issue.md
+          gh issue create \
+            --title "Nightly property tests failed on $GITHUB_SHA" \
+            --body-file nightly-issue.md

@@ -13,7 +13,7 @@ Use `mise run docs:dev` for local reading. `mise run docs:build` writes `docs/di
 
 ## Pinned tools
 
-These are the exact pins in `mise.toml` after PR #57. Rust uses the default profile. CI separately pins mise itself to 2026.8.6.
+These are the exact pins in `mise.toml`. Rust uses the default profile. CI separately pins mise itself to 2026.8.6.
 
 | Tool | Version |
 | --- | --- |
@@ -36,8 +36,9 @@ These are the exact pins in `mise.toml` after PR #57. Rust uses the default prof
 | `pipx:jscpd` | 5.3.2 |
 | `go:golang.org/x/tools/cmd/deadcode` | 0.50.0 |
 | `go:github.com/tbhb/repotools/cmd/guard-markdown` | 0.9.0 |
+| `go:github.com/go-gremlins/gremlins/cmd/gremlins` | 0.6.0 |
 
-Python development dependencies are locked in `uv.lock` and declared in `pyproject.toml`, including Ruff 0.16.9, pytest 9.1.1, pyrefly 1.3.1, import-linter 2.15, and vulture 2.16. Site package versions are in `docs/package.json` and `pnpm-lock.yaml`, with their rationale in [docs stack conventions](/guides/docs-stack-conventions/). Vale downloads `ai-tells` and `ai-tells-commits` v1.37.0 through the release URLs in `.vale.ini`.
+Python development dependencies are locked in `uv.lock` and declared in `pyproject.toml`, including Ruff 0.16.9, pytest 9.1.1, pyrefly 1.3.1, import-linter 2.15, vulture 2.16, Hypothesis 6.168.1, mutmut 3.8.0, and pytest-cov 7.0.0. Go properties use rapid 1.3.0 from `go.mod`. Site package versions are in `docs/package.json` and `pnpm-lock.yaml`, with their rationale in [docs stack conventions](/guides/docs-stack-conventions/). Vale downloads `ai-tells` and `ai-tells-commits` v1.37.0 through the release URLs in `.vale.ini`.
 
 ## Configuration
 
@@ -49,7 +50,9 @@ Python development dependencies are locked in `uv.lock` and declared in `pyproje
 | Duplicate code | `.jscpd.json`, with 50 tokens and 5 lines |
 | Go dead code | `scripts/check-deadcode.sh` fails on deadcode output |
 | Ruff and pytest | `pyproject.toml`, with test markers in `tests/conftest.py` |
-| pyrefly | `[tool.pyrefly]` and sub-configs in `pyproject.toml`, strict `check:pyrefly` gate |
+| pyrefly | `[tool.pyrefly]` in `pyproject.toml`, strict for source, tests, and experiments |
+| Gremlins | `.gremlins.yaml`, floors of 80 percent for the share of covered mutants killed and for mutant coverage |
+| mutmut and pytest-cov | `[tool.mutmut]` in `pyproject.toml`, `scripts/check-mutation-score.py`, 80 percent score and 90 percent line coverage |
 | Python imports | `[tool.importlinter]` in `pyproject.toml` and the core's nested `ruff.toml` |
 | Python dead code | `[tool.vulture]` in `pyproject.toml` at confidence 60 |
 | Biome | `biome.json` |
@@ -64,6 +67,8 @@ Python development dependencies are locked in `uv.lock` and declared in `pyproje
 | Hooks | `prek.toml` |
 
 `GOTOOLCHAIN=local` prevents an implicit Go download. `UV_PYTHON_PREFERENCE=only-system` selects mise's Python. Go checks include module tidiness and verification, then lint, build, and race-enabled shuffled tests. `check:pyrefly` runs in the `check` aggregate and CI.
+
+Property tests run in `check` with ordinary Go and Python tests. Required CI fixes the rapid seed at 20260926 and uses Hypothesis's built-in `ci` profile. Nightly tasks use random seeds and file an issue with their output on failure. Mutation tests run separately through `check:mutation`, and its CI job succeeds without running the tools when no core code or test changed.
 
 The `check` aggregate also runs `check:imports`, `check:dupl`, and `check:deadcode`. Go and Python complexity checks run in their existing linter tasks. Biome checks the TypeScript complexity rules at error level. Recalibrate thresholds at the first retro with phase 2 code.
 
@@ -83,6 +88,11 @@ The `check` aggregate also runs `check:imports`, `check:dupl`, and `check:deadco
 | `fmt:ruff` | Fix and format Python with ruff |
 | `check:pytest` | Run the Python tests |
 | `check:pyrefly` | Type check Python with pyrefly in strict mode |
+| `check:mutation` | Enforce both core mutation gates outside `check` |
+| `check:mutation:go` | Score the share of covered Go mutants killed and mutant coverage |
+| `check:mutation:python` | Enforce Python core line coverage and mutation score |
+| `check:property:nightly:go` | Run Go core properties with a random seed from CI |
+| `check:property:nightly:python` | Run Python tests with the default Hypothesis profile and a random seed |
 | `check:biome` | Lint and check formatting with Biome |
 | `fmt:biome` | Fix and format with Biome |
 | `vale:sync` | Download the pinned Vale styles into .vale/styles |
@@ -97,6 +107,9 @@ The `check` aggregate also runs `check:imports`, `check:dupl`, and `check:deadco
 | `check:experiments` | Check that every experiment directory has README.md, evidence/, and versions.md |
 | `check:secrets` | Scan the git history for secrets with gitleaks |
 | `check:actions` | Lint the GitHub Actions workflows with actionlint |
+| `review:preflight` | Check a PR's workflows against revisions added to `origin/main` since its merge base |
+| `pr:wait-check` | Wait for one named check to succeed on the PR head recorded at start |
+| `checkpoint:closure-audit` | Report closed work-item issues lacking a linked merged PR or a recorded non-code reason |
 | `check:pr-body` | Check a PR body on stdin against the commit convention: `mise run check:pr-body -- '<title>' < body.md` |
 | `check:imported-research` | Check that research/imported/ is unchanged against a base ref: `mise run check:imported-research -- <base> '<title>'` |
 | `docs:install` | Install the docs site dependencies from the committed lockfile |
@@ -106,6 +119,10 @@ The `check` aggregate also runs `check:imports`, `check:dupl`, and `check:deadco
 | `docs:check-links` | Build the docs site with starlight-links-validator enabled |
 
 The PR-body and imported-research tasks need arguments from a PR or base ref and run separately from `check`. Docs builds also run separately. The CI job table is on [workflow](/workflow/#ci-jobs).
+
+Run `mise run review:preflight -- <pr>` before review, `mise run pr:wait-check -- <pr> <name> <timeout-seconds>` before merge or completion reports, and `mise run checkpoint:closure-audit` at each checkpoint. The closure audit also runs weekly in read-only GitHub Actions. The [phase 1 retrospective](/retros/2026-09-26-phase-1/) records the failures behind these checks.
+
+The [documentation brief template](https://github.com/tbhb/agent-orchestration-poc/blob/main/docs/briefs/documentation-brief-template.md) is for coordinator dispatches. Codex runs `mise run check:vale -- <changed-markdown-paths>` locally with pinned Vale 3.22.0 before returning pages. The [sample brief](https://github.com/tbhb/agent-orchestration-poc/blob/main/docs/briefs/documentation-brief-sample.md) and [sample page](/workflow/documentation-brief-sample/) show the required prose and command.
 
 ## Prek hooks
 
@@ -126,6 +143,10 @@ The commit-msg hook runs Vale with `ai-tells` and `ai-tells-commits`. Real commi
 | `scripts/check-experiments.sh` | Requires `NN-slug`, README, evidence directory, and versions, except the phase 0 assessment |
 | `scripts/check-pr-body.sh` | Rejects attribution, missing `Refs:`, and missing evidence links for feature or experiment PRs |
 | `scripts/check-imported-research.sh` | Compares imports against a base ref and permits additions only for import PRs |
+| `scripts/check-mutation-score.py` | Runs mutmut from a fresh cache and enforces the exported score |
+| `scripts/check-gremlins-output.py` | Rejects timed-out Go mutants that gremlins excludes from its score |
+| `agent_orchestration_poc.shell.coordinator_preflight` | Reads git and GitHub state for the three coordinator tasks |
+| `agent_orchestration_poc.core.coordinator_preflight` | Decides workflow drift, check outcome, and closure review from values |
 
 ## Vale exemptions
 

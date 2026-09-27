@@ -71,6 +71,8 @@ The shared stash stack requires explicit ownership. Prefer `git rebase --autosta
 
 Open one small PR per issue. Its conventional title and body become the squash commit. Include What, Why, Evidence, Docs, and Checklist sections and end with `Refs: #<n>`. For `feat` and `exp`, the Evidence section needs a link to committed output or a test run. Check green CI, docs updated or an issue filed, no secrets, and evidence committed.
 
+Before review, the coordinator runs `mise run review:preflight -- <pr>` to verify that workflow revisions added on `main` are present at the PR head. Before merge or a completion report, run `mise run pr:wait-check -- <pr> <check-name> <timeout-seconds>`. The waiter succeeds only when the requested check concludes success on the head SHA recorded when waiting began. Its timeout includes GitHub calls, and zero seconds expires immediately. Both tasks address failures in the [phase 1 retrospective](/retros/2026-09-26-phase-1/).
+
 Workers open PRs for coordinator review and do not merge them. A different harness reviews first where practical. The coordinator merges after review and green CI. Changes to security policy or credentials need an operator merge. Egress rules or installations outside the repository also need an operator merge.
 
 The active [main ruleset](https://github.com/tbhb/agent-orchestration-poc/rules/24053242), read back on 2026-09-26, requires a PR and the `check` job and blocks force pushes and branch deletion. It permits squash merges only and has no bypass actors. Its required approving-review count is zero, so coordinator review remains a process requirement. Repository settings disable merge commits and rebase merges and delete head branches after merge. The provisioner will remove matching worktrees once implemented.
@@ -80,11 +82,16 @@ The active [main ruleset](https://github.com/tbhb/agent-orchestration-poc/rules/
 | Job | Trigger | Checks |
 | --- | --- | --- |
 | `check` | PRs and pushes to `main` | `mise run check`, including Go build, vet, tests and lint, Ruff and pytest, formatting, prose, secrets, experiment layout, Mermaid, and workflow syntax |
+| `mutation` | PRs and pushes to `main` | Always reports a result. Runs `mise run check:mutation` when Go or Python core code or their tests change, and succeeds without running the tools otherwise. |
+| `property-nightly` | Nightly schedule and manual dispatch | Runs Go and Python tests with random seeds and files an issue containing the seeds and output on failure. |
 | `docs` | PRs and pushes to `main` | Chromium setup and `mise run docs:check-links`, which builds the site and checks internal links and hashes |
 | `pr-body` | PR opened, edited, synchronized, or reopened | No attribution trailers, a `Refs:` trailer, and an Evidence link for `feat` or `exp` |
 | `imported-research` | PR opened, edited, synchronized, or reopened | No modification, rename, or deletion under `research/imported/`. Additions need a `research(import)` title. |
+| `closure-audit` | Weekly schedule or manual dispatch | Read-only audit of closed work-item issues without a linked merged PR or an explicit `Non-code closure:` reason. |
 
 These jobs currently run on `ubuntu-latest`. The `check` and `docs` jobs install mise 2026.8.6 with the pinned action. macOS jobs are planned when code needs Apple frameworks or Containers. See [tooling](/workflow/tooling/) for the task and hook inventory.
+
+At a checkpoint, the coordinator also runs `mise run checkpoint:closure-audit`. To record a non-code closure, put `Non-code closure: <reason and evidence>` on its own line in the issue body. The audit only reports issues for review and never changes issue state. Codex documentation dispatches use the [brief template](https://github.com/tbhb/agent-orchestration-poc/blob/main/docs/briefs/documentation-brief-template.md) and require a local Vale pass.
 
 ## Reporting
 

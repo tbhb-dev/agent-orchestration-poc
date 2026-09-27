@@ -132,6 +132,7 @@ func credential(path string) (string, error) {
 	if errors.Is(err, os.ErrNotExist) {
 		seed, err = createCredential(path)
 	}
+	defer clear(seed)
 	if err != nil {
 		return "", err
 	}
@@ -157,6 +158,7 @@ func createCredential(path string) ([]byte, error) {
 	}
 	defer pair.Wipe()
 	seed, err := pair.Seed()
+	defer clear(seed)
 	if err != nil {
 		return nil, err
 	}
@@ -200,6 +202,7 @@ func (b *Bus) createStream(ctx context.Context, group Group, operatorPath string
 	stream, err := js.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
 		Name: definition.Name, Subjects: definition.Subjects,
 		Storage: streamStorage(definition.Storage), Retention: streamRetention(definition.Retention),
+		NoAck: definition.NoAck,
 	})
 	if err != nil {
 		return err

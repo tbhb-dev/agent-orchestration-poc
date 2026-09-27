@@ -1,0 +1,81 @@
+[
+  { "case": "missing", "head": "abc", "checks": [], "expected": "wait" },
+  {
+    "case": "queued",
+    "head": "abc",
+    "checks": [
+      {
+        "name": "check",
+        "status": "QUEUED",
+        "conclusion": null,
+        "started_at": "1"
+      }
+    ],
+    "expected": "wait"
+  },
+  {
+    "case": "running",
+    "head": "abc",
+    "checks": [
+      {
+        "name": "check",
+        "status": "IN_PROGRESS",
+        "conclusion": null,
+        "started_at": "1"
+      }
+    ],
+    "expected": "wait"
+  },
+  {
+    "case": "successful",
+    "head": "abc",
+    "checks": [
+      {
+        "name": "check",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "started_at": "1"
+      }
+    ],
+    "expected": "success"
+  },
+  {
+    "case": "failed",
+    "head": "abc",
+    "checks": [
+      {
+        "name": "check",
+        "status": "COMPLETED",
+        "conclusion": "FAILURE",
+        "started_at": "1"
+      }
+    ],
+    "expected": "fail"
+  },
+  {
+    "case": "cancelled",
+    "head": "abc",
+    "checks": [
+      {
+        "name": "check",
+        "status": "COMPLETED",
+        "conclusion": "CANCELLED",
+        "started_at": "1"
+      }
+    ],
+    "expected": "fail"
+  },
+  {
+    "case": "changed-head",
+    "head": "def",
+    "checks": [
+      {
+        "name": "check",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "started_at": "1"
+      }
+    ],
+    "expected": "changed-head"
+  }
+]

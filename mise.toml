@@ -20,6 +20,7 @@ actionlint = "1.7.12"
 "pipx:jscpd" = "5.3.2"
 "go:golang.org/x/tools/cmd/deadcode" = "0.50.0"
 "go:github.com/tbhb/repotools/cmd/guard-markdown" = "0.9.0"
+"go:github.com/go-gremlins/gremlins/cmd/gremlins" = "0.6.0"
 
 [env]
 # A go.mod toolchain mismatch fails instead of downloading a Go outside mise.
@@ -107,6 +108,34 @@ run = "uv run pytest"
 description = "Type check Python with pyrefly in strict mode"
 run = "uv run pyrefly check"
 
+[tasks."check:mutation"]
+description = "Run the Go and Python core mutation score gates"
+run = ["mise run check:mutation:go", "mise run check:mutation:python"]
+
+[tasks."check:mutation:go"]
+description = "Mutation test the Go core with gremlins"
+env = { RAPID_NOFAILFILE = "1", RAPID_SHRINKTIME = "1s" }
+run = [
+  "rm -f gremlins.json",
+  "gremlins unleash ./internal/core --output-statuses lct --output gremlins.json",
+  "uv run python scripts/check-gremlins-output.py",
+]
+
+[tasks."check:mutation:python"]
+description = "Check Python core coverage and mutation score"
+run = [
+  "uv run pytest --cov=agent_orchestration_poc.core --cov-report=term --cov-fail-under=90",
+  "uv run python scripts/check-mutation-score.py",
+]
+
+[tasks."check:property:nightly:go"]
+description = "Run Go core properties with the nightly random seed"
+run = "go test -race -shuffle=on ./internal/core/..."
+
+[tasks."check:property:nightly:python"]
+description = "Run Python tests with the nightly random seed"
+run = 'uv run pytest --hypothesis-profile=default --hypothesis-seed="$HYPOTHESIS_SEED"'
+
 # JavaScript, TypeScript, CSS, JSON, HTML
 [tasks."check:biome"]
 description = "Lint and check formatting with Biome"
@@ -166,6 +195,19 @@ run = "gitleaks git --redact --no-banner ."
 [tasks."check:actions"]
 description = "Lint the GitHub Actions workflows with actionlint"
 run = "actionlint"
+
+# Coordinator preflight. These read live GitHub or git state and run separately from `check`.
+[tasks."review:preflight"]
+description = "Check that a PR branch includes current main workflows: mise run review:preflight -- <pr>"
+run = "uv run python -m agent_orchestration_poc.shell.coordinator_preflight review"
+
+[tasks."pr:wait-check"]
+description = "Wait for a named check on the current PR head: mise run pr:wait-check -- <pr> <name> <timeout-seconds>"
+run = "uv run python -m agent_orchestration_poc.shell.coordinator_preflight wait-check"
+
+[tasks."checkpoint:closure-audit"]
+description = "Audit closed work-item issues for linked merged PRs or recorded non-code closure"
+run = "uv run python -m agent_orchestration_poc.shell.coordinator_preflight closure-audit"
 
 # Pull request checks. These need a PR title, body, or base ref, so they run in CI (see .github/workflows/)
 # and by hand, never as part of the `check` aggregate.
