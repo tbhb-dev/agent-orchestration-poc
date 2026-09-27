@@ -1,0 +1,109 @@
+# Codex queue + tmux live trial, 2026-09-27
+
+## Versions
+
+codex-cli 0.157.1 (observed, `codex --version`).
+
+tmux 3.7b (observed, `tmux -V`).
+
+Model used: gpt-6-sol, reasoning effort low (observed, `/status` output).
+
+## Setup
+
+`mkdir -p /private/tmp/aop-trial-scratch` succeeded, no output.
+
+`tmux new-session -d -s aop-trial -x 200 -y 50 -c /private/tmp/aop-trial-scratch` succeeded, no output.
+
+`tmux list-sessions` confirmed `aop-trial` created alongside the operator's `0` session and two unrelated sessions (observed).
+
+## Startup
+
+Sent via `tmux send-keys -t aop-trial '<codex command>' Enter`: `codex -m gpt-6-sol -c model_reasoning_effort=low -s workspace-write "You are a disposable recipient..."`.
+
+First capture (after an 8s sleep) showed a trust prompt (observed): "Trust this folder? Codex can read, edit, and run files here, subject to your permission settings... 1. Trust and continue 2. Quit". Answered with `tmux send-keys -t aop-trial Enter`, which selected the default highlighted option, "1. Trust and continue" — the least-privileged choice that lets the session start.
+
+After another 8s sleep, the pane showed the Codex banner (model GPT-6-Sol low, directory correct), the initial prompt echoed, and the assistant reply "TRIAL-READY" at 12:42 AM (observed). No other prompts (update, approval) appeared at startup in this run.
+
+## Finding the thread identifier
+
+Sent `/status` via two separate calls: `tmux send-keys -t aop-trial '/status' Enter`, then a second `tmux send-keys -t aop-trial Enter` because the first capture only showed `/status` typed but not yet executed (observed — the Enter needed a moment or a nudge to register as submission; unclear which).
+
+`/status` output (observed) included a `Session:` line with a full UUID. First 8 characters: `01a0e12b`. This was used as `--thread` for all `codex queue` calls. Did not need the `codex queue --help` / `codex resume --help` fallback since `/status` worked directly.
+
+## T1 — idle recipient
+
+Command: `codex queue --thread 01a0e12b... --message "Trial T1. Reply exactly T1-RECEIVED-4471 and wait."`
+
+Exact stdout (observed): `Queued message <native-id> for thread <native-id>.`
+
+After an 8s sleep, the pane already showed the full exchange: the queued message appeared as a user turn ("› Trial T1...") and the reply "T1-RECEIVED-4471" at 12:43 AM (observed). Startup reply was also 12:42 AM per the timestamp, so T1's round trip was on the order of well under a minute, likely single-digit seconds given the model turnaround; exact sub-8s timing not resolvable from polling granularity.
+
+Conclusion: `codex queue` reliably delivers a message and produces a visible, answered turn in the pane while the worker is idle.
+
+## T2 — busy recipient
+
+Sent via `tmux send-keys -t aop-trial '<busy command>' Enter`: "Run the shell command: sleep 45 && echo SLEEP-DONE. Then reply exactly BUSY-TURN-FINISHED."
+
+No approval prompt appeared for the shell command (observed) — the session was started with `-s workspace-write`, and `/status` later showed `Permissions: Workspace (Approve for me)`, consistent with the command running without an interactive approval gate.
+
+Immediately after, ran: `codex queue --thread 01a0e12b... --message "Trial T2. Reply exactly T2-RECEIVED-8823 and wait."`
+
+Exact stdout (observed): `Queued message <native-id> for thread <native-id>.`
+
+The `codex queue` command itself succeeded (exit 0, normal confirmation text) while the worker was nominally busy — observed.
+
+Unexpected behavior (observed): the T2 message was answered ("T2-RECEIVED-8823" at 12:43 AM) well before the manually typed busy-turn message ("Run the shell command...") showed any response at all. Polled the pane repeatedly (roughly every 8-10s) for over 90 seconds; the busy-turn line sat with no "•" response, no visible spinner, and no tool-call output the entire time, while T2's full exchange was already complete in the transcript above it.
+
+The busy-turn message did eventually execute — but only much later, apparently only after further interaction (see Cleanup below): "Ran sleep 45 && echo SLEEP-DONE" / "SLEEP-DONE" / "BUSY-TURN-FINISHED" appeared at 12:48 AM, roughly five minutes after it was typed.
+
+Interpretation (inference): messages sent through `codex queue` appear to be inserted and processed ahead of a message that was typed directly into the pane but had not yet started being processed by the model. This is a materially different behavior from what the trial expected ("busy" meaning an in-flight shell command blocking new turns) — in this run the typed message never actually started running until much later, and two separate `codex queue` messages (T2, then T3) were processed and answered in the interim, ahead of it. This is observed, not inference, for the ordering; the *cause* (queue priority vs. some dispatch delay unrelated to queuing) is inference — not conclusively isolated in this trial.
+
+## T3 — pause cleanly rehearsal
+
+Command: `codex queue --thread 01a0e12b... --message "Control message: pause cleanly. Write a file named status.md ... Then reply exactly PAUSED-CLEANLY-5590 and do nothing further."`
+
+Exact stdout (observed): `Queued message <native-id> for thread <native-id>.`
+
+Within about 10s, the pane showed the tool call `Ran printf '%s\n' 'What I was doing...' 'What is saved...' 'What should happen next...'` and then the reply "PAUSED-CLEANLY-5590" at 12:46 AM (observed). This too was processed and answered before the still-pending busy-turn message.
+
+Verified with `ls -la /private/tmp/aop-trial-scratch` (observed): `status.md`, 180 bytes, present.
+
+Verified with `Read` on `status.md` (observed) — file contents:
+
+```
+What I was doing: Receiving messages for the disposable messaging trial.
+What is saved: status.md records the paused state.
+What should happen next: Wait for further instructions.
+```
+
+Conclusion: `codex queue` can reliably deliver a control message and have the worker perform a real file-write action and reply, and this worked even while another turn was nominally pending/unprocessed in the pane.
+
+## T4 — negative addressing
+
+Command: `codex queue --thread <native-id> --message "should fail"`
+
+Exact output (observed), exit code 1:
+
+```
+Error: failed to queue session message: thread/queue/add failed: failed to read thread: invalid thread-store request: no rollout found for thread id <native-id> (code -32603)
+```
+
+Conclusion: an unknown thread ID fails fast and loud with a clear JSON-RPC-style error and non-zero exit, rather than hanging or silently no-op'ing.
+
+## Cleanup
+
+Sent `/quit` via `tmux send-keys -t aop-trial '/quit' Enter`. This did not exit the app — instead, the literal text `/quit` was appended below the still-pending busy-turn message in the transcript (observed), and shortly after, the busy-turn message finally began executing (the sleep 45 command ran and completed, "BUSY-TURN-FINISHED" appeared). Whether sending `/quit` is what unstuck the pending turn, or it was simply coincidental timing, is inference — not established causally in this trial.
+
+After the busy-turn completed, sent `/quit` again (`tmux send-keys -t aop-trial '/quit' Enter`). This time it was submitted as an ordinary chat message ("› /quit") rather than executing as a slash command — observed. `/quit` did not work as an exit command in either attempt in this run.
+
+Fell back to the documented alternative: `tmux send-keys -t aop-trial C-c` sent twice, then `tmux kill-session -t aop-trial`.
+
+`tmux list-sessions` afterward (observed) showed only `0` (operator's), `codex-steering-757a243a`, `test-agy-interactive`, `test-agy-stream` — `aop-trial` was gone, operator's session untouched.
+
+## No permission denials encountered
+
+No `tmux` or `codex queue` command was denied by a permission check in this run.
+
+## Overall assessment
+
+`codex queue --thread <uuid> --message <text>` reliably delivers messages and gets them answered, both when the worker is idle (T1) and when a prior turn is still notionally in flight (T2, T3) — observed. The one anomaly worth flagging for a real worker: the manually-typed busy-turn message sat unprocessed for roughly five minutes while two `codex queue` messages were processed and answered ahead of it, and the message only started running after further pane interaction (a second `/quit` attempt). This suggests queued messages may not simply append to a strict FIFO turn queue behind an already-submitted-but-not-yet-started message — inference, not confirmed causally here. `/quit` as a typed slash command did not reliably exit the session in this codex-cli version; Ctrl-C twice plus `tmux kill-session` is the dependable cleanup path — observed.

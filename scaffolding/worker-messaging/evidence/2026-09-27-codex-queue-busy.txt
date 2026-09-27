@@ -1,0 +1,114 @@
+# Trial 2: codex queue against a busy session
+
+Date: 2026-09-27. Versions: codex-cli 0.157.1, tmux 3.7b.
+
+Goal: determine what happens to a message sent with `codex queue` while an interactive Codex CLI session is busy inside a turn.
+
+## Setup
+
+Commands run, in order:
+
+`mkdir -p /private/tmp/aop-trial2-scratch` — observed, succeeded silently.
+
+`tmux new-session -d -s aop-trial2 -x 200 -y 50 -c /private/tmp/aop-trial2-scratch` — observed, succeeded silently.
+
+`tmux send-keys -t aop-trial2 'codex -m gpt-6-sol -c model_reasoning_effort=low -s workspace-write "You are a disposable recipient for a messaging trial. Work only in the current directory. Reply exactly TRIAL2-READY and then wait for further messages."' Enter` — observed, sent at 00:50:56.
+
+Folder trust prompt appeared on capture. Sent one `tmux send-keys -t aop-trial2 Enter` to accept it. Observed prompt text: "Trust this folder? ... 1. Trust and continue 2. Quit".
+
+After acceptance, pane showed the Codex banner (model GPT-6-Sol low, directory /private/tmp/aop-trial2-scratch) and the reply `TRIAL2-READY` at timestamp 12:51 AM (observed).
+
+## Session identifier
+
+Sent `/status` text plus Enter via `tmux send-keys -t aop-trial2 '/status' Enter`. Observed: the text `/status` sat unsubmitted in the input box on the first capture (6s later). Sent a second bare `tmux send-keys -t aop-trial2 Enter` to submit it; the status panel then rendered. Inference: the initial combined `'/status' Enter` send-keys call landed before the UI was ready to accept a slash command submission, or an autocomplete dropdown intercepted the first Enter; a second Enter submitted it.
+
+Status panel showed (observed, trimmed):
+
+```
+Model:            GPT-6-Sol (reasoning low, summaries auto)
+Directory:        /private/tmp/aop-trial2-scratch
+Thread name:      Prepare messaging trial recipient
+Session:          <native-id>
+```
+
+Thread UUID used for all `codex queue` calls below (first 8 chars): `01a0e133`.
+
+## B1: make the session busy via queue
+
+Timestamp before send: 00:52:47 (observed, `date +%H:%M:%S`).
+
+Command: `codex queue --thread <native-id> --message "Trial B1. Run the shell command: sleep 60 && echo B1-SLEEP-DONE. When it finishes reply exactly B1-TURN-FINISHED-3105."`
+
+Output (observed): `Queued message <native-id> for thread <native-id>.`
+
+Capture at 00:52:53 (6s later, observed) showed the message text echoed into the transcript and: `Working (6s • esc to interrupt) · 1 background terminal running · /ps to view · /stop to close`. This working indicator plus the background-terminal counter is the evidence the turn had started and the `sleep` was running (observed).
+
+Further polls confirmed the counter advancing: `Working (30s ...)` at 00:53:26, `Working (44s ...)` at 00:53:40, `Working (57s ...)` at 00:53:54 (all observed).
+
+## B2: queue a second message while the first turn is running
+
+Timestamp before send: 00:53:06 (observed), approximately 19s after the B1 turn was first confirmed running (00:52:47 send, first busy evidence at 00:52:53).
+
+Command: `codex queue --thread <native-id> --message "Trial B2. Reply exactly B2-RECEIVED-7742 and wait."`
+
+Exact stdout (observed): `Queued message <native-id> for thread <native-id>.` No non-zero exit was reported by the tool; the command produced normal success output. Exit status was not separately captured as a numeric code, but the success-shaped message is the only signal available (observed limitation).
+
+Polling continued every ~8s: 00:53:26 (Working 30s), 00:53:40 (Working 44s), 00:53:54 (Working 57s). A bash `sleep` call between the 00:53:54 poll and the next was interrupted by an unrelated tool/session boundary event (exit code 137) that reset the agent's working context; the tmux session itself was unaffected and still running (verified afterward with `tmux list-sessions`, which listed `aop-trial2` still present).
+
+Next capture, no explicit timestamp recorded at the instant of capture but `date` immediately after read 00:54:11, showed the full sequence already resolved in the pane transcript:
+
+```
+• Ran sleep 60 && echo B1-SLEEP-DONE
+  └ B1-SLEEP-DONE
+
+• B1-TURN-FINISHED-3105
+
+  Worked for 1m 4s · 12:53 AM
+
+› Trial B2. Reply exactly B2-RECEIVED-7742 and wait.
+
+• B2-RECEIVED-7742
+
+  12:54 AM
+```
+
+Observed: B1 finished ("Worked for 1m 4s", timestamped 12:53 AM, consistent with a 00:52:47 send plus ~64s). B2's queued message then appears in the transcript as a new turn and was answered `B2-RECEIVED-7742` at 12:54 AM, with no key press sent to the pane between B1's completion and B2's processing (no `tmux send-keys` other than the two `/status`-related sends and the initial startup line had been issued at any point). Conclusion (observed): the queued B2 message was held and delivered to the session automatically once the busy turn ended, without any manual nudge.
+
+## B3: two more messages queued back to back
+
+Timestamp before B3a: 00:54:20 (observed). Command: `codex queue --thread <native-id> --message "Trial B3a. Reply exactly B3A-RECEIVED-1188 and wait."` Output (observed): `Queued message <native-id> for thread <native-id>.`
+
+Immediately after, command: `codex queue --thread <native-id> --message "Trial B3b. Reply exactly B3B-RECEIVED-2299 and wait."` Output (observed): `Queued message <native-id> for thread <native-id>.` Timestamp after: 00:54:23 (observed).
+
+At this point the session was idle (B2 had already completed at 12:54 AM per the prior capture), so this test exercised queuing while idle rather than while busy.
+
+Capture 8s later at 00:54:38 (observed) showed both messages processed in order, each as its own turn, with no merging:
+
+```
+› Trial B3a. Reply exactly B3A-RECEIVED-1188 and wait.
+
+• B3A-RECEIVED-1188
+
+  12:54 AM
+
+› Trial B3b. Reply exactly B3B-RECEIVED-2299 and wait.
+
+• B3B-RECEIVED-2299
+
+  12:54 AM
+```
+
+Observed: both B3a and B3b were processed, in the order queued, as separate turns, with correct exact-text replies. Neither was lost or merged.
+
+## Cleanup
+
+`tmux send-keys -t aop-trial2 C-c` (sent twice), then `tmux kill-session -t aop-trial2`, then `tmux list-sessions` — observed output confirmed `aop-trial2` no longer listed and `0`, `codex-steering-757a243a`, `test-agy-interactive`, `test-agy-stream` still present and untouched.
+
+## Claims summary
+
+- Observed: a queued message sent while the session is mid-turn (running `sleep 60`) does not interrupt that turn; the turn ran to completion (B1-TURN-FINISHED-3105 at 1m4s).
+- Observed: the queued message (B2) was automatically delivered and processed as soon as the busy turn ended, with zero manual key presses to the pane in between.
+- Observed: two messages queued back to back (B3a, B3b) were each processed in order as separate turns with no loss or merging, though in this run both were queued while the session was already idle rather than mid-turn.
+- Inference: `codex queue` appears to append to a per-thread queue that the CLI drains one message at a time, processing the next queued message automatically once the current turn finishes, requiring no external nudge.
+- Observed limitation: an unrelated agent-context interruption (exit 137) occurred between polls; it did not affect the tmux session or the trial's validity, confirmed by `tmux list-sessions` showing `aop-trial2` still alive immediately after.
+- No prompts, denials, or permission blocks were encountered on any `codex queue` or `tmux` command in this trial.
