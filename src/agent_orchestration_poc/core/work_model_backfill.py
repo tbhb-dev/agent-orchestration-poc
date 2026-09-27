@@ -401,11 +401,17 @@ def _validate_drafts(tables: Tables, snapshot: Snapshot) -> None:
         present = row["title"] in draft_titles
         if row["backfill mode"] == "existing draft" and not present:
             raise ValueError("unresolved existing draft")
-        if (
-            present
-            and row["target project item"]
-            and next(item.item_id for item in drafts if item.title == row["title"])
-            != row["target project item"]
+        if present and (
+            (
+                row["target project item"]
+                and next(item.item_id for item in drafts if item.title == row["title"])
+                != row["target project item"]
+            )
+            or (
+                row["target content id"]
+                and next(item.draft_id for item in drafts if item.title == row["title"])
+                != row["target content id"]
+            )
         ):
             raise ValueError("changed existing draft identity")
 
@@ -764,6 +770,11 @@ def _created_target_items(
         for row in tables.assignments
         if row["backfill mode"] in {"draft", "issue"} and _key(row) not in expected
     } | {f"title:{row['proposed title']}" for row in tables.parents}
+    draft_keys = {
+        _key(row)
+        for row in tables.assignments
+        if row["backfill mode"] == "draft" and _key(row) in required_created
+    }
     added_items = inputs.added_items or {}
     required_added = {
         _key(row)
@@ -782,6 +793,20 @@ def _created_target_items(
         for item in created.values()
     ):
         raise ValueError("creation map is incomplete or unexpected")
+    if any(
+        (key in draft_keys and (item.key != key or not item.draft_id or item.issue_id))
+        or (
+            key not in draft_keys
+            and (
+                not item.key.startswith("#")
+                or not item.key[1:].isdecimal()
+                or not item.issue_id
+                or item.draft_id
+            )
+        )
+        for key, item in created.items()
+    ):
+        raise ValueError("creation resource kind differs from plan")
     issue_ids = {item.issue_id for item in cp1.items if item.issue_id}
     item_ids = {item.item_id for item in cp1.items if item.item_id}
     draft_ids = {item.draft_id for item in cp1.items if item.draft_id}
@@ -852,7 +877,11 @@ def _assignment_target(
     item = replace(
         item,
         title=title,
-        state="draft" if draft else row["state"],
+        state="draft"
+        if draft
+        else "open"
+        if row["backfill mode"] == "issue"
+        else row["state"],
         state_reason=(
             "not_planned"
             if row["live state"] == "open" and row["state"] == "closed"

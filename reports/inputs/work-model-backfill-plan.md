@@ -50,7 +50,7 @@
 
 [Verified] The assignment parser requires the exact final header with `size` and without `project phase`. Under Python 3.14.6, the committed tables parse as 191 assignments, 22 parents, and 387 edge audit rows. The cycle check finds no accepted cycle. The approved work model, sanitized change record, source digests, and bounded live counts are in [the final manifest](work-model-tables/manifest.md). The source checkout was `6448b1175dbc2c8f22f68fa126b5b344db9b74b0`. The pinned parser's versioned source remains CPython `c63aec69` at 3.14.6, recorded in [Python conventions](../../docs/src/content/docs/guides/python-conventions.md).
 
-[Verified] CP1 validation accepts a numbered issue whose proposed title was already applied, including #155's part B retitle. It matches a proposed draft already in the Project by exact title and checks a supplied existing draft item ID. The parser still preserves `judgment`, `open`, `no link`, and `cut` edge rows, rejects identity collisions, and detects accepted cycles. No Project write is in this slice.
+[Verified] CP1 validation accepts a numbered issue whose proposed title was already applied, including #155's part B retitle. It matches a proposed draft already in the Project by exact title and checks supplied existing draft item and content IDs. The parser still preserves `judgment`, `open`, `no link`, and `cut` edge rows, rejects identity collisions, and detects accepted cycles. No Project write is in this slice.
 
 [Observed] The bounded REST read returned 161 issues and 169 new-Project items. Issue #155 already has its proposed title. These observations are consistent with the operator's report that issue copying and the part B retitle are done. They do not establish a complete CP1 because field, body, label, hierarchy, blocker, and nested page values were not collected. Request counts in version 3 remain estimates, and a changed count alone is not treated as a defect.
 
@@ -145,3 +145,20 @@
 | `mise run check:mutation` | 0 | Go killed 145 of 149; Python killed 2,831 of 3,137 for 90.25 percent |
 
 [Observed] The first `mise run fmt` exited 1 on a six-argument manifest signature and a broad `pytest.raises` block. The manifest override is now keyword-only with a documented targeted lint suppression, the test setup moved outside the exception block, and the final format and aggregate checks passed.
+
+## Third reviewer change request on 2026-09-27
+
+[Verified] Five focused cases first failed against head `542dca2`: a complete independently constructed read-back of two open numbered incident issues disagreed with `proposed` target state; the draft creation path accepted an issue resource; the incident and parent wrong-kind probes reached only a generic identity collision; and a changed D2 draft content ID passed the preclosure plan. `mise exec -- uv run pytest tests/test_work_model_backfill.py -q -k 'approved_incidents_are_open_numbered_issues_at_cp13 or cp13_rejects_wrong_creation_kind or cp1_rejects_changed_existing_draft_content_id' --tb=short` exited 1 with five failed and 71 deselected before the core fix. After the fix, the same command exited 0 with five passed and 71 deselected.
+
+[Verified] CP13 translates `backfill mode=issue` planning rows to open runtime issues. Its creation map requires numbered issue identities without draft IDs for incident and parent creations, and draft identities without issue IDs for draft creations. The approved-input helper now returns numbered incident issues. CP1 compares both the approved Project item ID and draft content ID before returning the closure plan. The complete approved-input test supplies independently constructed incident Item values for read-back and retains the other target rows; it is a synthetic fixture, not a live CP13.
+
+| Third review-fix command | Exit code | Result |
+| --- | --- | --- |
+| `mise exec -- uv run pytest tests/test_work_model_backfill.py -q --tb=short` | 0 | 76 focused tests passed |
+| `mise run fmt` | 0 | Formatters applied to the changed Python files |
+| `mise run check:imports` | 0 | Both core boundary contracts kept |
+| `mise run check:ruff` | 0 | Lint and format checks passed before the final test edits; aggregate reran them afterward |
+| `mise run check` | 0 | All aggregate gates passed; Python core lines 97.93 percent and branches 94.10 percent |
+| `mise run check:mutation` | 0 | Go killed 145 of 149 mutants; Python killed 2,880 of 3,189 for 90.31 percent |
+
+[Observed] An initial aggregate run exited 1 because two newly edited test lines needed Ruff formatting. `mise run fmt` corrected them, and the next aggregate run exited 0. No live backfill mutation or Project edit was made.

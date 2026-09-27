@@ -206,17 +206,21 @@ def approved_creation_inputs(approved: Tables, cp1: Snapshot) -> TargetInputs:
     """Supply synthetic returned IDs and reviewed issue bodies for the final table."""
     present = {item.key for item in cp1.items}
     created = {}
+    next_issue = 20000
     for row in approved.assignments:
         key = f"#{row['number']}" if row["number"] else f"title:{row['title']}"
         if row["backfill mode"] in {"draft", "issue"} and key not in present:
+            issue = row["backfill mode"] == "issue"
             created[key] = Item(
-                key,
+                f"#{next_issue}" if issue else key,
                 row["title"],
-                "draft" if not row["number"] else "open",
-                draft_id=f"new-draft-{key}" if not row["number"] else "",
-                issue_id=f"new-issue-{key}" if row["number"] else "",
+                "open" if issue else "draft",
+                draft_id=f"new-draft-{key}" if not issue else "",
+                issue_id=str(next_issue) if issue else "",
                 item_id=f"new-item-{key}",
             )
+            if issue:
+                next_issue += 1
     for index, row in enumerate(approved.parents, 10000):
         created[f"title:{row['proposed title']}"] = Item(
             f"#{index}",
@@ -241,6 +245,94 @@ def approved_creation_inputs(approved: Tables, cp1: Snapshot) -> TargetInputs:
         if row["number"] and row["live state"] == "open" and row["state"] == "closed"
     )
     return TargetInputs(created, bodies, closed, frozenset(), REFERENCE)
+
+
+def test_approved_incidents_are_open_numbered_issues_at_cp13() -> None:
+    """A real issue read-back must match the planned incident creations."""
+    approved, cp1 = approved_cp1_and_tables()
+    inputs = approved_creation_inputs(approved, cp1)
+    target = expected_cp13(approved, cp1, inputs)
+    incidents = {}
+    for row in approved.assignments:
+        if row["backfill mode"] != "issue":
+            continue
+        identity = inputs.created[f"title:{row['title']}"]
+        native = (("Priority", ""), ("Severity", "SEV2"), ("Work type", "Unplanned"))
+        project = tuple(
+            sorted(
+                {
+                    "Status": row["project status"],
+                    "Size": row["size"],
+                    "Area": row["project area"],
+                    "Harness": row["project harness"],
+                    "Worker": row["project worker"],
+                    "Type": "Incident",
+                    **dict(native),
+                }.items()
+            )
+        )
+        incidents[identity.key] = Item(
+            identity.key,
+            row["title"],
+            "open",
+            issue_type="Incident",
+            native=native,
+            project=project,
+            issue_id=identity.issue_id,
+            item_id=identity.item_id,
+        )
+    assert len(incidents) == 2
+    actual = final_snapshot(tuple(incidents.get(item.key, item) for item in target))
+    assert compare_cp13(target, actual, "after") == ()
+
+
+@pytest.mark.parametrize("kind", ["draft", "incident", "parent"])
+def test_cp13_rejects_wrong_creation_kind(kind: str) -> None:
+    """Creation identities must have the resource kind the row requested."""
+    approved, cp1 = approved_cp1_and_tables()
+    inputs = approved_creation_inputs(approved, cp1)
+    if kind == "parent":
+        key = f"title:{approved.parents[0]['proposed title']}"
+        wrong = replace(
+            inputs.created[key], key="title:wrong", issue_id="", draft_id="wrong"
+        )
+    elif kind == "incident":
+        row = next(
+            row for row in approved.assignments if row["backfill mode"] == "issue"
+        )
+        key = f"title:{row['title']}"
+        wrong = replace(
+            inputs.created[key], key="title:wrong", issue_id="", draft_id="wrong"
+        )
+    else:
+        row = next(
+            row for row in approved.assignments if row["backfill mode"] == "draft"
+        )
+        key = f"title:{row['title']}"
+        wrong = replace(
+            inputs.created[key], key="#20002", issue_id="20002", draft_id=""
+        )
+    with pytest.raises(ValueError, match="creation resource kind"):
+        expected_cp13(
+            approved,
+            cp1,
+            replace(inputs, created={**inputs.created, key: wrong}),
+        )
+
+
+def test_cp1_rejects_changed_existing_draft_content_id() -> None:
+    """The approved draft content ID is part of the preclosure identity."""
+    approved, cp1 = approved_cp1_and_tables()
+    d2 = next(item for item in cp1.items if item.draft_id)
+    changed = replace(
+        cp1,
+        items=tuple(
+            replace(item, draft_id="wrong-id") if item == d2 else item
+            for item in cp1.items
+        ),
+    )
+    with pytest.raises(ValueError, match="changed existing draft identity"):
+        operation_plan(approved, changed)
 
 
 def test_approved_table_counts_and_numbered_exemptions() -> None:
@@ -711,21 +803,23 @@ def test_cp13_refuses_missing_creation_or_reviewed_body() -> None:
 
 
 @pytest.mark.parametrize(
-    ("field", "value"),
+    ("field", "value", "error"),
     [
-        ("issue_id", "1"),
-        ("item_id", "item-1"),
-        ("key", "#1"),
-        ("key", "wrong"),
+        ("issue_id", "1", "created identity collides with CP1"),
+        ("item_id", "item-1", "created identity collides with CP1"),
+        ("key", "#1", "created identity collides with CP1"),
+        ("key", "wrong", "creation resource kind differs from plan"),
     ],
 )
-def test_created_parent_identity_must_be_new(field: str, value: str) -> None:
+def test_created_parent_identity_must_be_new(
+    field: str, value: str, error: str
+) -> None:
     """Returned parent IDs cannot alias CP1 or lose their numbered identity."""
     inputs = creation_inputs()
     parent = inputs.created["title:epic: migration"]
     changed = replace(parent, **cast("Any", {field: value}))
     created = {**inputs.created, "title:epic: migration": changed}
-    with pytest.raises(ValueError, match="created identity collides with CP1"):
+    with pytest.raises(ValueError, match=error):
         expected_cp13(tables(), snapshot(), replace(inputs, created=created))
 
 
