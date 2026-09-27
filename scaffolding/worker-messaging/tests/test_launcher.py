@@ -2,8 +2,11 @@
 # ruff: noqa: S101
 
 import json
+import socket
 import subprocess
 import sys
+import tempfile
+import threading
 from pathlib import Path
 
 import cli
@@ -57,6 +60,31 @@ def test_no_tmux_server_is_first_launch(monkeypatch: pytest.MonkeyPatch) -> None
     request.update(harness="agy", model="m", effort="low", brief_file="/brief")
     launcher.launch(request)
     assert calls == ["pane"]
+
+
+def test_codex_launch_requires_endpoint_before_side_effects() -> None:
+    """An omitted remote endpoint cannot create a worktree or tmux pane."""
+    with pytest.raises(ValueError, match="explicit absolute"):
+        launcher.launch({"harness": "codex", "brief_file": "/missing"})
+
+
+def test_status_snapshot_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The shell reads a local status file, then pure code classifies it."""
+    monkeypatch.setattr(launcher, "ROOT", tmp_path)
+    monkeypatch.setattr(launcher, "_now", lambda: "2026-09-27T00:00:10+00:00")
+    row = {"run_id": "one", "pane_generation": "generation"}
+    path = tmp_path / ".local-cache/worker-messaging/status/one.json"
+    path.parent.mkdir(parents=True)
+    path.write_text(
+        json.dumps(
+            {
+                "run_id": "one",
+                "generation": "generation",
+                "last_seen_utc": "2026-09-27T00:00:00+00:00",
+            }
+        )
+    )
+    assert launcher.status_record(row)["availability"] == "fresh"
 
 
 def test_first_pane_initializes_only_worker_session(
@@ -133,9 +161,16 @@ def test_command_from_main_or_linked_checkout(
     """Git's common directory supplies the same shim and metadata path."""
     monkeypatch.setattr(launcher, "ROOT", Path(checkout))
     monkeypatch.setattr(launcher, "_run", lambda _argv: "/repo/.git")
-    row = {"harness": "codex", "model": "m", "effort": "high", "worktree": "/new"}
+    row = {
+        "harness": "codex",
+        "model": "m",
+        "effort": "high",
+        "worktree": "/new",
+        "endpoint": "unix:///private/tmp/worker.sock",
+    }
     command = launcher._command(row, "brief")
-    assert "--add-dir /repo/.git" in command
+    assert "--remote unix:///private/tmp/worker.sock" in command
+    assert "--add-dir" not in command
     assert "PATH=/repo/.holding/shim:" in command
 
 
@@ -192,10 +227,76 @@ def test_loaded_inventory_pages(monkeypatch: pytest.MonkeyPatch) -> None:
         codex_launch.socket, "socket", lambda _family: HandshakeConnection()
     )
     monkeypatch.setattr(codex_launch, "_call", answer)
-    loaded, thread = codex_launch.runtime_thread("/sock", "thread-1")
+    loaded, thread = codex_launch.runtime_thread("unix:///sock", "thread-1")
     assert loaded
     assert thread["status"]["type"] == "active"
     assert calls[2] == ("thread/loaded/list", {"limit": 100, "cursor": "page-2"})
+
+
+@pytest.mark.parametrize("loaded", [True, False])
+def test_remote_inventory_on_temporary_unix_socket(loaded: bool) -> None:
+    """The adapter queries the selected endpoint using the real socket protocol."""
+    with tempfile.TemporaryDirectory(prefix="worker176-", dir="/private/tmp") as folder:
+        path = f"{folder}/app.sock"
+        server = socket.socket(socket.AF_UNIX)
+        server.bind(path)
+        server.listen(1)
+        errors: list[Exception] = []
+        methods: list[str] = []
+
+        def serve() -> None:
+            try:
+                conn, _ = server.accept()
+                with conn:
+                    handshake = bytearray()
+                    while not handshake.endswith(b"\r\n\r\n"):
+                        handshake.extend(conn.recv(1))
+                    conn.sendall(b"HTTP/1.1 101 Switching Protocols\r\n\r\n")
+                    while len(methods) < 4:
+                        request = codex_launch._receive(conn)
+                        method = request["method"]
+                        methods.append(method)
+                        if "id" not in request:
+                            continue
+                        result: dict[str, object] = {}
+                        if method == "thread/loaded/list":
+                            result = {
+                                "data": ["thread-1"] if loaded else [],
+                                "nextCursor": None,
+                            }
+                        if method == "thread/read":
+                            result = {
+                                "thread": {
+                                    "id": "thread-1",
+                                    "cwd": "/worker",
+                                    "model": "gpt-6-sol",
+                                    "reasoningEffort": "high",
+                                    "status": {"type": "idle"},
+                                }
+                            }
+                        conn.sendall(
+                            codex_launch._frame({"id": request["id"], "result": result})
+                        )
+            except (OSError, EOFError, ValueError, KeyError) as error:
+                errors.append(error)
+
+        thread = threading.Thread(target=serve)
+        thread.start()
+        try:
+            actual, readback = codex_launch.runtime_thread(f"unix://{path}", "thread-1")
+        finally:
+            server.close()
+            thread.join(timeout=5)
+        assert not thread.is_alive()
+        assert not errors
+        assert actual is loaded
+        assert readback["cwd"] == "/worker"
+        assert methods == [
+            "initialize",
+            "initialized",
+            "thread/loaded/list",
+            "thread/read",
+        ]
 
 
 @pytest.mark.parametrize("reply", [b"", b"HTTP/1.1 101 Switching Protocols\r\n\r\n"])
@@ -220,7 +321,7 @@ def test_socket_eof_persists_unknown_json(
     monkeypatch.setattr(
         launcher,
         "_observe",
-        lambda _row: codex_launch.runtime_thread("/sock", "thread-1"),
+        lambda _row: codex_launch.runtime_thread("unix:///sock", "thread-1"),
     )
     monkeypatch.setattr(
         codex_launch.socket, "socket", lambda _family: HandshakeConnection(reply)
@@ -228,11 +329,13 @@ def test_socket_eof_persists_unknown_json(
     monkeypatch.setattr(sys, "argv", ["worker", "status", "run-1"])
     assert cli.main() == 3
     output = json.loads(capsys.readouterr().out)
-    assert output == {
+    assert {key: output[key] for key in ("run_id", "state", "reason")} == {
         "run_id": "run-1",
         "state": "unknown",
         "reason": "observation failed: EOFError",
     }
+    assert output["endpoint"] is None
+    assert output["observed_at"]
     assert registry.read(store)[0]["state"] == "unknown"
 
 

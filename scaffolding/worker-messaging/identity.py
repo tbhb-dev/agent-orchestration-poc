@@ -2,6 +2,7 @@
 
 import hashlib
 import shlex
+from datetime import datetime
 from typing import Any
 
 
@@ -141,18 +142,30 @@ def codex_facts(
 
 
 def codex_runtime_facts(
-    found: str, worktree: str, loaded: bool, thread: dict[str, Any]
+    found: str, row: dict[str, Any], loaded: bool, thread: dict[str, Any]
 ) -> dict[str, bool]:
-    """Require loaded inventory and the matching runtime thread and cwd."""
+    """Require loaded inventory and matching runtime identity and configuration."""
     status = thread.get("status")
     return {
         "loaded": loaded
         and thread.get("id") == found
-        and thread.get("cwd") == worktree
+        and thread.get("cwd") == row["worktree"]
+        and thread.get("model") == row["model"]
+        and thread.get("reasoningEffort") == row["effort"]
         and isinstance(status, dict)
         and status.get("type") in {"idle", "active"},
         "busy": codex_busy(thread),
     }
+
+
+def codex_endpoint(endpoint: str | None) -> str:
+    """Require a recorded absolute Unix socket address for remote Codex."""
+    if not endpoint or not endpoint.startswith("unix:///"):
+        raise ValueError("Codex requires an explicit absolute unix:// endpoint")
+    path = endpoint.removeprefix("unix://")
+    if "\x00" in path or path == "/" or "//" in path or "/../" in f"{path}/":
+        raise ValueError("invalid Codex Unix endpoint")
+    return path
 
 
 def claude_facts(
@@ -215,13 +228,14 @@ def session_missing(code: int, stderr: str) -> bool:
     raise ValueError("tmux session observation failed")
 
 
-def command(
-    row: dict[str, Any], brief: str, shim: str, common_git: str, path_env: str
-) -> str:
+def command(row: dict[str, Any], brief: str, shim: str, path_env: str) -> str:
     """Build a harness command from captured values without reading the host."""
     if row["harness"] == "codex":
+        codex_endpoint(row.get("endpoint"))
         argv = [
             "codex",
+            "--remote",
+            row["endpoint"],
             "-m",
             row["model"],
             "-c",
@@ -232,8 +246,6 @@ def command(
             "workspace-write",
             "-C",
             row["worktree"],
-            "--add-dir",
-            common_git,
             brief,
         ]
     elif row["harness"] == "claude":
@@ -315,3 +327,34 @@ def readiness(record: dict[str, Any], seen: dict[str, Any]) -> tuple[str, str]:
     return (
         "busy" if seen.get("busy") else "ready"
     ), "native identity and brief confirmed"
+
+
+def status_view(
+    row: dict[str, Any], record: dict[str, Any] | None, source: str, now: str
+) -> dict[str, Any]:
+    """Classify a captured status record without changing native readiness."""
+    result: dict[str, Any] = {
+        "record": None,
+        "source": source,
+        "age_seconds": None,
+        "availability": "missing" if record is None else "invalid",
+    }
+    if record is None:
+        return result
+    if record.get("run_id") != row["run_id"] or record.get("generation") != row.get(
+        "pane_generation"
+    ):
+        return result
+    try:
+        age = (
+            datetime.fromisoformat(now)
+            - datetime.fromisoformat(record["last_seen_utc"])
+        ).total_seconds()
+    except KeyError, TypeError, ValueError:
+        return result
+    if age < 0:
+        return result
+    result.update(
+        record=record, age_seconds=age, availability="fresh" if age <= 120 else "stale"
+    )
+    return result

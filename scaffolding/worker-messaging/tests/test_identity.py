@@ -3,6 +3,7 @@
 
 import hashlib
 import json
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, cast
 
@@ -119,11 +120,127 @@ def test_codex_native_response_decisions() -> None:
     assert identity.codex_busy({"status": {"type": "active", "activeFlags": []}})
     assert not identity.codex_busy({"status": {"type": "idle"}})
     assert not identity.codex_busy({"status": {"type": "notLoaded"}})
-    thread = {"id": "thread-1", "cwd": "/worker", "status": {"type": "idle"}}
-    assert identity.codex_runtime_facts("thread-1", "/worker", True, thread)["loaded"]
+    row = {"worktree": "/worker", "model": "gpt-6-sol", "effort": "high"}
+    thread = {
+        "id": "thread-1",
+        "cwd": "/worker",
+        "model": "gpt-6-sol",
+        "reasoningEffort": "high",
+        "status": {"type": "idle"},
+    }
+    assert identity.codex_runtime_facts("thread-1", row, True, thread)["loaded"]
     assert not identity.codex_runtime_facts(
-        "thread-1", "/worker", True, {**thread, "status": {"type": "notLoaded"}}
+        "thread-1", row, True, {**thread, "status": {"type": "notLoaded"}}
     )["loaded"]
+
+
+@pytest.mark.parametrize(
+    "name", ["codex-owning-endpoint.json", "codex-unloaded-restart.json"]
+)
+def test_endpoint_fixture_readback(name: str) -> None:
+    """Stored history without a loaded runtime cannot grant readiness."""
+    case = fixture(name)
+    row = case["record"]
+    readback = case["read"]
+    facts = identity.codex_runtime_facts(
+        row["native_id"],
+        row,
+        row["native_id"] in identity.loaded_ids(case["loaded"]),
+        readback,
+    )
+    assert facts["loaded"] is (name == "codex-owning-endpoint.json")
+
+
+def test_fresh_status_cannot_override_stale_native_identity() -> None:
+    """Advisory status freshness leaves a native unknown unchanged."""
+    case = fixture("status-fresh-stale-native.json")
+    view = identity.status_view(
+        case["row"], case["record"], "/status.json", case["now"]
+    )
+    assert view["availability"] == case["expected_availability"]
+    assert case["row"]["state"] == case["expected_readiness"]
+
+
+@given(st.integers(min_value=0, max_value=10000))
+def test_status_age_classification(age: int) -> None:
+    """Status age alone determines fresh versus stale for valid records."""
+    row = {"run_id": "one", "pane_generation": "generation"}
+    record = {
+        "run_id": "one",
+        "generation": "generation",
+        "last_seen_utc": "2026-09-27T00:00:00+00:00",
+    }
+    now = (
+        datetime.fromisoformat(record["last_seen_utc"]) + timedelta(seconds=age)
+    ).isoformat()
+    view = identity.status_view(row, record, "/status", now)
+    assert view["availability"] == ("fresh" if age <= 120 else "stale")
+
+
+@pytest.mark.parametrize(
+    ("record", "availability"),
+    [
+        (None, "missing"),
+        ({"run_id": "wrong", "generation": "generation"}, "invalid"),
+        ({"run_id": "one", "generation": "wrong"}, "invalid"),
+        (
+            {"run_id": "one", "generation": "generation", "last_seen_utc": "bad"},
+            "invalid",
+        ),
+    ],
+)
+def test_status_invalid_cases(record: dict[str, Any] | None, availability: str) -> None:
+    """Missing or mismatched snapshots cannot claim freshness."""
+    row = {"run_id": "one", "pane_generation": "generation"}
+    view = identity.status_view(row, record, "/status", "2026-09-27T00:00:00+00:00")
+    assert view["availability"] == availability
+    assert view["record"] is None
+
+
+@pytest.mark.parametrize("change", ["id", "cwd", "model", "reasoningEffort", "status"])
+def test_codex_remote_readback_mismatch(change: str) -> None:
+    """A loaded ID alone cannot establish configured worker readiness."""
+    row = {"worktree": "/worker", "model": "gpt-6-sol", "effort": "high"}
+    thread = {
+        "id": "thread-1",
+        "cwd": "/worker",
+        "model": "gpt-6-sol",
+        "reasoningEffort": "high",
+        "status": {"type": "idle"},
+    }
+    assert not identity.codex_runtime_facts(
+        "thread-1", row, True, {**thread, change: "wrong"}
+    )["loaded"]
+
+
+@given(st.text().filter(lambda value: value != "gpt-6-sol"))
+def test_codex_model_readback_property(value: str) -> None:
+    """No distinct model name can satisfy the recorded model check."""
+    row = {"worktree": "/worker", "model": "gpt-6-sol", "effort": "high"}
+    thread = {
+        "id": "thread-1",
+        "cwd": "/worker",
+        "model": value,
+        "reasoningEffort": "high",
+        "status": {"type": "idle"},
+    }
+    assert not identity.codex_runtime_facts("thread-1", row, True, thread)["loaded"]
+
+
+@given(st.text())
+def test_codex_endpoint_requires_explicit_unix_socket(address: str) -> None:
+    """Only absolute Unix endpoint values can enter a Codex launch."""
+    if (
+        address.startswith("unix:///")
+        and "\x00" not in address
+        and "//" not in address[7:]
+        and "/../" not in f"{address[7:]}/"
+        and address[7:] != "/"
+    ):
+        assert identity.codex_endpoint(address) == address[7:]
+    else:
+        with pytest.raises(ValueError, match="endpoint"):
+            identity.codex_endpoint(address)
 
 
 @pytest.mark.parametrize(
@@ -190,11 +307,17 @@ def test_tmux_window_decisions() -> None:
 
 def test_command_uses_captured_paths() -> None:
     """Main and linked checkout use the same common Git directory and shim."""
-    row = {"harness": "codex", "model": "m", "effort": "high", "worktree": "/new"}
-    command = identity.command(
-        row, "brief", "/repo/.holding/shim", "/repo/.git", "/usr/bin"
-    )
-    assert "--add-dir /repo/.git" in command
+    row = {
+        "harness": "codex",
+        "model": "m",
+        "effort": "high",
+        "worktree": "/new",
+        "endpoint": "unix:///private/tmp/worker.sock",
+    }
+    command = identity.command(row, "brief", "/repo/.holding/shim", "/usr/bin")
+    assert "--remote unix:///private/tmp/worker.sock" in command
+    assert "--add-dir" not in command
+    assert "writable_roots" not in command
     assert "PATH=/repo/.holding/shim:/usr/bin" in command
 
 

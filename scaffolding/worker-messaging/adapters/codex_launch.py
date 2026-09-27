@@ -93,10 +93,11 @@ def _call(
 
 def runtime_thread(endpoint: str, thread_id: str) -> tuple[bool, dict[str, Any]]:
     """Read the named thread from its runtime and check the loaded inventory."""
+    socket_path = identity.codex_endpoint(endpoint)
     connection = socket.socket(socket.AF_UNIX)
     connection.settimeout(5)
     try:
-        connection.connect(endpoint)
+        connection.connect(socket_path)
         key = base64.b64encode(os.urandom(16)).decode()
         request = (
             "GET / HTTP/1.1\r\nHost: localhost\r\nUpgrade: websocket\r\n"
