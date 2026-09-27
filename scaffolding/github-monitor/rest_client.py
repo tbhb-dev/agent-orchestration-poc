@@ -23,10 +23,11 @@ from repair import (
     body_for_response,
     budget_handoff,
     capacity,
-    complete,
+    collection_change,
     component_reason,
     digest,
     endpoints,
+    final_reads,
     next_page,
 )
 from store import Store
@@ -120,7 +121,11 @@ class Client:
                 self.headers, self.requests - 1, self.pages - 1
             ):
                 raise RuntimeError(f"incomplete_http_{response.status}")
-            link = self.headers.get("link") or (cached.get("link") if cached else None)
+            link = (
+                (cached.get("link") if cached else None)
+                if response.status == 304
+                else self.headers.get("link")
+            )
             self.trace.append(
                 {
                     "page": url.removeprefix(self.base),
@@ -148,7 +153,7 @@ class Client:
         return tuple(values)
 
 
-def repair_object(  # noqa: C901 - one bounded collection transaction
+def repair_object(  # noqa: C901, PLR0912 - one bounded collection transaction
     client: Client, store: Store, item: dict[str, Any]
 ) -> dict[str, Any]:
     """Collect one tracked object and commit only stable supported components."""
@@ -192,18 +197,11 @@ def repair_object(  # noqa: C901 - one bounded collection transaction
                 continue
             pages = client.get(endpoint.path)
             initial[endpoint.name] = authoritative(endpoint.name, pages)
-        for endpoint in plan:
-            if endpoint.name in (
-                "issue",
-                "issue_comments",
-                "pull",
-                "check_runs",
-                "statuses",
-            ):
-                final[endpoint.name] = authoritative(
-                    endpoint.name, client.get(endpoint.path)
-                )
-        outcome = complete({name: initial[name] for name in final}, final, 0, 0)
+        for endpoint in final_reads(plan):
+            final[endpoint.name] = authoritative(
+                endpoint.name, client.get(endpoint.path)
+            )
+        outcome = collection_change(plan, initial, final)
         snapshot = store.snapshot()
         matching = next(
             (
@@ -241,6 +239,12 @@ def repair_object(  # noqa: C901 - one bounded collection transaction
                 )
                 if not saved:
                     reason = "invalidation_during_commit"
+            elif next(part for part in item["components"] if part["name"] == component)[
+                "complete"
+            ]:
+                store.stale_component(
+                    kind, number, component, components[component], reason
+                )
             paths = tuple(
                 endpoint.path.split("?")[0]
                 for endpoint in plan
@@ -265,6 +269,15 @@ def repair_object(  # noqa: C901 - one bounded collection transaction
             name: {"complete": False, "unknown_reason": str(error)}
             for name in components
         }
+        for part in item["components"]:
+            if part["complete"]:
+                store.stale_component(
+                    kind,
+                    number,
+                    str(part["name"]),
+                    components[str(part["name"])],
+                    str(error),
+                )
     report["requests"] = client.requests
     report["pages"] = client.pages
     return report

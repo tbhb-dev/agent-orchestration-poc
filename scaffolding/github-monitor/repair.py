@@ -128,6 +128,30 @@ def complete(
     return None
 
 
+def final_reads(plan: tuple[Endpoint, ...]) -> tuple[Endpoint, ...]:
+    """Select authoritative sources that must be proved after collection."""
+    required = {"issue", "issue_comments", "pull", "check_runs", "statuses"}
+    return tuple(endpoint for endpoint in plan if endpoint.name in required)
+
+
+def collection_change(
+    plan: tuple[Endpoint, ...], initial: dict[str, str], final: dict[str, str]
+) -> str | None:
+    """Reject absent or changed authoritative rereads."""
+    required = final_reads(plan)
+    for endpoint in required:
+        if endpoint.name not in initial:
+            return f"missing_initial_{endpoint.name}"
+        if endpoint.name not in final:
+            return f"missing_final_{endpoint.name}"
+    return complete(
+        {endpoint.name: initial[endpoint.name] for endpoint in required},
+        final,
+        0,
+        0,
+    )
+
+
 def component_reason(
     kind: str, component: str, change: str | None, captured: int, current: int
 ) -> str | None:

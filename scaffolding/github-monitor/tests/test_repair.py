@@ -16,6 +16,7 @@ from repair import (
     body_for_response,
     budget_handoff,
     capacity,
+    collection_change,
     complete,
     component_reason,
     digest,
@@ -210,6 +211,14 @@ def test_complete(
     reason: str | None,
 ) -> None:
     assert complete(initial, final, captured, current) == reason
+
+
+def test_omitted_required_final_read_is_incomplete() -> None:
+    plan = endpoints("issue", 7)
+    assert (
+        collection_change(plan, {"issue": "a", "issue_comments": "b"}, {"issue": "a"})
+        == "missing_final_issue_comments"
+    )
 
 
 @pytest.mark.parametrize(
@@ -422,6 +431,132 @@ def test_issue_change_without_webhook_and_restart(
         assert store.snapshot()["objects"][0]["components"][1]["stale_reason"] == (
             "dirty" if changed == "invalidation" else "restart"
         )
+    finally:
+        server.shutdown()
+        thread.join(timeout=3)
+        server.server_close()
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("failure", ["changed", "http_error"])
+def test_failed_second_repair_persists_staleness(tmp_path: Path, failure: str) -> None:
+    calls: defaultdict[str, int] = defaultdict(int)
+    changed = False
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self) -> None:
+            calls[self.path] += 1
+            value: object = []
+            if self.path.endswith("/issues/7"):
+                value = {
+                    "id": 7,
+                    "body": "changed" if changed and calls[self.path] == 4 else "first",
+                    "state": "open",
+                }
+            body = json.dumps(value).encode()
+            status = (
+                503
+                if changed and failure == "http_error" and calls[self.path] == 4
+                else 200
+            )
+            self.send_response(status)
+            self.send_header("ETag", f'"{calls[self.path]}"')
+            self.send_header("x-ratelimit-limit", "5000")
+            self.send_header("x-ratelimit-remaining", "4000")
+            self.send_header("x-ratelimit-resource", "core")
+            self.end_headers()
+            self.wfile.write(body)
+
+        @override
+        def log_message(self, format: str, *args: object) -> None:
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    thread = threading.Thread(target=server.serve_forever)
+    thread.start()
+    try:
+        store = Store(tmp_path / "store.sqlite3")
+        store.track("issue", 7)
+        client = Client(
+            f"http://127.0.0.1:{server.server_port}",
+            "fixture",
+            tmp_path / "cache.json",
+            0,
+        )
+        client.headers = {
+            "x-ratelimit-limit": "5000",
+            "x-ratelimit-remaining": "4000",
+            "x-ratelimit-resource": "core",
+        }
+        assert all(
+            part["complete"]
+            for part in repair_object(client, store, store.snapshot()["objects"][0])[
+                "components"
+            ].values()
+        )
+        assert all(
+            part["stale_reason"] == "fresh"
+            for part in store.snapshot()["objects"][0]["components"]
+        )
+        changed = True
+        client.requests = client.pages = 0
+        report = repair_object(client, store, store.snapshot()["objects"][0])
+        reason = "incomplete_http_503" if failure == "http_error" else "changed_issue"
+        assert report["components"]["identity"]["unknown_reason"] == reason
+        assert all(
+            not part["complete"] and part["stale_reason"] == reason
+            for part in store.snapshot()["objects"][0]["components"]
+        )
+    finally:
+        server.shutdown()
+        thread.join(timeout=3)
+        server.server_close()
+
+
+@pytest.mark.integration
+def test_new_200_clears_cached_next_page(tmp_path: Path) -> None:
+    calls: defaultdict[str, int] = defaultdict(int)
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self) -> None:
+            calls[self.path] += 1
+            self.send_response(
+                200 if self.path == "/x" or calls[self.path] == 1 else 404
+            )
+            self.send_header("ETag", f'"{calls[self.path]}"')
+            self.send_header("x-ratelimit-limit", "5000")
+            self.send_header("x-ratelimit-remaining", "4000")
+            self.send_header("x-ratelimit-resource", "core")
+            if self.path == "/x" and calls[self.path] == 1:
+                self.send_header(
+                    "Link",
+                    f'<http://127.0.0.1:{server.server_port}/x?page=2>; rel="next"',
+                )
+            self.end_headers()
+            self.wfile.write(b"[]")
+
+        @override
+        def log_message(self, format: str, *args: object) -> None:
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    thread = threading.Thread(target=server.serve_forever)
+    thread.start()
+    try:
+        client = Client(
+            f"http://127.0.0.1:{server.server_port}",
+            "fixture",
+            tmp_path / "cache.json",
+            0,
+        )
+        client.headers = {
+            "x-ratelimit-limit": "5000",
+            "x-ratelimit-remaining": "4000",
+            "x-ratelimit-resource": "core",
+        }
+        assert client.get("/x") == ()
+        assert client.get("/x") == ()
+        assert calls["/x?page=2"] == 1
     finally:
         server.shutdown()
         thread.join(timeout=3)
