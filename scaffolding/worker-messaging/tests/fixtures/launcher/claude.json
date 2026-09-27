@@ -1,0 +1,17 @@
+{
+  "seen": {
+    "pid": 100,
+    "process_start": "start",
+    "tmux_target": "s:@1.%2",
+    "worktree": "worktree"
+  },
+  "entry": {
+    "pid": 100,
+    "procStart": "start",
+    "tmux": "s:@1.%2",
+    "cwd": "worktree",
+    "entrypoint": "cli",
+    "kind": "interactive",
+    "sessionId": "session-1"
+  }
+}

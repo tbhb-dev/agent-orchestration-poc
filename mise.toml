@@ -140,6 +140,7 @@ run = [
 
 [tasks."check:pyrefly"]
 description = "Type check Python with pyrefly in strict mode"
+env = { PYTHONPATH = "scaffolding/worker-messaging" }
 run = "uv run pyrefly check"
 
 [tasks."check:mutation"]
@@ -291,3 +292,20 @@ dir = "docs"
 depends = ["docs:install"]
 env = { CHECK_LINKS = "1" }
 run = "pnpm exec astro build"
+
+[tasks."worker:launch"]
+description = "Launch a temporary interactive worker for issue 176"
+run = "uv run python scaffolding/worker-messaging/cli.py launch"
+
+[tasks."worker:status"]
+description = "Recheck a temporary worker run"
+run = "uv run python scaffolding/worker-messaging/cli.py status"
+
+[tasks."worker:readiness"]
+description = "Recheck temporary worker readiness"
+run = "uv run python scaffolding/worker-messaging/cli.py readiness"
+
+[tasks."worker:test-launcher"]
+description = "Test temporary worker launch decisions"
+env = { PYTHONPATH = "scaffolding/worker-messaging" }
+run = "uv run pytest scaffolding/worker-messaging/tests"
