@@ -146,6 +146,23 @@ def can_complete(captured_generation: int, current_generation: int) -> bool:
     return captured_generation == current_generation
 
 
+def receipt_result(existing_digest: str | None, digest: str) -> str:
+    """Classify a delivery GUID against its previously committed body digest."""
+    if existing_digest is None:
+        return "accepted"
+    return "duplicate" if existing_digest == digest else "changed_guid"
+
+
+def watch_result(token: str, instance: str, revision: int) -> str:
+    """Classify a watch token against one current store identity and revision."""
+    parts = token.split(":")
+    if len(parts) != 2 or not parts[1].isdecimal():
+        return "unavailable"
+    if parts[0] != instance or int(parts[1]) > revision:
+        return "unavailable"
+    return "changed" if revision > int(parts[1]) else "waiting"
+
+
 def invalidate_component(
     generation: int, sources: tuple[str, ...], delivery_id: str
 ) -> tuple[int, tuple[str, ...]]:

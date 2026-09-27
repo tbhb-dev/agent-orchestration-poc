@@ -5,6 +5,7 @@ import hashlib
 import hmac
 import http.client
 import json
+import socket
 import threading
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -197,6 +198,42 @@ def test_loopback_receiver(tmp_path: Path) -> None:
             "invalid": 1,
         }
     finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=3)
+
+
+@pytest.mark.integration
+def test_incomplete_headers_release_single_receiver(tmp_path: Path) -> None:
+    store = Store(tmp_path / "state.sqlite3")
+    handler = type(
+        "DeadlineHandler",
+        (Handler,),
+        {
+            "store": store,
+            "secret": SECRET,
+            "installation_id": 42,
+            "request_timeout": 0.25,
+        },
+    )
+    server = HTTPServer(("127.0.0.1", 0), handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    stalled = socket.create_connection(("127.0.0.1", server.server_port), timeout=2)
+    try:
+        stalled.sendall(b"POST /hooks/github HTTP/1.1\r\nHost: localhost\r\nX-Test: ")
+        while stalled.recv(4096):
+            pass
+        probe = http.client.HTTPConnection("127.0.0.1", server.server_port, timeout=2)
+        try:
+            probe.request("GET", "/hooks/github")
+            response = probe.getresponse()
+            assert response.status == 405
+            response.read()
+        finally:
+            probe.close()
+    finally:
+        stalled.close()
         server.shutdown()
         server.server_close()
         thread.join(timeout=3)

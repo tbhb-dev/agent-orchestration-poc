@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st
-from state import Invalidation, can_complete
+from state import Invalidation, can_complete, receipt_result, watch_result
 from store import Store
 
 EVENT = (Invalidation("pr", 7, ("identity", "checks"), "a" * 40),)
@@ -27,6 +27,29 @@ def test_can_complete_table(captured: int, current: int, expected: bool) -> None
 @given(st.integers(min_value=0), st.integers(min_value=0))
 def test_can_complete_property(captured: int, current: int) -> None:
     assert can_complete(captured, current) == (captured == current)
+
+
+@pytest.mark.parametrize(
+    ("token", "expected"),
+    [
+        ("bad", "unavailable"),
+        ("instance:bad", "unavailable"),
+        ("other:4", "unavailable"),
+        ("instance:6", "unavailable"),
+        ("instance:5", "waiting"),
+        ("instance:4", "changed"),
+    ],
+)
+def test_watch_result(token: str, expected: str) -> None:
+    assert watch_result(token, "instance", 5) == expected
+
+
+@pytest.mark.parametrize(
+    ("existing", "expected"),
+    [(None, "accepted"), ("same", "duplicate"), ("other", "changed_guid")],
+)
+def test_receipt_result(existing: str | None, expected: str) -> None:
+    assert receipt_result(existing, "same") == expected
 
 
 def test_receipt_dedup_restart_and_generation(tmp_path: Path) -> None:
@@ -69,7 +92,7 @@ def test_receipt_dedup_restart_and_generation(tmp_path: Path) -> None:
         "pr",
         7,
         "identity",
-        2,
+        3,
         source_id="rest:2",
         head_sha="a" * 40,
         observed_at=datetime.now(tz=UTC),
@@ -79,6 +102,33 @@ def test_receipt_dedup_restart_and_generation(tmp_path: Path) -> None:
     assert identity["stale_reason"] == "fresh"
     assert identity["source_ids"] == ["rest:2"]
     assert identity["expires_at"] is not None
+
+
+def test_restart_fences_captured_repair(tmp_path: Path) -> None:
+    store = Store(tmp_path / "state.sqlite3")
+    store.track("pr", 7)
+    captured = store.snapshot()["objects"][0]["components"][0]["generation"]
+    store.restart()
+    current = store.snapshot()["objects"][0]["components"][0]["generation"]
+    assert current > captured
+    assert not store.complete_component(
+        "pr",
+        7,
+        "checks",
+        captured,
+        source_id="old",
+        head_sha=None,
+        observed_at=datetime.now(tz=UTC),
+    )
+    assert store.complete_component(
+        "pr",
+        7,
+        "checks",
+        current,
+        source_id="new",
+        head_sha=None,
+        observed_at=datetime.now(tz=UTC),
+    )
 
 
 def test_before_and_after_ack_crash(tmp_path: Path) -> None:
@@ -118,3 +168,44 @@ def test_watch_revision_identity_and_race(tmp_path: Path) -> None:
         Store(tmp_path / "other.sqlite3").watch_state(registration["token"])
         == "unavailable"
     )
+
+
+def test_snapshot_keeps_one_committed_revision(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    store = Store(tmp_path / "state.sqlite3")
+    store.track("pr", 7)
+    before = store.status()["revision"]
+    assert isinstance(before, int)
+    ready = threading.Event()
+    done = threading.Event()
+    main_thread = threading.current_thread()
+    original_connect = Store._connect
+
+    def connect(self: Store) -> sqlite3.Connection:
+        db = original_connect(self)
+        if threading.current_thread() is main_thread:
+
+            def trace(statement: str) -> None:
+                if statement.startswith("SELECT * FROM objects"):
+                    ready.set()
+                    assert done.wait(timeout=3)
+
+            db.set_trace_callback(trace)
+        return db
+
+    monkeypatch.setattr(Store, "_connect", connect)
+
+    def change() -> None:
+        assert ready.wait(timeout=3)
+        store.receive(str(uuid.uuid4()), "pull_request", b"new", EVENT)
+        done.set()
+
+    thread = threading.Thread(target=change)
+    thread.start()
+    snapshot = store.snapshot()
+    thread.join(timeout=3)
+    assert not thread.is_alive()
+    assert snapshot["revision"] == before
+    assert snapshot["objects"][0]["components"][0]["generation"] == 0
+    assert store.status()["revision"] == before + 1

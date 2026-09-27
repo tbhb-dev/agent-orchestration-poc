@@ -11,7 +11,7 @@ description: Versioned sources, local commands, and bounded receiver and store r
 
 ## Signature and response fixtures
 
-[verified] `mise run monitor:test-receiver` exited 0 with 25 tests after the final receiver changes. `tests/fixtures/receiver/pull_request.json` is synthetic and contains repository ID `1389534135`, installation ID `42`, and PR number `7`. The configured fixture installation ID is also `42`, and ID `43` is rejected. The tests compute HMAC signatures from a synthetic test phrase at run time. No live webhook payload or credential was used or recorded.
+[verified] The review fix run of `mise run monitor:test-receiver` exited 0 with 37 tests on CPython 3.14.6 and pytest 9.1.1. `tests/fixtures/receiver/pull_request.json` is synthetic and contains repository ID `1389534135`, installation ID `42`, and PR number `7`. The configured fixture installation ID is also `42`, and ID `43` is rejected. The tests compute HMAC signatures from a synthetic test phrase at run time. No live webhook payload or credential was used or recorded.
 
 | Request case | Expected result in `tests/test_receiver.py` |
 | --- | --- |
@@ -30,9 +30,15 @@ description: Versioned sources, local commands, and bounded receiver and store r
 
 [verified] `tests/test_store.py` simulates a crash before receipt commit with a rolled-back SQLite transaction and verifies zero receipts after reopening. A committed receipt remains after the file is reopened. The duplicate and changed-GUID cases preserve the original revision. This tests SQLite transaction behavior in one local process and a reopened connection. Power-loss filesystem behavior remains untested.
 
-[verified] Restart marks stored components stale and advances revision. A new database has a different store-instance UUID, and a token from the prior database returns `unavailable`. A repair with a captured generation older than an intervening invalidation cannot clear dirty, while the current generation can. Table and property tests cover the pure generation predicate.
+[verified] Restart marks stored components stale and advances revision and component generations. A repair captured before restart then fails, while a new repair can clear the marker. A new database has a different store-instance UUID, and a token from the prior database returns `unavailable`. A repair with a captured generation older than an intervening invalidation cannot clear dirty, while the current generation can. Table and property tests cover the pure generation predicate.
 
 [verified] The watch test starts a writer thread behind an event, calls `register_watch()`, then releases the writer. The token and snapshot report the same revision, and `watch_state()` reports the later change. This controlled local ordering fixture covers the read/register race. Cross-process stress remains untested.
+
+[verified] A separate ordinary-snapshot fixture commits a receipt and component invalidation between the metadata and object SELECTs. Before the fix, the snapshot combined revision 1 with generation 1. With the explicit read transaction, it returns revision 1 and generation 0, then observes revision 2 after the writer commits. Plain-value tests cover malformed, replaced, future, equal, and older watch tokens and accepted, duplicate, and changed-digest receipt outcomes.
+
+[verified] A loopback fixture sends an incomplete HTTP header to the single-connection server and checks that the first connection closes. It then requests the hook path through a second connection. Before the fix, the second connection timed out after two seconds. With the timeout set in `Handler.setup()`, the first connection times out during parsing and the second receives HTTP 405. The fixture uses a 0.25-second socket inactivity timeout. Production uses five seconds. A continuous trickle of bytes can extend the connection beyond that inactivity limit.
+
+[observed] Before editing the code, `mise run monitor:test-receiver` exited 2 because the new pure classifier imports were absent. With only those imports temporarily removed, `mise exec -- env PYTHONPATH=scaffolding/github-monitor uv run pytest scaffolding/github-monitor/tests/test_store.py -q -k 'restart_fences or snapshot_keeps'` exited 1 with both regressions failing: generation stayed 0 across restart, and a revision-1 snapshot contained generation 1. `mise exec -- env PYTHONPATH=scaffolding/github-monitor uv run pytest scaffolding/github-monitor/tests/test_receiver.py -q` exited 1 because the second HTTP request timed out. No live listener was used.
 
 ## Commands and limits
 
@@ -40,14 +46,14 @@ description: Versioned sources, local commands, and bounded receiver and store r
 | --- | --- | --- |
 | `mise run vale:sync` | 0 | Pinned Vale styles synchronized in this worktree |
 | `mise run fmt` | 0 | Formatters applied, with only issue files changed |
-| `mise run monitor:test-receiver` | 0 | 25 tests passed |
+| `mise run monitor:test-receiver` | 0 | 37 tests passed after review fixes |
 | `env -u GITHUB_WEBHOOK_SECRET mise run monitor:start` | 2 | Startup refused the missing secret |
 | `mise run monitor:track -- issue 167` | 0 | Revision advanced in the ignored local store |
 | `mise run monitor:status` | 0 | Schema 1 and local store metadata returned, listener reported `other_process` |
 | `git check-ignore -v .local-cache/github-monitor/state.sqlite3` | 0 | `.gitignore:16:.local-cache/` matched |
 | `mise run check:imports` | 0 | Product Python contracts remained intact |
-| `mise run check:mutation` | 0 | Go 145/149 killed, Python 454/467 killed, both above 90 percent |
-| `mise run check` after the prose correction | 0 | Full aggregate passed, including coverage, docs prose, and repository guards |
+| `mise run check:mutation` | 0 | Review run killed 145/149 Go mutants and 994/1068 Python mutants. Both scores exceed 90 percent |
+| `mise run check` after the prose correction | 0 | The review run after merging current `main` passed the full aggregate |
 | `mise run build` | 0 | `bin/agentd` and `bin/agentctl` built |
 | `mise exec -- gitleaks dir --redact --no-banner scaffolding/github-monitor` | 0 | No leaks found in the scaffold |
 

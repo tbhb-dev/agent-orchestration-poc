@@ -21,6 +21,13 @@ class Handler(BaseHTTPRequestHandler):
     store: Store
     secret: bytes
     installation_id: int
+    request_timeout = 5.0
+
+    @override
+    def setup(self) -> None:
+        """Bound request-line and header reads before the parser starts."""
+        self.request.settimeout(self.request_timeout)
+        super().setup()
 
     @override
     def log_message(self, format: str, *args: object) -> None:
@@ -46,7 +53,6 @@ class Handler(BaseHTTPRequestHandler):
 
     def _post_hook(self) -> None:
         """Handle the one allowed route."""
-        self.connection.settimeout(5)
         size = sum(len(key) + len(value) for key, value in self.headers.items())
         length_header = self.headers.get("Content-Length", "")
         if (

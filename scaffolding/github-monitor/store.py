@@ -19,6 +19,8 @@ from state import (
     expiry,
     freshness,
     invalidate_component,
+    receipt_result,
+    watch_result,
 )
 
 
@@ -94,7 +96,9 @@ class Store:
         """Make every prior observation stale before accepting new ingress."""
         with closing(self._connect()) as db, db:
             db.execute("BEGIN IMMEDIATE")
-            db.execute("UPDATE components SET stale_reason='restart'")
+            db.execute(
+                "UPDATE components SET generation=generation+1, stale_reason='restart'"
+            )
             return self._revision(db)
 
     def count(self, name: str) -> None:
@@ -128,8 +132,9 @@ class Store:
             existing = db.execute(
                 "SELECT digest FROM receipts WHERE guid=?", (guid,)
             ).fetchone()
-            if existing:
-                return "duplicate" if existing[0] == digest else "changed_guid"
+            outcome = receipt_result(existing[0] if existing else None, digest)
+            if outcome != "accepted":
+                return outcome
             db.execute(
                 "INSERT INTO receipts VALUES (?, ?, ?, ?)", (guid, digest, event, now)
             )
@@ -236,7 +241,8 @@ class Store:
 
     def snapshot(self) -> dict[str, Any]:
         """Read versioned projection and derive expiry at read time."""
-        with closing(self._connect()) as db:
+        with closing(self._connect()) as db, db:
+            db.execute("BEGIN")
             return self._snapshot(db, datetime.now(tz=UTC))
 
     def register_watch(self) -> dict[str, Any]:
@@ -251,16 +257,11 @@ class Store:
 
     def watch_state(self, token: str) -> str:
         """Distinguish changed, waiting, and a replaced store instance."""
-        parts = token.split(":")
-        if len(parts) != 2 or not parts[1].isdecimal():
-            return "unavailable"
         with closing(self._connect()) as db:
             meta = db.execute(
                 "SELECT instance, revision FROM meta WHERE id=1"
             ).fetchone()
-            if parts[0] != meta[0] or int(parts[1]) > meta[1]:
-                return "unavailable"
-            return "changed" if meta[1] > int(parts[1]) else "waiting"
+            return watch_result(token, meta[0], meta[1])
 
     def status(self) -> dict[str, object]:
         """Read local store metadata and signature failure counts."""
