@@ -44,6 +44,27 @@ func TestShellCommand(t *testing.T) {
 	}
 }
 
+func TestClaudePromptAfterDirectoryOptions(t *testing.T) {
+	spec := Spec{Harness: "claude", Model: "m", Effort: "high", WorktreePath: "/repo/work", BriefPath: "/brief", CredentialPath: "/seed", SettingsPath: "/settings", Group: "build", Name: "worker", BusURL: "nats://127.0.0.1:4222", WritableRoots: []string{"/repo/.git"}}
+	recipe, err := Build(spec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"--add-dir", "/repo/.git", "--", "Read the brief at /brief and follow it."}
+	if got := recipe.Args[len(recipe.Args)-len(want):]; !reflect.DeepEqual(got, want) {
+		t.Fatalf("Claude argv tail = %q, want %q", got, want)
+	}
+}
+
+func TestSettings(t *testing.T) {
+	if got := string(Settings("claude")); got != "{\"sandbox\":{\"enabled\":true,\"autoAllowBashIfSandboxed\":true}}\n" {
+		t.Fatalf("Claude settings = %q", got)
+	}
+	if got := Settings("codex"); got != nil {
+		t.Fatalf("unexpected Codex settings: %q", got)
+	}
+}
+
 func TestBuildProperty(t *testing.T) {
 	rapid.Check(t, func(t *rapid.T) {
 		name := rapid.StringMatching("[a-z]{1,12}").Draw(t, "name")

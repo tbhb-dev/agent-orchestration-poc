@@ -11,6 +11,6 @@ Workers keep separate branches and worktrees. The coordinator sends task materia
 
 ## Review and shutdown
 
-The worker commits, pushes, and opens its PR. The coordinator reviews and merges after CI. `agentd stop` ends the worker window and retains its worktree. `agentd group stop` ends every recorded running window and the private tmux session. Worktree removal after merge remains a separate deliberate step.
+The worker commits, pushes, and opens its PR. The coordinator reviews and merges after CI. `agentd stop` ends the worker window and retains its worktree. `agentd group stop` treats a window that already exited as stopped. Interrupted shutdowns can be retried, and a completed shutdown ends the private tmux session. A record from an earlier tmux server cannot target a replacement window with the same numeric ID. Worktree removal after merge remains a separate deliberate step.
 
 **Untested:** issue #28 does not run real Claude Code, Codex, or `agy` spawns inside the worker sandbox. The operator and coordinator run the [recorded acceptance procedure](https://github.com/tbhb/agent-orchestration-poc/blob/feat/28-registry-tmux/reports/inputs/registry-tmux-28-evidence-2026-09-26.md) with their subscriptions. Operator commands in `agentctl` are connected after issue #27 merges.

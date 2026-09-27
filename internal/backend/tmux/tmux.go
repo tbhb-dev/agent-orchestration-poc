@@ -34,6 +34,51 @@ func (b Backend) GroupExists(ctx context.Context, name string) bool {
 	return err == nil
 }
 
+// GroupPresent distinguishes a missing session or server from other tmux errors.
+func (b Backend) GroupPresent(ctx context.Context, name string) (bool, error) {
+	_, err := b.run(ctx, "has-session", "-t", "="+name)
+	if err == nil {
+		return true, nil
+	}
+	message := err.Error()
+	if strings.Contains(message, "can't find session:") || strings.Contains(message, "(No such file or directory)") || strings.Contains(message, "no server running on ") {
+		return false, nil
+	}
+	return false, err
+}
+
+// SetGroupGeneration marks this live session's server lifetime.
+func (b Backend) SetGroupGeneration(ctx context.Context, name, generation string) error {
+	_, err := b.run(ctx, "set-option", "-t", name, "@agentd_generation", generation)
+	return err
+}
+
+// GroupGeneration reads the marker from the live session.
+func (b Backend) GroupGeneration(ctx context.Context, name string) (string, error) {
+	return b.run(ctx, "show-options", "-v", "-t", name, "@agentd_generation")
+}
+
+// SetWindowOwner marks a newly created window with its durable worker identity.
+func (b Backend) SetWindowOwner(ctx context.Context, windowID, workerID string) error {
+	_, err := b.run(ctx, "set-window-option", "-t", windowID, "@agentd_worker", workerID)
+	return err
+}
+
+// WindowOwner finds a window within one session and returns its ownership marker.
+func (b Backend) WindowOwner(ctx context.Context, group, windowID string) (string, bool, error) {
+	listed, err := b.run(ctx, "list-windows", "-t", group, "-F", "#{window_id}\t#{@agentd_worker}")
+	if err != nil {
+		return "", false, err
+	}
+	for _, line := range strings.Split(listed, "\n") {
+		id, owner, ok := strings.Cut(line, "\t")
+		if ok && id == windowID {
+			return owner, true, nil
+		}
+	}
+	return "", false, nil
+}
+
 // StartWorker creates one window and returns its tmux window id.
 func (b Backend) StartWorker(ctx context.Context, group, name, cwd string, recipe launch.Recipe) (string, error) {
 	args := []string{"new-window", "-d", "-P", "-F", "#{window_id}", "-t", "=" + group, "-n", name, "-c", cwd}

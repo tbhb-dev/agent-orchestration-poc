@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS groups (
   name TEXT NOT NULL UNIQUE,
   repo_path TEXT NOT NULL,
   tmux_session TEXT NOT NULL UNIQUE,
+  tmux_generation TEXT NOT NULL DEFAULT '',
   state TEXT NOT NULL CHECK (state IN ('requested','starting','running','stopping','stopped','failed')),
   created_at TEXT NOT NULL
 );
@@ -56,8 +57,22 @@ CREATE TABLE IF NOT EXISTS workers (
   updated_at TEXT NOT NULL,
   UNIQUE (group_id, name)
 );
-PRAGMA user_version = 1;
+PRAGMA user_version = 2;
 ```
+
+**Verified:** the version 1 to version 2 migration adds the empty `tmux_generation` column to existing group records. An old live session has no ownership marker and must be stopped outside this API before its record can be reconciled. A newly started session receives a random generation stored in SQLite and in a tmux session option; each new window receives its worker ID as a tmux window option.
+
+## Review regression evidence
+
+**Observed:** before the fixes, `mise exec -- go test ./internal/core/launch -run TestClaudePromptAfterDirectoryOptions -count=1` failed because the Claude argv tail lacked `--` between `/repo/.git` and the prompt. The installed Claude Code 2.1.283 help advertises variadic `--add-dir <directories...>`; this is a parser-boundary check, not a real Claude launch.
+
+**Observed:** before the fixes, `mise exec -- go test -tags integration -run 'TestRejectReusedWindowID|TestGroupStopAfterWindowExitAndRetry' -count=1 -v ./internal/provision` failed both private-server stand-in tests. `TestRejectReusedWindowID` captured a replacement window through a stale record. `TestGroupStopAfterWindowExitAndRetry` failed with `tmux kill-window: exit status 1: can't find window: @1`.
+
+**Verified:** after the fixes, the two regression tests and `TestGroupOperationsOnPrivateServer` passed. The replacement-server test checks capture, nudge, and stop all reject the old record and that the replacement window remains alive. The exit test removes a window before group shutdown, then repeats the shutdown and confirms the group and worker are stopped. The tmux integration suite also distinguishes a missing server from an unexpected socket error. Core value tests cover the Claude settings artifact, shutdown eligibility, and generation and worker-marker comparisons. `TestMigrateV1Group` exercises the schema upgrade.
+
+**Verified:** `GOLANGCI_LINT_CACHE=/private/tmp/agent28-golangci-cache mise run check:go` passed, including the race-enabled Go suite. The cache override was needed because this worker sandbox cannot write the default golangci-lint cache under `~/Library/Caches/golangci-lint`. No real harness session was started.
+
+**Verified:** `GOLANGCI_LINT_CACHE=/private/tmp/agent28-golangci-cache mise run check` passed after the review fixes. The aggregate includes Go race tests, Python's 52 passing tests with two integration skips, lint, formatting, boundary checks, and repository guards. `mise run build` passed. `mise run check:mutation` passed with 149 of 153 Go mutants killed, four survivors, zero uncovered mutants, zero timeouts, 97.39% efficacy, and 100% mutant coverage. Python killed 200 of 240 mutants for 83.33% with 100% line coverage.
 
 ## Local checks and tmux capture
 

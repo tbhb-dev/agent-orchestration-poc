@@ -34,18 +34,23 @@ func Open(path string) (*Registry, error) {
 	if err := db.QueryRow("PRAGMA user_version").Scan(&version); err != nil {
 		return closeOnError(err)
 	}
-	if version > 1 {
-		return closeOnError(fmt.Errorf("registry schema version %d is newer than supported version 1", version))
+	if version > 2 {
+		return closeOnError(fmt.Errorf("registry schema version %d is newer than supported version 2", version))
 	}
 	if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
 		return closeOnError(err)
 	}
-	if version == 0 {
+	switch version {
+	case 0:
 		migration, err := schema.ReadFile("schema.sql")
 		if err != nil {
 			return closeOnError(err)
 		}
 		if _, err := db.Exec(string(migration)); err != nil {
+			return closeOnError(err)
+		}
+	case 1:
+		if _, err := db.Exec("ALTER TABLE groups ADD COLUMN tmux_generation TEXT NOT NULL DEFAULT ''; PRAGMA user_version = 2;"); err != nil {
 			return closeOnError(err)
 		}
 	}
@@ -57,17 +62,23 @@ func (r *Registry) Close() error { return r.db.Close() }
 
 // CreateGroup records one host-tmux group.
 func (r *Registry) CreateGroup(ctx context.Context, g roster.Group) error {
-	_, err := r.db.ExecContext(ctx, `INSERT INTO groups(id,name,repo_path,tmux_session,state,created_at) VALUES(?,?,?,?,?,?)`,
-		g.ID, g.Name, g.RepoPath, g.TmuxSession, g.State, g.CreatedAt)
+	_, err := r.db.ExecContext(ctx, `INSERT INTO groups(id,name,repo_path,tmux_session,tmux_generation,state,created_at) VALUES(?,?,?,?,?,?,?)`,
+		g.ID, g.Name, g.RepoPath, g.TmuxSession, g.TmuxGeneration, g.State, g.CreatedAt)
 	return err
 }
 
 // Group loads one named group.
 func (r *Registry) Group(ctx context.Context, name string) (roster.Group, error) {
 	var g roster.Group
-	err := r.db.QueryRowContext(ctx, `SELECT id,name,repo_path,tmux_session,state,created_at FROM groups WHERE name=?`, name).
-		Scan(&g.ID, &g.Name, &g.RepoPath, &g.TmuxSession, &g.State, &g.CreatedAt)
+	err := r.db.QueryRowContext(ctx, `SELECT id,name,repo_path,tmux_session,tmux_generation,state,created_at FROM groups WHERE name=?`, name).
+		Scan(&g.ID, &g.Name, &g.RepoPath, &g.TmuxSession, &g.TmuxGeneration, &g.State, &g.CreatedAt)
 	return g, err
+}
+
+// SetGroupGeneration stores the tmux generation assigned at group start.
+func (r *Registry) SetGroupGeneration(ctx context.Context, id, generation string) error {
+	_, err := r.db.ExecContext(ctx, `UPDATE groups SET tmux_generation=? WHERE id=?`, generation, id)
+	return err
 }
 
 // SetGroupState stores a state computed by the core.

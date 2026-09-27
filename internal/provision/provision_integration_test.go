@@ -4,9 +4,7 @@ package provision
 
 import (
 	"context"
-	"net"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -17,28 +15,7 @@ import (
 )
 
 func TestGroupOperationsOnPrivateServer(t *testing.T) {
-	if _, err := exec.LookPath("tmux"); err != nil {
-		t.Skip("tmux is not installed")
-	}
-	state, err := os.MkdirTemp("/private/tmp", "agentd28-")
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = os.RemoveAll(state) })
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	port := listener.Addr().(*net.TCPAddr).Port
-	_ = listener.Close()
-	service, err := Open(t.Context(), state, filepath.Join(state, "repo", ".git"), port, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() {
-		_ = service.Tmux.StopGroup(context.Background(), "build")
-		_ = service.Close()
-	})
+	service, state := privateService(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	serverDone := make(chan error, 1)
@@ -64,6 +41,9 @@ func TestGroupOperationsOnPrivateServer(t *testing.T) {
 	recipe := launch.Recipe{Args: []string{"sh", "-c", `cat "$1"; IFS= read -r line; printf 'INPUT:%s\n' "$line"; sleep 3`, "sh", brief}}
 	windowID, err := service.Tmux.StartWorker(t.Context(), "build", "standin", state, recipe)
 	if err != nil {
+		t.Fatal(err)
+	}
+	if err := service.Tmux.SetWindowOwner(t.Context(), windowID, "build/standin"); err != nil {
 		t.Fatal(err)
 	}
 	w := roster.Worker{

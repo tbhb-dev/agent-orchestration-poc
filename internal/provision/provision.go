@@ -3,6 +3,7 @@ package provision
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -101,7 +102,18 @@ func (s *Service) groupStart(ctx context.Context) (roster.Group, error) {
 	if err != nil {
 		return g, err
 	}
-	if s.Tmux.GroupExists(ctx, g.TmuxSession) {
+	exists, err := s.Tmux.GroupPresent(ctx, g.TmuxSession)
+	if err != nil {
+		return g, err
+	}
+	if exists {
+		live, err := s.Tmux.GroupGeneration(ctx, g.TmuxSession)
+		if err != nil {
+			return g, err
+		}
+		if !roster.OwnsGroup(g.TmuxGeneration, live) {
+			return g, fmt.Errorf("tmux group %s has a different generation", g.Name)
+		}
 		return g, nil
 	}
 	if _, err := roster.Transition(g.State, roster.Starting); err != nil {
@@ -112,6 +124,17 @@ func (s *Service) groupStart(ctx context.Context) (roster.Group, error) {
 	}
 	if err := s.Tmux.StartGroup(ctx, g.TmuxSession); err != nil {
 		_ = s.Registry.SetGroupState(ctx, g.ID, roster.Failed)
+		return g, err
+	}
+	var generation [16]byte
+	if _, err := rand.Read(generation[:]); err != nil {
+		return g, err
+	}
+	g.TmuxGeneration = fmt.Sprintf("%x", generation)
+	if err := s.Tmux.SetGroupGeneration(ctx, g.TmuxSession, g.TmuxGeneration); err != nil {
+		return g, err
+	}
+	if err := s.Registry.SetGroupGeneration(ctx, g.ID, g.TmuxGeneration); err != nil {
 		return g, err
 	}
 	g.State = roster.Running
@@ -222,13 +245,16 @@ func (s *Service) startWorker(ctx context.Context, g roster.Group, w roster.Work
 		return w, err
 	}
 	settingsPath := filepath.Join(s.StateDir, "settings", w.Name+".json")
-	if w.Harness == "claude" {
-		if err = writeClaudeSettings(settingsPath); err != nil {
+	if settings := launch.Settings(w.Harness); len(settings) != 0 {
+		if err = writeSettings(settingsPath, settings); err != nil {
 			return w, err
 		}
 	}
 	w.WindowID, err = s.Tmux.StartWorker(ctx, g.TmuxSession, w.Name, w.WorktreePath, recipe)
 	if err != nil {
+		return w, err
+	}
+	if err = s.Tmux.SetWindowOwner(ctx, w.WindowID, w.ID); err != nil {
 		return w, err
 	}
 	w.State, err = roster.Transition(w.State, roster.Running)
@@ -260,9 +286,9 @@ func gitWorktree(ctx context.Context, repo, branch, path string) error {
 	return nil
 }
 
-func writeClaudeSettings(path string) error {
+func writeSettings(path string, content []byte) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}
-	return os.WriteFile(path, []byte("{\"sandbox\":{\"enabled\":true,\"autoAllowBashIfSandboxed\":true}}\n"), 0o600)
+	return os.WriteFile(path, content, 0o600)
 }

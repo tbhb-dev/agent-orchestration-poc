@@ -53,8 +53,49 @@ const (
 
 // Group is one tmux-backed roster namespace.
 type Group struct {
-	ID, Name, RepoPath, TmuxSession, CreatedAt string
-	State                                      State
+	ID, Name, RepoPath, TmuxSession, TmuxGeneration, CreatedAt string
+	State                                                      State
+}
+
+// PrepareStop permits a shutdown retry and leaves an already stopped record alone.
+func PrepareStop(state State) (State, error) {
+	switch state {
+	case Running, Stopping, Failed:
+		return Stopping, nil
+	case Stopped:
+		return Stopped, nil
+	default:
+		return "", fmt.Errorf("cannot stop state %q", state)
+	}
+}
+
+// CompleteStop accepts a completed or repeated shutdown.
+func CompleteStop(state State) (State, error) {
+	if state == Stopped {
+		return Stopped, nil
+	}
+	return Transition(state, Stopped)
+}
+
+// ShouldStopWorker selects workers that may still own a live window.
+func ShouldStopWorker(state State) bool {
+	return state == Running || state == Stopping || state == Failed
+}
+
+// CanNudge requires a running record and a recorded window.
+func CanNudge(w Worker) bool { return w.State == Running && w.WindowID != "" }
+
+// CanCapture requires a running record and a recorded window.
+func CanCapture(w Worker) bool { return w.State == Running && w.WindowID != "" }
+
+// OwnsGroup compares the durable group generation with the live marker.
+func OwnsGroup(generation, liveGeneration string) bool {
+	return generation != "" && generation == liveGeneration
+}
+
+// OwnsWindow compares persisted identity to a live tmux observation.
+func OwnsWindow(generation, liveGeneration, workerID, liveWorkerID string) bool {
+	return OwnsGroup(generation, liveGeneration) && workerID != "" && workerID == liveWorkerID
 }
 
 // Worker is a durable record of one harness window and worktree.

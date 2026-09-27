@@ -54,3 +54,35 @@ func TestFileRegistryRoundTrip(t *testing.T) {
 		t.Fatalf("missing worker error = %v", err)
 	}
 }
+
+func TestMigrateV1Group(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "registry.sqlite")
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = db.Exec(`CREATE TABLE groups (id TEXT PRIMARY KEY, name TEXT, repo_path TEXT, tmux_session TEXT, state TEXT, created_at TEXT);
+		INSERT INTO groups VALUES ('build','build','/repo','build','stopped','now'); PRAGMA user_version = 1;`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+	r, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = r.Close() }()
+	group, err := r.Group(t.Context(), "build")
+	if err != nil || group.TmuxGeneration != "" {
+		t.Fatalf("migrated group = %+v, %v", group, err)
+	}
+	if err := r.SetGroupGeneration(t.Context(), group.ID, "new"); err != nil {
+		t.Fatal(err)
+	}
+	group, err = r.Group(t.Context(), "build")
+	if err != nil || group.TmuxGeneration != "new" {
+		t.Fatalf("updated group = %+v, %v", group, err)
+	}
+}

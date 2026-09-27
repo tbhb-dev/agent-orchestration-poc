@@ -63,6 +63,38 @@ func TestTransition(t *testing.T) {
 	}
 }
 
+func TestShutdownDecisions(t *testing.T) {
+	for _, state := range []State{Running, Stopping, Failed} {
+		if got, err := PrepareStop(state); err != nil || got != Stopping || !ShouldStopWorker(state) {
+			t.Fatalf("PrepareStop(%q) = %q, %v", state, got, err)
+		}
+	}
+	if got, err := PrepareStop(Stopped); err != nil || got != Stopped || ShouldStopWorker(Stopped) {
+		t.Fatalf("stopped decision = %q, %v", got, err)
+	}
+	if _, err := PrepareStop(Requested); err == nil {
+		t.Fatal("requested worker was eligible for shutdown")
+	}
+	if got, err := CompleteStop(Stopping); err != nil || got != Stopped {
+		t.Fatalf("CompleteStop(stopping) = %q, %v", got, err)
+	}
+	if got, err := CompleteStop(Stopped); err != nil || got != Stopped {
+		t.Fatalf("CompleteStop(stopped) = %q, %v", got, err)
+	}
+}
+
+func TestWindowDecisions(t *testing.T) {
+	if !CanNudge(Worker{State: Running, WindowID: "@1"}) || CanNudge(Worker{State: Running}) || CanNudge(Worker{State: Stopping, WindowID: "@1"}) {
+		t.Fatal("incorrect nudge eligibility")
+	}
+	if !CanCapture(Worker{State: Running, WindowID: "@1"}) || CanCapture(Worker{State: Stopping, WindowID: "@1"}) {
+		t.Fatal("incorrect capture eligibility")
+	}
+	if !OwnsWindow("generation", "generation", "build/worker", "build/worker") || OwnsWindow("generation", "replacement", "build/worker", "build/worker") || OwnsWindow("generation", "generation", "build/worker", "other") || OwnsWindow("", "", "build/worker", "build/worker") {
+		t.Fatal("incorrect window ownership decision")
+	}
+}
+
 func TestValidateWorker(t *testing.T) {
 	w := Worker{
 		ID: "id", GroupID: "group", Name: "codex-impl", Harness: "codex", Model: "gpt-6-sol", Effort: "high", Issue: 28,

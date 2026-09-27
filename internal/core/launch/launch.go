@@ -50,12 +50,23 @@ func Build(spec Spec) (Recipe, error) {
 	if spec.Harness == "agy" {
 		args = append(args, "--prompt-interactive", prompt)
 	} else {
+		if spec.Harness == "claude" {
+			args = append(args, "--")
+		}
 		args = append(args, prompt)
 	}
 	return Recipe{Args: args, Env: map[string]string{
 		"AGENTCTL_GROUP": spec.Group, "AGENTCTL_WORKER": spec.Name,
 		"AGENTCTL_NATS_URL": spec.BusURL, "AGENTCTL_CREDS_FILE": spec.CredentialPath,
 	}}, nil
+}
+
+// Settings returns the harness-specific settings artifact, if one is required.
+func Settings(harness string) []byte {
+	if harness == "claude" {
+		return []byte("{\"sandbox\":{\"enabled\":true,\"autoAllowBashIfSandboxed\":true}}\n")
+	}
+	return nil
 }
 
 func validateSpec(spec Spec) error {

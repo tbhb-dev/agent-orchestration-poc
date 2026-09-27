@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS groups (
   name TEXT NOT NULL UNIQUE,
   repo_path TEXT NOT NULL,
   tmux_session TEXT NOT NULL UNIQUE,
+  tmux_generation TEXT NOT NULL DEFAULT '',
   state TEXT NOT NULL CHECK (state IN ('requested','starting','running','stopping','stopped','failed')),
   created_at TEXT NOT NULL
 );
@@ -27,4 +28,4 @@ CREATE TABLE IF NOT EXISTS workers (
   updated_at TEXT NOT NULL,
   UNIQUE (group_id, name)
 );
-PRAGMA user_version = 1;
+PRAGMA user_version = 2;
