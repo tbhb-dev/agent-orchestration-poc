@@ -1,0 +1,185 @@
+"""Table and property checks for analysis notebook gates."""
+
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+from hypothesis import given
+from hypothesis import strategies as st
+
+from agent_orchestration_poc.core.analysis.notebooks import (
+    is_private_notebook,
+    privacy_findings,
+    split_qmd,
+    supporting_sample,
+)
+
+FIXTURES = Path("tests/fixtures/analysis")
+
+
+@pytest.mark.parametrize(
+    ("source", "prose", "code"),
+    [
+        ("# Heading\n", "# Heading\n", ""),
+        (
+            "Before\n```{python}\nx = 1\n```\nAfter\n",
+            "Before\n```python\n```\nAfter\n",
+            "x = 1\n",
+        ),
+        ("```text\nhello\n```\n", "```text\nhello\n```\n", ""),
+    ],
+)
+def test_split_qmd(source: str, prose: str, code: str) -> None:
+    """Separate text and Python cells without changing other fences."""
+    assert split_qmd(source) == (prose, code)
+
+
+@given(st.text(alphabet="abcdefghijklmnopqrstuvwxyz\n", max_size=100))
+def test_split_qmd_plain_text_is_preserved(source: str) -> None:
+    """Ordinary prose is never discarded."""
+    assert split_qmd(source) == (source, "")
+
+
+def test_split_qmd_rejects_unclosed_fence() -> None:
+    """Do not pass incomplete code to Ruff."""
+    with pytest.raises(ValueError, match="unclosed"):
+        split_qmd("```{python}\nvalue = 1\n")
+
+
+@pytest.mark.parametrize(
+    ("row_ids", "expected_length"),
+    [([], 0), (["A", "B"], 2), ([str(value) for value in range(12)], 10)],
+)
+def test_supporting_sample(row_ids: list[str], expected_length: int) -> None:
+    """Use at most ten distinct supporting IDs."""
+    assert len(supporting_sample("107", row_ids)) == expected_length
+
+
+@given(st.lists(st.text(alphabet="ABC012", min_size=1, max_size=5), max_size=20))
+def test_supporting_sample_order_independent(row_ids: list[str]) -> None:
+    """Input order and duplicates cannot alter the sample."""
+    assert supporting_sample("107", row_ids) == supporting_sample(
+        "107", list(reversed(row_ids))
+    )
+
+
+@pytest.mark.parametrize(
+    ("fixture", "expected"),
+    [("privacy-pass.txt", []), ("privacy-fail.txt", ["private raw record field"])],
+)
+def test_privacy_fixtures(fixture: str, expected: list[str]) -> None:
+    """Reject private fields and retain clean aggregate prose."""
+    assert privacy_findings((FIXTURES / fixture).read_text()) == expected
+
+
+def test_privacy_csv_header() -> None:
+    """Reject a synthetic raw-record CSV header in a committable table."""
+    assert privacy_findings("id,prompt,minutes\nE01,invented,1\n") == [
+        "private raw record field"
+    ]
+
+
+@given(st.text(alphabet="abc 123", max_size=100))
+def test_privacy_clean_text(source: str) -> None:
+    """Plain aggregate text has no private signatures."""
+    assert privacy_findings(source) == []
+
+
+def test_privacy_planted_secret() -> None:
+    """Reject a constructed fake token without committing its signature."""
+    fake = "gh" + "p_" + "A" * 36
+    assert privacy_findings(fake) == ["GitHub token signature"]
+
+
+@pytest.mark.integration
+def test_lint_rejects_private_record_fixture() -> None:
+    """Reject an invented raw record before invoking prose tools."""
+    # mutmut copies only core source, so shell imports belong in integration tests.
+    from agent_orchestration_poc.shell.analysis.notebooks import (  # noqa: PLC0415
+        lint,
+    )
+
+    with pytest.raises(ValueError, match="private raw record"):
+        lint(FIXTURES / "privacy-fail.txt")
+
+
+@pytest.mark.parametrize(
+    ("source", "expected"),
+    [
+        ("No frontmatter\n", False),
+        ("---\nprivate-input: true\n---\n", True),
+        ("---\nprivate-input: false\n---\n", False),
+        ("---\nprivate-input: true\nNo closing fence\n", False),
+        ("---\ntitle: Public\n---\nprivate-input: true\n", False),
+    ],
+)
+def test_private_notebook_flag(source: str, expected: bool) -> None:
+    """Only a true flag in frontmatter removes a notebook from CI execution."""
+    assert is_private_notebook(source) is expected
+
+
+@given(st.text(alphabet="abc 123", max_size=100))
+def test_private_notebook_plain_text(source: str) -> None:
+    """Body text alone cannot mark a notebook private."""
+    assert not is_private_notebook(source)
+
+
+@pytest.mark.integration
+def test_prose_lint_fixtures() -> None:
+    """The pinned prose tools accept one fixture and reject a wrapped paragraph."""
+    # mutmut copies only core source, so shell imports belong in integration tests.
+    from agent_orchestration_poc.shell.analysis.notebooks import (  # noqa: PLC0415
+        lint,
+    )
+
+    lint(FIXTURES / "prose-pass.txt")
+    with pytest.raises(subprocess.CalledProcessError):
+        lint(FIXTURES / "prose-fail.txt")
+
+
+@pytest.mark.integration
+def test_notebook_lint_command(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Discover and lint the committed notebook through the task entry point."""
+    from agent_orchestration_poc.shell.analysis.notebooks import (  # noqa: PLC0415 - mutmut copies only core source
+        main,
+    )
+
+    monkeypatch.setattr(sys, "argv", ["notebooks", "lint"])
+    main()
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "arguments",
+    [["render"], ["verify", "tests/fixtures/analysis/prose-pass.txt"]],
+)
+def test_notebook_command_rejects_invalid_path(
+    monkeypatch: pytest.MonkeyPatch, arguments: list[str]
+) -> None:
+    """Reject a missing path and a path without the Quarto extension."""
+    from agent_orchestration_poc.shell.analysis.notebooks import (  # noqa: PLC0415 - mutmut copies only core source
+        main,
+    )
+
+    monkeypatch.setattr(sys, "argv", ["notebooks", *arguments])
+    with pytest.raises(SystemExit, match="2"):
+        main()
+
+
+@pytest.mark.integration
+def test_render_synthetic_notebook() -> None:
+    """Execute the synthetic notebook through Quarto and retain its result table."""
+    from agent_orchestration_poc.shell.analysis.notebooks import (  # noqa: PLC0415 - mutmut copies only core source
+        notebooks,
+        render,
+    )
+
+    path = Path("research/gates/data-analysis/example.qmd")
+    assert path in notebooks()
+    render(path)
+    assert path.with_name("example-results.csv").read_text().splitlines()[-1] == (
+        "TOTAL,headline,all,48"
+    )
+    assert path.with_name("example-chart-light.svg").is_file()
+    assert path.with_name("example-chart-dark.svg").is_file()

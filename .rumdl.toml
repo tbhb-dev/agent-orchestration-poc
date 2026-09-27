@@ -1,7 +1,7 @@
 # rumdl configuration. Paragraphs are one line each (guard-markdown enforces it), so MD013 is off.
 [global]
 disable = ["MD013"]
-exclude = ["research/imported/**", ".worktrees/", ".venv/", "node_modules/"]
+exclude = ["research/imported/**", ".worktrees/", ".venv/", "node_modules/", ".holding/"]
 
 [per-file-ignores]
 # Subagent definitions open with a prompt paragraph, not a heading.

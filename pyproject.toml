@@ -18,6 +18,11 @@ dev = [
   "ruff>=0.16.9",
   "vulture==2.16",
 ]
+analysis = [
+  "duckdb==1.5.5",
+  "ipykernel==7.1.0",
+  "matplotlib==3.11.2",
+]
 
 [build-system]
 requires = ["uv_build>=0.12.10,<0.13.0"]
@@ -71,7 +76,7 @@ pytest_add_cli_args_test_selection = ["tests/"]
 [tool.pyrefly]
 # Everything except the verbatim research imports, the sketches, and gitignored trees (use-ignore-files
 # defaults to true), so experiments/ and scripts/ join the check the day they gain a .py file.
-project-excludes = ["research/imported", "design-sketch"]
+project-excludes = ["research/imported", "design-sketch", ".holding"]
 search-path = ["src"]
 # pyrefly does not read requires-python; without this it takes the version from the queried interpreter.
 python-version = "3.14"
@@ -103,7 +108,7 @@ testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 88
-extend-exclude = [".worktrees", "research/imported", "design-sketch", "*.md"]
+extend-exclude = [".worktrees", ".holding", "research/imported", "design-sketch", "*.md"]
 
 [tool.ruff.lint]
 extend-select = [
@@ -170,7 +175,7 @@ line-ending = "lf"
 
 [tool.vulture]
 paths = ["src", "tests", "experiments", "scripts"]
-exclude = ["research/imported/", "node_modules/"]
+exclude = ["research/imported/", "node_modules/", ".holding/"]
 min_confidence = 60
 ignore_names = ["pytest_*"]
 ignore_decorators = ["@pytest.fixture"]

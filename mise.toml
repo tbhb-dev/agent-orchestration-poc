@@ -17,6 +17,7 @@ vale = "3.22.0"
 actionlint = "1.7.12"
 shellcheck = "0.11.0"
 shfmt = "3.14.0"
+"aqua:quarto-dev/quarto-cli" = "1.10.18"
 "npm:@biomejs/biome" = "2.5.14"
 "pipx:ryl" = "0.22.0"
 "pipx:jscpd" = "5.3.2"
@@ -57,6 +58,7 @@ depends = [
   "check:handoff-classifier",
   "check:secrets",
   "check:actions",
+  "notebooks:lint",
 ]
 
 [tasks.fmt]
@@ -234,6 +236,23 @@ run = "gitleaks git --redact --no-banner ."
 [tasks."check:actions"]
 description = "Lint the GitHub Actions workflows with actionlint"
 run = "actionlint"
+
+# Analysis notebooks. The shell selects the locked interpreter for Quarto.
+[tasks."notebooks:lint"]
+description = "Lint prose, Python cells, and privacy in committed Quarto notebooks"
+run = "uv run --group analysis python -m agent_orchestration_poc.shell.analysis.notebooks lint"
+
+[tasks."notebooks:render"]
+description = "Execute one Quarto notebook from source without cache"
+run = "uv run --group analysis python -m agent_orchestration_poc.shell.analysis.notebooks render"
+
+[tasks."notebooks:verify"]
+description = "Lint and execute one Quarto notebook from source"
+run = "uv run --group analysis python -m agent_orchestration_poc.shell.analysis.notebooks verify"
+
+[tasks."notebooks:ci"]
+description = "Render every notebook with committed or synthetic inputs"
+run = "uv run --group analysis python -m agent_orchestration_poc.shell.analysis.notebooks ci"
 
 # Coordinator preflight. These read live GitHub or git state and run separately from `check`.
 [tasks."review:preflight"]

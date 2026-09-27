@@ -1,0 +1,12 @@
+---
+title: Passing notebook
+---
+
+## Results
+
+The twelve synthetic events have a total duration of 48 minutes.
+
+```{python}
+total: int = 48
+assert total == 48
+```
