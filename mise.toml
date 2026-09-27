@@ -47,6 +47,8 @@ depends = [
   "check:guard-markdown",
   "check:mermaid",
   "check:experiments",
+  "check:ignore-collisions",
+  "check:handoff-classifier",
   "check:secrets",
   "check:actions",
 ]
@@ -187,6 +189,18 @@ run = "tombi format"
 [tasks."check:experiments"]
 description = "Check that every experiment directory has README.md, evidence/, and versions.md"
 run = "scripts/check-experiments.sh"
+
+[tasks."check:ignore-collisions"]
+description = "Fail on ignored tracked paths and warn about case-folded directory matches"
+run = ["scripts/check-ignore-collisions.sh", "scripts/test-ignore-collisions.sh"]
+
+[tasks."check:handoff"]
+description = "Verify PRs described as open in the handoff are open on GitHub"
+run = "scripts/check-handoff-prs.sh"
+
+[tasks."check:handoff-classifier"]
+description = "Test open PR classification with handoff line fixtures"
+run = "scripts/test-handoff-pr-classifier.sh"
 
 [tasks."check:secrets"]
 description = "Scan the git history for secrets with gitleaks"

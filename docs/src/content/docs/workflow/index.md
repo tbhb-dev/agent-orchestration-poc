@@ -65,6 +65,8 @@ Use `<type>/<issue>-<slug>` branches, normally `feat`, `fix`, `docs`, `exp`, `ch
 
 Commit with a Conventional Commit subject, a body explaining why, and `Refs: #<n>` as a trailer. Do not add attribution or co-author trailers. The commit-msg hook checks prose with `ai-tells` and `ai-tells-commits`. Record the harness and model in the Project Worker field and PR evidence section.
 
+The commit-msg hook rejects attribution and missing `Refs:` trailers except for subject `wip`, and PR-body CI applies the same trailer rules to the squash commit body.
+
 The shared stash stack requires explicit ownership. Prefer `git rebase --autostash` or the throwaway work-in-progress procedure in [AGENTS.md](https://github.com/tbhb/agent-orchestration-poc/blob/main/AGENTS.md). Never run bare `git stash pop` or `git stash apply`. A real commit must pass hooks.
 
 ## Pull requests, review, and merges
@@ -82,6 +84,7 @@ The active [main ruleset](https://github.com/tbhb/agent-orchestration-poc/rules/
 | Job | Trigger | Checks |
 | --- | --- | --- |
 | `check` | PRs and pushes to `main` | `mise run check`, including Go build, vet, tests and lint, Ruff and pytest, formatting, prose, secrets, experiment layout, Mermaid, and workflow syntax |
+| `handoff` | Pushes to `main` | Verify that PRs described as open in the handoff are open on GitHub |
 | `mutation` | PRs and pushes to `main` | Always reports a result. Runs `mise run check:mutation` when Go or Python core code or their tests change, and succeeds without running the tools otherwise. |
 | `property-nightly` | Nightly schedule and manual dispatch | Runs Go and Python tests with random seeds and files an issue containing the seeds and output on failure. |
 | `docs` | PRs and pushes to `main` | Chromium setup and `mise run docs:check-links`, which builds the site and checks internal links and hashes |
