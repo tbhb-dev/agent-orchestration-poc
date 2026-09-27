@@ -20,6 +20,151 @@ def fixture(name: str) -> dict[str, Any]:
 
 
 @pytest.mark.parametrize(
+    ("path", "created", "allowed"),
+    [
+        ("/repo/.worktrees/worker", True, True),
+        ("/repo/.worktrees/worker", False, False),
+        ("/repo", True, False),
+        ("/repo/.worktrees", True, False),
+        ("/repo/.worktrees/worker/nested", True, False),
+        ("/other/worker", True, False),
+    ],
+)
+def test_trust_target(path: str, created: bool, allowed: bool) -> None:
+    """Only a launcher-created exact child of the worktree directory is eligible."""
+    if allowed:
+        assert identity.trust_target(path, "/repo", created) == path
+    else:
+        with pytest.raises(ValueError, match="launcher-created"):
+            identity.trust_target(path, "/repo", created)
+
+
+@given(
+    st.text(min_size=1).filter(lambda name: "/" not in name and name not in {".", ".."})
+)
+def test_trust_target_property(name: str) -> None:
+    """A direct child is eligible only when creation belongs to this run."""
+    path = f"/repo/.worktrees/{name}"
+    assert identity.trust_target(path, "/repo", True) == path
+    with pytest.raises(ValueError, match="launcher-created"):
+        identity.trust_target(path, "/repo", False)
+
+
+@pytest.mark.parametrize("value", ["trusted", None])
+def test_trust_write_params(value: str | None) -> None:
+    """Both registration and removal use the tagged replace request shape."""
+    params = identity.trust_write_params('/repo/.worktrees/a"b', value)
+    assert params == {
+        "edits": [
+            {
+                "keyPath": 'projects."/repo/.worktrees/a\\"b".trust_level',
+                "value": value,
+                "mergeStrategy": "replace",
+            }
+        ],
+        "filePath": None,
+        "expectedVersion": None,
+        "reloadUserConfig": True,
+    }
+
+
+@given(st.text(min_size=1))
+def test_trust_write_params_property(path: str) -> None:
+    """Every escaped key decodes to exactly the path supplied."""
+    params = identity.trust_write_params(path, "trusted")
+    key = params["edits"][0]["keyPath"]
+    assert (
+        json.loads(key.removeprefix("projects.").removesuffix(".trust_level")) == path
+    )
+
+
+@pytest.mark.parametrize(
+    ("response", "confirmed"),
+    [({"status": "ok"}, True), ({"status": "okOverridden"}, False), ({}, False)],
+)
+def test_trust_write_confirmed(response: dict[str, Any], confirmed: bool) -> None:
+    """An overridden or missing status cannot establish the edit."""
+    assert identity.trust_write_confirmed(response) is confirmed
+
+
+@given(st.text().filter(lambda status: status != "ok"))
+def test_trust_write_confirmed_property(status: str) -> None:
+    """Every other write status fails the confirmation gate."""
+    assert not identity.trust_write_confirmed({"status": status})
+
+
+@pytest.mark.parametrize(
+    ("entry", "expected", "confirmed"),
+    [
+        ({"trust_level": "trusted"}, "trusted", True),
+        ({"trust_level": "untrusted"}, "trusted", False),
+        (None, "trusted", False),
+        (None, None, True),
+        ({}, None, True),
+        ({"trust_level": "trusted"}, None, False),
+    ],
+)
+def test_trust_readback(entry: object, expected: str | None, confirmed: bool) -> None:
+    """Only the exact project key establishes registration or removal."""
+    projects = {} if entry is None else {"/worker": entry}
+    response = {"config": {"projects": projects}, "layers": []}
+    assert identity.trust_readback(response, "/worker", expected) is confirmed
+    assert not identity.trust_readback(response, "/other", "trusted")
+
+
+@given(st.text(min_size=1))
+def test_trust_readback_property(other: str) -> None:
+    """A different project key cannot satisfy exact-path registration."""
+    if other == "/worker":
+        return
+    response = {
+        "config": {"projects": {other: {"trust_level": "trusted"}}},
+        "layers": [],
+    }
+    assert not identity.trust_readback(response, "/worker", "trusted")
+
+
+@pytest.mark.parametrize(
+    "response",
+    [
+        {},
+        {"layers": []},
+        {"config": {}, "layers": None},
+        {"config": {"projects": []}, "layers": []},
+    ],
+)
+def test_trust_readback_rejects_invalid_response(response: dict[str, Any]) -> None:
+    """Malformed read-backs cannot confirm even an absent entry."""
+    assert not identity.trust_readback(response, "/worker", None)
+
+
+@pytest.mark.parametrize(
+    ("row", "result"),
+    [
+        ({}, None),
+        ({"trust_registered": True}, None),
+        ({"trust_registered": False}, ("blocked", "folder trust removed")),
+        (
+            {"trust_blocked": True, "reason": "write failed"},
+            ("blocked", "write failed"),
+        ),
+    ],
+)
+def test_trust_gate(row: dict[str, Any], result: tuple[str, str] | None) -> None:
+    """A blocked edit or completed cleanup remains ineligible for sends."""
+    assert identity.trust_gate(row) == result
+
+
+@given(st.text())
+def test_trust_gate_property(reason: str) -> None:
+    """Every recorded trust failure retains its reason on reinspection."""
+    assert identity.trust_gate({"trust_blocked": True, "reason": reason}) == (
+        "blocked",
+        reason,
+    )
+
+
+@pytest.mark.parametrize(
     ("change", "value", "state"), fixture("cases.json")["observations"]
 )
 def test_readiness_cases(change: str, value: object, state: str) -> None:
