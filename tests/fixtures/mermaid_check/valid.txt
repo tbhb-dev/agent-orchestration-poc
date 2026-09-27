@@ -1,0 +1,6 @@
+```mermaid
+usecase-beta
+actor User
+Report("Read report")
+User --> Report
+```
