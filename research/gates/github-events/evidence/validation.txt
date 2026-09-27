@@ -38,3 +38,21 @@ Rendered-page omissions caused downstream link errors; CI must verify site build
 A read-only ps status probe was also denied by the sandbox; test exit statuses were collected through the tool sessions.
 No sandbox changes, host configuration changes or credentials reads were attempted.
 GitHub default authenticated identity verified as tbhb; no account switch.
+
+Main synchronization, 2026-09-27 UTC (2026-09-26 America/New_York).
+Latest tbhbbot review approved 25b4e41 with no findings; existing threads remain resolved.
+Merged origin/main at 1856e7b4ba68916bfb582767aedb8fb133b5e599 (PR #95).
+Initial merge refused configured fast-forward-only mode; explicit non-fast-forward merge reproduced one conflict.
+Conflicted file: docs/src/content/docs/decisions/index.md.
+Preserved accepted shell tooling decision 0006; renamed proposed monitor decision to 0007 and updated its title, index entry and design link.
+Updated the PR description to name decision 0007.
+mise run fmt: exit 0, no additional changes.
+mise run check: exit 0, including the merged ShellCheck and shfmt gates.
+Python: 52 passed, 2 integration tests skipped by configuration.
+Vale: 0 errors, 0 warnings and 0 suggestions in 104 files.
+Mermaid: 9 blocks in 104 files, 0 invalid.
+mise run check:mutation: exit 0.
+Python core mutation score: 83.33% (200 killed of 240); core coverage 100%.
+mise run docs:check-links: exit 1.
+Chromium failed at bootstrap_check_in with Permission denied (1100), causing omitted pages and downstream link errors.
+CI must verify the rendered site and internal links; no sandbox or host settings changed.

@@ -1,5 +1,5 @@
 ---
-title: "0006: webhook-fed pull request monitor"
+title: "0007: webhook-fed pull request monitor"
 description: Proposed agentd state monitor, authenticated waits, GitHub App identity, and REST stopgap.
 ---
 

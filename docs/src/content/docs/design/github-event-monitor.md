@@ -5,7 +5,7 @@ description: Proposed webhook intake, pull request state, bounded waits, and RES
 
 ## Status and evidence
 
-[untested] Proposed for [issue #98](https://github.com/tbhb/agent-orchestration-poc/issues/98), dated 2026-09-26. This page specifies proposed interfaces. Operator actions describe the remaining daemon cutover, not changes made by this work. [Decision 0006](/decisions/0006-github-event-monitor/) records the proposal.
+[untested] Proposed for [issue #98](https://github.com/tbhb/agent-orchestration-poc/issues/98), dated 2026-09-26. This page specifies proposed interfaces. Operator actions describe the remaining daemon cutover, not changes made by this work. [Decision 0007](/decisions/0007-github-event-monitor/) records the proposal.
 
 [documented] Evidence identifiers below refer to the source manifest and raw notes in [`research/gates/github-events/`](https://github.com/tbhb/agent-orchestration-poc/tree/docs/98-github-event-monitor-design/research/gates/github-events). G1 is GitHub documentation and generated API schemas at `18945a31a4f2d97beb6c5c1a7479102e23c25727`, with REST API version `2026-03-10`. G2 is `cli/gh-webhook@115d4d6768b55c74ee7d7c61d4775d83fdc323d2`. T1 is Tailscale v1.102.4 source at `bbcd7d1fc2054b9189ebc1531acf74bd880ca0c8`. H1 is the repository's 2026-09-26 harness assessment. B1 is PR #82's reviews and issue #96. R1 is the retained REST command output. Each table or diagram inherits the evidence label in its introduction unless a row supplies another label.
 

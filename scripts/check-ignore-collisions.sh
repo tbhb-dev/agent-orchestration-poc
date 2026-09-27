@@ -58,10 +58,12 @@ for source in "${sources[@]+"${sources[@]}"}"; do
                 relative=${dir#"$scope/"}
             fi
             leaf=${relative##*/}
+            # Gitignore entries may contain globs; pattern matching is intentional.
+            # shellcheck disable=SC2053
             if [[ $relative == $pattern || $leaf == $pattern ]]; then
                 printf 'case-insensitive directory match: %s:%s:%s -> %s\n' "$source" "$number" "$entry" "$dir"
             fi
         done
-    done < "$source"
+    done <"$source"
 done
 exit "$status"
