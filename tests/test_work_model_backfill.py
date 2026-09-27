@@ -105,7 +105,7 @@ def creation_inputs() -> TargetInputs:
                 body="Goal and finish line",
             ),
         },
-        {},
+        {"title:Draft B": ""},
         frozenset({"2"}),
         frozenset(),
         REFERENCE,
@@ -230,6 +230,11 @@ def approved_creation_inputs(approved: Tables, cp1: Snapshot) -> TargetInputs:
         for row in approved.assignments
         if row["body revision"] == "required"
     }
+    bodies.update(
+        (item.key, item.body)
+        for item in cp1.items
+        if item.draft_id and item.key not in bodies
+    )
     closed = frozenset(
         row["number"]
         for row in approved.assignments
@@ -324,6 +329,24 @@ def test_cp1_rejects_copied_drift_and_accepts_reviewed_status() -> None:
     )
     changed = replace(cp1, items=(reviewed, *cp1.items[1:]))
     operation_plan(approved, changed, {first.key: "Done"})
+    closures = frozenset(
+        row["number"]
+        for row in approved.assignments
+        if row["number"] and row["live state"] == "open" and row["state"] == "closed"
+    )
+    title_exemptions(
+        approved,
+        changed,
+        closures,
+        frozenset(),
+        REFERENCE,
+        reviewed_status={first.key: "Done"},
+    )
+    inputs = replace(
+        approved_creation_inputs(approved, changed),
+        reviewed_status={first.key: "Done"},
+    )
+    expected_cp13(approved, changed, inputs)
     with pytest.raises(ValueError, match="changed copied Project values"):
         operation_plan(approved, changed, {first.key: "In progress"})
 
@@ -387,6 +410,8 @@ def test_added_membership_uses_existing_issue_identity() -> None:
         ),
     )
     operation_plan(parsed, cp1)
+    with pytest.raises(ValueError, match="added Project membership is incomplete"):
+        expected_cp13(parsed, cp1, creation_inputs())
     inputs = replace(creation_inputs(), added_items={"#1": "new-item-1"})
     target = expected_cp13(parsed, cp1, inputs)
     assert target[0].issue_id == first.issue_id
@@ -417,8 +442,20 @@ def test_existing_d2_draft_requires_corrected_body() -> None:
             for item in cp1.items
         ),
     )
+    incomplete = approved_creation_inputs(approved, cp1)
     with pytest.raises(ValueError, match="reviewed body is missing"):
-        expected_cp13(approved, cp1, approved_creation_inputs(approved, cp1))
+        expected_cp13(
+            approved,
+            cp1,
+            replace(
+                incomplete,
+                bodies={
+                    key: body
+                    for key, body in incomplete.bodies.items()
+                    if key != d2.key
+                },
+            ),
+        )
     inputs = approved_creation_inputs(approved, cp1)
     inputs = replace(inputs, bodies={**inputs.bodies, d2.key: "corrected unplanned"})
     target = expected_cp13(approved, cp1, inputs)
@@ -436,6 +473,18 @@ def test_existing_d2_draft_requires_corrected_body() -> None:
             ),
             "after",
         )
+    )
+    already_correct = replace(
+        cp1,
+        items=tuple(
+            replace(item, body="corrected unplanned") if item.key == d2.key else item
+            for item in cp1.items
+        ),
+    )
+    target = expected_cp13(approved, already_correct, inputs)
+    assert (
+        next(item for item in target if item.key == d2.key).body
+        == "corrected unplanned"
     )
 
 
@@ -656,7 +705,7 @@ def test_cp13_refuses_missing_creation_or_reviewed_body() -> None:
     with pytest.raises(ValueError, match="reviewed body is missing"):
         expected_cp13(changed, snapshot(), inputs)
     supplied = expected_cp13(
-        changed, snapshot(), replace(inputs, bodies={"#1": "reviewed"})
+        changed, snapshot(), replace(inputs, bodies={**inputs.bodies, "#1": "reviewed"})
     )
     assert supplied[0].body == "reviewed"
 

@@ -453,15 +453,17 @@ def _validate_copied_project(
         raise ValueError("changed copied Project values")
 
 
-def title_exemptions(
+def title_exemptions(  # noqa: PLR0913 - preserve the public manifest inputs.
     tables: Tables,
     cp1: Snapshot,
     closed_at_cp0: frozenset[str],
     revoked: frozenset[str],
     reference: Reference,
+    *,
+    reviewed_status: dict[str, str] | None = None,
 ) -> tuple[str, ...]:
     """Derive numbered legacy exemptions only after every planned closure succeeds."""
-    validate_cp1(tables, cp1)
+    validate_cp1(tables, cp1, reviewed_status)
     return _derive_exemptions(tables, cp1, closed_at_cp0, revoked, reference)
 
 
@@ -763,6 +765,13 @@ def _created_target_items(
         if row["backfill mode"] in {"draft", "issue"} and _key(row) not in expected
     } | {f"title:{row['proposed title']}" for row in tables.parents}
     added_items = inputs.added_items or {}
+    required_added = {
+        _key(row)
+        for row in tables.assignments
+        if row["number"] and _key(row) in expected and not expected[_key(row)].item_id
+    }
+    if set(added_items) != required_added:
+        raise ValueError("added Project membership is incomplete or unexpected")
     if any(
         key not in expected or expected[key].item_id or not item_id
         for key, item_id in added_items.items()
@@ -820,15 +829,9 @@ def _assignment_target(
         else row["proposed title"] or row["title"]
     )
     if (
-        row["body revision"] == "required"
-        or row["title"] == "tooling(docs): move diagrams from Mermaid to D2"
+        row["body revision"] == "required" or row["backfill mode"] == "existing draft"
     ) and key not in context.bodies:
         raise ValueError(f"reviewed body is missing: {key}")
-    if (
-        row["title"] == "tooling(docs): move diagrams from Mermaid to D2"
-        and context.bodies[key] == item.body
-    ):
-        raise ValueError("D2 correction is unchanged")
     if (
         row["number"] not in context.exemptions
         and (len(title) > 72 or validate_title(title, context.reference, issue=True))
