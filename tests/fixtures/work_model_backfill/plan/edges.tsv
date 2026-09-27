@@ -1,0 +1,5 @@
+dependent	blocker	action	execution
+1	2	write	native
+1	Draft A	no link	audit only
+2	Draft B	judgment: inferred	audit only
+Draft A	2	cut: not native, remove from the body	audit only
