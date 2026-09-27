@@ -75,11 +75,11 @@ def _pane(pane: str) -> dict[str, Any]:
     }
 
 
-def _worktree(path: Path, branch: str, owned: bool) -> None:
+def _worktree(path: Path, branch: str, owned: bool) -> bool:
     listings = _run(["git", "worktree", "list", "--porcelain"])
     action = identity.worktree_action(str(path), branch, listings, path.exists(), owned)
     if action == "inspect":
-        return
+        return False
     if action != "create":
         raise ValueError("worktree or branch is not available for this run")
     if _run(["git", "branch", "--list", branch]):
@@ -87,6 +87,59 @@ def _worktree(path: Path, branch: str, owned: bool) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     _run(["git", "fetch", "origin", "main"])
     _run(["git", "worktree", "add", "-b", branch, str(path), "origin/main"])
+    return True
+
+
+def _change_trust(
+    row: dict[str, Any], rows: list[dict[str, Any]], remove: bool
+) -> bool:
+    """Persist every run-owned edit attempt before contacting its endpoint."""
+    target = identity.trust_target(
+        row["worktree"],
+        str(Path(row["git_common_dir"]).parent),
+        row.get("trust_created") is True,
+    )
+    event = {
+        "action": "remove" if remove else "register",
+        "at": _now(),
+        "result": "attempted",
+    }
+    row.setdefault("trust_events", []).append(event)
+    registry.write(STORE, rows)
+    try:
+        codex_launch.change_trust(
+            row["endpoint"], target, None if remove else "trusted"
+        )
+    except codex_launch.TrustConflictError as error:
+        row["trust_conflict"] = True
+        row["trust_blocked"] = True
+        event.update(result="failed", reason=str(error))
+        row.update(state="blocked", reason=str(error), observed_at=_now())
+        registry.write(STORE, rows)
+        return False
+    except codex_launch.TrustPreflightError as error:
+        row["trust_blocked"] = True
+        event.update(result="failed", reason=str(error))
+        row.update(state="blocked", reason=str(error), observed_at=_now())
+        registry.write(STORE, rows)
+        return False
+    except (OSError, ValueError, EOFError, TimeoutError) as error:
+        row["trust_write_attempted"] = True
+        row["trust_blocked"] = True
+        event.update(result="failed", reason=str(error))
+        row.update(
+            state="blocked",
+            reason=f"folder trust {event['action']} failed: {error}",
+            observed_at=_now(),
+        )
+        registry.write(STORE, rows)
+        return False
+    event["result"] = "confirmed"
+    row["trust_write_attempted"] = True
+    row["trust_blocked"] = False
+    row["trust_registered"] = not remove
+    registry.write(STORE, rows)
+    return True
 
 
 def _command(row: dict[str, Any], brief: str) -> str:
@@ -161,6 +214,11 @@ def _observe(row: dict[str, Any]) -> dict[str, Any]:
 
 def inspect(row: dict[str, Any]) -> tuple[dict[str, Any], str, str]:
     """Re-observe rather than trusting a saved row."""
+    gate = identity.trust_gate(row)
+    if gate is not None:
+        state, reason = gate
+        row.update(state=state, reason=reason, observed_at=_now())
+        return row, state, reason
     try:
         seen = _observe(row)
     except (
@@ -180,10 +238,15 @@ def inspect(row: dict[str, Any]) -> tuple[dict[str, Any], str, str]:
     return row, state, reason
 
 
-def launch(request: dict[str, Any]) -> tuple[dict[str, Any], str, str]:
+def launch(request: dict[str, Any]) -> tuple[dict[str, Any], str, str]:  # noqa: C901
     """Reserve ownership, launch one TUI, and make a bounded readiness check."""
+    common_git = None
     if request["harness"] == "codex":
         identity.codex_endpoint(request.get("endpoint"))
+        common_git = _run(
+            ["git", "rev-parse", "--path-format=absolute", "--git-common-dir"]
+        )
+        identity.trust_target(request["worktree"], str(Path(common_git).parent), True)
     brief = Path(request["brief_file"]).read_text()
     if not brief.strip():
         raise ValueError("brief is empty")
@@ -214,7 +277,7 @@ def launch(request: dict[str, Any]) -> tuple[dict[str, Any], str, str]:
         windows.returncode, windows.stderr, windows.stdout
     ):
         raise ValueError("tmux window name already exists")
-    _worktree(Path(request["worktree"]), request["branch"], False)
+    created = _worktree(Path(request["worktree"]), request["branch"], False)
     row = {
         **request,
         "run_id": str(uuid.uuid7()),
@@ -225,12 +288,13 @@ def launch(request: dict[str, Any]) -> tuple[dict[str, Any], str, str]:
         "observed_at": _now(),
     }
     if request["harness"] == "codex":
-        row["git_common_dir"] = _run(
-            ["git", "rev-parse", "--path-format=absolute", "--git-common-dir"]
-        )
+        row["trust_created"] = created
+        row["git_common_dir"] = common_git
     row.pop("brief_file")
     rows.append(row)
     registry.write(STORE, rows)
+    if request["harness"] == "codex" and not _change_trust(row, rows, remove=False):
+        return row, "blocked", row["reason"]
     try:
         row.update(_new_pane(row, brief))
     except (OSError, ValueError, subprocess.CalledProcessError) as error:
@@ -249,6 +313,27 @@ def launch(request: dict[str, Any]) -> tuple[dict[str, Any], str, str]:
         time.sleep(1)
     registry.write(STORE, rows)
     return result
+
+
+def cleanup(run_id: str) -> tuple[dict[str, Any], str, str]:
+    """Remove the recorded run's exact Codex trust entry after worker cleanup."""
+    rows = registry.read(STORE)
+    row = next((item for item in rows if item["run_id"] == run_id), None)
+    if row is None:
+        raise ValueError("run ID not found")
+    if (
+        row["harness"] != "codex"
+        or not row.get("trust_events")
+        or not row.get("trust_write_attempted")
+    ):
+        raise ValueError("run has no launcher-owned Codex trust write")
+    if row.get("trust_registered") is False:
+        raise ValueError("run trust entry was already removed")
+    if not _change_trust(row, rows, remove=True):
+        return row, "blocked", row["reason"]
+    row.update(state="removed", reason="folder trust removed", observed_at=_now())
+    registry.write(STORE, rows)
+    return row, "removed", row["reason"]
 
 
 def status(run_id: str) -> tuple[dict[str, Any], str, str]:

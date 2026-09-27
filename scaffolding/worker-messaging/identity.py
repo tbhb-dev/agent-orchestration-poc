@@ -1,8 +1,10 @@
 """Temporary #176 identity decisions; #28 replaces this scaffold."""
 
 import hashlib
+import json
 import shlex
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 
@@ -155,6 +157,66 @@ def codex_endpoint(endpoint: str | None) -> str:
     if "\x00" in path or path == "/" or "//" in path or "/../" in f"{path}/":
         raise ValueError("invalid Codex Unix endpoint")
     return path
+
+
+def trust_target(worktree: str, root: str, created: bool) -> str:
+    """Limit a trust edit to a newly created, direct child worktree."""
+    path = Path(worktree)
+    if (
+        not created
+        or not path.is_absolute()
+        or path.parent != Path(root) / ".worktrees"
+    ):
+        raise ValueError("trust target is not a launcher-created worktree")
+    return str(path)
+
+
+def trust_write_params(worktree: str, value: str | None) -> dict[str, Any]:
+    """Match the tagged TUI's replace edit for one quoted project key."""
+    if value not in {"trusted", None}:
+        raise ValueError("invalid trust value")
+    return {
+        "edits": [
+            {
+                "keyPath": f"projects.{json.dumps(worktree, ensure_ascii=False)}.trust_level",
+                "value": value,
+                "mergeStrategy": "replace",
+            }
+        ],
+        "filePath": None,
+        "expectedVersion": None,
+        "reloadUserConfig": True,
+    }
+
+
+def trust_write_confirmed(response: dict[str, Any]) -> bool:
+    """Accept only an unoverridden user-config write result."""
+    return response.get("status") == "ok"
+
+
+def trust_readback(response: dict[str, Any], worktree: str, value: str | None) -> bool:
+    """Require the exact project key in a layered config read."""
+    if not isinstance(response.get("layers"), list):
+        return False
+    config = response.get("config")
+    if not isinstance(config, dict):
+        return False
+    projects = config.get("projects")
+    if projects is not None and not isinstance(projects, dict):
+        return False
+    entry = projects.get(worktree) if isinstance(projects, dict) else None
+    if value is None:
+        return entry is None or isinstance(entry, dict) and "trust_level" not in entry
+    return isinstance(entry, dict) and entry.get("trust_level") == value
+
+
+def trust_gate(row: dict[str, Any]) -> tuple[str, str] | None:
+    """Keep failed trust operations and completed cleanup ineligible for sends."""
+    if row.get("trust_blocked"):
+        return "blocked", row["reason"]
+    if row.get("trust_registered") is False:
+        return "blocked", "folder trust removed"
+    return None
 
 
 def claude_facts(

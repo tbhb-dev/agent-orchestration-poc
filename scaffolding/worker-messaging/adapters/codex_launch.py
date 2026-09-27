@@ -10,6 +10,59 @@ from typing import Any, cast
 import identity
 
 
+class TrustPreflightError(ValueError):
+    """No trust write was sent to the endpoint."""
+
+
+class TrustConflictError(TrustPreflightError):
+    """The endpoint already has an entry for this exact worktree."""
+
+
+def change_trust(endpoint: str, worktree: str, value: str | None) -> None:
+    """Write one server user-config trust key and read it back on that endpoint."""
+    try:
+        connection = _connect(endpoint)
+    except (OSError, ValueError, EOFError) as error:
+        if value is not None:
+            raise TrustPreflightError("folder trust endpoint unavailable") from error
+        raise
+    try:
+        number = 2
+        if value is not None:
+            try:
+                before = _call(
+                    connection,
+                    number,
+                    "config/read",
+                    {"cwd": worktree, "includeLayers": True},
+                )
+            except (OSError, ValueError, EOFError) as error:
+                raise TrustPreflightError(
+                    "folder trust preflight read failed"
+                ) from error
+            if not identity.trust_readback(before, worktree, None):
+                raise TrustConflictError("exact worktree already has a trust entry")
+            number += 1
+        written = _call(
+            connection,
+            number,
+            "config/batchWrite",
+            identity.trust_write_params(worktree, value),
+        )
+        if not identity.trust_write_confirmed(written):
+            raise ValueError("config/batchWrite did not confirm an unoverridden write")
+        read = _call(
+            connection,
+            number + 1,
+            "config/read",
+            {"cwd": worktree, "includeLayers": True},
+        )
+        if not identity.trust_readback(read, worktree, value):
+            raise ValueError("config/read did not confirm exact worktree trust")
+    finally:
+        connection.close()
+
+
 def _frame(payload: dict[str, Any]) -> bytes:
     data = json.dumps(payload).encode()
     mask = os.urandom(4)
