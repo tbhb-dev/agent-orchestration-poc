@@ -1,0 +1,62 @@
+# Single source for issue, pull request, label, branch, and size conventions.
+[titles]
+types = ["feat", "fix", "docs", "exp", "research", "tooling", "process", "decision", "chore", "refactor", "test"]
+scopes = ["bus", "containers", "daemon", "desktop", "docs", "experiment", "remote", "research", "security", "terminal", "tooling", "ui", "workflow", "go", "python", "shell", "github", "git", "ci", "testing", "coverage", "mutation", "gates", "review", "preflight", "handoff", "project", "workers", "checkpoint", "retro", "sync", "import", "subject", "skeleton", "boundaries", "design", "process"]
+verbs = ["add", "allow", "audit", "build", "check", "clarify", "define", "detect", "document", "enforce", "fix", "gate", "keep", "make", "measure", "move", "pin", "record", "refine", "reject", "remove", "report", "require", "resolve", "restore", "retire", "run", "split", "sync", "test", "track", "update", "validate", "verify"]
+max_length = 72
+branch_pattern = "<type>/<issue>[-<issue>...]-<slug>"
+
+[types]
+feat = "type/feature"
+fix = "type/bug"
+docs = "type/docs"
+exp = "type/experiment"
+research = "type/research"
+tooling = "type/tooling"
+process = "type/process"
+decision = "type/decision"
+chore = "type/tooling"
+refactor = "type/tooling"
+test = "type/tooling"
+
+[forms]
+issue_fields = ["Goal", "Context and links", "Dependencies and paths", "Acceptance criteria", "Evidence required", "Docs impact", "Out of scope"]
+pr_sections = ["What", "Why", "Evidence", "Docs", "Checklist", "Size justification", "Gate justifications"]
+allowed_paths_field = "Allowed paths"
+allowed_path_syntax = "repo-relative literals or anchored globs. `*` matches one segment and `**` matches zero or more segments. Absolute paths, `..`, and negation are invalid"
+evidence_requires = "named repository paths and exact commands"
+
+[labels]
+areas = ["bus", "containers", "daemon", "desktop", "docs", "experiment", "remote", "research", "security", "terminal", "tooling", "ui", "workflow"]
+phases = ["0", "1", "2", "3", "4", "5", "6"]
+harnesses = ["agy", "any", "claude", "codex"]
+area_color = "1d76db"
+phase_color = "5319e7"
+harness_color = "fbca04"
+type_color = "0e8a16"
+blocked_color = "b60205"
+operator_color = "d93f0b"
+area_description = "Area: {value}"
+phase_description = "Phase {value}"
+harness_description = "Intended harness: {value}"
+type_description = "Type: {value}"
+blocked_description = "Blocked on another item or a finding"
+operator_description = "Needs the operator's decision or approval"
+
+[size]
+tool = "github.com/boyter/scc/v4"
+version = "4.1.0"
+target = 400
+limit = 800
+small = 200
+medium = 400
+large = 800
+code_unit = "scc-classified changed code lines, added plus deleted, excluding blanks and comment-only lines"
+prose_unit = "each added or deleted nonblank line, including Markdown comments"
+base = "merge base of PR target, including upstream target for a stacked PR"
+excluded = ["go.sum", "uv.lock", "pnpm-lock.yaml", "**/pnpm-lock.yaml", "**/*-checksum*", "**/vendor/**", "tests/fixtures/**", "reports/inputs/**", "experiments/**/evidence/**", "research/imported/**", "**/*.svg", "**/*.excalidraw"]
+detected_exclusions = ["generated", "minified"]
+
+[migration]
+# Filled with the number of this validator's PR after it opens. Its merged_at is the cutoff.
+validator_pr = 137
