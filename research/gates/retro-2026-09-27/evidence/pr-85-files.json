@@ -1,0 +1,107 @@
+[
+  {
+    "filename": ".github/workflows/closure-audit.yml",
+    "status": "added",
+    "additions": 30,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/briefs/documentation-brief-sample.md",
+    "status": "added",
+    "additions": 13,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/briefs/documentation-brief-template.md",
+    "status": "added",
+    "additions": 19,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/workflow/documentation-brief-sample.md",
+    "status": "added",
+    "additions": 10,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/workflow/index.md",
+    "status": "modified",
+    "additions": 5,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/workflow/tooling.md",
+    "status": "modified",
+    "additions": 9,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "mise.toml",
+    "status": "modified",
+    "additions": 13,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "reports/inputs/coordinator-preflight-70-73-evidence-2026-09-26.md",
+    "status": "added",
+    "additions": 89,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "src/agent_orchestration_poc/core/coordinator_preflight.py",
+    "status": "added",
+    "additions": 149,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "src/agent_orchestration_poc/shell/coordinator_preflight.py",
+    "status": "added",
+    "additions": 233,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "tests/fixtures/coordinator_preflight/checks.json",
+    "status": "added",
+    "additions": 81,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "tests/fixtures/coordinator_preflight/closures.json",
+    "status": "added",
+    "additions": 47,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "tests/fixtures/coordinator_preflight/workflows.json",
+    "status": "added",
+    "additions": 17,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "tests/test_coordinator_preflight.py",
+    "status": "added",
+    "additions": 127,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "tests/test_coordinator_preflight_shell.py",
+    "status": "added",
+    "additions": 37,
+    "deletions": 0,
+    "patch_available": true
+  }
+]

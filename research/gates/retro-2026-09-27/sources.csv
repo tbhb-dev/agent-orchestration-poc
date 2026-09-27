@@ -1,0 +1,42 @@
+source_id,kind,url,local_evidence,limit
+S01,issue,https://github.com/tbhb-dev/agent-orchestration-poc/issues/165,evidence/query-transcript.md,Approved specification and fixed bounds
+S02,rest,https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls?state=closed&per_page=100&page=1,evidence/pulls-page-1.json,Snapshot at 2026-09-27T17:45:59Z
+S03,rest,https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls?state=closed&per_page=100&page=2,evidence/pulls-page-2.json,Empty completion page at source time
+S04,rest,https://api.github.com/users/tbhb/projectsV2/9/items,evidence/project-size-worker.tsv,Current fields may differ from dispatch
+S05,document,https://github.com/tbhb-dev/agent-orchestration-poc/blob/main/reports/inputs/pr-size-research.md,reports/inputs/pr-size-research.md,Counter remains assigned to issue 142
+S06,pr,https://github.com/tbhb-dev/agent-orchestration-poc/pull/137,none,Issue 84 split and deferred counter
+S07,issue,https://github.com/tbhb-dev/agent-orchestration-poc/issues/109,none,Scope and planned split only
+S08,pr,https://github.com/tbhb-dev/agent-orchestration-poc/pull/138,evidence/pr-138.json,Partial provider research for issue 110
+S09,pr,https://github.com/tbhb-dev/agent-orchestration-poc/pull/121,evidence/pr-121-reviews.jsonl,Open context outside cohort
+S10,issue_comment,https://github.com/tbhb-dev/agent-orchestration-poc/pull/121#issuecomment-5852465388,none,Coordinator arbitration testimony
+S11,issue,https://github.com/tbhb-dev/agent-orchestration-poc/issues/153,none,Two hook blocked workers reported without private logs
+S12,document,https://github.com/tbhb-dev/agent-orchestration-poc/blob/main/docs/src/content/docs/retros/2026-09-26-phase-1.md,docs/src/content/docs/retros/2026-09-26-phase-1.md,Earlier zsh and coordinator testimony
+S13,issue,https://github.com/tbhb-dev/agent-orchestration-poc/issues/161,none,Duplicate disposition and stub policy
+S14,issue,https://github.com/tbhb-dev/agent-orchestration-poc/issues/141,none,Existing label drift owner
+S15,issue,https://github.com/tbhb-dev/agent-orchestration-poc/issues/142,none,Existing PR size counter owner
+S16,issue,https://github.com/tbhb-dev/agent-orchestration-poc/issues/151,none,Duplicate candidate
+S17,issue,https://github.com/tbhb-dev/agent-orchestration-poc/issues/152,none,Duplicate candidate
+S18,issue,https://github.com/tbhb-dev/agent-orchestration-poc/issues/158,none,Dependency contract and PR 121 example
+S19,issue_comment,https://github.com/tbhb-dev/agent-orchestration-poc/issues/164#issuecomment-5852591106,evidence/issue-164-comments.jsonl,Coordinator reported original header values
+S20,issue_comment,https://github.com/tbhb-dev/agent-orchestration-poc/issues/164#issuecomment-5852783968,evidence/issue-164-comments.jsonl,Coordinator reported renewed exhaustion on agent account
+S21,issue_comment,https://github.com/tbhb-dev/agent-orchestration-poc/issues/164#issuecomment-5852895053,evidence/issue-164-comments.jsonl,Coordinator reported REST recovery and residual gaps
+S22,pr,https://github.com/tbhb-dev/agent-orchestration-poc/pull/156,none,Open notebook gate with changes requested
+S23,issue,https://github.com/tbhb-dev/agent-orchestration-poc/issues/90,none,Per PR metric definitions
+S24,issue,https://github.com/tbhb-dev/agent-orchestration-poc/issues/164,none,Later incident and reconciliation specification
+SPR75,pr,https://github.com/tbhb-dev/agent-orchestration-poc/pull/75,evidence/pr-75.json,PR body and detail snapshot with supporting rows under evidence
+SPR76,pr,https://github.com/tbhb-dev/agent-orchestration-poc/pull/76,evidence/pr-76.json,PR body and detail snapshot with supporting rows under evidence
+SPR79,pr,https://github.com/tbhb-dev/agent-orchestration-poc/pull/79,evidence/pr-79.json,PR body and detail snapshot with supporting rows under evidence
+SPR80,pr,https://github.com/tbhb-dev/agent-orchestration-poc/pull/80,evidence/pr-80.json,PR body and detail snapshot with supporting rows under evidence
+SPR85,pr,https://github.com/tbhb-dev/agent-orchestration-poc/pull/85,evidence/pr-85.json,PR body and detail snapshot with supporting rows under evidence
+SPR82,pr,https://github.com/tbhb-dev/agent-orchestration-poc/pull/82,evidence/pr-82.json,PR body and detail snapshot with supporting rows under evidence
+SPR81,pr,https://github.com/tbhb-dev/agent-orchestration-poc/pull/81,evidence/pr-81.json,PR body and detail snapshot with supporting rows under evidence
+SPR95,pr,https://github.com/tbhb-dev/agent-orchestration-poc/pull/95,evidence/pr-95.json,PR body and detail snapshot with supporting rows under evidence
+SPR112,pr,https://github.com/tbhb-dev/agent-orchestration-poc/pull/112,evidence/pr-112.json,PR body and detail snapshot with supporting rows under evidence
+SPR105,pr,https://github.com/tbhb-dev/agent-orchestration-poc/pull/105,evidence/pr-105.json,PR body and detail snapshot with supporting rows under evidence
+SPR99,pr,https://github.com/tbhb-dev/agent-orchestration-poc/pull/99,evidence/pr-99.json,PR body and detail snapshot with supporting rows under evidence
+SPR122,pr,https://github.com/tbhb-dev/agent-orchestration-poc/pull/122,evidence/pr-122.json,PR body and detail snapshot with supporting rows under evidence
+SPR113,pr,https://github.com/tbhb-dev/agent-orchestration-poc/pull/113,evidence/pr-113.json,PR body and detail snapshot with supporting rows under evidence
+SPR119,pr,https://github.com/tbhb-dev/agent-orchestration-poc/pull/119,evidence/pr-119.json,PR body and detail snapshot with supporting rows under evidence
+SPR138,pr,https://github.com/tbhb-dev/agent-orchestration-poc/pull/138,evidence/pr-138.json,PR body and detail snapshot with supporting rows under evidence
+SPR115,pr,https://github.com/tbhb-dev/agent-orchestration-poc/pull/115,evidence/pr-115.json,PR body and detail snapshot with supporting rows under evidence
+SPR144,pr,https://github.com/tbhb-dev/agent-orchestration-poc/pull/144,evidence/pr-144.json,PR body and detail snapshot with supporting rows under evidence

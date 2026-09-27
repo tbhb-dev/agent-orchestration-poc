@@ -1,0 +1,100 @@
+[
+  {
+    "filename": "AGENTS.md",
+    "status": "modified",
+    "additions": 8,
+    "deletions": 5,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/briefs/documentation-brief-sample.md",
+    "status": "modified",
+    "additions": 4,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/briefs/documentation-brief-template.md",
+    "status": "modified",
+    "additions": 4,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/project/plan.md",
+    "status": "modified",
+    "additions": 4,
+    "deletions": 4,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/workflow/index.md",
+    "status": "modified",
+    "additions": 7,
+    "deletions": 3,
+    "patch_available": true
+  },
+  {
+    "filename": "mise.toml",
+    "status": "modified",
+    "additions": 5,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "reports/inputs/reviewer-account-evidence.md",
+    "status": "added",
+    "additions": 44,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "scripts/reviewer-gh.sh",
+    "status": "added",
+    "additions": 4,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "src/agent_orchestration_poc/core/review_identity.py",
+    "status": "added",
+    "additions": 61,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "src/agent_orchestration_poc/shell/review_identity.py",
+    "status": "added",
+    "additions": 59,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "tests/fixtures/review_identity/policy.json",
+    "status": "added",
+    "additions": 154,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "tests/fixtures/review_identity/test_policy.py",
+    "status": "added",
+    "additions": 117,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "tests/fixtures/review_identity/test_wrapper.py",
+    "status": "added",
+    "additions": 59,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "tests/fixtures/review_identity/wrapper.json",
+    "status": "added",
+    "additions": 47,
+    "deletions": 0,
+    "patch_available": true
+  }
+]

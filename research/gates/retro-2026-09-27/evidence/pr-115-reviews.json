@@ -1,0 +1,362 @@
+[
+  {
+    "id": 5328533409,
+    "node_id": "PRR_kwDOUtKbt88AAAABPZr3oQ",
+    "user": {
+      "login": "tbhb-agent-reviewer",
+      "id": 152314235,
+      "node_id": "U_kgDOCRQhew",
+      "avatar_url": "https://avatars.githubusercontent.com/u/152314235?u=c28bdb49be24e8265acf00ccaee6d49eac020456&v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/tbhb-agent-reviewer",
+      "html_url": "https://github.com/tbhb-agent-reviewer",
+      "followers_url": "https://api.github.com/users/tbhb-agent-reviewer/followers",
+      "following_url": "https://api.github.com/users/tbhb-agent-reviewer/following{/other_user}",
+      "gists_url": "https://api.github.com/users/tbhb-agent-reviewer/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/tbhb-agent-reviewer/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/tbhb-agent-reviewer/subscriptions",
+      "organizations_url": "https://api.github.com/users/tbhb-agent-reviewer/orgs",
+      "repos_url": "https://api.github.com/users/tbhb-agent-reviewer/repos",
+      "events_url": "https://api.github.com/users/tbhb-agent-reviewer/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/tbhb-agent-reviewer/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "body": "Reviewer: Codex CLI 0.157.1, gpt-6-astra, medium effort. Head 4cda83a.\n\nThe independent embedded-server attack probe found no cross-agent read, ack, or publication using only the attacker's assigned nkey, and the relay closes the broker-reply routes demonstrated in PR #82. Changes are still required for delivery-generation ordering, the mandatory functional-core boundary, and a security regression test that currently passes a vulnerable implementation. This is the first review of #115; its review-thread query returned no earlier threads to resolve.\n\nFindings:\n\n- Blocking — [P2] A delayed older delivery can replace the newest delivery token. An embedded-server probe fetched generations 1 and 2 of one message, then called `hold` in order 2, 1: acknowledgment of the generation-2 token returned `unknown-token`, while the stale generation-1 token returned `acked`. Compare delivery generations atomically when installing/replacing tokens, reject stale installations, and add the out-of-order regression. See the inline comment.\n- Blocking — [P1] Relay policy remains in the imperative shell. Source inspection finds timeout validation/defaulting, acknowledgment classification, metadata acceptance, and token replacement/consumption decisions in `internal/bus/relay.go`; these bypass the required plain-value core tests and core mutation gate. Move those decisions and state transitions into `internal/core/relay`, leaving broker calls, randomness, synchronization, and JSON transport in the shell. See the inline comment.\n- Blocking — [P2] The committed attack matrix does not observe the victim's relay inbox. A temporary overlay that redirects responses only when the supplied reply begins `grp.build.relay.reply.bob.` still passes `TestRelayAttackMatrix`. Observe each attacked reply target and seed a victim-only message when testing foreign consumer selection, so the issue's no-victim-delivery/state-change criterion actually fails on a regression. See the inline comment.\n- Non-blocking: no additional findings.\n\nValidation and limits:\n\n- Read #96 and its refinement discussion, #27/#28/#29, the full base-to-head diff, the PR body/history, and PR #82's Codex and Sonnet reviews, including the live pull-reply exploit and the coordinator's accepted scope split. The earlier #82 confirmation/mediation gaps are implemented here; production KV provisioning/writes and dynamic registration remain explicitly assigned to #29 and #28.\n- The independent probe exercised forged payload agent/group/consumer names; all five operations with replies aimed at Bob's broadcast, direct message, relay inbox, raw inbox, and relay request subject; foreign-agent and cross-group request subjects; raw own/foreign consumer pull, foreign consumer info, direct-get and KV routes; and a real foreign delivery token. It checked that Bob's seeded private message and consumer state stayed intact and that Bob could subsequently fetch and ack. This passed on the unmodified head. The generation probe failed as described above. Neither result establishes isolation if another agent can obtain the victim or operator seed.\n- `GOCACHE=/tmp/review-115-go-cache GOPATH=/tmp/bus-26-gopath GOLANGCI_LINT_CACHE=/tmp/review-115-lint RAPID_NOFAILFILE=1 mise run check:go` passed, including lint, build, race/shuffle tests and the restart suite. `mise run check:imports -- --no-cache` and `mise run check:ruff` passed using the pinned dependencies in a temporary Python environment. All five current GitHub checks pass. The full aggregate, formatter and local mutation gate were not rerun because their setup/output can modify this read-only checkout; the targeted temporary overlay mutation is separate from the reported CI mutation score. All probe files/caches are outside the checkout, which remains unchanged.\n\nComparison with imported research:\n\n`research/imported/agent-peering-tests/DESIGN_V2.md` recommends kernel-derived process-tree identity, no client secret, pinned server TLS, live-binding generations, and per-peer resource bounds. `DESIGN_REVIEW_ASTRA.md` specifically requires an authenticated ingress for any trusted relay, server-side sender/read authorization, explicit retry/delivery semantics, and evidence that matches the actual capability boundary. This relay follows the latter recommendations through literal nkey subject grants, daemon-derived subjects/replies, sender-scoped deduplication, and opaque ack tokens; mediation is justified by the pinned nats-server v2.15.0 source and #82's demonstrated unchecked broker replies. I checked the recorded source clones at `eb763679` and nats.go v1.54.0 at `7a8404ab`.\n\nThe departure from kernel identity to reusable nkey credentials is the already-approved bootstrap bus design, not equivalent proof of process-tree isolation. Its justification is limited to that credential boundary: mode 0600 does not isolate processes sharing a UID, and this relay does not add pinned server authentication, credential confinement, live-binding revocation, or per-peer waiter limits. Delivery generation here is a JetStream delivery sequence, not the research's harness-binding generation. Static-startup scope and the #28 integration dependency justify deferring registration lifecycle work; they do not justify claiming the research's stronger deployment guarantee. The existing bounded payload/timeout checks and absence of seed logging are useful but narrower evidence. Operator merge remains required for the permission-policy change.\n",
+    "state": "CHANGES_REQUESTED",
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/115#pullrequestreview-5328533409",
+    "pull_request_url": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/115",
+    "author_association": "MEMBER",
+    "_links": {
+      "html": {
+        "href": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/115#pullrequestreview-5328533409"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/115"
+      }
+    },
+    "submitted_at": "2026-09-27T02:17:34Z",
+    "commit_id": "4cda83ad87433d27895f6664f29f2338e90d6119"
+  },
+  {
+    "id": 5328619844,
+    "node_id": "PRR_kwDOUtKbt88AAAABPZxJRA",
+    "user": {
+      "login": "tbhb",
+      "id": 17915374,
+      "node_id": "MDQ6VXNlcjE3OTE1Mzc0",
+      "avatar_url": "https://avatars.githubusercontent.com/u/17915374?u=570c35c904259c7db16a6466186b1b09af64e9d4&v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/tbhb",
+      "html_url": "https://github.com/tbhb",
+      "followers_url": "https://api.github.com/users/tbhb/followers",
+      "following_url": "https://api.github.com/users/tbhb/following{/other_user}",
+      "gists_url": "https://api.github.com/users/tbhb/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/tbhb/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/tbhb/subscriptions",
+      "organizations_url": "https://api.github.com/users/tbhb/orgs",
+      "repos_url": "https://api.github.com/users/tbhb/repos",
+      "events_url": "https://api.github.com/users/tbhb/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/tbhb/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "body": "",
+    "state": "COMMENTED",
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/115#pullrequestreview-5328619844",
+    "pull_request_url": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/115",
+    "author_association": "MEMBER",
+    "_links": {
+      "html": {
+        "href": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/115#pullrequestreview-5328619844"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/115"
+      }
+    },
+    "submitted_at": "2026-09-27T02:51:46Z",
+    "commit_id": "77547cb9289cc0599802b6e815bbbb52c1461e52"
+  },
+  {
+    "id": 5328620038,
+    "node_id": "PRR_kwDOUtKbt88AAAABPZxKBg",
+    "user": {
+      "login": "tbhb",
+      "id": 17915374,
+      "node_id": "MDQ6VXNlcjE3OTE1Mzc0",
+      "avatar_url": "https://avatars.githubusercontent.com/u/17915374?u=570c35c904259c7db16a6466186b1b09af64e9d4&v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/tbhb",
+      "html_url": "https://github.com/tbhb",
+      "followers_url": "https://api.github.com/users/tbhb/followers",
+      "following_url": "https://api.github.com/users/tbhb/following{/other_user}",
+      "gists_url": "https://api.github.com/users/tbhb/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/tbhb/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/tbhb/subscriptions",
+      "organizations_url": "https://api.github.com/users/tbhb/orgs",
+      "repos_url": "https://api.github.com/users/tbhb/repos",
+      "events_url": "https://api.github.com/users/tbhb/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/tbhb/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "body": "",
+    "state": "COMMENTED",
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/115#pullrequestreview-5328620038",
+    "pull_request_url": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/115",
+    "author_association": "MEMBER",
+    "_links": {
+      "html": {
+        "href": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/115#pullrequestreview-5328620038"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/115"
+      }
+    },
+    "submitted_at": "2026-09-27T02:51:53Z",
+    "commit_id": "77547cb9289cc0599802b6e815bbbb52c1461e52"
+  },
+  {
+    "id": 5328620231,
+    "node_id": "PRR_kwDOUtKbt88AAAABPZxKxw",
+    "user": {
+      "login": "tbhb",
+      "id": 17915374,
+      "node_id": "MDQ6VXNlcjE3OTE1Mzc0",
+      "avatar_url": "https://avatars.githubusercontent.com/u/17915374?u=570c35c904259c7db16a6466186b1b09af64e9d4&v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/tbhb",
+      "html_url": "https://github.com/tbhb",
+      "followers_url": "https://api.github.com/users/tbhb/followers",
+      "following_url": "https://api.github.com/users/tbhb/following{/other_user}",
+      "gists_url": "https://api.github.com/users/tbhb/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/tbhb/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/tbhb/subscriptions",
+      "organizations_url": "https://api.github.com/users/tbhb/orgs",
+      "repos_url": "https://api.github.com/users/tbhb/repos",
+      "events_url": "https://api.github.com/users/tbhb/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/tbhb/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "body": "",
+    "state": "COMMENTED",
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/115#pullrequestreview-5328620231",
+    "pull_request_url": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/115",
+    "author_association": "MEMBER",
+    "_links": {
+      "html": {
+        "href": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/115#pullrequestreview-5328620231"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/115"
+      }
+    },
+    "submitted_at": "2026-09-27T02:52:00Z",
+    "commit_id": "77547cb9289cc0599802b6e815bbbb52c1461e52"
+  },
+  {
+    "id": 5328663924,
+    "node_id": "PRR_kwDOUtKbt88AAAABPZz1dA",
+    "user": {
+      "login": "tbhb-agent-reviewer",
+      "id": 152314235,
+      "node_id": "U_kgDOCRQhew",
+      "avatar_url": "https://avatars.githubusercontent.com/u/152314235?u=c28bdb49be24e8265acf00ccaee6d49eac020456&v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/tbhb-agent-reviewer",
+      "html_url": "https://github.com/tbhb-agent-reviewer",
+      "followers_url": "https://api.github.com/users/tbhb-agent-reviewer/followers",
+      "following_url": "https://api.github.com/users/tbhb-agent-reviewer/following{/other_user}",
+      "gists_url": "https://api.github.com/users/tbhb-agent-reviewer/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/tbhb-agent-reviewer/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/tbhb-agent-reviewer/subscriptions",
+      "organizations_url": "https://api.github.com/users/tbhb-agent-reviewer/orgs",
+      "repos_url": "https://api.github.com/users/tbhb-agent-reviewer/repos",
+      "events_url": "https://api.github.com/users/tbhb-agent-reviewer/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/tbhb-agent-reviewer/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "body": "",
+    "state": "COMMENTED",
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/115#pullrequestreview-5328663924",
+    "pull_request_url": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/115",
+    "author_association": "MEMBER",
+    "_links": {
+      "html": {
+        "href": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/115#pullrequestreview-5328663924"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/115"
+      }
+    },
+    "submitted_at": "2026-09-27T03:11:58Z",
+    "commit_id": "ef65b7077e28aa3c401e5b230d4678ee8a5ccde6"
+  },
+  {
+    "id": 5328665641,
+    "node_id": "PRR_kwDOUtKbt88AAAABPZz8KQ",
+    "user": {
+      "login": "tbhb-agent-reviewer",
+      "id": 152314235,
+      "node_id": "U_kgDOCRQhew",
+      "avatar_url": "https://avatars.githubusercontent.com/u/152314235?u=c28bdb49be24e8265acf00ccaee6d49eac020456&v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/tbhb-agent-reviewer",
+      "html_url": "https://github.com/tbhb-agent-reviewer",
+      "followers_url": "https://api.github.com/users/tbhb-agent-reviewer/followers",
+      "following_url": "https://api.github.com/users/tbhb-agent-reviewer/following{/other_user}",
+      "gists_url": "https://api.github.com/users/tbhb-agent-reviewer/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/tbhb-agent-reviewer/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/tbhb-agent-reviewer/subscriptions",
+      "organizations_url": "https://api.github.com/users/tbhb-agent-reviewer/orgs",
+      "repos_url": "https://api.github.com/users/tbhb-agent-reviewer/repos",
+      "events_url": "https://api.github.com/users/tbhb-agent-reviewer/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/tbhb-agent-reviewer/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "body": "Reviewer: Codex CLI 0.157.1, gpt-6-astra, medium effort. Head ef65b70.\n\nThe generation-ordering and functional-core findings are fixed by d64827b and documented in 77547cb; I verified both at this head and resolved their threads. The third finding remains blocking because the strengthened attack matrix still passes a cross-agent reply publication; I replied in that thread and left it open.\n\nFindings:\n\n- Blocking — [P2] The victim relay-inbox observer lacks subscription permission. `attackRelayReply` uses the operator connection for `grp.build.relay.reply.bob.request`, but the operator subscribe allow list excludes relay replies. The asynchronous permission error is ignored, so the later timeout is not evidence of an empty victim inbox. A temporary Go overlay that retains Alice's legitimate response and additionally publishes the same response to that Bob inbox passes `TestRelayAttackMatrix`. A second overlay probe logged the operator subscription permission violation and observed the injected response through Bob's authorized subscription. Use an authorized observer for each target, detect observer subscription errors, and require this duplicate-publication mutant to fail. See the inline finding and the existing unresolved thread.\n- Non-blocking: no additional findings.\n\nVerification:\n\n- Reviewed #96's body and discussion, the PR body and earlier review, all three implementer thread replies, the named fix/documentation commits, the project plan, and the full origin/main-to-head change. The remote head still matches ef65b7077e28aa3c401e5b230d4678ee8a5ccde6.\n- The new core functions classify publish acknowledgments, validate/default receive waits, accept delivery metadata, and decide token installation/consumption using plain values. The shell applies the generation transition under its lock. The real-server out-of-order regression and plain-value transition tests pass.\n- Agent grants remain limited to five literal relay request subjects and the agent's reply subscription prefix. Agents have no JetStream API, ACK, KV, or direct-message publication grant. Fixing test observation requires no agent JetStream grant.\n- `GOCACHE=/tmp/review-115-go-cache GOPATH=/tmp/bus-26-gopath GOLANGCI_LINT_CACHE=/tmp/review-115-lint RAPID_NOFAILFILE=1 mise run check:go` passed, including lint, build, race/shuffle tests, and restart/redelivery. `mise run check:imports -- --no-cache` and `mise run check:ruff` passed with temporary Python/cache directories. All five GitHub checks are green.\n- `GOCACHE=/tmp/review-115-go-cache GOPATH=/tmp/bus-26-gopath mise exec -- go test -race -overlay=/tmp/review-115-round2/overlay.json ./internal/bus -run '^TestRelayAttackMatrix$' -count=1 -v` unexpectedly passed with the injected extra Bob publication. The independent observer probe returned `Permissions Violation for Subscription to \"grp.build.relay.reply.bob.request\"` for the operator and received `{\"result\":\"stored\",\"sequence\":1}` as Bob. This demonstrates a regression-test gap, not an observed bypass in the unmodified relay.\n- The full aggregate, formatter, local mutation gate, and docs build were not rerun because this checkout is read-only; current CI and the committed evidence cover those separately. Probe files and caches stayed under /tmp, and git status remains clean. Operator merge and the documented #28 registration/#29 KV integration dependencies remain applicable.\n",
+    "state": "CHANGES_REQUESTED",
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/115#pullrequestreview-5328665641",
+    "pull_request_url": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/115",
+    "author_association": "MEMBER",
+    "_links": {
+      "html": {
+        "href": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/115#pullrequestreview-5328665641"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/115"
+      }
+    },
+    "submitted_at": "2026-09-27T03:12:41Z",
+    "commit_id": "ef65b7077e28aa3c401e5b230d4678ee8a5ccde6"
+  },
+  {
+    "id": 5328701427,
+    "node_id": "PRR_kwDOUtKbt88AAAABPZ2H8w",
+    "user": {
+      "login": "tbhb",
+      "id": 17915374,
+      "node_id": "MDQ6VXNlcjE3OTE1Mzc0",
+      "avatar_url": "https://avatars.githubusercontent.com/u/17915374?u=570c35c904259c7db16a6466186b1b09af64e9d4&v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/tbhb",
+      "html_url": "https://github.com/tbhb",
+      "followers_url": "https://api.github.com/users/tbhb/followers",
+      "following_url": "https://api.github.com/users/tbhb/following{/other_user}",
+      "gists_url": "https://api.github.com/users/tbhb/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/tbhb/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/tbhb/subscriptions",
+      "organizations_url": "https://api.github.com/users/tbhb/orgs",
+      "repos_url": "https://api.github.com/users/tbhb/repos",
+      "events_url": "https://api.github.com/users/tbhb/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/tbhb/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "body": "",
+    "state": "COMMENTED",
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/115#pullrequestreview-5328701427",
+    "pull_request_url": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/115",
+    "author_association": "MEMBER",
+    "_links": {
+      "html": {
+        "href": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/115#pullrequestreview-5328701427"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/115"
+      }
+    },
+    "submitted_at": "2026-09-27T03:30:49Z",
+    "commit_id": "16948a43b3617b7908dadc366fe3b89b550365d2"
+  },
+  {
+    "id": 5328701657,
+    "node_id": "PRR_kwDOUtKbt88AAAABPZ2I2Q",
+    "user": {
+      "login": "tbhb",
+      "id": 17915374,
+      "node_id": "MDQ6VXNlcjE3OTE1Mzc0",
+      "avatar_url": "https://avatars.githubusercontent.com/u/17915374?u=570c35c904259c7db16a6466186b1b09af64e9d4&v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/tbhb",
+      "html_url": "https://github.com/tbhb",
+      "followers_url": "https://api.github.com/users/tbhb/followers",
+      "following_url": "https://api.github.com/users/tbhb/following{/other_user}",
+      "gists_url": "https://api.github.com/users/tbhb/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/tbhb/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/tbhb/subscriptions",
+      "organizations_url": "https://api.github.com/users/tbhb/orgs",
+      "repos_url": "https://api.github.com/users/tbhb/repos",
+      "events_url": "https://api.github.com/users/tbhb/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/tbhb/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "body": "",
+    "state": "COMMENTED",
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/115#pullrequestreview-5328701657",
+    "pull_request_url": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/115",
+    "author_association": "MEMBER",
+    "_links": {
+      "html": {
+        "href": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/115#pullrequestreview-5328701657"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/115"
+      }
+    },
+    "submitted_at": "2026-09-27T03:30:56Z",
+    "commit_id": "16948a43b3617b7908dadc366fe3b89b550365d2"
+  },
+  {
+    "id": 5328721648,
+    "node_id": "PRR_kwDOUtKbt88AAAABPZ3W8A",
+    "user": {
+      "login": "tbhb-agent-reviewer",
+      "id": 152314235,
+      "node_id": "U_kgDOCRQhew",
+      "avatar_url": "https://avatars.githubusercontent.com/u/152314235?u=c28bdb49be24e8265acf00ccaee6d49eac020456&v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/tbhb-agent-reviewer",
+      "html_url": "https://github.com/tbhb-agent-reviewer",
+      "followers_url": "https://api.github.com/users/tbhb-agent-reviewer/followers",
+      "following_url": "https://api.github.com/users/tbhb-agent-reviewer/following{/other_user}",
+      "gists_url": "https://api.github.com/users/tbhb-agent-reviewer/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/tbhb-agent-reviewer/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/tbhb-agent-reviewer/subscriptions",
+      "organizations_url": "https://api.github.com/users/tbhb-agent-reviewer/orgs",
+      "repos_url": "https://api.github.com/users/tbhb-agent-reviewer/repos",
+      "events_url": "https://api.github.com/users/tbhb-agent-reviewer/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/tbhb-agent-reviewer/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "body": "Reviewer: Codex CLI 0.157.1, gpt-6-astra, medium effort. Head 16948a4.\n\nCommit 16948a4 fixes the remaining victim-observer finding: Bob's authorized connection observes his relay inbox, and observer connection errors fail the test. The duplicate-publication probe now fails while Alice's legitimate response remains intact; the unmodified attack matrix passes, and both remaining threads are resolved.\n\nFindings:\n\n- Blocking: none remaining.\n- Non-blocking: none added.\n\nVerification:\n\n- Read issue #96 and its discussion, the PR body and earlier comments/reviews, every review thread and implementer reply, the project plan, the origin/main-to-head diff, and the named fix commit. The earlier generation-ordering and functional-core fixes remain present; core policy uses plain values, with broker I/O, randomness, and synchronization in the shell.\n- Confirmed agents retain only five literal relay request publish grants and their own relay reply subscription prefix. They hold no JetStream API, ACK, KV, or direct-message publish grant. This test fix changes no permissions.\n- `GOCACHE=/tmp/review-115-go-cache GOPATH=/tmp/bus-26-gopath RAPID_NOFAILFILE=1 mise exec -- go test -race -overlay=/tmp/review-115-round2/overlay.json ./internal/bus -run '^TestRelayAttackMatrix$' -count=1 -v` exited 1 with `send published to victim target grp.build.relay.reply.bob.request`. Inspected the overlay against this head: its only change retains the legitimate Publish and additionally publishes the same response to the supplied Bob inbox. The identical command without the overlay exited 0. This verifies detection of the injected defect, not an exploit in the unmodified relay.\n- `GOCACHE=/tmp/review-115-go-cache GOPATH=/tmp/bus-26-gopath GOLANGCI_LINT_CACHE=/tmp/review-115-lint RAPID_NOFAILFILE=1 mise run check:go` exited 0, including lint, build, race/shuffle tests, generation ordering, and restart/redelivery. `mise run check:imports -- --no-cache` and `mise run check:ruff` exited 0 with temporary Python/cache directories.\n- All five GitHub checks are successful at the reviewed SHA. The full aggregate, formatter, local mutation gate, and docs build were not rerun in this read-only checkout; their current CI results and committed evidence are separate from the checks above. Git status and diff checks are clean.\n- All four review threads are resolved. Operator merge remains required for the permission-policy change; #28 dynamic registration and #29 production KV integration remain the documented follow-up dependencies.\n",
+    "state": "APPROVED",
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/115#pullrequestreview-5328721648",
+    "pull_request_url": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/115",
+    "author_association": "MEMBER",
+    "_links": {
+      "html": {
+        "href": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/115#pullrequestreview-5328721648"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/115"
+      }
+    },
+    "submitted_at": "2026-09-27T03:41:36Z",
+    "commit_id": "f346d2e0229f7f1db79ee672c0a5e0c093ac2611"
+  }
+]

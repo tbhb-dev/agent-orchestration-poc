@@ -1,0 +1,30 @@
+[
+  {
+    "filename": ".gitignore",
+    "status": "modified",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/observability/notes.md",
+    "status": "added",
+    "additions": 57,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/observability/provider-matrix.csv",
+    "status": "added",
+    "additions": 6,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/observability/versions.md",
+    "status": "added",
+    "additions": 15,
+    "deletions": 0,
+    "patch_available": true
+  }
+]

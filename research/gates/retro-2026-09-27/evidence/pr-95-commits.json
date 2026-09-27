@@ -1,0 +1,37 @@
+[
+  {
+    "short_sha": "9d6eca255999",
+    "parent_count": 1,
+    "subject": "research(shell): add the shell-scripting conventions gate"
+  },
+  {
+    "short_sha": "f9f5b44a9d71",
+    "parent_count": 2,
+    "subject": "chore(shell): merge main and renumber tooling decision"
+  },
+  {
+    "short_sha": "0fce7f782496",
+    "parent_count": 2,
+    "subject": "Merge branch 'main' into research/30-shell-conventions"
+  },
+  {
+    "short_sha": "6a71a604d1eb",
+    "parent_count": 2,
+    "subject": "Merge branch 'main' into research/30-shell-conventions"
+  },
+  {
+    "short_sha": "a3228586885f",
+    "parent_count": 2,
+    "subject": "Merge remote-tracking branch 'origin/research/30-shell-conventions' into research/30-shell-conventions"
+  },
+  {
+    "short_sha": "7ad89c279bd8",
+    "parent_count": 1,
+    "subject": "docs(shell): correct agy assessment version"
+  },
+  {
+    "short_sha": "9c8823225783",
+    "parent_count": 2,
+    "subject": "chore(shell): merge current main into research branch"
+  }
+]

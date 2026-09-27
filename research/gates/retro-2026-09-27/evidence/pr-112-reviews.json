@@ -1,0 +1,42 @@
+[
+  {
+    "id": 5328487977,
+    "node_id": "PRR_kwDOUtKbt88AAAABPZpGKQ",
+    "user": {
+      "login": "tbhb-agent-reviewer",
+      "id": 152314235,
+      "node_id": "U_kgDOCRQhew",
+      "avatar_url": "https://avatars.githubusercontent.com/u/152314235?u=c28bdb49be24e8265acf00ccaee6d49eac020456&v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/tbhb-agent-reviewer",
+      "html_url": "https://github.com/tbhb-agent-reviewer",
+      "followers_url": "https://api.github.com/users/tbhb-agent-reviewer/followers",
+      "following_url": "https://api.github.com/users/tbhb-agent-reviewer/following{/other_user}",
+      "gists_url": "https://api.github.com/users/tbhb-agent-reviewer/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/tbhb-agent-reviewer/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/tbhb-agent-reviewer/subscriptions",
+      "organizations_url": "https://api.github.com/users/tbhb-agent-reviewer/orgs",
+      "repos_url": "https://api.github.com/users/tbhb-agent-reviewer/repos",
+      "events_url": "https://api.github.com/users/tbhb-agent-reviewer/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/tbhb-agent-reviewer/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "body": "Reviewer: Codex CLI 0.157.1, gpt-6-astra, medium effort. Head f34e826.\n\nThe change meets issue #102's merge-ready criteria: direct pins remain unchanged, all three vulnerable lockfile edges resolve to 4.18.1, and the report distinguishes source-based inference, observed parser behavior, and untested post-merge alert closure. Independently reproduced a frozen install in /tmp with pnpm 12.7.0, the single-version dependency graph, an unchanged lockfile after lockfile-only installation, and fixture exit codes 0/1/0; checked the recorded source commits and Dependabot failure excerpt, and confirmed green CI at this head. The checkout remains unchanged; full aggregate validation is supported by CI rather than a reviewer rerun, and there are no earlier review threads to resolve.\n\nFindings: no blocking or non-blocking findings. The documented risk that fresh resolution can restore Chevrotain's exact vulnerable request remains explicit; post-merge alert closure belongs to the coordinator's follow-up recorded in #102.",
+    "state": "APPROVED",
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/112#pullrequestreview-5328487977",
+    "pull_request_url": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/112",
+    "author_association": "MEMBER",
+    "_links": {
+      "html": {
+        "href": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/112#pullrequestreview-5328487977"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/112"
+      }
+    },
+    "submitted_at": "2026-09-27T02:01:45Z",
+    "commit_id": "f34e8263c900d9f187fdd9b3a6517c43e71b9e05"
+  }
+]

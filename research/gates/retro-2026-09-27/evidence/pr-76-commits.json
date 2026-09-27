@@ -1,0 +1,17 @@
+[
+  {
+    "short_sha": "78a6ae118cba",
+    "parent_count": 1,
+    "subject": "tooling(gates): enforce core boundaries and quality thresholds"
+  },
+  {
+    "short_sha": "a824cb7e9b47",
+    "parent_count": 1,
+    "subject": "docs(gates): record core layout and quality gate decisions"
+  },
+  {
+    "short_sha": "b190cc583524",
+    "parent_count": 1,
+    "subject": "test(gates): record deliberately failing examples"
+  }
+]

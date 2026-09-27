@@ -1,0 +1,16 @@
+[
+  {
+    "filename": "docs/src/content/docs/project/handoff.md",
+    "status": "modified",
+    "additions": 17,
+    "deletions": 15,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/project/plan.md",
+    "status": "modified",
+    "additions": 1,
+    "deletions": 1,
+    "patch_available": true
+  }
+]
