@@ -57,6 +57,7 @@ depends = [
   "check:handoff-classifier",
   "check:secrets",
   "check:actions",
+  "check:workflow-forms",
 ]
 
 [tasks.fmt]
@@ -265,6 +266,31 @@ run = "uv run python -m agent_orchestration_poc.shell.coordinator_preflight clos
 [tasks."check:pr-body"]
 description = "Check a PR body on stdin against the commit convention: mise run check:pr-body -- '<title>' < body.md"
 run = "scripts/check-pr-body.sh"
+
+[tasks."check:workflow-forms"]
+description = "Test workflow form decisions and compare generated forms"
+run = ["uv run pytest tests/test_workflow_forms.py", "uv run python -m agent_orchestration_poc.shell.workflow_forms forms"]
+
+[tasks."forms:write"]
+description = "Regenerate issue forms from the workflow reference"
+run = "uv run python -m agent_orchestration_poc.shell.workflow_forms write-forms"
+
+[tasks."workflow:issue"]
+description = "Read and validate one issue"
+run = "uv run python -m agent_orchestration_poc.shell.workflow_forms issue"
+
+[tasks."workflow:issues"]
+description = "Read and validate every open issue"
+run = "uv run python -m agent_orchestration_poc.shell.workflow_forms issues"
+
+[tasks."workflow:pr"]
+description = "Read and validate one pull request"
+run = "uv run python -m agent_orchestration_poc.shell.workflow_forms pr"
+
+[tasks."scc:version"]
+description = "Report the pinned scc version for the PR size contract"
+tools."go:github.com/boyter/scc/v4" = "4.1.0"
+run = "scc --version"
 
 [tasks."check:imported-research"]
 description = "Check that research/imported/ is unchanged against a base ref: mise run check:imported-research -- <base> '<title>'"

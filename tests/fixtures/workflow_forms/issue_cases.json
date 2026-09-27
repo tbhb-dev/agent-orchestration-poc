@@ -1,0 +1,30 @@
+[
+  {
+    "case": "valid",
+    "title": "tooling(workflow): add forms",
+    "body": "## Goal\nAdd forms.\n## Context and links\nSee #84.\n## Dependencies and paths\nAfter PR #81. Allowed paths: `config/workflow-reference.toml`, `.github/ISSUE_TEMPLATE/**`.\n## Acceptance criteria\n- [ ] Forms exist.\n## Evidence required\nCommit `reports/inputs/workflow-forms-evidence.md` after `mise run check:workflow-forms`.\n## Docs impact\nUpdate the workflow page.\n## Out of scope\nIdentity checks.",
+    "labels": ["area/workflow", "type/tooling", "phase/1", "harness/codex"],
+    "expected": []
+  },
+  {
+    "case": "invalid",
+    "title": "workflow(unknown): added",
+    "body": "## Goal\nSomething.\n## Dependencies and paths\nAllowed paths: `/tmp/private`, `../escape`, `!AGENTS.md`.\n## Evidence required\nLater.",
+    "labels": ["area/workflow", "area/docs", "type/nope", "phase/1"],
+    "expected": [
+      "title must be type(scope): verb object",
+      "expected exactly one area/ label",
+      "unknown label: type/nope",
+      "expected exactly one harness/ label",
+      "missing or empty section: Context and links",
+      "missing or empty section: Acceptance criteria",
+      "missing or empty section: Docs impact",
+      "missing or empty section: Out of scope",
+      "dependencies need an issue or PR reference",
+      "invalid allowed path: /tmp/private",
+      "invalid allowed path: ../escape",
+      "invalid allowed path: !AGENTS.md",
+      "evidence needs a named path and exact command"
+    ]
+  }
+]
