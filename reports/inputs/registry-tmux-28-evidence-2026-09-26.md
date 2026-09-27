@@ -106,6 +106,8 @@ ok   github.com/tbhb/agent-orchestration-poc/internal/provision 1.125s
 
 **Observed:** `mise run docs:check-links` again failed in this sandbox. Chromium could not register `org.chromium.Chromium.MachPortRendezvousServer` (`Permission denied (1100)`), and the link validator reported three existing `/workflow/` links in `index.md`, `project/history.md`, and `workflow/tooling.md`. The edited bus and provisioner pages rendered; this local run does not establish a green docs check.
 
+**Observed:** `origin/main` advanced again to `1c745ff` before push. Merge commit `83698b0` brought in its workflow checks without file conflicts. After that merge, `mise run check` passed, including the added ignore-collision and handoff-classifier checks. `mise run check:mutation` passed again with the same 135/139 Go and 200/240 Python killed-mutant results recorded above.
+
 ## Operator acceptance procedure
 
 **Untested:** the following commands need the operator's subscriptions, user-scope sandbox settings, and a host location outside this worker sandbox. Run them from a trusted checkout of the feature branch. Use three prepared brief files that each ask the worker to read the file, make a small issue-scoped change, stage it, and commit it. The commands use distinct issue #28 acceptance branches so they cannot share a worktree.
