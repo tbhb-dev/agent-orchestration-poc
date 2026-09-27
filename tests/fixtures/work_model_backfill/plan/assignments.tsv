@@ -1,0 +1,5 @@
+number	state	title	epic	initiative	priority	severity	work type	issue type	live state	state reason	backfill mode	project status	project size	project phase	project area	project harness	project worker	proposed title	fold into	fixture source
+1	open	tooling(project): old title	epic: migration		Standard		Planned	Chore	open		existing issue	Ready	M	2	tooling	codex	worker	tooling(project): build a model		synthetic
+2	closed	legacy title	epic: migration		Intangible		Unplanned	Spike	open	not_planned	existing issue	Done	S	2	research	codex	worker		1	synthetic
+	proposed	Draft A			Standard		Unplanned	Chore			draft	Backlog		2	tooling	codex				synthetic
+	proposed	Draft B			Standard		Unplanned	Chore			existing draft	Backlog		2	tooling	codex				synthetic
