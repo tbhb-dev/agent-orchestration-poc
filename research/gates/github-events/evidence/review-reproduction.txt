@@ -1,0 +1,28 @@
+PR #99 review reproduction, 2026-09-27, before document edits at 9ca2d88.
+Source: review 5328337227, tbhbbot, head 0b5c375.
+Command: mise exec -- python, reading docs/src/content/docs/design/github-event-monitor.md.
+Assertions (all required true):
+  'provision secret files' not in page
+  'https://usdholt05.ibex-paradise.ts.net/hooks/github' in page
+  'inbox byte' in page
+  'coordinator-only' in page
+  '900 requests' in page
+Result: five FAIL lines, AssertionError, exit 1.
+These reproduce textual omissions; no monitor implementation exists to runtime-test.
+
+Manual deterministic trace of the old generation-discard contract:
+  Start collection n at generation n.
+  Deliver relevant same-PR event before its final REST page; generation becomes n+1.
+  Commit compares n against n+1, discards all candidate state and retries.
+  Repeat for n=1..100: zero committed candidates. The trace extends indefinitely.
+This is a counterexample to bounded convergence, not a measured throughput test.
+
+Review comment IDs and finding mapping:
+4113602295 credential bootstrap
+4113602304 existing ingress
+4113602306 Actions burst and storage
+4113602311 coordinator-only first slice
+4113602314 stopgap request accounting
+
+Post-edit assertions: same five assertions PASS (exit 0).
+Runtime acceptance tests are specified in the design, not claimed as executed.
