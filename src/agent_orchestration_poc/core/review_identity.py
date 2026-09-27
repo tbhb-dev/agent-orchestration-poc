@@ -2,8 +2,8 @@
 
 from collections.abc import Sequence
 
-REVIEWER = "tbhbbot"
-IMPLEMENTER = "tbhb"
+REVIEWER = "tbhb-agent-reviewer"
+COORDINATOR = "tbhb"
 REQUIRED_CHECKS = frozenset(
     {"check", "docs", "pr-body", "imported-research", "mutation"}
 )
@@ -45,7 +45,7 @@ def another_review_round_allowed(
     if changes_requested < 3:
         return True
     return (
-        arbitration_author == IMPLEMENTER
+        arbitration_author == COORDINATOR
         and arbitration_body.rstrip("\r\n") == "Arbitration: authorize another round"
         and arbitration_at > third_verdict_at
     )
