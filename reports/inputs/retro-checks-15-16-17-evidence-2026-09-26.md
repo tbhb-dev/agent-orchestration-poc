@@ -98,7 +98,7 @@ A temporary handoff claiming `Open PR #2` produced exit 1 after the script queri
 handoff calls PR #2 open, but GitHub reports MERGED
 ```
 
-`mise run fmt` and `mise run check` both exited 0 with uv, Go, and golangci-lint caches directed to writable temporary paths. The `check` aggregate included `check:handoff-classifier`, and the branch has no `check:mutation` task.
+`mise run fmt` and `mise run check` both exited 0 with uv, Go, and golangci-lint caches directed to writable temporary paths. The `check` aggregate included `check:handoff-classifier`; before the main merge, this branch had no `check:mutation` task.
 
 The current root pointer and docs handoff produced exit 0:
 
@@ -114,3 +114,5 @@ With GitHub CLI 2.100.0 and `GH_REPO=tbhb/agent-orchestration-poc`, a temporary 
 ```text
 handoff calls PR #2 open, but GitHub reports MERGED
 ```
+
+After merging `origin/main` into PR #81, the workflow table keeps this branch's `handoff` job and main's `mutation` and `property-nightly` jobs. `mise run fmt`, `mise run check`, and `mise run build` exited 0 with writable temporary caches. The new `mise run check:mutation` task exited 0: Go killed 14 of 14 mutants, and Python killed 74 of 83 mutants for an 89.16% score. Python core coverage was 100% (30 statements); pytest reported 31 passed and 1 skipped. The aggregate check also reported 31 passed and 1 skipped. The first formatter attempt could not initialize the default uv cache under the sandbox, so these runs used temporary cache paths. Local `mise run docs:check-links` could not render the workflow page because Chromium's Mach port registration was denied by the sandbox; the validator then reported three links into that missing page as invalid.

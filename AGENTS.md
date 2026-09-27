@@ -22,7 +22,7 @@ Read the assigned issue and [project plan](docs/src/content/docs/project/plan.md
 - Functional core, imperative shell is a binding operator requirement from 2026-09-26. Put decisions and data transformations in pure functions. Keep side effects in a thin shell at the edges. A PR that puts I/O in the core or decisions in the shell cannot merge.
 - Go core packages live under `internal/core/`. `cmd/`, `internal/bus`, `internal/registry`, `internal/backend/`, `internal/term`, and `internal/api` are shell packages. golangci-lint 2.14.0 `depguard` checks core imports.
 - Python core modules live under `agent_orchestration_poc.core`. I/O lives under `agent_orchestration_poc.shell` and in experiment scripts. import-linter 2.15 checks the layers and forbidden I/O imports, with ruff 0.16.9 `TID251` as a partial call check.
-- Test the core with plain values and no mocks. Add property tests and mutation testing when #59 and #60 land. Put process and socket tests in the shell's integration suite.
+- Test the core with plain values and no mocks. Property tests run in `check`, and `check:mutation` enforces scores for the core. Put process and socket tests in the shell's integration suite.
 - Review rejects calls that import checkers cannot see, including `pathlib` writes and I/O through writer, connection, or process parameters. Run `check:go`, `check:imports`, and `check:ruff` for the boundary.
 
 ## Mise and checks
