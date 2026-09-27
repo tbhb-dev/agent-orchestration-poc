@@ -5,6 +5,7 @@ import json
 import os
 import socket
 import struct
+from collections.abc import Callable
 from typing import Any, cast
 
 import identity
@@ -18,7 +19,12 @@ class TrustConflictError(TrustPreflightError):
     """The endpoint already has an entry for this exact worktree."""
 
 
-def change_trust(endpoint: str, worktree: str, value: str | None) -> None:
+def change_trust(
+    endpoint: str,
+    worktree: str,
+    value: str | None,
+    before_write: Callable[[], None] | None = None,
+) -> None:
     """Write one server user-config trust key and read it back on that endpoint."""
     try:
         connection = _connect(endpoint)
@@ -43,6 +49,8 @@ def change_trust(endpoint: str, worktree: str, value: str | None) -> None:
             if not identity.trust_readback(before, worktree, None):
                 raise TrustConflictError("exact worktree already has a trust entry")
             number += 1
+        if before_write is not None:
+            before_write()
         written = _call(
             connection,
             number,

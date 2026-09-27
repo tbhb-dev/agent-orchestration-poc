@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+from collections.abc import Callable
 from pathlib import Path
 
 import cli
@@ -392,8 +393,9 @@ def test_trust_write_and_readback_on_fake_endpoint(  # noqa: C901, PLR0915
         errors: list[Exception] = []
         worktree = "/repo/.worktrees/worker"
         reads = 0
+        pending: list[str] = []
 
-        def serve() -> None:  # noqa: C901
+        def serve() -> None:  # noqa: C901, PLR0912
             nonlocal reads
             try:
                 conn, _ = server.accept()
@@ -412,6 +414,10 @@ def test_trust_write_and_readback_on_fake_endpoint(  # noqa: C901, PLR0915
                             continue
                         method = request["method"]
                         if method == "config/batchWrite":
+                            if pending != ["writing"]:
+                                raise ValueError(
+                                    "write reached server before registry phase"
+                                )
                             response: dict[str, object] = {"status": "ok"}
                             if failure == "write_status":
                                 response = {"status": "okOverridden"}
@@ -463,9 +469,16 @@ def test_trust_write_and_readback_on_fake_endpoint(  # noqa: C901, PLR0915
         try:
             if failure:
                 with pytest.raises(ValueError, match="config/|trust entry|preflight"):
-                    codex_launch.change_trust(f"unix://{path}", worktree, value)
+                    codex_launch.change_trust(
+                        f"unix://{path}",
+                        worktree,
+                        value,
+                        lambda: pending.append("writing"),
+                    )
             else:
-                codex_launch.change_trust(f"unix://{path}", worktree, value)
+                codex_launch.change_trust(
+                    f"unix://{path}", worktree, value, lambda: pending.append("writing")
+                )
         finally:
             server.close()
             thread.join(timeout=5)
@@ -474,8 +487,10 @@ def test_trust_write_and_readback_on_fake_endpoint(  # noqa: C901, PLR0915
         writes = [item for item in requests if item["method"] == "config/batchWrite"]
         if failure in {"preexisting", "preflight_error"}:
             assert writes == []
+            assert pending == []
         else:
             assert writes[0]["params"] == identity.trust_write_params(worktree, value)
+            assert pending == ["writing"]
         read_requests = [item for item in requests if item["method"] == "config/read"]
         assert all(
             item["params"] == {"cwd": worktree, "includeLayers": True}
@@ -511,14 +526,19 @@ def test_launch_trust_gate_precedes_pane(
             args[0], 1, "", "no server running"
         ),
     )
-    monkeypatch.setattr(
-        codex_launch,
-        "change_trust",
-        lambda *_args: (
-            calls.append("trust")
-            or ((_ for _ in ()).throw(ValueError("write denied")) if failure else None)
-        ),
-    )
+
+    def change_trust(
+        _endpoint: str,
+        _worktree: str,
+        _value: str | None,
+        before_write: Callable[[], None],
+    ) -> None:
+        before_write()
+        calls.append("trust")
+        if failure:
+            raise ValueError("write denied")
+
+    monkeypatch.setattr(codex_launch, "change_trust", change_trust)
     monkeypatch.setattr(
         launcher, "_new_pane", lambda *_args: calls.append("pane") or {}
     )
@@ -576,7 +596,13 @@ def test_cleanup_removes_only_recorded_trust(
     monkeypatch.setattr(launcher, "STORE", store)
     calls: list[tuple[str, str, str | None]] = []
 
-    def change(endpoint: str, worktree: str, value: str | None) -> None:
+    def change(
+        endpoint: str,
+        worktree: str,
+        value: str | None,
+        before_write: Callable[[], None],
+    ) -> None:
+        before_write()
         calls.append((endpoint, worktree, value))
         if failure:
             raise ValueError("readback failed")
@@ -620,6 +646,57 @@ def test_prewrite_failure_is_never_removed(
     assert not registry.read(store)[0].get("trust_write_attempted")
     with pytest.raises(ValueError, match="no launcher-owned"):
         launcher.cleanup("run-1")
+
+
+@pytest.mark.parametrize("stage", ["preflight", "pending", "applied", "readback"])
+def test_interrupted_trust_write_recovery(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, stage: str
+) -> None:
+    """Only a persisted pending edit can be cleaned up after interruption."""
+    row = {
+        "run_id": "run-1",
+        "harness": "codex",
+        "worktree": "/repo/.worktrees/worker",
+        "endpoint": "unix:///private/tmp/fake.sock",
+        "trust_created": True,
+        "git_common_dir": "/repo/.git",
+    }
+    store = tmp_path / "registry.json"
+    monkeypatch.setattr(launcher, "STORE", store)
+    applied: list[str | None] = []
+
+    def change(
+        _endpoint: str,
+        _worktree: str,
+        value: str | None,
+        before_write: Callable[[], None] | None = None,
+    ) -> None:
+        if value is None:
+            applied.append(None)
+            return
+        if stage == "preflight":
+            raise KeyboardInterrupt
+        if before_write is not None:
+            before_write()
+        if stage == "pending":
+            raise KeyboardInterrupt
+        applied.append(value)
+        if stage in {"applied", "readback"}:
+            raise KeyboardInterrupt
+
+    monkeypatch.setattr(codex_launch, "change_trust", change)
+    with pytest.raises(KeyboardInterrupt):
+        launcher._change_trust(row, [row], remove=False)
+    saved = registry.read(store)[0]
+    if stage == "preflight":
+        assert not saved.get("trust_write_attempted")
+        with pytest.raises(ValueError, match="no launcher-owned"):
+            launcher.cleanup("run-1")
+    else:
+        assert saved["trust_write_attempted"] is True
+        assert saved["trust_events"][-1]["result"] == "writing"
+        assert launcher.cleanup("run-1")[1] == "removed"
+        assert applied[-1] is None
 
 
 @pytest.mark.parametrize(

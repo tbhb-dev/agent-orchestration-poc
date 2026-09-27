@@ -93,52 +93,43 @@ def _worktree(path: Path, branch: str, owned: bool) -> bool:
 def _change_trust(
     row: dict[str, Any], rows: list[dict[str, Any]], remove: bool
 ) -> bool:
-    """Persist every run-owned edit attempt before contacting its endpoint."""
+    """Persist preflight and pending-write phases around one remote edit."""
     target = identity.trust_target(
         row["worktree"],
         str(Path(row["git_common_dir"]).parent),
         row.get("trust_created") is True,
     )
-    event = {
-        "action": "remove" if remove else "register",
-        "at": _now(),
-        "result": "attempted",
-    }
-    row.setdefault("trust_events", []).append(event)
-    registry.write(STORE, rows)
+
+    def record(outcome: str, reason: str = "") -> None:
+        row.update(
+            identity.trust_transition(
+                row,
+                outcome,
+                _now(),
+                action="remove" if remove else "register",
+                reason=reason,
+            )
+        )
+        registry.write(STORE, rows)
+
+    record("attempted")
     try:
         codex_launch.change_trust(
-            row["endpoint"], target, None if remove else "trusted"
+            row["endpoint"],
+            target,
+            None if remove else "trusted",
+            lambda: record("writing"),
         )
     except codex_launch.TrustConflictError as error:
-        row["trust_conflict"] = True
-        row["trust_blocked"] = True
-        event.update(result="failed", reason=str(error))
-        row.update(state="blocked", reason=str(error), observed_at=_now())
-        registry.write(STORE, rows)
+        record("conflict", str(error))
         return False
     except codex_launch.TrustPreflightError as error:
-        row["trust_blocked"] = True
-        event.update(result="failed", reason=str(error))
-        row.update(state="blocked", reason=str(error), observed_at=_now())
-        registry.write(STORE, rows)
+        record("preflight", str(error))
         return False
     except (OSError, ValueError, EOFError, TimeoutError) as error:
-        row["trust_write_attempted"] = True
-        row["trust_blocked"] = True
-        event.update(result="failed", reason=str(error))
-        row.update(
-            state="blocked",
-            reason=f"folder trust {event['action']} failed: {error}",
-            observed_at=_now(),
-        )
-        registry.write(STORE, rows)
+        record("write_failed", str(error))
         return False
-    event["result"] = "confirmed"
-    row["trust_write_attempted"] = True
-    row["trust_blocked"] = False
-    row["trust_registered"] = not remove
-    registry.write(STORE, rows)
+    record("confirmed")
     return True
 
 
@@ -321,18 +312,11 @@ def cleanup(run_id: str) -> tuple[dict[str, Any], str, str]:
     row = next((item for item in rows if item["run_id"] == run_id), None)
     if row is None:
         raise ValueError("run ID not found")
-    if (
-        row["harness"] != "codex"
-        or not row.get("trust_events")
-        or not row.get("trust_write_attempted")
-    ):
-        raise ValueError("run has no launcher-owned Codex trust write")
-    if row.get("trust_registered") is False:
-        raise ValueError("run trust entry was already removed")
+    error = identity.trust_cleanup_error(row)
+    if error:
+        raise ValueError(error)
     if not _change_trust(row, rows, remove=True):
         return row, "blocked", row["reason"]
-    row.update(state="removed", reason="folder trust removed", observed_at=_now())
-    registry.write(STORE, rows)
     return row, "removed", row["reason"]
 
 

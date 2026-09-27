@@ -40,7 +40,14 @@ def test_trust_target(path: str, created: bool, allowed: bool) -> None:
 
 
 @given(
-    st.text(min_size=1).filter(lambda name: "/" not in name and name not in {".", ".."})
+    st.text(min_size=1).filter(
+        lambda name: (
+            "/" not in name
+            and "\x00" not in name
+            and name not in {".", ".."}
+            and all(not 0xD800 <= ord(char) <= 0xDFFF for char in name)
+        )
+    )
 )
 def test_trust_target_property(name: str) -> None:
     """A direct child is eligible only when creation belongs to this run."""
@@ -68,14 +75,73 @@ def test_trust_write_params(value: str | None) -> None:
     }
 
 
-@given(st.text(min_size=1))
+def server_key_segments(key: str) -> list[str]:
+    """Mirror the pinned config manager's quoted-key parser for this test."""
+    segments: list[str] = []
+    segment = ""
+    quoted = False
+    index = 0
+    while index < len(key):
+        char = key[index]
+        if char == '"' and not segment and not quoted:
+            quoted = True
+        elif char == '"' and quoted:
+            quoted = False
+        elif char == "\\" and quoted:
+            index += 1
+            if index == len(key):
+                raise ValueError("unterminated escape")
+            segment += key[index]
+        elif char == "." and not quoted:
+            if not segment:
+                raise ValueError("empty segment")
+            segments.append(segment)
+            segment = ""
+        elif char == '"':
+            raise ValueError("invalid quote")
+        else:
+            segment += char
+        index += 1
+    if quoted or not segment:
+        raise ValueError("incomplete key")
+    return [*segments, segment]
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/repo/.worktrees/a\nb",
+        "/repo/.worktrees/a\\b",
+        '/repo/.worktrees/a"b',
+        "/repo/.worktrees/a.b",
+    ],
+)
+def test_trust_key_server_roundtrip(path: str) -> None:
+    """The server parser must select exactly the requested worktree."""
+    key = identity.trust_write_params(path, "trusted")["edits"][0]["keyPath"]
+    assert server_key_segments(key) == ["projects", path, "trust_level"]
+
+
+@given(
+    st.text(min_size=1).filter(
+        lambda path: (
+            "\x00" not in path
+            and all(not 0xD800 <= ord(char) <= 0xDFFF for char in path)
+        )
+    )
+)
 def test_trust_write_params_property(path: str) -> None:
     """Every escaped key decodes to exactly the path supplied."""
     params = identity.trust_write_params(path, "trusted")
     key = params["edits"][0]["keyPath"]
-    assert (
-        json.loads(key.removeprefix("projects.").removesuffix(".trust_level")) == path
-    )
+    assert server_key_segments(key) == ["projects", path, "trust_level"]
+
+
+@pytest.mark.parametrize("path", ["a\x00b", "a\ud800b"])
+def test_trust_key_rejects_unrepresentable_path(path: str) -> None:
+    """Reject bytes the config path cannot persist before any write."""
+    with pytest.raises(ValueError, match="trust path"):
+        identity.trust_write_params(path, "trusted")
 
 
 @pytest.mark.parametrize(
@@ -162,6 +228,72 @@ def test_trust_gate_property(reason: str) -> None:
         "blocked",
         reason,
     )
+
+
+@pytest.mark.parametrize(
+    ("action", "outcome", "expected"),
+    [
+        ("register", "confirmed", (True, False, "confirmed")),
+        ("register", "preflight", (None, True, "failed")),
+        ("register", "conflict", (None, True, "failed")),
+        ("register", "write_failed", (None, True, "failed")),
+        ("remove", "confirmed", (False, False, "confirmed")),
+        ("remove", "write_failed", (True, True, "failed")),
+    ],
+)
+def test_trust_transition_values(
+    action: str, outcome: str, expected: tuple[bool | None, bool, str]
+) -> None:
+    """Trust state, ownership, and event results come from plain values."""
+    original: dict[str, Any] = {"state": "starting"}
+    if action == "remove":
+        original["trust_registered"] = True
+    snapshot = original.copy()
+    started = identity.trust_transition(original, "attempted", "time-1", action=action)
+    if outcome not in {"preflight", "conflict"}:
+        started = identity.trust_transition(started, "writing", "time-2")
+        assert started["trust_write_attempted"] is True
+        assert started["reason"] == f"folder trust {action} outcome unknown"
+    final = identity.trust_transition(started, outcome, "time-3", reason="denied")
+    assert original == snapshot
+    assert final.get("trust_registered") is expected[0]
+    assert final["trust_blocked"] is expected[1]
+    assert final["trust_events"][-1]["result"] == expected[2]
+    if outcome == "conflict":
+        assert final["trust_conflict"] is True
+    if outcome == "write_failed":
+        assert final["reason"] == f"folder trust {action} failed: denied"
+
+
+@pytest.mark.parametrize(
+    ("row", "error"),
+    [
+        (
+            {"harness": "codex", "trust_events": [{}], "trust_write_attempted": True},
+            None,
+        ),
+        (
+            {"harness": "codex", "trust_events": [{}]},
+            "run has no launcher-owned Codex trust write",
+        ),
+        (
+            {"harness": "claude", "trust_events": [{}], "trust_write_attempted": True},
+            "run has no launcher-owned Codex trust write",
+        ),
+        (
+            {
+                "harness": "codex",
+                "trust_events": [{}],
+                "trust_write_attempted": True,
+                "trust_registered": False,
+            },
+            "run trust entry was already removed",
+        ),
+    ],
+)
+def test_trust_cleanup_eligibility(row: dict[str, Any], error: str | None) -> None:
+    """An ambiguous owned write is eligible; preflight and removed rows are not."""
+    assert identity.trust_cleanup_error(row) == error
 
 
 @pytest.mark.parametrize(
