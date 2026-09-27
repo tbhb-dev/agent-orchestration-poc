@@ -1,0 +1,202 @@
+[
+  {
+    "id": 5328190226,
+    "node_id": "PRR_kwDOUtKbt88AAAABPZW7Eg",
+    "user": {
+      "login": "tbhb-agent-reviewer",
+      "id": 152314235,
+      "node_id": "U_kgDOCRQhew",
+      "avatar_url": "https://avatars.githubusercontent.com/u/152314235?u=c28bdb49be24e8265acf00ccaee6d49eac020456&v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/tbhb-agent-reviewer",
+      "html_url": "https://github.com/tbhb-agent-reviewer",
+      "followers_url": "https://api.github.com/users/tbhb-agent-reviewer/followers",
+      "following_url": "https://api.github.com/users/tbhb-agent-reviewer/following{/other_user}",
+      "gists_url": "https://api.github.com/users/tbhb-agent-reviewer/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/tbhb-agent-reviewer/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/tbhb-agent-reviewer/subscriptions",
+      "organizations_url": "https://api.github.com/users/tbhb-agent-reviewer/orgs",
+      "repos_url": "https://api.github.com/users/tbhb-agent-reviewer/repos",
+      "events_url": "https://api.github.com/users/tbhb-agent-reviewer/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/tbhb-agent-reviewer/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "body": "Reviewer: Codex CLI 0.157.1, gpt-6-astra, medium effort. Head 358e6cd.\n\nThe earlier ignore-pattern finding is fixed: the committed negated fixture exits 0 and the ignored fixture exits 1 with the expected diagnostic. The handoff guard still misses an explicit open-PR list, violating issue #17's requirement to check every linked PR described as open. There are no existing review threads to resolve.\n\nBlocking — P2: Open-list claims bypass the handoff guard; see the inline finding on scripts/check-handoff-prs.sh:25. A temporary handoff containing an open-list claim for merged PR #2 exited 0, while the singular control queried GitHub and exited 1; recognize the list form and add regression fixtures.\n\nValidation: ran mise run check:ignore-collisions and mise run check:handoff-classifier, plus temporary-file probes for valid, missing-Refs, attributed, and wip commit messages. All four GitHub checks at this head report success; I did not rerun the full aggregate or formatters in this read-only checkout.",
+    "state": "CHANGES_REQUESTED",
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/81#pullrequestreview-5328190226",
+    "pull_request_url": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/81",
+    "author_association": "MEMBER",
+    "_links": {
+      "html": {
+        "href": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/81#pullrequestreview-5328190226"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/81"
+      }
+    },
+    "submitted_at": "2026-09-27T00:05:42Z",
+    "commit_id": "358e6cd36dc847cd9fbc585561b441f3aeffc5fb"
+  },
+  {
+    "id": 5328209869,
+    "node_id": "PRR_kwDOUtKbt88AAAABPZYHzQ",
+    "user": {
+      "login": "tbhb",
+      "id": 17915374,
+      "node_id": "MDQ6VXNlcjE3OTE1Mzc0",
+      "avatar_url": "https://avatars.githubusercontent.com/u/17915374?u=570c35c904259c7db16a6466186b1b09af64e9d4&v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/tbhb",
+      "html_url": "https://github.com/tbhb",
+      "followers_url": "https://api.github.com/users/tbhb/followers",
+      "following_url": "https://api.github.com/users/tbhb/following{/other_user}",
+      "gists_url": "https://api.github.com/users/tbhb/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/tbhb/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/tbhb/subscriptions",
+      "organizations_url": "https://api.github.com/users/tbhb/orgs",
+      "repos_url": "https://api.github.com/users/tbhb/repos",
+      "events_url": "https://api.github.com/users/tbhb/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/tbhb/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "body": "",
+    "state": "COMMENTED",
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/81#pullrequestreview-5328209869",
+    "pull_request_url": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/81",
+    "author_association": "MEMBER",
+    "_links": {
+      "html": {
+        "href": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/81#pullrequestreview-5328209869"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/81"
+      }
+    },
+    "submitted_at": "2026-09-27T00:12:17Z",
+    "commit_id": "49836efa8a9ef7abb4419c0afadadd63ccfe87db"
+  },
+  {
+    "id": 5328235626,
+    "node_id": "PRR_kwDOUtKbt88AAAABPZZsag",
+    "user": {
+      "login": "tbhb-agent-reviewer",
+      "id": 152314235,
+      "node_id": "U_kgDOCRQhew",
+      "avatar_url": "https://avatars.githubusercontent.com/u/152314235?u=c28bdb49be24e8265acf00ccaee6d49eac020456&v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/tbhb-agent-reviewer",
+      "html_url": "https://github.com/tbhb-agent-reviewer",
+      "followers_url": "https://api.github.com/users/tbhb-agent-reviewer/followers",
+      "following_url": "https://api.github.com/users/tbhb-agent-reviewer/following{/other_user}",
+      "gists_url": "https://api.github.com/users/tbhb-agent-reviewer/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/tbhb-agent-reviewer/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/tbhb-agent-reviewer/subscriptions",
+      "organizations_url": "https://api.github.com/users/tbhb-agent-reviewer/orgs",
+      "repos_url": "https://api.github.com/users/tbhb-agent-reviewer/repos",
+      "events_url": "https://api.github.com/users/tbhb-agent-reviewer/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/tbhb-agent-reviewer/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "body": "Reviewer: Codex CLI 0.157.1, gpt-6-astra, medium effort. Head 49836ef.\n\nCommit 49836ef fixes the explicit open-PR list finding: the classifier fixtures pass, and an independent temporary handoff containing the original linked PR #2 list now reports MERGED and exits 1. The earlier ignore-negation fix also passes its positive and negative fixtures, and valid, missing-Refs, attributed, and wip commit-message probes return the expected results. I resolved the fixed review thread and verified that no conversation remains open.\n\nBlocking findings: none.\nNon-blocking findings: none.\n\nValidation: reviewed issues #15, #16, and #17, the full diff against origin/main, prior comments and reviews, and the implementer reply and named commit. Ran mise run check:handoff-classifier and mise run check:ignore-collisions, with independent probes through mise exec. No full aggregate or formatters were rerun in this read-only checkout; GitHub currently returns no check runs for this head, so this approval does not assert green CI.",
+    "state": "DISMISSED",
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/81#pullrequestreview-5328235626",
+    "pull_request_url": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/81",
+    "author_association": "MEMBER",
+    "_links": {
+      "html": {
+        "href": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/81#pullrequestreview-5328235626"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/81"
+      }
+    },
+    "submitted_at": "2026-09-27T00:22:42Z",
+    "commit_id": "49836efa8a9ef7abb4419c0afadadd63ccfe87db"
+  },
+  {
+    "id": 5328269365,
+    "node_id": "PRR_kwDOUtKbt88AAAABPZbwNQ",
+    "user": {
+      "login": "tbhb-agent-reviewer",
+      "id": 152314235,
+      "node_id": "U_kgDOCRQhew",
+      "avatar_url": "https://avatars.githubusercontent.com/u/152314235?u=c28bdb49be24e8265acf00ccaee6d49eac020456&v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/tbhb-agent-reviewer",
+      "html_url": "https://github.com/tbhb-agent-reviewer",
+      "followers_url": "https://api.github.com/users/tbhb-agent-reviewer/followers",
+      "following_url": "https://api.github.com/users/tbhb-agent-reviewer/following{/other_user}",
+      "gists_url": "https://api.github.com/users/tbhb-agent-reviewer/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/tbhb-agent-reviewer/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/tbhb-agent-reviewer/subscriptions",
+      "organizations_url": "https://api.github.com/users/tbhb-agent-reviewer/orgs",
+      "repos_url": "https://api.github.com/users/tbhb-agent-reviewer/repos",
+      "events_url": "https://api.github.com/users/tbhb-agent-reviewer/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/tbhb-agent-reviewer/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "body": "Reviewer: Codex CLI 0.157.1, gpt-6-astra, medium effort. Head 4a46dde.\n\nReviewed issues #15, #16, and #17, the PR body and earlier comments and reviews, the diff against origin/main, and the changes since approved head 49836ef, focusing on merge resolutions and changes not inherited from main. The two merges preserve the approved guards, hooks, fixtures, and handoff workflow; the documentation resolutions retain both branches' entries, and the evidence update distinguishes the earlier run from merged-branch checks. The previous finding remains fixed and its thread is resolved; no review thread remains open.\n\nBlocking findings: none.\nNon-blocking findings: none.\n\nValidation: mise run check:handoff-classifier and mise run check:ignore-collisions passed, including the positive and negative ignore fixtures; git diff --check 49836ef..HEAD passed. The checkout remains unchanged; I did not rerun the full aggregate or formatters in this read-only re-review.\n\nCI limitation: the current head's check job failed during mise tool installation because the Python 3.14.6 download returned HTTP 500, before project checks ran (https://github.com/tbhb/agent-orchestration-poc/actions/runs/36282996979/job/108518315825). This approval does not assert green CI; the required check must succeed before merge.",
+    "state": "APPROVED",
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/81#pullrequestreview-5328269365",
+    "pull_request_url": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/81",
+    "author_association": "MEMBER",
+    "_links": {
+      "html": {
+        "href": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/81#pullrequestreview-5328269365"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/81"
+      }
+    },
+    "submitted_at": "2026-09-27T00:38:51Z",
+    "commit_id": "8620ba0ba9c1034195fa0c921367b43381acb1a0"
+  },
+  {
+    "id": 5328314104,
+    "node_id": "PRR_kwDOUtKbt88AAAABPZee-A",
+    "user": {
+      "login": "tbhb-agent-reviewer",
+      "id": 152314235,
+      "node_id": "U_kgDOCRQhew",
+      "avatar_url": "https://avatars.githubusercontent.com/u/152314235?u=c28bdb49be24e8265acf00ccaee6d49eac020456&v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/tbhb-agent-reviewer",
+      "html_url": "https://github.com/tbhb-agent-reviewer",
+      "followers_url": "https://api.github.com/users/tbhb-agent-reviewer/followers",
+      "following_url": "https://api.github.com/users/tbhb-agent-reviewer/following{/other_user}",
+      "gists_url": "https://api.github.com/users/tbhb-agent-reviewer/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/tbhb-agent-reviewer/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/tbhb-agent-reviewer/subscriptions",
+      "organizations_url": "https://api.github.com/users/tbhb-agent-reviewer/orgs",
+      "repos_url": "https://api.github.com/users/tbhb-agent-reviewer/repos",
+      "events_url": "https://api.github.com/users/tbhb-agent-reviewer/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/tbhb-agent-reviewer/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "body": "Reviewer: Codex CLI 0.157.1, gpt-6-astra, medium effort. Head 8620ba0.\n\nVerified that the only commit since approved head 4a46dde is the merge of main: git diff 4a46dde..HEAD exactly matches the incoming main delta, the PR diff is identical before and after the merge, and every PR-owned file is unchanged. Reviewed issues #15–#17 and earlier reviews; the previous fix remains intact, its thread is resolved, and no thread remains open. Both focused fixture tasks and git diff --check passed; the checkout is unchanged, the full aggregate was not rerun, and GitHub check and mutation jobs are still running.\n\nBlocking findings: none.\nNon-blocking findings: none.",
+    "state": "APPROVED",
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/81#pullrequestreview-5328314104",
+    "pull_request_url": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/81",
+    "author_association": "MEMBER",
+    "_links": {
+      "html": {
+        "href": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/81#pullrequestreview-5328314104"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/81"
+      }
+    },
+    "submitted_at": "2026-09-27T00:54:34Z",
+    "commit_id": "8620ba0ba9c1034195fa0c921367b43381acb1a0"
+  }
+]

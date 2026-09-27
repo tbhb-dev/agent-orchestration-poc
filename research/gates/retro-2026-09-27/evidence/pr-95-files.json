@@ -1,0 +1,121 @@
+[
+  {
+    "filename": ".claude/rules/shell.md",
+    "status": "added",
+    "additions": 25,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "AGENTS.md",
+    "status": "modified",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/decisions/0006-shell-tooling.md",
+    "status": "added",
+    "additions": 28,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/decisions/index.md",
+    "status": "modified",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/guides/index.md",
+    "status": "modified",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/guides/shell-conventions.md",
+    "status": "added",
+    "additions": 42,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/workflow/tooling.md",
+    "status": "modified",
+    "additions": 6,
+    "deletions": 1,
+    "patch_available": true
+  },
+  {
+    "filename": "mise.toml",
+    "status": "modified",
+    "additions": 13,
+    "deletions": 1,
+    "patch_available": true
+  },
+  {
+    "filename": "prek.toml",
+    "status": "modified",
+    "additions": 14,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/shell/notes.md",
+    "status": "added",
+    "additions": 61,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/shell/versions.md",
+    "status": "added",
+    "additions": 39,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "scripts/check-experiments.sh",
+    "status": "modified",
+    "additions": 16,
+    "deletions": 4,
+    "patch_available": true
+  },
+  {
+    "filename": "scripts/check-gofumpt.sh",
+    "status": "modified",
+    "additions": 5,
+    "deletions": 1,
+    "patch_available": true
+  },
+  {
+    "filename": "scripts/check-handoff-prs.sh",
+    "status": "modified",
+    "additions": 6,
+    "deletions": 3,
+    "patch_available": true
+  },
+  {
+    "filename": "scripts/check-ignore-collisions.sh",
+    "status": "modified",
+    "additions": 3,
+    "deletions": 1,
+    "patch_available": true
+  },
+  {
+    "filename": "scripts/check-pr-body.sh",
+    "status": "modified",
+    "additions": 8,
+    "deletions": 5,
+    "patch_available": true
+  },
+  {
+    "filename": "scripts/test-handoff-pr-classifier.sh",
+    "status": "modified",
+    "additions": 1,
+    "deletions": 1,
+    "patch_available": true
+  }
+]

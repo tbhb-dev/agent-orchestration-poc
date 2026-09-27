@@ -1,0 +1,170 @@
+[
+  {
+    "filename": ".claude/rules/go.md",
+    "status": "modified",
+    "additions": 14,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": ".claude/rules/python.md",
+    "status": "modified",
+    "additions": 15,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": ".gitignore",
+    "status": "modified",
+    "additions": 3,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": ".golangci.yml",
+    "status": "modified",
+    "additions": 70,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": ".jscpd.json",
+    "status": "added",
+    "additions": 19,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "AGENTS.md",
+    "status": "modified",
+    "additions": 9,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "biome.json",
+    "status": "modified",
+    "additions": 15,
+    "deletions": 1,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/decisions/0003-functional-core-imperative-shell.md",
+    "status": "added",
+    "additions": 30,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/decisions/0004-quality-gates.md",
+    "status": "added",
+    "additions": 28,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/decisions/index.md",
+    "status": "modified",
+    "additions": 2,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/guides/docs-stack-conventions.md",
+    "status": "modified",
+    "additions": 4,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/guides/go-conventions.md",
+    "status": "modified",
+    "additions": 41,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/guides/python-conventions.md",
+    "status": "modified",
+    "additions": 42,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/workflow/tooling.md",
+    "status": "modified",
+    "additions": 15,
+    "deletions": 2,
+    "patch_available": true
+  },
+  {
+    "filename": "internal/core/doc.go",
+    "status": "added",
+    "additions": 3,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "mise.toml",
+    "status": "modified",
+    "additions": 17,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "prek.toml",
+    "status": "modified",
+    "additions": 8,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "pyproject.toml",
+    "status": "modified",
+    "additions": 60,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "reports/inputs/gates-failing-examples-2026-09-26.md",
+    "status": "added",
+    "additions": 203,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "scripts/check-deadcode.sh",
+    "status": "added",
+    "additions": 9,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "src/agent_orchestration_poc/core/__init__.py",
+    "status": "added",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "src/agent_orchestration_poc/core/ruff.toml",
+    "status": "added",
+    "additions": 10,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "src/agent_orchestration_poc/shell/__init__.py",
+    "status": "added",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "uv.lock",
+    "status": "modified",
+    "additions": 130,
+    "deletions": 0,
+    "patch_available": true
+  }
+]

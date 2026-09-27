@@ -1,0 +1,22 @@
+[
+  {
+    "short_sha": "71660cb67f8c",
+    "parent_count": 1,
+    "subject": "chore(observability): ignore clone-local runtime state"
+  },
+  {
+    "short_sha": "c6f76e12c80c",
+    "parent_count": 1,
+    "subject": "research(observability): record native binary provider probes"
+  },
+  {
+    "short_sha": "f297453ffd9f",
+    "parent_count": 2,
+    "subject": "chore(observability): merge current main"
+  },
+  {
+    "short_sha": "8084498a1c81",
+    "parent_count": 2,
+    "subject": "Merge branch 'main' into research/110-observability-stack"
+  }
+]

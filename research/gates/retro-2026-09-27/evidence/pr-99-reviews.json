@@ -1,0 +1,322 @@
+[
+  {
+    "id": 5328337227,
+    "node_id": "PRR_kwDOUtKbt88AAAABPZf5Sw",
+    "user": {
+      "login": "tbhb-agent-reviewer",
+      "id": 152314235,
+      "node_id": "U_kgDOCRQhew",
+      "avatar_url": "https://avatars.githubusercontent.com/u/152314235?u=c28bdb49be24e8265acf00ccaee6d49eac020456&v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/tbhb-agent-reviewer",
+      "html_url": "https://github.com/tbhb-agent-reviewer",
+      "followers_url": "https://api.github.com/users/tbhb-agent-reviewer/followers",
+      "following_url": "https://api.github.com/users/tbhb-agent-reviewer/following{/other_user}",
+      "gists_url": "https://api.github.com/users/tbhb-agent-reviewer/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/tbhb-agent-reviewer/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/tbhb-agent-reviewer/subscriptions",
+      "organizations_url": "https://api.github.com/users/tbhb-agent-reviewer/orgs",
+      "repos_url": "https://api.github.com/users/tbhb-agent-reviewer/repos",
+      "events_url": "https://api.github.com/users/tbhb-agent-reviewer/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/tbhb-agent-reviewer/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "body": "Reviewer: Codex CLI 0.157.1, gpt-6-sol, medium effort. Head 0b5c375.\n\nThe state and wait contracts largely cover issue #98, and default worker results exclude raw comment and review text. The deployment instructions conflict with the operator's current App, Funnel, and 1Password setup; the burst path also lacks a bounded convergence and storage plan for the observed Actions traffic.\n\n- Blocking — Credential bootstrap: issue #98's operator comment places the existing App secrets in 1Password and asks how agentd reads them at start without disk, logs, or worker environment exposure. The page instead instructs the operator to write the key and webhook secret to files under a shared-user home directory, while acknowledging mode bits do not isolate them. Specify an actual startup retrieval and process boundary, rotation path, and a worker-read-denial acceptance test.\n- Blocking — Existing ingress: issue #98 records an already installed App and a live Funnel at `https://usdholt05.ibex-paradise.ts.net/hooks/github` proxying to loopback port 8787. The page says no Funnel exists and proposes a different public path, port, and create/enable steps. Revise operator actions around the fixed public URL and existing route, with only the local mapping changed as needed, and distinguish the reported live deliveries from untested daemon handling.\n- Blocking — Actions burst behavior: the supplied post-design observation is about 200 signed deliveries in 15 minutes, mostly workflow_run, workflow_job, check_run, and check_suite. The proposed App subscribes to workflow_run/check_run/check_suite, not workflow_job, which is a reasonable filter if job state is unnecessary. Yet every accepted delivery is durably stored, processed raw bodies stay 24 hours with no byte cap, and each relevant generation change discards an entire REST candidate. A concentrated burst can keep a multi-page repair from committing. Bound inbox bytes and processed-body retention, specify backpressure and a finite repair lag under continuing invalidations, and test the observed-rate and concentrated-PR cases. Preserve durable unprocessed entries and GUID dedup metadata.\n- Non-blocking — First slice: the existing loopback HTTP wait and pure predicate could ship for a coordinator-owned collector before #96. Direct worker HTTP waits would require scoped per-worker authentication; a shared operator credential gives no caller identity or repository scope. Explain this sequencing option and its identity cost. The predicate, registry revision watch, and HTTP endpoint remain useful when the relay arrives.\n- Non-blocking — Stopgap accounting: six workers with one PR each, five requests per two-minute pass including the final head reread, imply about 900 primary REST requests per hour before pagination and other callers. That fits under 5,000 and a 20% reserve in the simplified case, but the page's four-request example understates it. Count actual pages and rereads, enforce one coordinator owner and header-based pacing, and state that changed responses and unrelated account use consume the shared budget.\n\nNo earlier review threads were present to resolve.",
+    "state": "CHANGES_REQUESTED",
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/99#pullrequestreview-5328337227",
+    "pull_request_url": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/99",
+    "author_association": "MEMBER",
+    "_links": {
+      "html": {
+        "href": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/99#pullrequestreview-5328337227"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/99"
+      }
+    },
+    "submitted_at": "2026-09-27T01:00:02Z",
+    "commit_id": "0b5c3755f03fd386331aa19f15489b6b9fcdb138"
+  },
+  {
+    "id": 5328379560,
+    "node_id": "PRR_kwDOUtKbt88AAAABPZieqA",
+    "user": {
+      "login": "tbhb",
+      "id": 17915374,
+      "node_id": "MDQ6VXNlcjE3OTE1Mzc0",
+      "avatar_url": "https://avatars.githubusercontent.com/u/17915374?u=570c35c904259c7db16a6466186b1b09af64e9d4&v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/tbhb",
+      "html_url": "https://github.com/tbhb",
+      "followers_url": "https://api.github.com/users/tbhb/followers",
+      "following_url": "https://api.github.com/users/tbhb/following{/other_user}",
+      "gists_url": "https://api.github.com/users/tbhb/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/tbhb/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/tbhb/subscriptions",
+      "organizations_url": "https://api.github.com/users/tbhb/orgs",
+      "repos_url": "https://api.github.com/users/tbhb/repos",
+      "events_url": "https://api.github.com/users/tbhb/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/tbhb/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "body": "",
+    "state": "COMMENTED",
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/99#pullrequestreview-5328379560",
+    "pull_request_url": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/99",
+    "author_association": "MEMBER",
+    "_links": {
+      "html": {
+        "href": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/99#pullrequestreview-5328379560"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/99"
+      }
+    },
+    "submitted_at": "2026-09-27T01:17:24Z",
+    "commit_id": "25b4e4169174e264134e89ebbf1203b0e0b45a4d"
+  },
+  {
+    "id": 5328379596,
+    "node_id": "PRR_kwDOUtKbt88AAAABPZiezA",
+    "user": {
+      "login": "tbhb",
+      "id": 17915374,
+      "node_id": "MDQ6VXNlcjE3OTE1Mzc0",
+      "avatar_url": "https://avatars.githubusercontent.com/u/17915374?u=570c35c904259c7db16a6466186b1b09af64e9d4&v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/tbhb",
+      "html_url": "https://github.com/tbhb",
+      "followers_url": "https://api.github.com/users/tbhb/followers",
+      "following_url": "https://api.github.com/users/tbhb/following{/other_user}",
+      "gists_url": "https://api.github.com/users/tbhb/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/tbhb/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/tbhb/subscriptions",
+      "organizations_url": "https://api.github.com/users/tbhb/orgs",
+      "repos_url": "https://api.github.com/users/tbhb/repos",
+      "events_url": "https://api.github.com/users/tbhb/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/tbhb/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "body": "",
+    "state": "COMMENTED",
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/99#pullrequestreview-5328379596",
+    "pull_request_url": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/99",
+    "author_association": "MEMBER",
+    "_links": {
+      "html": {
+        "href": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/99#pullrequestreview-5328379596"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/99"
+      }
+    },
+    "submitted_at": "2026-09-27T01:17:25Z",
+    "commit_id": "25b4e4169174e264134e89ebbf1203b0e0b45a4d"
+  },
+  {
+    "id": 5328379630,
+    "node_id": "PRR_kwDOUtKbt88AAAABPZie7g",
+    "user": {
+      "login": "tbhb",
+      "id": 17915374,
+      "node_id": "MDQ6VXNlcjE3OTE1Mzc0",
+      "avatar_url": "https://avatars.githubusercontent.com/u/17915374?u=570c35c904259c7db16a6466186b1b09af64e9d4&v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/tbhb",
+      "html_url": "https://github.com/tbhb",
+      "followers_url": "https://api.github.com/users/tbhb/followers",
+      "following_url": "https://api.github.com/users/tbhb/following{/other_user}",
+      "gists_url": "https://api.github.com/users/tbhb/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/tbhb/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/tbhb/subscriptions",
+      "organizations_url": "https://api.github.com/users/tbhb/orgs",
+      "repos_url": "https://api.github.com/users/tbhb/repos",
+      "events_url": "https://api.github.com/users/tbhb/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/tbhb/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "body": "",
+    "state": "COMMENTED",
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/99#pullrequestreview-5328379630",
+    "pull_request_url": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/99",
+    "author_association": "MEMBER",
+    "_links": {
+      "html": {
+        "href": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/99#pullrequestreview-5328379630"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/99"
+      }
+    },
+    "submitted_at": "2026-09-27T01:17:26Z",
+    "commit_id": "25b4e4169174e264134e89ebbf1203b0e0b45a4d"
+  },
+  {
+    "id": 5328379665,
+    "node_id": "PRR_kwDOUtKbt88AAAABPZifEQ",
+    "user": {
+      "login": "tbhb",
+      "id": 17915374,
+      "node_id": "MDQ6VXNlcjE3OTE1Mzc0",
+      "avatar_url": "https://avatars.githubusercontent.com/u/17915374?u=570c35c904259c7db16a6466186b1b09af64e9d4&v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/tbhb",
+      "html_url": "https://github.com/tbhb",
+      "followers_url": "https://api.github.com/users/tbhb/followers",
+      "following_url": "https://api.github.com/users/tbhb/following{/other_user}",
+      "gists_url": "https://api.github.com/users/tbhb/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/tbhb/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/tbhb/subscriptions",
+      "organizations_url": "https://api.github.com/users/tbhb/orgs",
+      "repos_url": "https://api.github.com/users/tbhb/repos",
+      "events_url": "https://api.github.com/users/tbhb/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/tbhb/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "body": "",
+    "state": "COMMENTED",
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/99#pullrequestreview-5328379665",
+    "pull_request_url": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/99",
+    "author_association": "MEMBER",
+    "_links": {
+      "html": {
+        "href": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/99#pullrequestreview-5328379665"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/99"
+      }
+    },
+    "submitted_at": "2026-09-27T01:17:27Z",
+    "commit_id": "25b4e4169174e264134e89ebbf1203b0e0b45a4d"
+  },
+  {
+    "id": 5328379705,
+    "node_id": "PRR_kwDOUtKbt88AAAABPZifOQ",
+    "user": {
+      "login": "tbhb",
+      "id": 17915374,
+      "node_id": "MDQ6VXNlcjE3OTE1Mzc0",
+      "avatar_url": "https://avatars.githubusercontent.com/u/17915374?u=570c35c904259c7db16a6466186b1b09af64e9d4&v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/tbhb",
+      "html_url": "https://github.com/tbhb",
+      "followers_url": "https://api.github.com/users/tbhb/followers",
+      "following_url": "https://api.github.com/users/tbhb/following{/other_user}",
+      "gists_url": "https://api.github.com/users/tbhb/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/tbhb/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/tbhb/subscriptions",
+      "organizations_url": "https://api.github.com/users/tbhb/orgs",
+      "repos_url": "https://api.github.com/users/tbhb/repos",
+      "events_url": "https://api.github.com/users/tbhb/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/tbhb/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "body": "",
+    "state": "COMMENTED",
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/99#pullrequestreview-5328379705",
+    "pull_request_url": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/99",
+    "author_association": "MEMBER",
+    "_links": {
+      "html": {
+        "href": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/99#pullrequestreview-5328379705"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/99"
+      }
+    },
+    "submitted_at": "2026-09-27T01:17:28Z",
+    "commit_id": "25b4e4169174e264134e89ebbf1203b0e0b45a4d"
+  },
+  {
+    "id": 5328401223,
+    "node_id": "PRR_kwDOUtKbt88AAAABPZjzRw",
+    "user": {
+      "login": "tbhb-agent-reviewer",
+      "id": 152314235,
+      "node_id": "U_kgDOCRQhew",
+      "avatar_url": "https://avatars.githubusercontent.com/u/152314235?u=c28bdb49be24e8265acf00ccaee6d49eac020456&v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/tbhb-agent-reviewer",
+      "html_url": "https://github.com/tbhb-agent-reviewer",
+      "followers_url": "https://api.github.com/users/tbhb-agent-reviewer/followers",
+      "following_url": "https://api.github.com/users/tbhb-agent-reviewer/following{/other_user}",
+      "gists_url": "https://api.github.com/users/tbhb-agent-reviewer/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/tbhb-agent-reviewer/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/tbhb-agent-reviewer/subscriptions",
+      "organizations_url": "https://api.github.com/users/tbhb-agent-reviewer/orgs",
+      "repos_url": "https://api.github.com/users/tbhb-agent-reviewer/repos",
+      "events_url": "https://api.github.com/users/tbhb-agent-reviewer/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/tbhb-agent-reviewer/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "body": "Reviewer: Codex CLI 0.157.1, gpt-6-sol, medium effort. Head 25b4e41.\n\nThe revised design addresses all five earlier findings: protected credential bootstrap, the existing Funnel route, bounded burst repair and storage, coordinator-only HTTP waits before #96, and corrected stopgap request accounting. I checked each implementer reply against the page and resolved all five threads; the design labels deployment and runtime behavior untested, and the required CI jobs are green.\n\nFindings: none.",
+    "state": "DISMISSED",
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/99#pullrequestreview-5328401223",
+    "pull_request_url": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/99",
+    "author_association": "MEMBER",
+    "_links": {
+      "html": {
+        "href": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/99#pullrequestreview-5328401223"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/99"
+      }
+    },
+    "submitted_at": "2026-09-27T01:26:53Z",
+    "commit_id": "25b4e4169174e264134e89ebbf1203b0e0b45a4d"
+  },
+  {
+    "id": 5328484933,
+    "node_id": "PRR_kwDOUtKbt88AAAABPZo6RQ",
+    "user": {
+      "login": "tbhb-agent-reviewer",
+      "id": 152314235,
+      "node_id": "U_kgDOCRQhew",
+      "avatar_url": "https://avatars.githubusercontent.com/u/152314235?u=c28bdb49be24e8265acf00ccaee6d49eac020456&v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/tbhb-agent-reviewer",
+      "html_url": "https://github.com/tbhb-agent-reviewer",
+      "followers_url": "https://api.github.com/users/tbhb-agent-reviewer/followers",
+      "following_url": "https://api.github.com/users/tbhb-agent-reviewer/following{/other_user}",
+      "gists_url": "https://api.github.com/users/tbhb-agent-reviewer/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/tbhb-agent-reviewer/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/tbhb-agent-reviewer/subscriptions",
+      "organizations_url": "https://api.github.com/users/tbhb-agent-reviewer/orgs",
+      "repos_url": "https://api.github.com/users/tbhb-agent-reviewer/repos",
+      "events_url": "https://api.github.com/users/tbhb-agent-reviewer/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/tbhb-agent-reviewer/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "body": "Reviewer: Codex CLI 0.157.1, gpt-6-sol, medium effort. Head acfcaa5.\n\nThe merge preserves the accepted shell tooling decision as 0006 and renumbers the monitor proposal to 0007. I verified both monitor decision links resolve to the renamed file, found no stale references to its old path, and confirmed all five CI jobs pass.\n\nFindings: none, blocking or non-blocking.",
+    "state": "APPROVED",
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/99#pullrequestreview-5328484933",
+    "pull_request_url": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/99",
+    "author_association": "MEMBER",
+    "_links": {
+      "html": {
+        "href": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/99#pullrequestreview-5328484933"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/99"
+      }
+    },
+    "submitted_at": "2026-09-27T02:01:03Z",
+    "commit_id": "2f7f73f5eda43f2e9b5d6e21629bd30e3222fbe2"
+  }
+]

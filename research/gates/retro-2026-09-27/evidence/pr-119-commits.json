@@ -1,0 +1,57 @@
+[
+  {
+    "short_sha": "46904576ea5e",
+    "parent_count": 1,
+    "subject": "docs(handoff): record phase 2 rollover state"
+  },
+  {
+    "short_sha": "36b6a688f9d1",
+    "parent_count": 1,
+    "subject": "docs(handoff): record instrumentation decision"
+  },
+  {
+    "short_sha": "fb2486db8fe3",
+    "parent_count": 2,
+    "subject": "chore(handoff): merge current main into rollover branch"
+  },
+  {
+    "short_sha": "7786728abd4d",
+    "parent_count": 1,
+    "subject": "docs(handoff): complete rollover script inventory"
+  },
+  {
+    "short_sha": "97a8bae5f281",
+    "parent_count": 2,
+    "subject": "Merge origin/main into docs/114-handoff-phase-2-rollover"
+  },
+  {
+    "short_sha": "1c89c9894d8a",
+    "parent_count": 1,
+    "subject": "docs(handoff): align rollover with current coordinator workflow"
+  },
+  {
+    "short_sha": "7da161749bcb",
+    "parent_count": 2,
+    "subject": "Merge origin/main into docs/114-handoff-phase-2-rollover"
+  },
+  {
+    "short_sha": "b660b031ef84",
+    "parent_count": 1,
+    "subject": "docs(handoff): refresh live phase 2 roster"
+  },
+  {
+    "short_sha": "17b04f38a80a",
+    "parent_count": 2,
+    "subject": "Merge origin/main into docs/114-handoff-phase-2-rollover"
+  },
+  {
+    "short_sha": "3db0a751dfa9",
+    "parent_count": 2,
+    "subject": "chore: merge origin/main into docs/114-handoff-phase-2-rollover"
+  },
+  {
+    "short_sha": "13c9bc111059",
+    "parent_count": 1,
+    "subject": "docs(handoff): archive the actual phase 2 rollover prompt"
+  }
+]
