@@ -15,7 +15,8 @@
       "complete CP1, source digests, IDs, bodies, fields, order, PR and branch"
     ],
     "check": "CP1 complete and matches assignments before any closure",
-    "reversal": ["retain immutable CP1"]
+    "reversal": ["retain immutable CP1"],
+    "native_writes": []
   },
   {
     "number": "0",
@@ -35,7 +36,8 @@
       "PATCH saved states and PR state",
       "DELETE only created comments",
       "GET branch"
-    ]
+    ],
+    "native_writes": []
   },
   {
     "number": "2",
@@ -43,7 +45,8 @@
     "calls": [],
     "saved_inputs": ["reviewed and prior workflow commits"],
     "check": "external implementation and enforcement prerequisites checked",
-    "reversal": ["restore prior commit through review"]
+    "reversal": ["restore prior commit through review"],
+    "native_writes": []
   },
   {
     "number": "3",
@@ -56,7 +59,8 @@
     ],
     "saved_inputs": ["original #149 blocker set and trial result"],
     "check": "exact original blocker set restored",
-    "reversal": ["DELETE only newly added trial link", "GET blockers"]
+    "reversal": ["DELETE only newly added trial link", "GET blockers"],
+    "native_writes": []
   },
   {
     "number": "4",
@@ -70,7 +74,8 @@
     "check": "created definitions match and old definitions unchanged",
     "reversal": [
       "DELETE only created unused definitions after attachments reverse"
-    ]
+    ],
+    "native_writes": []
   },
   {
     "number": "5",
@@ -82,7 +87,8 @@
     ],
     "saved_inputs": ["definition IDs/options and delegated view export"],
     "check": "seven types, native options and retained fields match",
-    "reversal": ["owner restores prior view settings"]
+    "reversal": ["owner restores prior view settings"],
+    "native_writes": []
   },
   {
     "number": "6",
@@ -93,7 +99,7 @@
       "POST P/drafts for unmatched drafts",
       "PATCH P/items/{item-id} supported fields",
       "PATCH R/issues/{n} native type",
-      "POST R/issues/{n}/issue-field-values",
+      "POST R/issues/{n}/issue-field-values pinned fields",
       "GraphQL updateProjectV2DraftIssue for copied D2 body",
       "GET P/items, R/issues and issue-field-values"
     ],
@@ -102,8 +108,22 @@
     ],
     "check": "CP6 native and P values, draft identities and bodies match",
     "reversal": [
-      "restore saved type/native/P values and D2 body",
+      "restore saved native fields",
+      "restore saved type",
+      "restore saved P values and D2 body",
       "delete only created P items after exporting drafts"
+    ],
+    "native_writes": [
+      {
+        "key": "#1",
+        "issue_type": "Chore",
+        "fields": [["Priority", "Standard"], ["Work type", "Planned"]]
+      },
+      {
+        "key": "#2",
+        "issue_type": "Spike",
+        "fields": [["Priority", "Intangible"], ["Work type", "Unplanned"]]
+      }
     ]
   },
   {
@@ -121,7 +141,8 @@
     "reversal": [
       "with enforcement held, restore only changed titles",
       "GET titles"
-    ]
+    ],
+    "native_writes": []
   },
   {
     "number": "7",
@@ -137,7 +158,8 @@
     ],
     "saved_inputs": ["trial item, predecessor, full order, positions and cost"],
     "check": "changed and restored order exact",
-    "reversal": ["restore saved predecessor and verify order"]
+    "reversal": ["restore saved predecessor and verify order"],
+    "native_writes": []
   },
   {
     "number": "8",
@@ -149,13 +171,14 @@
     ],
     "saved_inputs": ["operator-approved seed and complete prior order"],
     "check": "exact approved relative Standard order",
-    "reversal": ["restore complete saved sequence and compare"]
+    "reversal": ["restore complete saved sequence and compare"],
+    "native_writes": []
   },
   {
     "number": "9",
     "targets": ["epic: migration"],
     "calls": [
-      "POST R/issues initiatives then epics",
+      "POST R/issues initiatives then epics with type=approved native type",
       "POST R/issues/{n}/issue-field-values Work type",
       "POST P/items",
       "PATCH P/items/{item-id} Status",
@@ -168,6 +191,13 @@
       "reverse downstream links",
       "close created issues not_planned",
       "remove only created P items"
+    ],
+    "native_writes": [
+      {
+        "key": "epic: migration",
+        "issue_type": "Epic",
+        "fields": [["Work type", "Planned"]]
+      }
     ]
   },
   {
@@ -182,7 +212,8 @@
     "reversal": [
       "DELETE only new memberships",
       "restore saved old parent links"
-    ]
+    ],
+    "native_writes": []
   },
   {
     "number": "11",
@@ -198,14 +229,15 @@
     "reversal": [
       "remove only added links",
       "restore only removed old links and saved bodies"
-    ]
+    ],
+    "native_writes": []
   },
   {
     "number": "12",
     "targets": [],
     "calls": [
-      "POST R/issues for incidents",
-      "POST R/issues/{n}/issue-field-values",
+      "POST R/issues for incidents with type=Incident",
+      "POST R/issues/{n}/issue-field-values pinned fields",
       "POST P/items",
       "PATCH P/items/{item-id} supported fields",
       "GET issues, issue-field-values and P/items"
@@ -215,7 +247,8 @@
     "reversal": [
       "close only created incidents not_planned",
       "remove only created P items"
-    ]
+    ],
+    "native_writes": []
   },
   {
     "number": "13",
@@ -230,7 +263,8 @@
       "withdraw confirmation",
       "pause dispatch",
       "use prior checkpoint inverses"
-    ]
+    ],
+    "native_writes": []
   },
   {
     "number": "14",
@@ -243,7 +277,8 @@
     "reversal": [
       "restore prior activation through review",
       "retain revocations"
-    ]
+    ],
+    "native_writes": []
   },
   {
     "number": "15",
@@ -254,6 +289,7 @@
     ],
     "saved_inputs": ["removed label IDs and remaining labels"],
     "check": "no issue duplicate type labels; unrelated and PR labels retained",
-    "reversal": ["POST only saved removed issue labels"]
+    "reversal": ["POST only saved removed issue labels"],
+    "native_writes": []
   }
 ]
