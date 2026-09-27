@@ -94,6 +94,8 @@ The active [main ruleset](https://github.com/tbhb/agent-orchestration-poc/rules/
 
 These jobs currently run on `ubuntu-latest`. The `check` and `docs` jobs install mise 2026.8.6 with the pinned action. macOS jobs are planned when code needs Apple frameworks or Containers. See [tooling](/workflow/tooling/) for the task and hook inventory.
 
+Local mise task and prek hook invocations write their duration and outcome to the main clone's ignored [check timing store](/workflow/tooling/#local-check-timings). The local store is independent of required CI status. GitHub Actions job and step ingestion is a follow-up to this local capture slice.
+
 At a checkpoint, the coordinator also runs `mise run checkpoint:closure-audit`. To record a non-code closure, put `Non-code closure: <reason and evidence>` on its own line in the issue body. The audit only reports issues for review and never changes issue state. Codex documentation dispatches use the [brief template](https://github.com/tbhb/agent-orchestration-poc/blob/main/docs/briefs/documentation-brief-template.md) and require a local Vale pass.
 
 ## Reporting

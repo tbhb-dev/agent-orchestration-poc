@@ -9,21 +9,36 @@ default_install_hook_types = ["pre-commit", "commit-msg"]
 exclude = '^(research/imported/|\.worktrees/|\.venv/|node_modules/)'
 
 [[repos]]
-repo = "builtin"
-hooks = [
-  { id = "trailing-whitespace" },
-  { id = "end-of-file-fixer" },
-  { id = "check-added-large-files" },
-]
-
-[[repos]]
 repo = "local"
+
+[[repos.hooks]]
+id = "trailing-whitespace"
+name = "trim trailing whitespace"
+language = "system"
+entry = "mise exec -- scripts/record-check.sh hook:trailing-whitespace -- __builtin__ trailing-whitespace"
+types = ["text"]
+stages = ["pre-commit", "pre-push", "manual"]
+
+[[repos.hooks]]
+id = "end-of-file-fixer"
+name = "fix end of files"
+language = "system"
+entry = "mise exec -- scripts/record-check.sh hook:end-of-file-fixer -- __builtin__ end-of-file-fixer"
+types = ["text"]
+stages = ["pre-commit", "pre-push", "manual"]
+
+[[repos.hooks]]
+id = "check-added-large-files"
+name = "check for added large files"
+language = "system"
+entry = "mise exec -- scripts/record-check.sh hook:check-added-large-files -- __builtin__ check-added-large-files"
+stages = ["pre-commit", "pre-push", "manual"]
 
 [[repos.hooks]]
 id = "gitleaks"
 name = "gitleaks (staged secrets)"
 language = "system"
-entry = "mise exec -- gitleaks git --pre-commit --redact --staged --verbose --no-banner"
+entry = "mise exec -- scripts/record-check.sh hook:gitleaks -- mise exec -- gitleaks git --pre-commit --redact --staged --verbose --no-banner"
 pass_filenames = false
 always_run = true
 

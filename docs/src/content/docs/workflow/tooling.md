@@ -86,6 +86,8 @@ The `check` aggregate also runs `check:imports`, `check:dupl`, and `check:deadco
 | --- | --- |
 | `check` | Run every check and the tests |
 | `fmt` | Apply every formatter |
+| `check-timings:record` | Record one command: `mise run check-timings:record -- <command>` |
+| `check:timing-inventory` | Fail when a configured task or hook lacks a wrapper or local record |
 | `check:go` | Format check, vet, module checks, lint, build, and test the Go module |
 | `check:shell` | Lint and check formatting of repository shell scripts |
 | `fmt:shell` | Format repository shell scripts |
@@ -133,6 +135,14 @@ The `check` aggregate also runs `check:imports`, `check:dupl`, and `check:deadco
 | `docs:check-links` | Build the docs site with starlight-links-validator enabled |
 
 The PR-body and imported-research tasks need arguments from a PR or base ref and run separately from `check`. Docs builds also run separately. The CI job table is on [workflow](/workflow/#ci-jobs).
+
+## Local check timings
+
+Mechanical mise tasks and prek hooks append timing records to `.local-cache/check-timings/timings.sqlite3` in the main clone, including checks invoked from worktrees. The path is gitignored and is resolved from Git's common directory. The `check` aggregate is a dependency runner, so its child tasks are recorded individually. Each invocation writes one `local_checks` row after its command exits. A failed append does not change the command's stdout, stderr, or exit status.
+
+The SQLite table has an integer `id` primary key, `name`, UTC ISO 8601 `started_at`, monotonic `duration_ns`, integer `exit_status`, nullable `commit_sha`, nullable `branch`, `origin` (`local` or `ci`), nullable `actor`, and `host`. It contains no command, arguments, output, environment, credentials, prompts, transcripts, or comment bodies. The actor comes only from `CHECK_TIMING_ACTOR` or `GITHUB_ACTOR`. An unknown actor or detached branch is stored as null.
+
+Run `mise run check-timings:record -- <command>` for an ad hoc command. Run `mise run check:timing-inventory` after each configured task and hook has executed to verify both wrapper configuration and stored coverage. The inventory is separate from the `check` aggregate because a fresh clone has no prior records. To inspect the local table, use a SQLite reader against the main clone's store. If a check ran while the store was unavailable, rerun it to create a record. A later collector will import GitHub Actions timings without requiring a CI runner to write to this local path.
 
 Run `mise run review:preflight -- <pr>` before review, `mise run pr:wait-check -- <pr> <name> <timeout-seconds>` before merge or completion reports, and `mise run checkpoint:closure-audit` at each checkpoint. The closure audit also runs weekly in read-only GitHub Actions. The [phase 1 retrospective](/retros/2026-09-26-phase-1/) records the failures behind these checks.
 
