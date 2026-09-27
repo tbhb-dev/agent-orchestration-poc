@@ -79,7 +79,7 @@ Measured under #84: 172 changed nonblank Markdown units, zero changed code lines
 | Account probe record | 50 | 0 | 34 | None |
 | Signature source record | 66 | 0 | 51 | None |
 | Security cross-check | 34 | 0 | 25 | None |
-| This report | Recorded by final diff | 0 | 0 | `reports/inputs/**` |
+| This report | 110 | 0 | 0 | `reports/inputs/**` |
 
 The counting command read each new file with `mise exec -- python`, counted `bool(line.strip())` for prose units, and counted all lines for raw additions. Because each file is newly added, this is the complete added-line population against the merge base. `git diff --numstat` corroborates raw counts after staging.
 
@@ -92,9 +92,9 @@ The counting command read each new file with `mise exec -- python`, counted `boo
 | `mise exec -- vale --ext=.md --path=docs/identity-signatures.md < research/gates/agent-identity/github-signatures.md` | 0 | Signature prose passed |
 | `mise exec -- vale --ext=.md --path=docs/identity-cross-check.md < research/gates/agent-identity/security-cross-check.md` | 0 | Cross-check prose passed |
 | `mise exec -- vale --ext=.md --path=docs/identity-report.md < reports/inputs/agent-identity-design.md` | 0 | Explicit report prose check |
-| `mise exec -- rumdl check docs/src/content/docs/decisions/0015-agent-identity.md reports/inputs/agent-identity-design.md research/gates/agent-identity` | 0 | Passed for the changed files before this validation table |
-| `mise run check` | Pending | Aggregate running |
-| `mise run check:mutation` | Pending | Running after source inspection confirmed separate temporary instrumentation |
+| `mise exec -- rumdl check docs/src/content/docs/decisions/0015-agent-identity.md reports/inputs/agent-identity-design.md research/gates/agent-identity` | 0 | Passed for the changed files |
+| `mise run check` | 0 | Aggregate passed in 839.63 seconds. Python core lines 100%, branches 94%, shell lines 77.54%. Go core statements 96.43%, branches 94.74%, shell statements 74.58% |
+| `mise run check:mutation` | 0 | Go killed 145 of 149 mutants, 97.32% score. Python killed 454 of 467, 97.22% |
 | `mise run build` | 0 | Both Go binaries built |
 | `mise run docs:build` | 0 | Initial and final builds passed, with 47 pages in the final build |
 | `mise run docs:check-links` | 1 | Chromium Mach port registration denied while rendering existing Mermaid pages, then five links to unavailable existing pages failed |
@@ -105,4 +105,6 @@ The counting command read each new file with `mise exec -- python`, counted `boo
 
 [Observed] The docs link-check failure reports Chromium `bootstrap_check_in` with `Permission denied (1100)` for existing workflow and monitor diagrams. The new decision was not among the invalid link reports. A diagnostic `ps -Ao pid,ppid,etime,comm` was also denied by the sandbox, exit 1. The worker did not bypass either denial. Hosted CI must establish the full docs result.
 
-The default Git configuration enables commit signing. Each design commit uses the process-local `git -c commit.gpgsign=false commit` override to honor this issue's prohibition on signing and gpg operations, without changing configuration. Normal hooks remain enabled. Hook cache files use permitted `$TMPDIR/issue-132-cache` through `XDG_CACHE_HOME`. The first two commits passed staged secret scanning and all applicable hooks.
+The default Git configuration enables commit signing. Each design commit uses the process-local `git -c commit.gpgsign=false commit` override to honor this issue's prohibition on signing and gpg operations, without changing configuration. Normal hooks remain enabled. Hook cache files use permitted `$TMPDIR/issue-132-cache` through `XDG_CACHE_HOME`. The design commits passed staged secret scanning and all applicable hooks.
+
+PR creation through `gh pr create` returned a GraphQL rate-limit error, exit 1. After a two-minute wait, the authorized REST fallback `gh api repos/tbhb/agent-orchestration-poc/pulls --method POST --input <task-owned-json> --jq '{number,html_url,head:.head.sha}'` exited 0 and created PR #162. The JSON contained only the PR title, branch names, and body. Final hosted check results are recorded in the PR body after collection against the final pushed SHA.
