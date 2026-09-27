@@ -15,6 +15,7 @@ bin/
 .import_linter_cache/
 .local-cache/
 .coverage
+.coverage-reports/
 mutants/
 gremlins.json
 .pnpm-store/

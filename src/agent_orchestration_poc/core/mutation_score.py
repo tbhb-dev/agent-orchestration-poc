@@ -18,7 +18,7 @@ SCORED = frozenset({"killed", "survived", "no_tests", "suspicious", "timeout"})
 
 
 def evaluate(stats: Mapping[str, int]) -> tuple[float, bool]:
-    """Return the score and whether a complete run meets the 80 percent floor."""
+    """Return the score and whether a complete run meets the 90 percent floor."""
     if stats.keys() != OUTCOMES | {"total"}:
         return 0.0, False
     total = stats["total"]
@@ -27,4 +27,4 @@ def evaluate(stats: Mapping[str, int]) -> tuple[float, bool]:
     score = 100 * stats["killed"] / total
     if sum(stats[key] for key in SCORED) != total:
         return score, False
-    return score, score >= 80
+    return score, score >= 90

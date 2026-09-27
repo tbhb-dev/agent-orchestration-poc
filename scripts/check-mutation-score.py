@@ -10,7 +10,7 @@ from agent_orchestration_poc.core.mutation_score import evaluate
 
 
 def main() -> int:
-    """Run mutants, print the score, and fail below 80 percent."""
+    """Run mutants, print the score, and fail below 90 percent."""
     mutants = Path("mutants")
     if mutants.exists():
         shutil.rmtree(mutants)
