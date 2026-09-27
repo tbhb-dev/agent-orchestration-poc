@@ -42,7 +42,7 @@ See [Python conventions](../../docs/src/content/docs/guides/python-conventions.m
 - pytest 9.1.1: add the verified async plugin before writing `async def` tests.
 - hypothesis 6.168.1: test properties of pure functions with `@given`. Keep the built-in `ci` profile for required CI and use random seeds in local and nightly runs.
 - mutmut 3.8.0: run `mise run check:mutation:python` for core changes. Delete `mutants/` before scoring and require at least 90 percent mutation score.
-- coverage.py 7.16.1, pytest-cov 7.0.0: run `mise run check:coverage`. Require 95 percent core lines and 90 percent core branches. Require 70 percent shell lines when code exists, with integration tests included.
+- coverage.py 7.16.1, pytest-cov 7.0.0: run `mise run check:coverage`. Require 95 percent core lines and 90 percent core branches. Require 70 percent shell lines when code exists, with integration tests and spawned Python processes included.
 
 ## Core and shell
 

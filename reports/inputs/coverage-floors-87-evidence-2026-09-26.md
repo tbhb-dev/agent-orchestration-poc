@@ -20,6 +20,8 @@ Observed: The first Go shell measurement could not meet 70% with the existing pl
 
 Observed: The first Python mutation score missed 90% by one mutant. Tests for a single-mutant total and rejected uppercase `X` and `Y` killed the three behavior-changing survivors. No floor was lowered.
 
+Observed: PR #80 merged into `main` while this branch was in progress. Rebasing onto `main` also brought in the new bus and coordinator preflight packages. The first measurement against that updated base, before tests for those packages, was Go core statements 100% against 95%, Go core branches 100% against 90%, Go shell statements 61.82% against 70%, Python core lines 100% against 95%, Python core branches 93.75% against 90%, and Python shell lines 0/108 against 70%. Go mutation efficacy and coverage were each 89/89, 100% against 90%, and Python mutation was 390/427, 91.33% against 90%. The shell coverage deficits came from the newly added command and subprocess paths. Integration tests for those paths brought both shell groups above their issue floors.
+
 ## Failing gate probes
 
 | Temporary test change | Captured gate output | Result |
@@ -29,7 +31,7 @@ Observed: The first Python mutation score missed 90% by one mutant. Tests for a 
 | Skipped `internal/cli/run_test.go` before adding writer-error cases | Go shell statements 12.50% below 70% | `check:coverage` exited 1, `/tmp/coverage-87-fail-go-shell.log` |
 | Added a temporary Python shell function and complete test, then skipped the test | Python shell lines fell from 100% to 25% below 70% | `check:coverage` exited 1, `/tmp/coverage-87-fail-python-shell.log` |
 
-Verified: All temporary test edits and the Python shell probe files were restored or removed. The final `check:coverage` run reported Python core lines 100%, branches 93.33%, no Python shell code, Go core statements 100%, Go shell statements 80%, and Go core branches 100%.
+Verified: All temporary test edits and the Python shell probe files were restored or removed. Before the updated base, `check:coverage` reported Python core lines 100%, branches 93.33%, no Python shell code, Go core statements 100%, Go shell statements 80%, and Go core branches 100%.
 
 ## Mutant review
 
@@ -58,6 +60,21 @@ The new coverage decision initially had 18 additional, non-equivalent survivors.
 | `coverage_floors.x_evaluate_gobco__mutmut_33` | No | This changed the multiplier from 100 to 101. An 89/99 report stays below 90%. |
 
 Verified: The final Go run killed 20/20 mutants, with 100% efficacy and 100% mutant coverage. The final Python run killed 264/270 mutants, scoring 97.78%. The only six survivors are the equivalent `gremlins_output` cast mutations listed above. No mutmut exemption was added because the score passes and the source type hints remain useful.
+
+The updated `main` base added 31 coordinator preflight survivors at its first mutation run. Tests killed these 28 behavior-changing mutants. The remaining three are equivalent and listed below.
+
+| Mutants | Equivalent? | Reason and resolution |
+| --- | --- | --- |
+| `coordinator_preflight.x_outdated_workflows__mutmut_8` | No | Read the wrong head key. A test now requires no warning when head has the current main workflow revision. |
+| `coordinator_preflight.x_check_outcome__mutmut_9` through `_14`, `_34`, `_35` | No | Altered accepted terminal statuses or the direct success outcome. Tests now cover `SUCCESS`, `FAILURE`, and `ERROR` without a conclusion. |
+| `coordinator_preflight.x_normalize_checks__mutmut_15` through `_17`, `_23` through `_25`, `_30` through `_32`, `_39` through `_42` | No | Changed fallback keys for status rollup values. A test now requires `context`, `state`, and `createdAt` fallback data. |
+| `coordinator_preflight.x_needs_closure_review__mutmut_12`, `_21`, `_34` through `_37` | No | Changed the decision label condition, case-insensitive decision note, or non-code explanation check. Tests now cover those cases. |
+| `coordinator_preflight.x_check_outcome__mutmut_16` | Yes | Replacing `len(matches) > 1` with `>= 1` enters a conflict check for a single result, whose one outcome can never conflict. |
+| `coordinator_preflight.x_needs_closure_review__mutmut_23`, `_24` | Yes | Only changed the regex pattern's letter case while `re.IGNORECASE` still applies. |
+
+Verified: After the updated-base tests, Go killed 89/89 mutants, with 100% efficacy and coverage. Python killed 418/427 mutants, scoring 97.89%. The nine survivors are the six `gremlins_output` cast mutations and three coordinator preflight equivalents in these tables.
+
+Verified: The final `mise run check:coverage` on the updated base passed with Go core statements 100% against 95%, Go core branches 100% against 90%, Go shell statements 72.12% against 70%, Python core lines 100% against 95%, Python core branches 93.75% against 90%, and Python shell lines 75.93% against 70%.
 
 ## Sandbox and source limits
 

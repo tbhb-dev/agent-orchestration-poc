@@ -57,7 +57,7 @@ Python development dependencies are locked in `uv.lock` and declared in `pyproje
 | pyrefly | `[tool.pyrefly]` in `pyproject.toml`, strict for source, tests, and experiments |
 | Gremlins | `.gremlins.yaml`, floors of 90 percent for the share of covered mutants killed and for mutant coverage |
 | mutmut | `[tool.mutmut]` in `pyproject.toml`, `scripts/check-mutation-score.py`, 90 percent score |
-| Coverage.py and pytest-cov | `[tool.coverage.run]` in `pyproject.toml`, `scripts/check-coverage.py`, separate Python line and branch floors |
+| Coverage.py and pytest-cov | `[tool.coverage.run]` in `pyproject.toml` enables branch and subprocess measurement, `scripts/check-coverage.py` enforces separate Python line and branch floors |
 | Go coverage and gobco | `go test -coverprofile`, gobco 1.3.4, `scripts/check-coverage.py`, separate statement and branch floors |
 | Python imports | `[tool.importlinter]` in `pyproject.toml` and the core's nested `ruff.toml` |
 | Python dead code | `[tool.vulture]` in `pyproject.toml` at confidence 60 |

@@ -190,7 +190,7 @@ Use Hypothesis 6.168.1 `@given` tests for pure core functions. These run with or
 
 Run `mise run check:mutation:python` after changing the Python core or its tests. Mutmut 3.8.0 scores only `agent_orchestration_poc.core`. The task deletes `mutants/` before every run because mutmut otherwise reuses results after test edits. The score floor is 90 percent, and the task fails if the scored outcomes do not account for every mutant, including runs with crashes, interruptions, or skipped mutants. This task runs outside `mise run check` in the always-present mutation CI job (research/gates/testing/notes.md §4, decision 0005).
 
-Run `mise run check:coverage` on every pull request. Coverage.py 7.16.1 measures branches through `[tool.coverage.run]`. The JSON checker separately requires 95 percent core lines, 90 percent core branches, and 70 percent shell lines when shell code exists. Its pytest run includes tests marked `integration` and `socket`. The separate counts matter because pytest-cov 7.0.0 `--cov-fail-under` checks one combined total (research/gates/testing/coverage-branches-87.md, decision 0005).
+Run `mise run check:coverage` on every pull request. Coverage.py 7.16.1 measures branches and subprocesses through `[tool.coverage.run]`. The JSON checker separately requires 95 percent core lines, 90 percent core branches, and 70 percent shell lines when shell code exists. Its pytest run includes tests marked `integration` and `socket`. The subprocess patch captures Python commands spawned by those tests. The separate counts matter because pytest-cov 7.0.0 `--cov-fail-under` checks one combined total (research/gates/testing/coverage-branches-87.md, decision 0005).
 
 ## Functional core and imperative shell
 

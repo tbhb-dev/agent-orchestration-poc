@@ -25,6 +25,7 @@ build-backend = "uv_build"
 
 [tool.coverage.run]
 branch = true
+patch = ["subprocess"]
 
 [tool.importlinter]
 root_package = "agent_orchestration_poc"
