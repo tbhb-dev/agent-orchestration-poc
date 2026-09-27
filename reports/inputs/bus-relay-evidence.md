@@ -24,6 +24,20 @@
 
 [Observed] The initial Go lint and commit hook invocations could not write their default caches under `/Users/tony/Library/Caches/golangci-lint` and `/Users/tony/.cache/prek`. Later checks used sandbox-writable cache directories `/tmp/bus96-lint-cache` and `/tmp/bus96-prek-home`. No sandbox setting was changed.
 
+## Review fix at d64827b
+
+[Verified] Merge commit `fcfba2b` incorporated current `origin/main`, including the 90% Go mutation floor and the 95% core statement, 90% core branch, and 70% shell statement coverage floors. Fix commit `d64827b` moved publish classification, receive timeout, metadata acceptance, and token transitions into pure `internal/core/relay` functions while keeping NATS calls, randomness, locking, and JSON transport in `internal/bus`.
+
+[Observed] Before the fix, `go test -race ./internal/bus -run '^TestRelayOutOfOrderDelivery$' -count=1` failed after fetching stream sequence 1 at consumer delivery generations 1 and 2 and installing them in order 2 then 1: the stale call returned `delivered`. The test now requires rejection of the stale generation and a successful ack with the newer token. The plain-value core tests initially failed to compile because the policy functions did not exist, then passed after the move.
+
+[Verified] The expanded `TestRelayAttackMatrix` observes each attacked reply target through the operator connection, waits for Alice's legitimate response, tries send, receive, ack, status, and roster with forged Bob identity and consumer fields, and checks that Bob's seeded private message and consumer state remain intact. A temporary local overlay that redirected only a Bob relay inbox reply made the test fail with `lost legitimate response: nats: timeout`; the overlay was restored before commit. The unmodified server passed the strengthened test.
+
+[Verified] `mise run check:go` and `mise run build` exited 0. `mise run check:coverage` exited 0: Go core statements 96.43%, core branches 94.74%, shell statements 74.58%; Python core lines 100.00%, branches 93.75%, shell lines 75.93%. `mise run check:mutation` exited 0: Go core 145 killed of 149 classified mutants, 97.32% efficacy and 100% mutant coverage with no timeout; Python core 418 killed of 427, 97.89%.
+
+[Verified] The final `mise run check` exited 0 on fix commit `d64827b`, including Go lint, race tests, import rules, formatting, and all raised coverage floors. `mise run docs:build` exited 0 with the updated decision sentence, and `mise run check:vale` reported no alerts after a wording adjustment. The docs build logged a Chromium launch denial in the sandbox but completed 39 pages using its fallback rendering path.
+
+[Observed] The merge hook first attempted to write `/Users/tony/.cache/prek/prek.log`, and the new gobco pin first attempted an install under `/Users/tony/.local/share/mise` and a Go checksum write under `/Users/tony/go/pkg/sumdb`; the sandbox denied those writes. Checks and commits succeeded with temporary cache, mise data, and Go path directories under `/tmp`. No host setting or sandbox policy changed.
+
 ## Pending integration
 
 [Untested] Issue #28 and draft PR #97 must add a registered-agent relay grant, fetch, and ack test after this protocol lands. That test blocks provisioned-worker acceptance. Issue #27 and draft PR #86 must adapt the CLI to this relay and wait for issue #29's production bucket creation and safe writes before completing status and roster commands.
