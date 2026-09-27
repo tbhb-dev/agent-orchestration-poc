@@ -78,6 +78,33 @@
       "expected": true
     },
     {
+      "case": "explicit refusal",
+      "changes_requested": 3,
+      "third_verdict_at": "2026-09-27T00:00:00Z",
+      "arbitration_author": "tbhb",
+      "arbitration_body": "Arbitration: do not authorize another round",
+      "arbitration_at": "2026-09-27T00:01:00Z",
+      "expected": false
+    },
+    {
+      "case": "quoted authorization",
+      "changes_requested": 3,
+      "third_verdict_at": "2026-09-27T00:00:00Z",
+      "arbitration_author": "tbhb",
+      "arbitration_body": "Arbitration: quoted request: \"authorize another round\"",
+      "arbitration_at": "2026-09-27T00:01:00Z",
+      "expected": false
+    },
+    {
+      "case": "incidental authorization",
+      "changes_requested": 3,
+      "third_verdict_at": "2026-09-27T00:00:00Z",
+      "arbitration_author": "tbhb",
+      "arbitration_body": "Arbitration: discuss whether to authorize another round",
+      "arbitration_at": "2026-09-27T00:01:00Z",
+      "expected": false
+    },
+    {
       "case": "stale arbitration",
       "changes_requested": 3,
       "third_verdict_at": "2026-09-27T00:00:00Z",

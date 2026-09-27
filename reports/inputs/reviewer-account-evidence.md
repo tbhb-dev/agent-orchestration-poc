@@ -22,11 +22,13 @@ The live `main` status check contexts are `check`, `docs`, `pr-body`, `imported-
 | `scripts/reviewer-gh.sh api user --jq .login` | 0 | `tbhbbot` |
 | `mise exec -- uv run pytest tests/fixtures/review_identity/test_policy.py` | 0 | 32 passed |
 | `mise exec -- uv run pytest tests/fixtures/review_identity/test_wrapper.py --run-integration` | 0 | 5 passed |
-| `mise run check` | 0 | 84 passed, 7 integration skips, all aggregate gates passed |
-| `mise run check:mutation` | 0 | Go 85 of 85 mutants killed, Python 241 of 282 killed, 85.46 percent score, 100 percent Python core line coverage |
+| `mise run check` | 0 | 87 passed, 7 integration skips, all aggregate gates passed after the `main` merge and arbitration fix |
+| `mise run check:mutation` | 0 | Go 85 of 85 mutants killed, Python 236 of 280 killed, 84.29 percent score, 100 percent Python core line coverage |
 | `mise run check:review-identity` | 1 | No task found because issue #83's allowed paths omit `mise.toml` |
 | `mise run build` | 0 | `bin/agentd` and `bin/agentctl` built |
 | `mise run docs:check-links` | 1 | Sandboxed Chromium failed its macOS Mach port registration, then the validator reported three existing `/workflow/` links |
+
+The PR #113 review regression was reproduced before the fix: `mise exec -- uv run pytest tests/fixtures/review_identity/test_policy.py -q` exited 1, with `explicit refusal`, `quoted authorization`, and `incidental authorization` each returning `True` where the fixture required `False` (32 passed, 3 failed). With an exact arbitration command, the same test exited 0 (35 passed). The only accepted comment body is `Arbitration: authorize another round`, allowing terminal line breaks; the coordinator author and newer timestamp requirements still apply. After merging `origin/main` at `d2add70`, `mise run check` passed with 87 tests passed and seven integration tests skipped, including all five wrapper cases. `mise run check:mutation` passed with 85 of 85 Go mutants killed, 236 of 280 Python mutants killed (84.29 percent), and 100 percent Python core line coverage.
 
 The wrapper fixtures cover a successful review command and expected exits 90 or 91 for failed token lookup, empty token, wrong effective identity, and failed identity lookup. In every failing fixture, the review command did not run, and no fixture token appeared in captured output. The successful sandboxed identity probe printed only account names. The operator's [account setup record](https://github.com/tbhb/agent-orchestration-poc/issues/83#issuecomment-5850989497) confirms Project write access, default account, and git credential helper without disclosing a token.
 

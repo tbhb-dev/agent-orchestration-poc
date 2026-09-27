@@ -41,13 +41,12 @@ def another_review_round_allowed(
     arbitration_body: str,
     arbitration_at: str,
 ) -> bool:
-    """Require newer coordinator authorization after three requested changes."""
+    """Require the coordinator's exact, newer arbitration command after round three."""
     if changes_requested < 3:
         return True
     return (
         arbitration_author == IMPLEMENTER
-        and arbitration_body.startswith("Arbitration:")
-        and "authorize another round" in arbitration_body.lower()
+        and arbitration_body.rstrip("\r\n") == "Arbitration: authorize another round"
         and arbitration_at > third_verdict_at
     )
 

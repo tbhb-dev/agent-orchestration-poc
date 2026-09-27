@@ -8,7 +8,7 @@ State the issue, target pages, source inputs, and expected reader action.
 
 ## Branch and review
 
-Merge `main` into a pushed branch and rebase only unpublished history. Never force push a pushed branch. Open the PR and exit after checks conclude. A review round is one verdict by `tbhbbot`. After the third changes-requested verdict, stop until a newer coordinator `tbhb` comment starts `Arbitration:` and explicitly authorizes another round. Reply to inline threads and push fixes before re-review.
+Merge `main` into a pushed branch and rebase only unpublished history. Never force push a pushed branch. Open the PR and exit after checks conclude. A review round is one verdict by `tbhbbot`. After the third changes-requested verdict, stop until a newer coordinator `tbhb` comment has the exact body `Arbitration: authorize another round`. Reply to inline threads and push fixes before re-review.
 
 ## Writing rules
 
