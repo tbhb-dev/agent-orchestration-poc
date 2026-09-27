@@ -1,0 +1,66 @@
+All paths below refer to the issue #214 worktree unless `-c` or `workdir` says otherwise. Times are UTC. Captured output is selected and redacted. Every tmux target was created by this experiment.
+
+2026-09-27T18:12:18Z, first disposable probe:
+mkdir -p /private/tmp/exp214-claude
+mise exec -- tmux new-session -d -s exp214-claude -c /private/tmp/exp214-claude 'EXP214_CAPTURE_DIR=/private/tmp/exp214-claude mise exec -- claude --restricted --tools Bash,Read --permission-mode manual --settings '\''{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"/Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.worktrees/exp-214-detect-idle-turns/experiments/01-interactive-turn-state/stop-hook.sh"}]}]}}'\'' --name exp214-claude'
+exit 0. The pane displayed folder trust. No choice was entered.
+mise exec -- tmux kill-session -t exp214-claude
+exit 0.
+
+2026-09-27T18:13:29Z, Codex owned runtime:
+PYTHONSAFEPATH=1 PYTHONUNBUFFERED=1 NO_COLOR=1 mise exec -- python experiments/01-interactive-turn-state/codex-probe.py
+exit 1. Owned child PID 50827 exited 1 in about 0.02 s. `initialize` received no response.
+mise exec -- codex app-server --stdio
+exit 1 with the SQLite state-runtime error recorded in bootstrap-obstructions.txt.
+
+2026-09-27T18:14:24Z, agy first interactive attempt:
+mkdir -p /private/tmp/exp214-agy
+mise exec -- tmux new-session -d -s exp214-agy -c /private/tmp/exp214-agy 'mise exec -- agy --prompt-interactive "Reply with EXP214-DONE."'
+exit 0. The pane displayed folder trust. No choice was entered.
+mise exec -- agy remote-control status
+exit 0 and `Daemon status: not running`.
+mise exec -- tmux kill-session -t exp214-agy
+exit 0.
+
+2026-09-27T18:15Z, Claude print-mode hook check, workdir /private/tmp/exp214-claude:
+EXP214_CAPTURE_DIR=/private/tmp/exp214-claude mise exec -- timeout 120 claude -p --restricted --tools '' --settings '{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"/Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.worktrees/exp-214-detect-idle-turns/experiments/01-interactive-turn-state/stop-hook.sh"}]}]}}' 'Reply with EXP214-DONE.'
+exit 0 in about 3 s. Output and hook selection are in claude-print-output.txt and claude-hook.jsonl.
+
+2026-09-27T18:15Z, Claude report-file attempts, workdir /private/tmp/exp214-claude:
+EXP214_CAPTURE_DIR=/private/tmp/exp214-claude mise exec -- timeout 120 claude -p --restricted --tools Write --settings '{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"/Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.worktrees/exp-214-detect-idle-turns/experiments/01-interactive-turn-state/stop-hook.sh"}]}]}}' 'Write exactly {"schema":1,"worker":"claude","state":"finished","generation":"exp214-claude-1"} to /private/tmp/exp214-claude/report.json and then reply EXP214-REPORTED.'
+exit 0, but the assistant reported a write denial and the file was absent.
+EXP214_CAPTURE_DIR=/private/tmp/exp214-claude mise exec -- timeout 120 claude -p --permission-mode acceptEdits --setting-sources '' --tools Write --settings '{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"/Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.worktrees/exp-214-detect-idle-turns/experiments/01-interactive-turn-state/stop-hook.sh"}]}]}}' 'Write exactly {"schema":1,"worker":"claude","state":"finished","generation":"exp214-claude-2"} to /private/tmp/exp214-claude/report.json and then reply EXP214-REPORTED.'
+exit 0 in about 30 s. The file and selected output are committed separately.
+
+2026-09-27T18:15Z, agy print-mode report, workdir /private/tmp/exp214-agy:
+mise exec -- timeout 120 agy --print --mode accept-edits 'Write exactly {"schema":1,"worker":"agy","state":"finished","generation":"exp214-agy-1"} to /private/tmp/exp214-agy/report.json and reply EXP214-REPORTED.'
+exit 2 before a turn because bare `--print` consumed `--mode` as its prompt.
+mise exec -- timeout 120 agy --mode accept-edits --print='Write exactly {"schema":1,"worker":"agy","state":"finished","generation":"exp214-agy-1"} to /private/tmp/exp214-agy/report.json and reply EXP214-REPORTED.'
+exit 0 in about 9 s. The file and selected output are committed separately.
+
+2026-09-27T18:17Z, Claude second interactive launch:
+mise exec -- tmux new-session -d -s exp214-claude2 -c /Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.worktrees/exp-214-detect-idle-turns 'EXP214_CAPTURE_DIR=/private/tmp/exp214-claude mise exec -- claude --restricted --tools Bash,Read --permission-mode manual --settings '\''{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"/Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.worktrees/exp-214-detect-idle-turns/experiments/01-interactive-turn-state/stop-hook.sh"}]}]}}'\'' --name exp214-claude2'
+exit 0. The TUI opened in this worktree.
+mise exec -- tmux send-keys -t exp214-claude2 'Use Bash to run sleep 20, then reply EXP214-DONE.' Enter
+exit 0. Active and idle captures are in claude-active-pane.txt and claude-idle-pane.txt.
+mise exec -- claude agents --json
+exit 0 with `[]` during the turn and again at the permission prompt.
+ps -p 91071 -o pid=,lstart=,comm= && pgrep -P 91071
+exit 127 because the sandbox denied `ps`.
+mise exec -- tmux send-keys -t exp214-claude2 'Use Bash to run touch /private/tmp/exp214-claude/approval-marker, then reply EXP214-WRITTEN.' Enter
+The first prompt remained in the editor. I canceled that unsent text with `mise exec -- tmux send-keys -t exp214-claude2 C-c`.
+mise exec -- tmux send-keys -t exp214-claude2 'Use Write to create /private/tmp/exp214-claude/approval-marker containing TEST.'
+mise exec -- tmux send-keys -t exp214-claude2 Enter
+Both exited 0. The pane showed the Bash permission question in claude-wait-pane.txt. It was never answered.
+mise exec -- tmux kill-session -t exp214-claude2
+exit 0. `tmux has-session -t exp214-claude2` exited 1. The marker remained absent.
+
+2026-09-27T18:19Z, agy second interactive attempt:
+mise exec -- tmux new-session -d -s exp214-agy2 -c /Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.worktrees/exp-214-detect-idle-turns 'mise exec -- agy --prompt-interactive "Reply with EXP214-DONE."'
+exit 0. The pane again displayed folder trust. No choice was entered.
+mise exec -- tmux kill-session -t exp214-agy2
+exit 0.
+
+2026-09-27T18:16:36Z and the freshness rerun after it, local report-file test:
+PYTHONSAFEPATH=1 NO_COLOR=1 PYTHONUNBUFFERED=1 mise exec -- python experiments/01-interactive-turn-state/report-probe.py
+Both runs exited 0. The final capture is report-file.jsonl.

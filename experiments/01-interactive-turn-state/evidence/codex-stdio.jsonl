@@ -1,0 +1,2 @@
+{"at": "2026-09-27T18:13:29.893392+00:00", "event": "runtime-start", "pid": 50827, "cwd": "/Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.worktrees/exp-214-detect-idle-turns"}
+{"at": "2026-09-27T18:13:29.913837+00:00", "event": "runtime-exit", "pid": 50827, "returncode": 1}
