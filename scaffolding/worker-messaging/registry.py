@@ -27,3 +27,13 @@ def write(path: Path, rows: list[dict[str, Any]]) -> None:
         json.dump({"version": SCHEMA, "runs": rows}, stream, indent=2)
         stream.write("\n")
     draft.replace(path)
+
+
+def read_status(path: Path) -> dict[str, Any] | None:
+    """Read a worker status snapshot if one exists."""
+    if not path.exists():
+        return None
+    data = json.loads(path.read_text())
+    if not isinstance(data, dict):
+        raise TypeError("invalid status snapshot")
+    return data

@@ -1,0 +1,17 @@
+{
+  "record": {
+    "run_id": "run-1",
+    "worktree": "/worker",
+    "model": "gpt-6-sol",
+    "effort": "high",
+    "native_id": "thread-1"
+  },
+  "loaded": { "data": [], "nextCursor": null },
+  "read": {
+    "id": "thread-1",
+    "cwd": "/worker",
+    "model": "gpt-6-sol",
+    "reasoningEffort": "high",
+    "status": { "type": "notLoaded" }
+  }
+}

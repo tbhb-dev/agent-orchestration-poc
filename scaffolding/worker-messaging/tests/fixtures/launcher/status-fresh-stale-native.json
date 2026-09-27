@@ -1,0 +1,16 @@
+{
+  "row": {
+    "run_id": "run-1",
+    "pane_generation": "%1:100:start",
+    "state": "unknown"
+  },
+  "record": {
+    "run_id": "run-1",
+    "generation": "%1:100:start",
+    "last_seen_utc": "2026-09-27T14:00:00+00:00",
+    "current_step": "working"
+  },
+  "now": "2026-09-27T14:00:10+00:00",
+  "expected_availability": "fresh",
+  "expected_readiness": "unknown"
+}
