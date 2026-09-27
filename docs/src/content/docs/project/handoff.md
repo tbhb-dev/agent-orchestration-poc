@@ -3,34 +3,35 @@ title: Coordinator handoff
 description: Phase 2 rollover state, decisions, infrastructure, and next actions.
 ---
 
-Snapshot: 2026-09-26 22:08 America/New_York (2026-09-27 02:08 UTC). Outgoing coordinator session: `a8fde4b6-9f82-4188-b1f5-ccc20413cf6f`. Start the new Fable session with `@HANDOFF.md`. **Verify live state before acting.** This page records the roster at the snapshot time.
+Snapshot: 2026-09-26 22:36 America/New_York (2026-09-27 02:36 UTC). Outgoing coordinator session: `a8fde4b6-9f82-4188-b1f5-ccc20413cf6f`. Start the new Fable session with `@HANDOFF.md`. **Verify live state before acting.** This page records the roster at the snapshot time.
 
 ## Phase 2 state
 
-Embedded NATS, testing gates, retro checks, the shell gate, and coordinator preflight merged in [#80](https://github.com/tbhb/agent-orchestration-poc/pull/80), [#81](https://github.com/tbhb/agent-orchestration-poc/pull/81), [#82](https://github.com/tbhb/agent-orchestration-poc/pull/82), [#85](https://github.com/tbhb/agent-orchestration-poc/pull/85), and [#95](https://github.com/tbhb/agent-orchestration-poc/pull/95). The bus relay, `agentctl`, and host provisioner remain in review or draft. The bus roster and status bucket are not yet usable.
+Embedded NATS, testing gates, retro checks, the shell gate, coordinator preflight, coverage floors, and the Monitor design merged in [#80](https://github.com/tbhb/agent-orchestration-poc/pull/80), [#81](https://github.com/tbhb/agent-orchestration-poc/pull/81), [#82](https://github.com/tbhb/agent-orchestration-poc/pull/82), [#85](https://github.com/tbhb/agent-orchestration-poc/pull/85), [#95](https://github.com/tbhb/agent-orchestration-poc/pull/95), [#105](https://github.com/tbhb/agent-orchestration-poc/pull/105), and [#99](https://github.com/tbhb/agent-orchestration-poc/pull/99). The bus relay, `agentctl`, and host provisioner remain in review or draft. The bus roster and status bucket are not yet usable.
 
-**REST evidence:** the refresh at 2026-09-27 02:08:46 UTC found six open PRs and 53 open issues. [PR #112](https://github.com/tbhb/agent-orchestration-poc/pull/112) merged at 02:03:44 UTC, closing #102, and issue #116 opened. The refresh used `gh api repos/tbhb/agent-orchestration-poc/pulls?state=open&per_page=100` and `gh api repos/tbhb/agent-orchestration-poc/issues?state=open&per_page=100` at 02:08:46 UTC. The same queries first ran at 02:02:01 UTC. PR details and reviews, both rulesets, and `git worktree list --porcelain` were read immediately afterward. Requery before merge or dispatch.
+**REST evidence:** the refresh at 2026-09-27 02:36 UTC found seven open PRs and 55 open issues, excluding PRs from the issues response. [PR #112](https://github.com/tbhb/agent-orchestration-poc/pull/112) merged at 02:03:44 UTC, [PR #105](https://github.com/tbhb/agent-orchestration-poc/pull/105) at 02:17:09 UTC, and [PR #99](https://github.com/tbhb/agent-orchestration-poc/pull/99) at 02:25:35 UTC. Issues #117, #118, #120, and #123 opened after the earlier snapshot. The refresh used `gh api 'repos/tbhb/agent-orchestration-poc/pulls?state=open&per_page=100'` and `gh api 'repos/tbhb/agent-orchestration-poc/issues?state=open&per_page=100'`. The issue count filters out entries with a `pull_request` field. PR details and reviews and `git worktree list --porcelain` were read immediately afterward. The ruleset statement below comes from the earlier 02:02 UTC REST read. Requery before merge or dispatch.
 
 | Open PR | Branch and worktree under `.worktrees/` | Review at snapshot | Waits on |
 | --- | --- | --- | --- |
-| [#115](https://github.com/tbhb/agent-orchestration-poc/pull/115), relay | `feat/96-bus-relay`, `feat-96-bus-relay` | No submitted review | Reviewer, five checks, then #86 integration. |
-| [#113](https://github.com/tbhb/agent-orchestration-poc/pull/113), review process | `process/83-review-process`, `process-83-review-process` | `tbhbbot` requested changes | Fix scope and review findings, then re-review. |
-| [#105](https://github.com/tbhb/agent-orchestration-poc/pull/105), coverage floors | `tooling/87-coverage-floors`, `tooling-87-coverage-floors` | `tbhbbot` approved | Concluded checks, current main, then merge. |
-| [#99](https://github.com/tbhb/agent-orchestration-poc/pull/99), monitor design | `docs/98-github-event-monitor-design`, `docs-98-github-event-monitor-design` | `tbhbbot` approved | Concluded checks, current main, then merge. |
+| [#122](https://github.com/tbhb/agent-orchestration-poc/pull/122), data analysis research | `research/104-data-analysis-stack`, `research-104-data-analysis-stack` | No submitted review | Reviewer and required checks. |
+| [#121](https://github.com/tbhb/agent-orchestration-poc/pull/121), document size research | `research/100-document-size-limits`, `research-100-document-size-limits` | No submitted review | Reviewer and required checks. |
+| [#119](https://github.com/tbhb/agent-orchestration-poc/pull/119), this handoff | `docs/114-handoff-phase-2-rollover`, `docs-114-handoff-phase-2-rollover` | `tbhbbot` requested changes | Fix the heartbeat and delegation findings, re-review, then merge. |
+| [#115](https://github.com/tbhb/agent-orchestration-poc/pull/115), relay | `feat/96-bus-relay`, `feat-96-bus-relay` | `tbhbbot` requested changes | Fix review findings, re-review and checks, then #86 integration. |
+| [#113](https://github.com/tbhb/agent-orchestration-poc/pull/113), review process | `process/83-review-process`, `process-83-review-process` | `tbhbbot` approved | Update the branch from main, conclude checks, then merge. |
 | [#97](https://github.com/tbhb/agent-orchestration-poc/pull/97), host provisioner | `feat/28-registry-tmux`, `feat-28-registry-tmux` | `tbhbbot` approved after fixes | Real harness acceptance, checks, then merge. |
 | [#86](https://github.com/tbhb/agent-orchestration-poc/pull/86), `agentctl` | `feat/27-agentctl`, `feat-27-agentctl` | Draft, no submitted review | #115 relay lands and CLI integration passes. |
 
-The handoff itself is on `docs/114-handoff-phase-2-rollover`. Refer to this branch until its PR exists. A clean update from main can preserve approval, while a changed PR diff requires another approval. Check effective review and check state each time.
+The handoff itself is in PR #119. A clean update from main can preserve approval, while a changed PR diff requires another approval. Check effective review and check state each time.
 
 ## Open issues by status
 
-REST found 53 open issues at 02:08 UTC. These groups describe observable work state and dependencies, not the Project 9 Status field, which the REST query does not expose. Verify the Project field separately before dispatch.
+REST found 55 open issues at 02:36 UTC. These groups describe observable work state and dependencies, not the Project 9 Status field, which the REST query does not expose. Verify the Project field separately before dispatch.
 
 | Snapshot status | Open issues |
 | --- | --- |
-| Open PR or draft | [#27](https://github.com/tbhb/agent-orchestration-poc/issues/27), [#28](https://github.com/tbhb/agent-orchestration-poc/issues/28), [#83](https://github.com/tbhb/agent-orchestration-poc/issues/83), [#87](https://github.com/tbhb/agent-orchestration-poc/issues/87), [#96](https://github.com/tbhb/agent-orchestration-poc/issues/96), [#98](https://github.com/tbhb/agent-orchestration-poc/issues/98). |
+| Open PR or draft | [#27](https://github.com/tbhb/agent-orchestration-poc/issues/27), [#28](https://github.com/tbhb/agent-orchestration-poc/issues/28), [#83](https://github.com/tbhb/agent-orchestration-poc/issues/83), [#96](https://github.com/tbhb/agent-orchestration-poc/issues/96), [#100](https://github.com/tbhb/agent-orchestration-poc/issues/100), [#104](https://github.com/tbhb/agent-orchestration-poc/issues/104). |
 | Rollover in this branch | [#114](https://github.com/tbhb/agent-orchestration-poc/issues/114). |
-| Phase 2 queue, dependencies, or refinement | #18, #29, #31, #32, #33, #74, #84, #88, #89, #90, #91, #92, #93, #94, #100, #101, #103, #104, #106, #107, #108, #109, #110, #111, #116. #84 reached arbitration after three changes-needed verdicts. #88 through #93 depend on its contract. #100, #101, and #110 need operator input. |
+| Phase 2 queue, dependencies, or refinement | #18, #29, #31, #32, #33, #74, #84, #88, #89, #90, #91, #92, #93, #94, #101, #103, #106, #107, #108, #109, #110, #111, #116, #117, #118, #120, #123. #84 reached arbitration after three changes-needed verdicts. #88 through #93 depend on its contract. #101 and #110 need operator input. #117 and #118 cover wake research and the coordinator event channel. #120 covers automated merge passes, and #123 covers handoff review and archiving. |
 | Phase 3 backlog | #34, #35, #36, #37, #38, #39, #40, #41, #42, #43, #44, #45, #46, #47, #48, #49, #50, #51, #52, #53, #54. |
 
 ## Operator decisions and process
@@ -40,7 +41,7 @@ The decisions below were made on 2026-09-26. The coordinator's local memory dire
 | Decision | Current instruction |
 | --- | --- |
 | Architecture and gates | “A guiding architectural principle that I want followed strictly here is functional core/imperative shell.” Pure decisions and transformations live in core, I/O in a thin shell. Use boundary, property, mutation, coverage, duplicate, dead-code, and complexity checks. Python typing is strict everywhere. |
-| Assignment and usage | Shift coding, research, and first review to Codex. Use `gpt-6-sol` high for code and `gpt-6-astra` medium for reviews and design, with Sonnet 5 cross-checks for bus and security. Later usage showed 73% above 150 thousand context tokens, so roll over before 300 thousand and keep heartbeat output compact. |
+| Coordinator-only role and usage | The operator's 2026-09-26 goal is a streamlined project orchestrator “delegating everything else.” The coordinator retains decisions, arbitration, dispatch order, merge authority, and conversation with the operator. Delegate issue and brief authoring to Codex instead of writing inline; delegate coding, research, first review, long-document and log reading, browser work, and routine investigation. Run mechanical GitHub work through compact scripts and seek decision-relevant summaries. Use `gpt-6-sol` high for code and `gpt-6-astra` medium for reviews and design, with Sonnet 5 cross-checks for bus and security. Later usage showed 73% above 150 thousand context tokens, so roll over before 300 thousand. |
 | Concurrency | Codex may run about six jobs. Plan four coding slots, two review slots, and one docs or research slot. Reviewers may burst. Watch rate-limit logs. Earlier three-job guidance is superseded. |
 | Issue refinement | “All issues should go through a refinement review and approval.” Backlog means unrefined, Ready requires a newer `Issue review: ready` verdict from `tbhbbot`. This time-bound handoff was dispatched without that review. |
 | PR review | Reviews are real PR reviews by `tbhbbot`, with discussion in threads and a required approval. Keep default `gh` identity as `tbhb`. Use the fail-closed reviewer wrapper. Reviewer resolves threads. Limit to three review rounds before coordinator arbitration. |
@@ -58,7 +59,8 @@ The decisions below were made on 2026-09-26. The coordinator's local memory dire
 
 | Component | Location and action |
 | --- | --- |
-| Heartbeat | Recreate one session cron at `4-59/14 * * * *` for cache continuity and silent-worker checks. Never run two. Keep each wakeup to a compact single probe. |
+| Coordinator wake | The operator's 22:20 update supersedes the 14-minute cron. Arm Monitor on the main checkout's `.holding/bin/coordinator-digest.sh 120`, re-arm at its 30-minute expiry, and keep one approximately hourly cron heartbeat as a fallback. Never run two fallback heartbeats. The digest reports changed worker, review, PR, check, or job state in compact output. The channel in #118 is still unbuilt. #117 must verify wake cost and cache retention before treating either as established. |
+| Merge train | Check whether the main checkout's `.holding/bin/merge-train.sh` is already running, then run it in the background with the outgoing scratchpad's `gh-as-reviewer` wrapper and an optional duration. It calls `.holding/bin/merge-ready.sh` and writes `.holding/merge-train.log`. Inspect the scripts and their authority before reuse. The coordinator retains merge decisions. |
 | Docs daemon | Check port 4322. Restart the Astro daemon after merges adding pages, then request the page before sharing it. |
 | Funnel | Check `tailscale funnel status` for `https://usdholt05.ibex-paradise.ts.net/hooks/github`, forwarding to `127.0.0.1:8787/hooks/github`. Credentials are in the `tbhb.dev` 1Password item `github-app-tbhb-monitor`, with no values in this page. |
 | Webhook capture | The temporary `webhook-capture.py` probe in the outgoing scratchpad writes into `.holding/2026-09-26/webhooks`. Its process ends with the session, so verify the receiver and restart it under the coordinator's existing authority. Captured data is unverified and remains local. |
@@ -81,6 +83,8 @@ The outgoing scratchpad is `/private/tmp/claude-501/-Users-tony-Code-github-com-
 - `st.sh` sets Project status by issue URL.
 - `webhook-capture.py` captures temporary webhook deliveries in the local holding area.
 
+The digest and merge scripts are temporary local prototypes under the main checkout's `.holding/bin/`, separate from the still-unbuilt coordinator event channel in #118. Their source and log are outside this PR and are not durable repository infrastructure.
+
 ## Gotchas
 
 - A worker brief that says to wait for an upstream merge can hold a Codex slot indefinitely. Have workers open the PR, report, and exit, then dispatch a short follow-up.
@@ -97,9 +101,9 @@ The outgoing scratchpad is `/private/tmp/claude-501/-Users-tony-Code-github-com-
 
 ## Next three actions
 
-1. Verify REST PR, issue, review, ruleset, and check state. Recreate exactly one 14-minute heartbeat, inspect the docs daemon, funnel, capture probe, holding area, and transcript hooks. Report discrepancies before dispatch.
-2. Finish approved PRs #105 and #99 when all five checks conclude successfully and branches are current. Address #113 review findings and #97 real harness acceptance. The coordinator handles merges under the current authority rule.
-3. Review #115 with a bus and security cross-check. Once the relay is approved and merged, resume #86 against it, then proceed with #29, #31 through #33, and the refined workflow queue in dependency order.
+1. Verify REST PR, issue, review, ruleset, and check state. Arm Monitor on `.holding/bin/coordinator-digest.sh 120`, re-arm after 30 minutes, check the background merge train, and retain one approximately hourly fallback heartbeat. Inspect the docs daemon, funnel, capture probe, holding area, and transcript hooks. Report discrepancies before dispatch.
+2. Update approved #113 from main, wait for its checks, and merge when ready. Address #119 review findings and #97 real harness acceptance. Review new research PRs #121 and #122. The coordinator retains merge authority while delegating routine checks and issue or brief writing.
+3. Address #115 review findings with a bus and security cross-check. Once the relay is approved and merged, resume #86 against it, then proceed with #29, #31 through #33, and the refined workflow queue in dependency order. Use #117, #118, and #120 to validate and replace the temporary wake and merge prototypes.
 
 ## Verify before acting
 
