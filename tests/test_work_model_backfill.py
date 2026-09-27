@@ -48,7 +48,13 @@ def snapshot() -> Snapshot:
             item_id="item-" + row["number"],
             source_project=tuple(
                 sorted(
-                    (field, row.get("project " + field.lower(), ""))
+                    (
+                        field,
+                        row.get(
+                            "size" if field == "Size" else "project " + field.lower(),
+                            "",
+                        ),
+                    )
                     for field in PROJECT_FIELDS
                 )
             ),
@@ -238,13 +244,12 @@ def test_complete_and_draft_guards() -> None:
     assert cp1.items[0].labels == ()
 
 
-def test_new_draft_already_in_cp1_fails() -> None:
-    """Reject creation intent when a held draft now has the proposed title."""
+def test_new_draft_already_in_cp1_is_reused() -> None:
+    """Match an early created draft by unique title without a second creation."""
     cp1 = snapshot()
     found = replace(cp1.items[-1], key="title:Draft A", title="Draft A")
     cp1 = replace(cp1, items=(*cp1.items[:-1], found))
-    with pytest.raises(ValueError, match="^proposed new draft already exists$"):
-        validate_cp1(tables(), cp1)
+    validate_cp1(tables(), cp1)
 
 
 @given(st.integers(min_value=1, max_value=50))
@@ -299,3 +304,35 @@ def test_audit_row_property(note: str) -> None:
     parsed = parse_tables(*values)
     assert parsed.edges[-1]["action"] == "judgment: " + note
     assert cycle_nodes(parsed) == ()
+
+
+def test_final_header_rejects_phase() -> None:
+    """Reject the deleted Phase field and the earlier project size name."""
+    values = list(texts())
+    for old, new in (("size", "project phase"), ("size", "project size")):
+        changed = values.copy()
+        changed[0] = changed[0].replace(f"\t{old}\t", f"\t{new}\t", 1)
+        with pytest.raises(ValueError, match="^table header is incomplete$"):
+            parse_tables(*changed)
+
+
+def test_preapplied_title_and_existing_draft_id() -> None:
+    """Accept an already applied title and reject a changed draft item ID."""
+    cp1 = snapshot()
+    cp1 = replace(
+        cp1,
+        items=(
+            replace(cp1.items[0], title="tooling(project): build a model"),
+            *cp1.items[1:],
+        ),
+    )
+    validate_cp1(tables(), cp1)
+    values = list(texts())
+    lines = values[0].splitlines()
+    header = lines[0].split("\t")
+    cells = lines[-1].split("\t")
+    cells[header.index("target project item")] = "different"
+    lines[-1] = "\t".join(cells)
+    values[0] = "\n".join(lines) + "\n"
+    with pytest.raises(ValueError, match="^changed existing draft identity$"):
+        validate_cp1(parse_tables(*values), snapshot())
