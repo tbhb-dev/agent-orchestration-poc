@@ -278,7 +278,7 @@ def test_new_class_mapping_accepts_old_and_new_labels(kind: str) -> None:
 )
 def test_parent_exempts_form_and_other_label_families(title: str, label: str) -> None:
     assert validate_issue(title, "", (label,), REFERENCE) == ()
-    assert validate_issue("epic: 1 quality gates", "", (label,), REFERENCE)
+    assert validate_issue("epic: 1. quality gates", "", (label,), REFERENCE)
     assert validate_issue(title, "", ("type/chore", label), REFERENCE)
 
 
@@ -286,15 +286,29 @@ def test_parent_exempts_form_and_other_label_families(title: str, label: str) ->
     ("title", "label", "valid"),
     [
         ("initiative: I1 repository foundation", "type/initiative", False),
-        ("initiative: 1 repository foundation", "type/initiative", False),
-        ("initiative: 1st repository foundation", "type/initiative", False),
+        ("initiative: 1 repository foundation", "type/initiative", True),
+        ("initiative: 1st repository foundation", "type/initiative", True),
+        ("initiative: 1. repository foundation", "type/initiative", False),
+        ("initiative: 2) repository foundation", "type/initiative", False),
         ("epic: I2-E3 quality gates", "type/epic", False),
         ("epic: E3 quality gates", "type/epic", False),
-        ("epic: e3: quality gates", "type/epic", False),
-        ("epic: i. quality gates", "type/epic", False),
+        ("epic: I1", "type/epic", False),
+        ("epic: e3: quality gates", "type/epic", True),
+        ("epic: i. quality gates", "type/epic", True),
+        ("epic: II: quality gates", "type/epic", False),
+        ("epic: IV - quality gates", "type/epic", False),
         ("epic: IV: quality gates", "type/epic", False),
-        ("epic: IV quality gates", "type/epic", False),
+        ("epic: IV quality gates", "type/epic", True),
+        ("epic: phase 1 quality gates", "type/epic", False),
+        ("epic: part 2 quality gates", "type/epic", False),
+        ("epic: step 3 quality gates", "type/epic", False),
         ("epic: quality gates", "type/epic", True),
+        ("epic: civil infrastructure", "type/epic", True),
+        ("epic: CLI tooling", "type/epic", True),
+        ("epic: CI quality gates", "type/epic", True),
+        ("epic: mix process", "type/epic", True),
+        ("epic: DIM review", "type/epic", True),
+        ("epic: MIDI support", "type/epic", True),
         ("epic: GitHub monitor", "type/epic", True),
         ("initiative: Codex integration", "type/initiative", True),
         ("epic: ", "type/epic", False),
@@ -304,10 +318,25 @@ def test_parent_title_contract(title: str, label: str, valid: bool) -> None:
     assert (validate_issue(title, "", (label,), REFERENCE) == ()) is valid
 
 
-@given(st.integers(min_value=1), st.sampled_from(("I", "E", "i", "e", "I2-E", "i.")))
+@given(st.integers(min_value=1), st.sampled_from(("I", "E", "I2-E")))
 def test_parent_rejects_generated_leading_keys(number: int, prefix: str) -> None:
-    key = f"{prefix}{number}" if not prefix.endswith(".") else prefix
+    key = f"{prefix}{number}"
     assert validate_issue(f"epic: {key} GitHub monitor", "", ("type/epic",), REFERENCE)
+
+
+@given(
+    st.lists(
+        st.text(
+            alphabet=st.characters(min_codepoint=97, max_codepoint=122), min_size=1
+        ),
+        min_size=1,
+        max_size=5,
+    )
+)
+def test_parent_accepts_ordinary_lowercase_words(words: list[str]) -> None:
+    assert (
+        validate_issue(f"epic: {' '.join(words)}", "", ("type/epic",), REFERENCE) == ()
+    )
 
 
 @pytest.mark.parametrize(

@@ -10,11 +10,19 @@ type Label = tuple[str, str]
 TITLE = re.compile(r"^([a-z]+)\(([a-z][a-z0-9-]*)\): ([a-z]+) (.+)$")
 INCIDENT = re.compile(r"^inc(?:\(([a-z][a-z0-9-]*)\))?: (\S.*)$")
 PARENT = re.compile(r"^(initiative|epic): ([^\n]*)$")
-PARENT_PREFIX = re.compile(
-    r"^(?:\d|(?:[IiEe]\d+(?:-[IiEe]\d+)*|[IVXLCDMivxlcdm]+)(?:[.:-]|\)|\s|$))"
-)
+PARENT_KEY = re.compile(r"^[A-Z]\d+(?:-[A-Z]\d+)*(?=$|\s|[.:)])")
+PARENT_ORDINAL = re.compile(r"^(?:\d+|[IVXLCDM]{1,4})(?:[.:)]| ?-(?:\s|$))")
+PARENT_STAGE = re.compile(r"^(?i:phase|part|step) ?\d+(?=$|\s|[.:)])")
 HEADING = re.compile(r"(?m)^#{2,3} ([^\n]+)\s*$")
 REF = re.compile(r"^Refs: #(\d+)$")
+
+
+def valid_parent_summary(summary: str) -> bool:
+    """Accept text without a leading parent key, ordinal, or numbered stage."""
+    summary = summary.strip()
+    return bool(summary) and not any(
+        pattern.match(summary) for pattern in (PARENT_KEY, PARENT_ORDINAL, PARENT_STAGE)
+    )
 
 
 def validate_title(
@@ -24,10 +32,9 @@ def validate_title(
     if issue and title in reference["title_label_exceptions"]:
         return ()
     if issue and (parent := PARENT.fullmatch(title)):
-        summary = parent.group(2).strip()
         return (
             ("parent summary needs text without a leading key or ordinal",)
-            if not summary or PARENT_PREFIX.match(summary)
+            if not valid_parent_summary(parent.group(2))
             else ()
         )
     if issue and (match_incident := INCIDENT.fullmatch(title)):
