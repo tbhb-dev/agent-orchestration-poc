@@ -3,7 +3,7 @@
 name: "research work item"
 description: "Open a research work item"
 title: "research(scope): "
-labels: ["type/research"]
+labels: ["type/spike"]
 body:
   - type: textarea
     attributes:

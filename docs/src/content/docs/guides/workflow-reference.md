@@ -7,13 +7,15 @@ description: Checked types, scopes, labels, forms, and pull request size rules.
 
 ## Titles and branches
 
-Types: `feat`, `fix`, `docs`, `exp`, `research`, `tooling`, `process`, `decision`, `chore`, `refactor`, `test`.
+Types: `feat`, `fix`, `docs`, `exp`, `research`, `tooling`, `process`, `decision`, `chore`, `refactor`, `test`, `inc`.
 
 Scopes: `bus`, `containers`, `daemon`, `desktop`, `docs`, `experiment`, `remote`, `research`, `security`, `terminal`, `tooling`, `ui`, `workflow`, `go`, `python`, `shell`, `github`, `git`, `ci`, `testing`, `coverage`, `mutation`, `gates`, `review`, `preflight`, `handoff`, `project`, `workers`, `checkpoint`, `retro`, `sync`, `import`, `subject`, `skeleton`, `boundaries`, `design`, `process`.
 
 Subject verbs: `add`, `allow`, `audit`, `build`, `check`, `clarify`, `define`, `detect`, `document`, `enforce`, `fix`, `gate`, `keep`, `make`, `measure`, `move`, `pin`, `record`, `refine`, `reject`, `remove`, `report`, `require`, `resolve`, `restore`, `retire`, `run`, `split`, `sync`, `test`, `track`, `update`, `validate`, `verify`.
 
 Titles use `type(scope): verb object` without a final period. Commit subjects have at most 72 characters. Branches use `<type>/<issue>[-<issue>...]-<slug>`. A new scope needs a reference edit in the same PR.
+
+Issues also admit `inc: summary` and `inc(scope): summary` with no imperative verb. Parent issues use `initiative: summary` or `epic: summary` without a key or ordinal. PR titles keep the conventional pattern.
 
 `workflow` remains an area and scope, but is retired as a commit type because `process` and `tooling` describe the two kinds of workflow changes without a separate overlapping type.
 
@@ -39,6 +41,26 @@ Titles use `type(scope): verb object` without a final period. Commit subjects ha
 | `harness/any` | Intended harness: any | `#fbca04` |
 | `harness/claude` | Intended harness: claude | `#fbca04` |
 | `harness/codex` | Intended harness: codex | `#fbca04` |
+| `invalid/acceptance-criteria` | Invalid acceptance-criteria | `#b60205` |
+| `invalid/allowed-paths` | Invalid allowed-paths | `#b60205` |
+| `invalid/area` | Invalid area | `#b60205` |
+| `invalid/context-and-links` | Invalid context-and-links | `#b60205` |
+| `invalid/dependencies-and-paths` | Invalid dependencies-and-paths | `#b60205` |
+| `invalid/docs-impact` | Invalid docs-impact | `#b60205` |
+| `invalid/evidence-required` | Invalid evidence-required | `#b60205` |
+| `invalid/goal` | Invalid goal | `#b60205` |
+| `invalid/harness` | Invalid harness | `#b60205` |
+| `invalid/out-of-scope` | Invalid out-of-scope | `#b60205` |
+| `invalid/parent` | Invalid parent | `#b60205` |
+| `invalid/phase` | Invalid phase | `#b60205` |
+| `invalid/priority` | Invalid priority | `#b60205` |
+| `invalid/review` | Invalid review | `#b60205` |
+| `invalid/severity` | Invalid severity | `#b60205` |
+| `invalid/status` | Invalid status | `#b60205` |
+| `invalid/stub-record` | Invalid stub-record | `#b60205` |
+| `invalid/title` | Invalid title | `#b60205` |
+| `invalid/type` | Invalid type | `#b60205` |
+| `invalid/work-type` | Invalid work-type | `#b60205` |
 | `needs-operator` | Needs the operator's decision or approval | `#d93f0b` |
 | `phase/0` | Phase 0 | `#5319e7` |
 | `phase/1` | Phase 1 | `#5319e7` |
@@ -47,30 +69,54 @@ Titles use `type(scope): verb object` without a final period. Commit subjects ha
 | `phase/4` | Phase 4 | `#5319e7` |
 | `phase/5` | Phase 5 | `#5319e7` |
 | `phase/6` | Phase 6 | `#5319e7` |
+| `review/approved` | Review: approved | `#c5def5` |
+| `review/changes-requested` | Review: changes-requested | `#c5def5` |
+| `review/pending-review` | Review: pending-review | `#c5def5` |
+| `review/rejected` | Review: rejected | `#c5def5` |
 | `type/bug` | Type: bug | `#0e8a16` |
+| `type/chore` | Type: chore | `#0e8a16` |
 | `type/decision` | Type: decision | `#0e8a16` |
+| `type/defect` | Type: defect | `#0e8a16` |
 | `type/docs` | Type: docs | `#0e8a16` |
+| `type/epic` | Type: epic | `#0e8a16` |
 | `type/experiment` | Type: experiment | `#0e8a16` |
 | `type/feature` | Type: feature | `#0e8a16` |
+| `type/incident` | Type: incident | `#0e8a16` |
+| `type/initiative` | Type: initiative | `#0e8a16` |
 | `type/process` | Type: process | `#0e8a16` |
 | `type/research` | Type: research | `#0e8a16` |
+| `type/spike` | Type: spike | `#0e8a16` |
 | `type/tooling` | Type: tooling | `#0e8a16` |
 
 Each issue and PR has exactly one `area/`, `type/`, `phase/`, and `harness/` label. Type-to-label mapping:
 
+Parent issues require one `type/initiative` or `type/epic` label and are exempt from form, `area/`, `phase/`, and `harness/` checks. An old and new label for the same class count as one during migration.
+
 | Type | Label |
 | --- | --- |
 | `feat` | `type/feature` |
-| `fix` | `type/bug` |
-| `docs` | `type/docs` |
+| `fix` | `type/defect` |
+| `docs` | `type/chore` |
 | `exp` | `type/experiment` |
-| `research` | `type/research` |
-| `tooling` | `type/tooling` |
-| `process` | `type/process` |
-| `decision` | `type/decision` |
-| `chore` | `type/tooling` |
-| `refactor` | `type/tooling` |
-| `test` | `type/tooling` |
+| `research` | `type/spike` |
+| `tooling` | `type/chore` |
+| `process` | `type/chore` |
+| `decision` | `type/spike` |
+| `chore` | `type/chore` |
+| `refactor` | `type/chore` |
+| `test` | `type/chore` |
+| `inc` | `type/incident` |
+
+The relabel-only exceptions are keyed by their exact issue titles in the reference. These issues keep their titles. The migration table remains until the final read-back in issue #200:
+
+| Old label | New label |
+| --- | --- |
+| `type/bug` | `type/defect` |
+| `type/tooling` | `type/chore` |
+| `type/process` | `type/chore` |
+| `type/docs` | `type/chore` |
+| `type/research` | `type/spike` |
+| `type/decision` | `type/spike` |
 
 ## Forms and references
 

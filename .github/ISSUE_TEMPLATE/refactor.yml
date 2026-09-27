@@ -3,7 +3,7 @@
 name: "refactor work item"
 description: "Open a refactor work item"
 title: "refactor(scope): "
-labels: ["type/tooling"]
+labels: ["type/chore"]
 body:
   - type: textarea
     attributes:

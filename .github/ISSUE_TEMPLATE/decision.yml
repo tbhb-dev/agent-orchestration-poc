@@ -3,7 +3,7 @@
 name: "decision work item"
 description: "Open a decision work item"
 title: "decision(scope): "
-labels: ["type/decision"]
+labels: ["type/spike"]
 body:
   - type: textarea
     attributes:
