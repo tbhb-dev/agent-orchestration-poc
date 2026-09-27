@@ -7,6 +7,7 @@ Read the assigned issue and [project plan](docs/src/content/docs/project/plan.md
 - Use one issue per work item in [Project 9](https://github.com/users/tbhb/projects/9). Issues need a goal, context and links, acceptance criteria, evidence required, docs impact, and out of scope.
 - Work on `<type>/<issue>-<slug>` in your own `.worktrees/<type>-<issue>-<slug>/` checkout. Use the coordinator's assigned branch. Never work on `main` or share a checkout with another worker.
 - Commit with `type(scope): imperative subject`, an explanatory body, and a `Refs: #<n>` trailer. Use Conventional Commits. Do not add attribution or co-author trailers to commits or PR bodies.
+- The commit-msg hook rejects attribution and missing `Refs:` trailers except for subject `wip`, the ignore check guards tracked paths, and the handoff check verifies open PR claims.
 - Keep work committed. Push before reporting completion and, once the bus exists, whenever reporting status there. Scan evidence for secrets and redact or hold back sensitive material before committing it.
 - Open one small PR per issue with `gh pr create`. Use the conventional subject as its title. Include what, why, evidence, docs, and checklist sections, ending with `Refs: #<n>`. Include evidence links for `feat` and `exp` changes.
 - The checklist covers green CI, docs updated or an issue filed, no secrets, and evidence committed. The Project Worker field and PR evidence section record the harness and model.

@@ -110,6 +110,9 @@ The `check` aggregate also runs `check:imports`, `check:dupl`, and `check:deadco
 | `check:tombi` | Lint and check formatting of TOML with tombi |
 | `fmt:tombi` | Format TOML with tombi |
 | `check:experiments` | Check that every experiment directory has README.md, evidence/, and versions.md |
+| `check:ignore-collisions` | Fail when Git ignores a tracked path and warn on case-insensitive directory matches |
+| `check:handoff` | Verify that PRs described as open in the handoff are open on GitHub |
+| `check:handoff-classifier` | Test open PR classification with line fixtures |
 | `check:secrets` | Scan the git history for secrets with gitleaks |
 | `check:actions` | Lint the GitHub Actions workflows with actionlint |
 | `review:preflight` | Check a PR's workflows against revisions added to `origin/main` since its merge base |
@@ -135,6 +138,8 @@ The built-in hooks remove trailing whitespace, fix the final newline, and reject
 
 The commit-msg hook runs Vale with `ai-tells` and `ai-tells-commits`. Real commits cannot bypass hooks. The exception is an incomplete throwaway work-in-progress commit that is removed before shared history, as described in `AGENTS.md`.
 
+The `commit-trailers` hook rejects attribution and missing `Refs:` trailers except for subject `wip`, and `ignore-collisions` checks tracked paths and directory case matches before commits.
+
 ## Repository scripts
 
 | Script | Purpose |
@@ -147,6 +152,8 @@ The commit-msg hook runs Vale with `ai-tells` and `ai-tells-commits`. Real commi
 | `scripts/mermaid-check/check.mjs` | Extracts fenced Mermaid and parses it with Mermaid |
 | `scripts/check-experiments.sh` | Requires `NN-slug`, README, evidence directory, and versions, except the phase 0 assessment |
 | `scripts/check-pr-body.sh` | Rejects attribution, missing `Refs:`, and missing evidence links for feature or experiment PRs |
+| `scripts/check-ignore-collisions.sh` | Checks tracked paths with Git and warns on case-insensitive ignore directory matches |
+| `scripts/check-handoff-prs.sh` | Classifies open PR claims and checks their GitHub state |
 | `scripts/check-imported-research.sh` | Compares imports against a base ref and permits additions only for import PRs |
 | `scripts/check-mutation-score.py` | Runs mutmut from a fresh cache and enforces the exported score |
 | `scripts/check-gremlins-output.py` | Rejects timed-out Go mutants that gremlins excludes from its score |
