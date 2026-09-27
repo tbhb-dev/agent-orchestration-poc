@@ -17,7 +17,7 @@ type Permissions struct {
 	Subscribe SubjectPermissions
 }
 
-// Agent permits publications ending in the agent's name and its own inbox.
+// Agent permits only attributed relay requests and lifecycle events.
 func Agent(group, agent string) (Permissions, error) {
 	if err := layout.ValidToken(group); err != nil {
 		return Permissions{}, err
@@ -28,14 +28,14 @@ func Agent(group, agent string) (Permissions, error) {
 	prefix := "grp." + group
 	return Permissions{
 		Publish: SubjectPermissions{Allow: []string{
-			prefix + ".msg.all." + agent,
-			prefix + ".msg.dm.*." + agent,
-			prefix + ".msg.op." + agent,
-			prefix + ".evt.*." + agent,
+			prefix + ".relay.req.send." + agent,
+			prefix + ".relay.req.receive." + agent,
+			prefix + ".relay.req.ack." + agent,
+			prefix + ".relay.req.status." + agent,
+			prefix + ".relay.req.roster." + agent,
 		}},
 		Subscribe: SubjectPermissions{Allow: []string{
-			prefix + ".msg.all.*",
-			prefix + ".msg.dm." + agent + ".*",
+			prefix + ".relay.reply." + agent + ".>",
 		}},
 	}, nil
 }
@@ -48,12 +48,11 @@ func Operator(group string) (Permissions, error) {
 	prefix := "grp." + group
 	return Permissions{
 		Publish: SubjectPermissions{Allow: []string{
-			prefix + ".msg.all.operator",
-			prefix + ".msg.dm.*.operator",
+			prefix + ".msg.>", prefix + ".evt.>", prefix + ".relay.reply.>", "$KV.>",
 			"$JS.API.>", "$JS.ACK.>",
 		}},
 		Subscribe: SubjectPermissions{Allow: []string{
-			prefix + ".msg.>", prefix + ".evt.>", "_INBOX.>",
+			prefix + ".msg.>", prefix + ".relay.req.>", prefix + ".evt.>", "_INBOX.>",
 		}},
 	}, nil
 }
