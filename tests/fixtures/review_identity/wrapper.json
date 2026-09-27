@@ -4,7 +4,7 @@
     "token_status": 0,
     "token": "fixture-only",
     "identity_status": 0,
-    "identity": "tbhbbot",
+    "identity": "tbhb-agent-reviewer",
     "expected_exit": 0,
     "review_runs": true
   },
@@ -13,7 +13,7 @@
     "token_status": 1,
     "token": "",
     "identity_status": 0,
-    "identity": "tbhbbot",
+    "identity": "tbhb-agent-reviewer",
     "expected_exit": 90,
     "review_runs": false
   },
@@ -22,7 +22,7 @@
     "token_status": 0,
     "token": "",
     "identity_status": 0,
-    "identity": "tbhbbot",
+    "identity": "tbhb-agent-reviewer",
     "expected_exit": 90,
     "review_runs": false
   },
@@ -32,6 +32,15 @@
     "token": "fixture-only",
     "identity_status": 0,
     "identity": "tbhb",
+    "expected_exit": 91,
+    "review_runs": false
+  },
+  {
+    "case": "retired reviewer identity",
+    "token_status": 0,
+    "token": "fixture-only",
+    "identity_status": 0,
+    "identity": "tbhbbot",
     "expected_exit": 91,
     "review_runs": false
   },

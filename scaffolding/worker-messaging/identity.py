@@ -363,9 +363,9 @@ def command(row: dict[str, Any], brief: str, shim: str, path_env: str) -> str:
         "PATH": f"{shim}:{path_env}",
         "ZDOTDIR": f"{shim}/zdotdir",
         "PREK_HOME": "/private/tmp/agent-orchestration-poc-prek",
-        "GIT_AUTHOR_NAME": "tbhbagent",
+        "GIT_AUTHOR_NAME": "tbhb-agent",
         "GIT_AUTHOR_EMAIL": "agent@tonyburns.net",
-        "GIT_COMMITTER_NAME": "tbhbagent",
+        "GIT_COMMITTER_NAME": "tbhb-agent",
         "GIT_COMMITTER_EMAIL": "agent@tonyburns.net",
     }
     if row["harness"] == "codex":
@@ -407,6 +407,15 @@ def command(row: dict[str, Any], brief: str, shim: str, path_env: str) -> str:
         ]
     else:
         argv = ["agy", "--model", row["model"], "--effort", row["effort"], "-i", brief]
+    env = {
+        "PATH": f"{shim}:{path_env}",
+        "ZDOTDIR": f"{shim}/zdotdir",
+        "PREK_HOME": "/private/tmp/agent-orchestration-poc-prek",
+        "GIT_AUTHOR_NAME": "tbhb-agent",
+        "GIT_AUTHOR_EMAIL": "agent@tonyburns.net",
+        "GIT_COMMITTER_NAME": "tbhb-agent",
+        "GIT_COMMITTER_EMAIL": "agent@tonyburns.net",
+    }
     return "exec " + shlex.join(
         ["env", *(f"{key}={value}" for key, value in env.items()), *argv]
     )

@@ -685,12 +685,14 @@ def test_command_uses_captured_paths() -> None:
         ("PATH", "/repo/.holding/shim:/usr/bin"),
         ("ZDOTDIR", "/repo/.holding/shim/zdotdir"),
         ("PREK_HOME", "/private/tmp/agent-orchestration-poc-prek"),
-        ("GIT_AUTHOR_NAME", "tbhbagent"),
+        ("GIT_AUTHOR_NAME", "tbhb-agent"),
         ("GIT_AUTHOR_EMAIL", "agent@tonyburns.net"),
-        ("GIT_COMMITTER_NAME", "tbhbagent"),
+        ("GIT_COMMITTER_NAME", "tbhb-agent"),
         ("GIT_COMMITTER_EMAIL", "agent@tonyburns.net"),
     ):
         assert f"shell_environment_policy.set.{key}={json.dumps(value)}" in overrides
+    assert "GIT_AUTHOR_NAME=tbhb-agent" in command
+    assert "GIT_COMMITTER_NAME=tbhb-agent" in command
 
 
 def test_main_is_rejected_even_with_recorded_owner() -> None:

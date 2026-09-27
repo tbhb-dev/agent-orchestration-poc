@@ -1,6 +1,6 @@
 # Temporary worker launcher
 
-This issue #176 scaffold is replaced by the production provisioner in [#28](https://github.com/tbhb/agent-orchestration-poc/issues/28).
+This issue #176 scaffold is replaced by the production provisioner in [#28](https://github.com/tbhb-dev/agent-orchestration-poc/issues/28).
 
 ## Launch and inspect
 
