@@ -134,6 +134,34 @@ def test_readable_observation_metadata_and_delivery() -> None:
 
 
 @pytest.mark.parametrize(
+    ("changes", "expected"),
+    [
+        ({"body": {"from": "old draft body"}}, None),
+        (None, None),
+        ({"field_value": {"field_node_id": "PVTF_123", "from": "old"}}, "edited"),
+    ],
+)
+def test_edited_delivery_requires_field_change(
+    changes: dict[str, Any] | None, expected: str | None
+) -> None:
+    payload: dict[str, Any] = {"projects_v2_item": {"project_node_id": "PVT_123"}}
+    if changes is not None:
+        payload["changes"] = changes
+    delivery = {
+        "event": "projects_v2_item",
+        "action": "edited",
+        "delivered_at": "2026-09-27T05:17:43Z",
+    }
+    detail = {"request": {"payload": payload}}
+    assert (
+        MODULE["observed_action"](
+            delivery, detail, "PVT_123", "2026-09-27T05:17:42Z", "2026-09-27T05:17:45Z"
+        )
+        == expected
+    )
+
+
+@pytest.mark.parametrize(
     ("account", "definitions", "pages", "expected"),
     [
         (200, True, True, True),
@@ -181,7 +209,10 @@ def test_observation_reads_deliveries_after_window(
                 {},
                 {
                     "request": {
-                        "payload": {"projects_v2_item": {"project_node_id": "PVT_123"}}
+                        "payload": {
+                            "projects_v2_item": {"project_node_id": "PVT_123"},
+                            "changes": {"field_value": {"field_node_id": "PVTF_123"}},
+                        }
                     }
                 },
             )

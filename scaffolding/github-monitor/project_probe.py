@@ -106,6 +106,15 @@ def observed_action(
     if not isinstance(item, dict) or item.get("project_node_id") != project_node_id:
         return None
     action = delivery.get("action")
+    if action == "edited":
+        changes = payload.get("changes") if isinstance(payload, dict) else None
+        field_value = changes.get("field_value") if isinstance(changes, dict) else None
+        if (
+            not isinstance(field_value, dict)
+            or not isinstance(field_value.get("field_node_id"), str)
+            or not field_value["field_node_id"]
+        ):
+            return None
     return action if action in ("created", "deleted", "edited") else None
 
 
