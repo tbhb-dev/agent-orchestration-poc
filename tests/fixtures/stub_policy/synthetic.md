@@ -55,6 +55,6 @@ Verdict record: `Stub review: ready`, `Stub-URL: <item 4242 URL>`, `Draft-URL: <
 
 ## Creation read-back and old Backlog
 
-Synthetic new issue URL: `https://github.com/fixture-owner/fixture-repo/issues/18`. Its `body` equals draft comment 7001 and its `user.login` is `fixture-author`, which represents `tbhbagent`. A new comment on the issue links item 4242, comments 7001 and 7002, and the digest. A differing body or author is an exception. The coordinator moves issue 18 to Refined and retires item 4242 after verification.
+Synthetic new issue URL: `https://github.com/fixture-owner/fixture-repo/issues/18`. Its `body` equals draft comment 7001 and its `user.login` is `fixture-author`, which represents `tbhbagent`. A new comment on the issue links item 4242, comments 7001 and 7002, and the digest. A differing body or author is an exception. The coordinator moves issue 18 to Refinement and retires item 4242 after verification.
 
-Synthetic old Backlog issue 12 predates the direction at `2026-09-27T05:34:59Z`. It remains issue 12 in Backlog until approved refinement. The coordinator then moves issue 12 to Refined without deletion or recreation. It is not counted as a new post-activation creation by #183.
+Synthetic old Backlog issue 12 predates the direction at `2026-09-27T05:34:59Z`. It remains issue 12 in Backlog until approved refinement. The coordinator then moves issue 12 to Refinement without deletion or recreation. It is not counted as a new post-activation creation by #183.

@@ -5,7 +5,7 @@ description: Issues, Project fields, review, merge policy, and CI.
 
 Approved work has an issue in [Project 9](https://github.com/users/tbhb/projects/9). The coordinator dispatches a worker into its own branch and worktree. Review and green CI precede a squash merge.
 
-New unrefined work starts as a [Project draft stub](/workflow/stub-refinement/) in Backlog. An approved issue enters Refined. Ready means dispatchable now and is capped at eight. The later [coordinator direction](https://github.com/tbhb/agent-orchestration-poc/issues/161#issuecomment-5853040703) governs these states while this page's historical Project table awaits the coordinator's shared-file integration.
+New unrefined work starts as a [Project draft stub](/workflow/stub-refinement/) in Backlog. An approved issue enters Refinement. Ready means dispatchable now and is capped at eight. The later [coordinator direction](https://github.com/tbhb/agent-orchestration-poc/issues/161#issuecomment-5853040703) governs these states.
 
 ```mermaid
 flowchart LR
@@ -17,11 +17,11 @@ flowchart LR
 
 ## Project fields and views
 
-The table below preserves the fields configured on 2026-09-26, as recorded in [Project configuration evidence](https://github.com/tbhb/agent-orchestration-poc/blob/main/reports/inputs/project-configuration-2026-09-26.md). Its former In review value is historical under the later coordinator direction.
+The initial fields are recorded in [Project configuration evidence](https://github.com/tbhb/agent-orchestration-poc/blob/main/reports/inputs/project-configuration-2026-09-26.md). A read-only Status-field probe on 2026-09-27 confirmed Refinement and the removal of In review.
 
 | Field | Type | Values |
 | --- | --- | --- |
-| Status | Single select | Backlog, Ready, In progress, In review, Blocked, Done |
+| Status | Single select | Backlog, Refinement, Ready, In progress, Blocked, Done |
 | Phase | Single select | 0, 1, 2, 3, 4, 5, 6 |
 | Area | Single select | bus, daemon, containers, terminal, ui, desktop, remote, docs, tooling, experiment, research, workflow, security |
 | Harness | Single select | claude, codex, agy, any |

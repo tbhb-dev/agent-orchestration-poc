@@ -7,7 +7,7 @@ description: The approved phases, worker assignments, research gates, and operat
 
 Written 2026-09-26 for the phase 0 checkpoint, this plan records the coordinator's decisions, subject to the requirements in `FABLE_HANDOFF.md`. The operator approved phase 0 and the revised plan and model and effort assignments on 2026-09-26. The operator approved phase 1 on 2026-09-26, and phase 2 is starting. Boundary and quality-gate implementation remains a phase 2 prerequisite. See [phase 1 checkpoint](/project/phase-1-checkpoint/). The remaining sections preserve the approved plan, including its original checkpoint questions. See [project history](/project/history/) for merged work since approval and [repository layout](/workflow/repository-layout/) for the current tree.
 
-The later [Project 9 stub direction](/workflow/stub-refinement/) governs new work: unrefined work is a Backlog draft, approved issues enter Refined, and Ready holds at most eight dispatchable issues. Older Backlog issues remain issues until approved refinement moves them to Refined.
+The later [Project 9 stub direction](/workflow/stub-refinement/) governs new work: unrefined work is a Backlog draft, approved issues enter Refinement, and Ready holds at most eight dispatchable issues. Older Backlog issues remain issues until approved refinement moves them to Refinement.
 
 ## Operator requirements added in phase 1
 
