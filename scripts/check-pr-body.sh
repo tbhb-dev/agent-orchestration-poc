@@ -23,7 +23,7 @@ if ! printf '%s\n' "$body" | grep -qE '^Refs: #[0-9]+'; then
 fi
 
 case "$title" in
-    feat:*|feat\(*|feat!:*|exp:*|exp\(*|exp!:*)
+    feat:* | feat\(* | feat!:* | exp:* | exp\(* | exp!:*)
         # The evidence section runs from a heading containing "evidence" to the next heading.
         evidence=$(printf '%s\n' "$body" | awk '
             /^#+ /            { in_section = tolower($0) ~ /evidence/; next }

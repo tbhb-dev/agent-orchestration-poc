@@ -68,6 +68,7 @@ Before editing a language or stack, read its rules and conventions:
 | --- | --- |
 | Go | [.claude/rules/go.md](.claude/rules/go.md), [Go conventions](docs/src/content/docs/guides/go-conventions.md) |
 | Python | [.claude/rules/python.md](.claude/rules/python.md), [Python conventions](docs/src/content/docs/guides/python-conventions.md) |
+| Shell | [.claude/rules/shell.md](.claude/rules/shell.md), [Shell conventions](docs/src/content/docs/guides/shell-conventions.md) |
 | Docs stack | [Docs stack conventions, including Rules for workers](docs/src/content/docs/guides/docs-stack-conventions.md#rules-for-workers) |
 
 Codex reads this file natively but does not apply Claude's path-scoped rule globs. A Codex worker must read the corresponding file explicitly. Claude imports this file through `CLAUDE.md` and loads language rules from `.claude/rules/`. The docs stack rules currently live in the conventions page. Verify `agy` rule loading before relying on it.
