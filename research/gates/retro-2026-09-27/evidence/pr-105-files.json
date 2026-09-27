@@ -1,0 +1,212 @@
+[
+  {
+    "filename": ".claude/rules/go.md",
+    "status": "modified",
+    "additions": 3,
+    "deletions": 2,
+    "patch_available": true
+  },
+  {
+    "filename": ".claude/rules/python.md",
+    "status": "modified",
+    "additions": 2,
+    "deletions": 1,
+    "patch_available": true
+  },
+  {
+    "filename": ".gitignore",
+    "status": "modified",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": ".golangci.yml",
+    "status": "modified",
+    "additions": 4,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": ".gremlins.yaml",
+    "status": "modified",
+    "additions": 2,
+    "deletions": 2,
+    "patch_available": true
+  },
+  {
+    "filename": "AGENTS.md",
+    "status": "modified",
+    "additions": 2,
+    "deletions": 2,
+    "patch_available": true
+  },
+  {
+    "filename": "cmd/agentctl/main.go",
+    "status": "modified",
+    "additions": 2,
+    "deletions": 8,
+    "patch_available": true
+  },
+  {
+    "filename": "cmd/agentd/main.go",
+    "status": "modified",
+    "additions": 2,
+    "deletions": 7,
+    "patch_available": true
+  },
+  {
+    "filename": "cmd/agentd/main_integration_test.go",
+    "status": "added",
+    "additions": 46,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/decisions/0005-property-and-mutation-testing.md",
+    "status": "modified",
+    "additions": 6,
+    "deletions": 2,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/guides/go-conventions.md",
+    "status": "modified",
+    "additions": 4,
+    "deletions": 2,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/guides/python-conventions.md",
+    "status": "modified",
+    "additions": 3,
+    "deletions": 1,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/workflow/tooling.md",
+    "status": "modified",
+    "additions": 10,
+    "deletions": 3,
+    "patch_available": true
+  },
+  {
+    "filename": "internal/cli/run.go",
+    "status": "added",
+    "additions": 25,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "internal/cli/run_test.go",
+    "status": "added",
+    "additions": 47,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "internal/core/command/version.go",
+    "status": "added",
+    "additions": 10,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "internal/core/command/version_test.go",
+    "status": "added",
+    "additions": 29,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "mise.toml",
+    "status": "modified",
+    "additions": 13,
+    "deletions": 5,
+    "patch_available": true
+  },
+  {
+    "filename": "pyproject.toml",
+    "status": "modified",
+    "additions": 4,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "reports/inputs/coverage-floors-87-evidence-2026-09-26.md",
+    "status": "added",
+    "additions": 83,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/testing/coverage-branches-87.md",
+    "status": "added",
+    "additions": 33,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "scripts/check-coverage.py",
+    "status": "added",
+    "additions": 51,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "scripts/check-mutation-score.py",
+    "status": "modified",
+    "additions": 1,
+    "deletions": 1,
+    "patch_available": true
+  },
+  {
+    "filename": "src/agent_orchestration_poc/core/coverage_floors.py",
+    "status": "added",
+    "additions": 99,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "src/agent_orchestration_poc/core/mutation_score.py",
+    "status": "modified",
+    "additions": 2,
+    "deletions": 2,
+    "patch_available": true
+  },
+  {
+    "filename": "tests/test_coordinator_preflight.py",
+    "status": "modified",
+    "additions": 54,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "tests/test_coordinator_preflight_shell.py",
+    "status": "modified",
+    "additions": 63,
+    "deletions": 14,
+    "patch_available": true
+  },
+  {
+    "filename": "tests/test_coverage_floors.py",
+    "status": "added",
+    "additions": 133,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "tests/test_mutation_score.py",
+    "status": "modified",
+    "additions": 3,
+    "deletions": 1,
+    "patch_available": true
+  },
+  {
+    "filename": "tests/test_subject.py",
+    "status": "modified",
+    "additions": 3,
+    "deletions": 0,
+    "patch_available": true
+  }
+]

@@ -1,0 +1,22 @@
+[
+  {
+    "short_sha": "ceca27844ab9",
+    "parent_count": 1,
+    "subject": "research(data): compare analysis engines and define verification"
+  },
+  {
+    "short_sha": "dcbdaf85e5f7",
+    "parent_count": 1,
+    "subject": "docs(data): choose notebooks and chart conventions"
+  },
+  {
+    "short_sha": "cc08787222fb",
+    "parent_count": 1,
+    "subject": "research(data): record final verification limits"
+  },
+  {
+    "short_sha": "1edea11d8ba8",
+    "parent_count": 2,
+    "subject": "chore(data): merge main before review"
+  }
+]

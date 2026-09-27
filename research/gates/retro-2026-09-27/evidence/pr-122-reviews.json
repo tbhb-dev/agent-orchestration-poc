@@ -1,0 +1,82 @@
+[
+  {
+    "id": 5328570829,
+    "node_id": "PRR_kwDOUtKbt88AAAABPZuJzQ",
+    "user": {
+      "login": "tbhb-agent-reviewer",
+      "id": 152314235,
+      "node_id": "U_kgDOCRQhew",
+      "avatar_url": "https://avatars.githubusercontent.com/u/152314235?u=c28bdb49be24e8265acf00ccaee6d49eac020456&v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/tbhb-agent-reviewer",
+      "html_url": "https://github.com/tbhb-agent-reviewer",
+      "followers_url": "https://api.github.com/users/tbhb-agent-reviewer/followers",
+      "following_url": "https://api.github.com/users/tbhb-agent-reviewer/following{/other_user}",
+      "gists_url": "https://api.github.com/users/tbhb-agent-reviewer/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/tbhb-agent-reviewer/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/tbhb-agent-reviewer/subscriptions",
+      "organizations_url": "https://api.github.com/users/tbhb-agent-reviewer/orgs",
+      "repos_url": "https://api.github.com/users/tbhb-agent-reviewer/repos",
+      "events_url": "https://api.github.com/users/tbhb-agent-reviewer/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/tbhb-agent-reviewer/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "body": "Reviewer: Codex CLI 0.157.1, gpt-6-astra, medium effort. Head cc08787.\n\nThe eight changed files satisfy refined issue #104: engine comparison, notebook and visualization decisions, conventions, and a verification protocol with a worked paper example; executable proof remains explicitly assigned to #107. Measured against `origin/main...HEAD`, this is 225 added lines and zero deletions, or 151 nonblank prose units under #84's size contract, so it should not have been split further. There are no earlier PR reviews or unresolved threads.\n\nFindings: no blocking or non-blocking defects found.\n\nValidation: checked all nine recorded source checkout SHAs and sampled the cited DuckDB, Polars, Arrow, Quarto, nbformat, Matplotlib, Altair, and Plotly source claims; targeted rumdl and guard-markdown checks, `git diff --check`, and resolution of all 18 local site-page links passed. The core/shell rules exclude I/O from the core, and no executable code or private input is added. I did not rerun the aggregate checks, style synchronization, or site build because this checkout is read-only; the reported local build/check results remain author evidence, and GitHub currently exposes no check results. Approval does not establish notebook compatibility, SVG repeatability, or green CI.",
+    "state": "DISMISSED",
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/122#pullrequestreview-5328570829",
+    "pull_request_url": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/122",
+    "author_association": "MEMBER",
+    "_links": {
+      "html": {
+        "href": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/122#pullrequestreview-5328570829"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/122"
+      }
+    },
+    "submitted_at": "2026-09-27T02:33:01Z",
+    "commit_id": "cc08787222fb3f0d40b02e8bd7bdab1dabd2ca18"
+  },
+  {
+    "id": 5328587020,
+    "node_id": "PRR_kwDOUtKbt88AAAABPZvJDA",
+    "user": {
+      "login": "tbhb-agent-reviewer",
+      "id": 152314235,
+      "node_id": "U_kgDOCRQhew",
+      "avatar_url": "https://avatars.githubusercontent.com/u/152314235?u=c28bdb49be24e8265acf00ccaee6d49eac020456&v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/tbhb-agent-reviewer",
+      "html_url": "https://github.com/tbhb-agent-reviewer",
+      "followers_url": "https://api.github.com/users/tbhb-agent-reviewer/followers",
+      "following_url": "https://api.github.com/users/tbhb-agent-reviewer/following{/other_user}",
+      "gists_url": "https://api.github.com/users/tbhb-agent-reviewer/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/tbhb-agent-reviewer/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/tbhb-agent-reviewer/subscriptions",
+      "organizations_url": "https://api.github.com/users/tbhb-agent-reviewer/orgs",
+      "repos_url": "https://api.github.com/users/tbhb-agent-reviewer/repos",
+      "events_url": "https://api.github.com/users/tbhb-agent-reviewer/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/tbhb-agent-reviewer/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "body": "Reviewer: Codex CLI 0.157.1, gpt-6-astra, medium effort. Head 1edea11.\n\nRe-reviewed the merge against approved head cc08787, issue #104 and its review history, the PR body and earlier review, and origin/main...HEAD. The seven analysis files other than the decision index are unchanged; the combined merge diff preserves main's decision 0007 alongside decisions 0008 and 0009, with no regression in the research scope, evidence labels, privacy rules, or core/shell contract. There are no review threads to resolve.\n\nFindings: no blocking or non-blocking defects found.\n\nValidation: confirmed the merge's second parent equals origin/main (8296340), the PR diff remains confined to the eight allowed documentation paths, all three merged decision-index targets exist, git diff --check passes, and the checkout remains clean. The broader local link probe did not execute because mise attempted to install gobco and received Operation not permitted; no sandbox workaround was attempted. Aggregate checks and the site build were not rerun in this read-only checkout. GitHub reports docs, mutation, imported-research, and pr-body successful at this head; check is still in progress. Approval does not establish green aggregate CI or the executable notebook proof assigned to #107.",
+    "state": "APPROVED",
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/122#pullrequestreview-5328587020",
+    "pull_request_url": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/122",
+    "author_association": "MEMBER",
+    "_links": {
+      "html": {
+        "href": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/122#pullrequestreview-5328587020"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/122"
+      }
+    },
+    "submitted_at": "2026-09-27T02:40:59Z",
+    "commit_id": "1edea11d8ba84511b9a7102a6c12b41ed7c56710"
+  }
+]
