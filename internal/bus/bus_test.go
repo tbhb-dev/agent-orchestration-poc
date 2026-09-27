@@ -79,15 +79,7 @@ func TestPublishPermissions(t *testing.T) {
 	if err := operator.conn.Flush(); err != nil {
 		t.Fatal(err)
 	}
-	if err := alice.conn.Publish("grp.build.msg.all.alice", []byte("allowed")); err != nil {
-		t.Fatal(err)
-	}
-	if err := alice.conn.Flush(); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := allowed.NextMsg(time.Second); err != nil {
-		t.Fatalf("own publication not delivered: %v", err)
-	}
+	expectPublishDenied(t, alice, "grp.build.msg.all.alice")
 	for _, tc := range []struct {
 		name    string
 		client  testClient
@@ -175,7 +167,7 @@ func TestStreamProvisioning(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if info.Config.Storage != jetstream.FileStorage || info.Config.Retention != jetstream.LimitsPolicy || !info.Config.NoAck || !reflect.DeepEqual(info.Config.Subjects, []string{"grp.build.msg.>", "grp.build.evt.>"}) {
+	if info.Config.Storage != jetstream.FileStorage || info.Config.Retention != jetstream.LimitsPolicy || info.Config.NoAck || !reflect.DeepEqual(info.Config.Subjects, []string{"grp.build.msg.>", "grp.build.evt.>"}) {
 		t.Fatalf("stream config %+v", info.Config)
 	}
 	consumer, err := stream.Consumer(t.Context(), "alice")
@@ -206,13 +198,13 @@ func TestAgentCannotUseBrokerRepliesAsAnotherSender(t *testing.T) {
 					t.Error(err)
 				}
 			}()
-			checkStreamReplies(t, alice.conn, sub, reply)
+			checkStreamReplies(t, alice, sub, reply)
 			checkAPIRouteReplies(t, alice, sub, reply)
 		})
 	}
 }
 
-func checkStreamReplies(t *testing.T, alice *nats.Conn, sub *nats.Subscription, reply string) {
+func checkStreamReplies(t *testing.T, alice testClient, sub *nats.Subscription, reply string) {
 	t.Helper()
 	for _, subject := range []string{
 		"grp.build.msg.all.alice",
@@ -220,12 +212,7 @@ func checkStreamReplies(t *testing.T, alice *nats.Conn, sub *nats.Subscription, 
 		"grp.build.msg.op.alice",
 		"grp.build.evt.ready.alice",
 	} {
-		if err := alice.PublishRequest(subject, reply, []byte("probe")); err != nil {
-			t.Fatal(err)
-		}
-		if err := alice.Flush(); err != nil {
-			t.Fatal(err)
-		}
+		publishRequestDenied(t, alice, subject, reply, []byte("probe"))
 		if msg, err := sub.NextMsg(100 * time.Millisecond); err != nats.ErrTimeout {
 			t.Fatalf("broker published as bob after %s: message=%v error=%v", subject, msg, err)
 		}
@@ -277,13 +264,7 @@ func checkAPIRouteReplies(t *testing.T, alice testClient, sub *nats.Subscription
 		"$JS.ACK.GROUP_BUILD.alice.1.1.1.1.1",
 		"$JS.SNAPSHOT.ACK.GROUP_BUILD.1",
 	} {
-		if err := alice.conn.PublishRequest(route, reply, []byte("{}")); err != nil {
-			t.Fatal(err)
-		}
-		if err := alice.conn.Flush(); err != nil {
-			t.Fatal(err)
-		}
-		expectPermissionError(t, alice.errs)
+		publishRequestDenied(t, alice, route, reply, []byte("{}"))
 		if msg, err := sub.NextMsg(25 * time.Millisecond); err != nats.ErrTimeout {
 			t.Fatalf("route %s published as bob: message=%v error=%v", route, msg, err)
 		}
@@ -300,6 +281,17 @@ func bobReplySubjects() []string {
 	}
 }
 
+func publishRequestDenied(t *testing.T, client testClient, subject, reply string, data []byte) {
+	t.Helper()
+	if err := client.conn.PublishRequest(subject, reply, data); err != nil {
+		t.Fatal(err)
+	}
+	if err := client.conn.Flush(); err != nil {
+		t.Fatal(err)
+	}
+	expectPermissionError(t, client.errs)
+}
+
 func subscribeReply(t *testing.T, conn *nats.Conn, reply string) *nats.Subscription {
 	t.Helper()
 	sub, err := conn.SubscribeSync(reply)
@@ -314,11 +306,7 @@ func subscribeReply(t *testing.T, conn *nats.Conn, reply string) *nats.Subscript
 
 func TestRestartKeepsCredentialsAndStream(t *testing.T) {
 	state := t.TempDir()
-	cfg := Config{StateDir: state, Port: -1, Groups: []Group{{Name: "build", Agents: []string{"alice"}}}}
-	first, err := Start(t.Context(), cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
+	first := startSingleAgentBus(t, state)
 	path, err := first.CredentialPath("build", "alice")
 	if err != nil {
 		t.Fatal(err)
@@ -329,10 +317,7 @@ func TestRestartKeepsCredentialsAndStream(t *testing.T) {
 	}
 	publishAndAck(t, first)
 	first.Close()
-	second, err := Start(t.Context(), cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
+	second := startSingleAgentBus(t, state)
 	t.Cleanup(second.Close)
 	after, err := os.ReadFile(path)
 	if err != nil {
@@ -344,14 +329,23 @@ func TestRestartKeepsCredentialsAndStream(t *testing.T) {
 	assertPersistedMessageAndAck(t, second)
 }
 
-func publishAndAck(t *testing.T, broker *Bus) {
+func startSingleAgentBus(t *testing.T, state string) *Bus {
 	t.Helper()
-	alice := connectTest(t, broker, "build", "alice")
-	_, firstStream := openTestStream(t, broker)
-	if err := alice.conn.Publish("grp.build.msg.all.alice", []byte("persisted")); err != nil {
+	broker, err := Start(t.Context(), Config{StateDir: state, Port: -1, Groups: []Group{{Name: "build", Agents: []string{"alice"}}}})
+	if err != nil {
 		t.Fatal(err)
 	}
-	if err := alice.conn.Flush(); err != nil {
+	return broker
+}
+
+func publishAndAck(t *testing.T, broker *Bus) {
+	t.Helper()
+	operator := connectTest(t, broker, "build", "operator")
+	_, firstStream := openTestStream(t, broker)
+	if err := operator.conn.Publish("grp.build.msg.all.alice", []byte("persisted")); err != nil {
+		t.Fatal(err)
+	}
+	if err := operator.conn.Flush(); err != nil {
 		t.Fatal(err)
 	}
 	consumer, err := firstStream.Consumer(t.Context(), "alice")
