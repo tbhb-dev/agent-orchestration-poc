@@ -80,6 +80,8 @@ The active [main ruleset](https://github.com/tbhb/agent-orchestration-poc/rules/
 | Job | Trigger | Checks |
 | --- | --- | --- |
 | `check` | PRs and pushes to `main` | `mise run check`, including Go build, vet, tests and lint, Ruff and pytest, formatting, prose, secrets, experiment layout, Mermaid, and workflow syntax |
+| `mutation` | PRs and pushes to `main` | Always reports a result. Runs `mise run check:mutation` when Go or Python core code or their tests change, and succeeds without running the tools otherwise. |
+| `property-nightly` | Nightly schedule and manual dispatch | Runs Go and Python tests with random seeds and files an issue containing the seeds and output on failure. |
 | `docs` | PRs and pushes to `main` | Chromium setup and `mise run docs:check-links`, which builds the site and checks internal links and hashes |
 | `pr-body` | PR opened, edited, synchronized, or reopened | No attribution trailers, a `Refs:` trailer, and an Evidence link for `feat` or `exp` |
 | `imported-research` | PR opened, edited, synchronized, or reopened | No modification, rename, or deletion under `research/imported/`. Additions need a `research(import)` title. |
