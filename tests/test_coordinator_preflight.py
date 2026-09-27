@@ -167,6 +167,12 @@ def test_decision_closure_accepts_case_insensitive_note() -> None:
     assert not needs_closure_review(issue)
 
 
+@pytest.mark.parametrize("label", ["type/spike", "type/decision"])
+def test_decision_closure_accepts_new_and_transitional_labels(label: str) -> None:
+    issue = IssueState(1, "closed", "Closed by the decision record", (label,), ())
+    assert not needs_closure_review(issue)
+
+
 def test_non_code_closure_requires_explanation() -> None:
     issue = IssueState(1, "closed", "Non-code closure:  ", ("type/bug",), ())
     assert needs_closure_review(issue)

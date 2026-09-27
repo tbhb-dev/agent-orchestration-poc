@@ -1,0 +1,82 @@
+---
+# do not edit: generated from config/workflow-reference.toml
+name: "incident"
+description: "Open an incident"
+title: "inc: "
+labels: ["type/incident"]
+body:
+  - type: textarea
+    attributes:
+      label: "Incident-ID"
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: "Started-UTC"
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: "Detected-UTC"
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: "Ended-UTC"
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: "Severity"
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: "Status"
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: "Reporter"
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: "Lead"
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: "Category"
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: "Impact"
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: "Evidence"
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: "Response"
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: "Cause"
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: "Actions"
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: "Review-URL"
+    validations:
+      required: true

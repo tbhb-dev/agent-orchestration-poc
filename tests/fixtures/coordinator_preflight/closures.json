@@ -22,7 +22,7 @@
     "number": 3,
     "state": "open",
     "body": "Work remains.",
-    "labels": ["type/bug"],
+    "labels": ["type/defect"],
     "linked_prs": [],
     "expected": false
   },
@@ -31,7 +31,7 @@
     "number": 4,
     "state": "closed",
     "body": "Non-code closure: Decision recorded in docs/decisions/0001-go-linter.md.",
-    "labels": ["type/decision"],
+    "labels": ["type/spike"],
     "linked_prs": [],
     "expected": false
   },

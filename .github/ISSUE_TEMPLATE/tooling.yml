@@ -3,7 +3,7 @@
 name: "tooling work item"
 description: "Open a tooling work item"
 title: "tooling(scope): "
-labels: ["type/tooling"]
+labels: ["type/chore"]
 body:
   - type: textarea
     attributes:

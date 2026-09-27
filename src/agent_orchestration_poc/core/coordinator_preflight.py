@@ -110,7 +110,7 @@ def needs_closure_review(issue: IssueState) -> bool:
         return False
     if issue.merged_prs:
         return False
-    if "type/decision" in issue.labels and re.search(
+    if {"type/spike", "type/decision"}.intersection(issue.labels) and re.search(
         r"\bClosed by (?:the|a) decision record\b", issue.body, re.IGNORECASE
     ):
         return False
