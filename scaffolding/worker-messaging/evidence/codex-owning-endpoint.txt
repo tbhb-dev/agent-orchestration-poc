@@ -1,0 +1,7 @@
+Fake Unix endpoint capture for issue #176 fifth partial delivery. The path /repo/.worktrees/worker is synthetic. The responses come from a test server in /private/tmp, not a Codex app server. WebSocket initialize and initialized frames are omitted. No live thread or user config was touched.
+
+{"request":{"id":2,"method":"config/read","params":{"cwd":"/repo/.worktrees/worker","includeLayers":true}},"response":{"id":2,"result":{"config":{"projects":{}},"layers":[]}}}
+{"request":{"id":3,"method":"config/batchWrite","params":{"edits":[{"keyPath":"projects.\"/repo/.worktrees/worker\".trust_level","value":"trusted","mergeStrategy":"replace"}],"filePath":null,"expectedVersion":null,"reloadUserConfig":true}},"response":{"id":3,"result":{"status":"ok"}}}
+{"request":{"id":4,"method":"config/read","params":{"cwd":"/repo/.worktrees/worker","includeLayers":true}},"response":{"id":4,"result":{"config":{"projects":{"/repo/.worktrees/worker":{"trust_level":"trusted"}}},"layers":[]}}}
+{"request":{"id":2,"method":"config/batchWrite","params":{"edits":[{"keyPath":"projects.\"/repo/.worktrees/worker\".trust_level","value":null,"mergeStrategy":"replace"}],"filePath":null,"expectedVersion":null,"reloadUserConfig":true}},"response":{"id":2,"result":{"status":"ok"}}}
+{"request":{"id":3,"method":"config/read","params":{"cwd":"/repo/.worktrees/worker","includeLayers":true}},"response":{"id":3,"result":{"config":{"projects":{}},"layers":[]}}}
