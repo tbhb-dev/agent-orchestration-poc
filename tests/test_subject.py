@@ -12,6 +12,7 @@ from agent_orchestration_poc.core.subject import valid
     [
         ("a", True),
         ("a.b-2_c", True),
+        ("a-_", True),
         ("a" * 255, True),
         ("", False),
         (".a", False),
@@ -20,6 +21,8 @@ from agent_orchestration_poc.core.subject import valid
         ("a.*", False),
         ("a.>", False),
         ("a.B", False),
+        ("a.X", False),
+        ("a.Y", False),
         ("a/b", False),
         ("é", False),
         ("\ud800", False),

@@ -39,6 +39,8 @@ linters:
               desc: only internal/bus embeds the NATS server
             - pkg: github.com/tbhb/agent-orchestration-poc/internal/backend
               desc: core packages never import a backend
+            - pkg: github.com/tbhb/agent-orchestration-poc/internal/cli
+              desc: core packages never import the CLI shell
             - pkg: github.com/tbhb/agent-orchestration-poc/internal/bus
               desc: core packages never import the bus
             - pkg: github.com/tbhb/agent-orchestration-poc/internal/registry
@@ -62,6 +64,8 @@ linters:
               desc: core tests need no broker
             - pkg: github.com/tbhb/agent-orchestration-poc/internal/backend
               desc: core tests never import a backend
+            - pkg: github.com/tbhb/agent-orchestration-poc/internal/cli
+              desc: core tests never import the CLI shell
     funlen:
       lines: 60
       statements: 40
