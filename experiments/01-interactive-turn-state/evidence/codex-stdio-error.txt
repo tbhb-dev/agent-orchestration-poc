@@ -1,0 +1,15 @@
+Traceback (most recent call last):
+  File "/Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.worktrees/exp-214-detect-idle-turns/experiments/01-interactive-turn-state/codex-probe.py", line 151, in <module>
+    main()
+    ~~~~^^
+  File "/Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.worktrees/exp-214-detect-idle-turns/experiments/01-interactive-turn-state/codex-probe.py", line 88, in main
+    initialized = request(
+        process,
+    ...<3 lines>...
+        deadline,
+    )
+  File "/Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.worktrees/exp-214-detect-idle-turns/experiments/01-interactive-turn-state/codex-probe.py", line 41, in request
+    message = receive(process, deadline)
+  File "/Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.worktrees/exp-214-detect-idle-turns/experiments/01-interactive-turn-state/codex-probe.py", line 27, in receive
+    raise EOFError("app-server closed stdout")
+EOFError: app-server closed stdout

@@ -1,0 +1,7 @@
+The corrected print-mode probe exited 0 and wrote `agy-report.json` despite stderr diagnostics.
+Selected stderr fields from the 253-line raw local log, with process and conversation identifiers omitted:
+- CLI log creation under `~/.gemini/antigravity-cli/log/` failed with `operation not permitted`.
+- Crash log creation under `~/.gemini/antigravity-cli/crashes/` failed with `operation not permitted`.
+- The language server reported `You are not logged into Antigravity` during startup.
+- Conversation persistence under `~/.gemini/antigravity-cli/conversations/` failed with `operation not permitted`.
+The raw stderr file is held at `/private/tmp/exp214-agy/raw-stderr.txt` and is not committed.

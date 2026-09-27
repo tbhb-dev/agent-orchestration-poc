@@ -1,0 +1,8 @@
+Validation in the issue #214 worktree at commit base cfb74707dd57c70288b250c739c480bad4258770, before the experiment commit:
+
+`mise run vale:sync` exited 0 once for this worktree.
+`mise run check` exited 0 on the final source and Markdown. Python core lines 99.75%, branches 97.30%, shell lines 85.13%. Go core statements 96.43%, branches 94.74%, shell statements 74.58%. The run took 142.94 seconds.
+`mise run check:mutation` exited 0. Go core killed 145/149 mutants, 97.32%. Python core killed 1417/1557, 91.01%.
+`mise exec -- gitleaks dir --no-banner --redact=100 --log-level error experiments/01-interactive-turn-state` exited 0 before the final command-log addition. It was repeated after staging the final files.
+`mise exec -- shellcheck experiments/01-interactive-turn-state/stop-hook.sh` exited 0.
+The first `mise run fmt` returned 1 on Ruff findings in the new probe scripts. They were corrected, both Python files were formatted through `mise exec -- uv run ruff format`, and the final `mise run fmt` exited 0 with no further changes.
