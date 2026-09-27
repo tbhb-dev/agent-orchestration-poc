@@ -23,6 +23,13 @@ def reservation(rows: list[dict[str, Any]], request: dict[str, Any]) -> str:
     return "duplicate ownership"
 
 
+def codex_brief_digest(brief: str) -> str:
+    """Hash the preview text exposed by Codex for the startup message."""
+    marker = "## My request for Codex:"
+    preview = brief.split(marker, 1)[1] if marker in brief else brief
+    return hashlib.sha256(preview.strip().encode()).hexdigest()
+
+
 def codex_candidate(threads: list[dict[str, Any]], row: dict[str, Any]) -> str | None:
     """Identify one remote startup by worktree, launch time, and first brief."""
     launched = int(datetime.fromisoformat(row["launch_time"]).timestamp())

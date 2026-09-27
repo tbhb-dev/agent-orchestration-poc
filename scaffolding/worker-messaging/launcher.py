@@ -178,7 +178,12 @@ def launch(request: dict[str, Any]) -> tuple[dict[str, Any], str, str]:
     brief = Path(request["brief_file"]).read_text()
     if not brief.strip():
         raise ValueError("brief is empty")
-    request = {**request, "brief_digest": hashlib.sha256(brief.encode()).hexdigest()}
+    digest = (
+        identity.codex_brief_digest(brief)
+        if request["harness"] == "codex"
+        else hashlib.sha256(brief.encode()).hexdigest()
+    )
+    request = {**request, "brief_digest": digest}
     rows = registry.read(STORE)
     decision = identity.reservation(rows, request)
     if decision == "inspect":

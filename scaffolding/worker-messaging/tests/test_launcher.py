@@ -1,7 +1,6 @@
 """Temporary #176 registry and command tests; #28 replaces this scaffold."""
 # ruff: noqa: S101
 
-import hashlib
 import json
 import socket
 import subprocess
@@ -11,6 +10,7 @@ import threading
 from pathlib import Path
 
 import cli
+import identity
 import launcher
 import pytest
 import registry
@@ -340,6 +340,8 @@ def _serve_fake_endpoint(
         ("wrong_read_cwd", "unknown"),
         ("unloaded", "unknown"),
         ("wrong_brief", "unknown"),
+        ("newline_brief", "ready"),
+        ("prefixed_brief", "ready"),
     ],
 )
 def test_remote_discovery_without_tui_rollout(
@@ -354,11 +356,17 @@ def test_remote_discovery_without_tui_rollout(
         server.settimeout(2)
         methods: list[str] = []
         errors: list[Exception] = []
-        brief = "first brief"
+        brief = (
+            "context\n## My request for Codex:\nfirst brief\n"
+            if change == "prefixed_brief"
+            else "first brief\n"
+            if change == "newline_brief"
+            else "first brief"
+        )
         listed_id = "other" if change == "wrong_id" else "thread-1"
         cwd = "/other" if change == "wrong_cwd" else "/worker"
         read_cwd = "/other" if change == "wrong_read_cwd" else cwd
-        preview = "other brief" if change == "wrong_brief" else brief
+        preview = "other brief" if change == "wrong_brief" else "first brief"
 
         replies: dict[str, dict[str, object]] = {
             "initialize": {},
@@ -396,7 +404,7 @@ def test_remote_discovery_without_tui_rollout(
             "model": "gpt-6-sol",
             "effort": "high",
             "native_id": None,
-            "brief_digest": hashlib.sha256(brief.encode()).hexdigest(),
+            "brief_digest": identity.codex_brief_digest(brief),
             "launch_time": "2026-09-27T01:00:00+00:00",
             "endpoint": f"unix://{path}",
             "tmux_session": "worker-messaging",
@@ -435,7 +443,7 @@ def test_remote_discovery_without_tui_rollout(
         assert not errors
         assert actual == state
         assert "thread/list" in methods
-        if change == "matching":
+        if state == "ready":
             assert row["native_id"] == "thread-1"
             assert methods[-2:] == ["thread/loaded/list", "thread/read"]
 
