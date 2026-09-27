@@ -6,3 +6,13 @@ Validation in the issue #214 worktree at commit base cfb74707dd57c70288b250c739c
 `mise exec -- gitleaks dir --no-banner --redact=100 --log-level error experiments/01-interactive-turn-state` exited 0 before the final command-log addition. It was repeated after staging the final files.
 `mise exec -- shellcheck experiments/01-interactive-turn-state/stop-hook.sh` exited 0.
 The first `mise run fmt` returned 1 on Ruff findings in the new probe scripts. They were corrected, both Python files were formatted through `mise exec -- uv run ruff format`, and the final `mise run fmt` exited 0 with no further changes.
+
+2026-09-27 review repair on branch exp/214-detect-idle-turns:
+`mise exec -- uv run pytest experiments/01-interactive-turn-state/test_codex_probe.py -q` failed before the reader fix: the 0.1-second deadline did not raise, and the flushed partial-line child returned after about 0.8 seconds. The child was terminated and reaped in test cleanup.
+After replacing blocking `readline()` with deadline-checked single-byte pipe reads, the same command passed: 1 test in 0.30 seconds. The synthetic child did not start a Codex runtime.
+`mise run fmt` exited 0 after correcting the new test's Ruff string-concatenation finding; only the experiment files changed.
+`mise run check` exited 0 after the reader fix and before this documentation addition. Its coverage floors passed: Python core lines 99.75%, branches 97.30%, shell lines 85.13%; Go core statements 96.43%, branches 94.74%, shell statements 74.58%.
+`mise run check:mutation` exited 0 after the reader fix: Go core 145/149 killed (97.32%); Python core 1419/1557 killed (91.14%). The changed experiment reader is outside the core mutation targets.
+The first full check after the README addition exited 123 on two Vale wording findings in its new sentence. After changing those words, `mise run check:vale` exited 0 with zero alerts.
+The final `mise run check` exited 0 on the corrected source and report in 244.88 seconds, with the same coverage percentages above. A process-inspection attempt during that long run returned `operation not permitted` for `ps`; the check itself completed without intervention.
+The final focused regression passed again (1 test in 0.46 seconds). `mise run build`, `git diff --check`, and `mise exec -- gitleaks dir --no-banner --redact=100 --log-level error experiments/01-interactive-turn-state` each exited 0.

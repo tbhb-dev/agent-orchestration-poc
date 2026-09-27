@@ -39,6 +39,8 @@ The first Claude attempt also stopped at trust for `/private/tmp/exp214-claude` 
 
 A stored Codex thread is not proof of a loaded worker. The prior [Codex lifecycle research](../../research/imported/agent-session-tests/CODEX_SESSION_MANAGEMENT.md) observed `thread/read` returning `notLoaded` after server restart, while a later resume restored the same stored ID. The current owned-runtime test could not repeat that observation under this sandbox. A live tmux pane is also insufficient. The same Claude pane PID 91071 existed during a running command, after the completed reply, and at an approval wait, and the process-start query was denied. The detection rule rejects each of these inputs as insufficient evidence of idle.
 
+The [Codex reader regression](test_codex_probe.py) uses an owned child that flushes `{`, waits 0.8 seconds, then writes `}\n`. Before the fix, a 0.1-second deadline returned the complete line after about 0.8 seconds. After the fix, the reader raises `TimeoutError` at the deadline and the test stops and reaps the child. This synthetic check verifies deadline handling during a partial response. The live Codex cells remain inaccessible.
+
 ## Candidate decision table
 
 | Candidate | Evidence label and finding | Use in the later completion reporter |

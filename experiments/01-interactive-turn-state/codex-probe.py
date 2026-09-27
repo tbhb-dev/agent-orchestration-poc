@@ -1,6 +1,7 @@
 """Probe a disposable stdio app server without printing model text or credentials."""
 
 import json
+import os
 import select
 import subprocess
 import time
@@ -21,13 +22,17 @@ def receive(process: subprocess.Popen[bytes], deadline: float) -> dict[str, Any]
     """Read one bounded response or notification."""
     if process.stdout is None:
         raise RuntimeError("app-server stdout unavailable")
-    remaining = deadline - time.monotonic()
-    if remaining <= 0 or not select.select([process.stdout], [], [], remaining)[0]:
-        raise TimeoutError("app-server response deadline")
-    line = process.stdout.readline()
-    if not line:
-        raise EOFError("app-server closed stdout")
-    return cast("dict[str, Any]", json.loads(line))
+    line = bytearray()
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0 or not select.select([process.stdout], [], [], remaining)[0]:
+            raise TimeoutError("app-server response deadline")
+        byte = os.read(process.stdout.fileno(), 1)
+        if not byte:
+            raise EOFError("app-server closed stdout")
+        if byte == b"\n":
+            return cast("dict[str, Any]", json.loads(line))
+        line.extend(byte)
 
 
 def request(
