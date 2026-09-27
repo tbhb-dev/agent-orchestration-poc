@@ -112,6 +112,9 @@ The `check` aggregate also runs `check:imports`, `check:dupl`, and `check:deadco
 | `check:experiments` | Check that every experiment directory has README.md, evidence/, and versions.md |
 | `check:secrets` | Scan the git history for secrets with gitleaks |
 | `check:actions` | Lint the GitHub Actions workflows with actionlint |
+| `review:preflight` | Check a PR's workflows against revisions added to `origin/main` since its merge base |
+| `pr:wait-check` | Wait for one named check to succeed on the PR head recorded at start |
+| `checkpoint:closure-audit` | Report closed work-item issues lacking a linked merged PR or a recorded non-code reason |
 | `check:pr-body` | Check a PR body on stdin against the commit convention: `mise run check:pr-body -- '<title>' < body.md` |
 | `check:imported-research` | Check that research/imported/ is unchanged against a base ref: `mise run check:imported-research -- <base> '<title>'` |
 | `docs:install` | Install the docs site dependencies from the committed lockfile |
@@ -121,6 +124,10 @@ The `check` aggregate also runs `check:imports`, `check:dupl`, and `check:deadco
 | `docs:check-links` | Build the docs site with starlight-links-validator enabled |
 
 The PR-body and imported-research tasks need arguments from a PR or base ref and run separately from `check`. Docs builds also run separately. The CI job table is on [workflow](/workflow/#ci-jobs).
+
+Run `mise run review:preflight -- <pr>` before review, `mise run pr:wait-check -- <pr> <name> <timeout-seconds>` before merge or completion reports, and `mise run checkpoint:closure-audit` at each checkpoint. The closure audit also runs weekly in read-only GitHub Actions. The [phase 1 retrospective](/retros/2026-09-26-phase-1/) records the failures behind these checks.
+
+The [documentation brief template](https://github.com/tbhb/agent-orchestration-poc/blob/main/docs/briefs/documentation-brief-template.md) is for coordinator dispatches. Codex runs `mise run check:vale -- <changed-markdown-paths>` locally with pinned Vale 3.22.0 before returning pages. The [sample brief](https://github.com/tbhb/agent-orchestration-poc/blob/main/docs/briefs/documentation-brief-sample.md) and [sample page](/workflow/documentation-brief-sample/) show the required prose and command.
 
 ## Prek hooks
 
@@ -143,6 +150,8 @@ The commit-msg hook runs Vale with `ai-tells` and `ai-tells-commits`. Real commi
 | `scripts/check-imported-research.sh` | Compares imports against a base ref and permits additions only for import PRs |
 | `scripts/check-mutation-score.py` | Runs mutmut from a fresh cache and enforces the exported score |
 | `scripts/check-gremlins-output.py` | Rejects timed-out Go mutants that gremlins excludes from its score |
+| `agent_orchestration_poc.shell.coordinator_preflight` | Reads git and GitHub state for the three coordinator tasks |
+| `agent_orchestration_poc.core.coordinator_preflight` | Decides workflow drift, check outcome, and closure review from values |
 
 ## Vale exemptions
 
