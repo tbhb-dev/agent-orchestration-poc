@@ -1,0 +1,30 @@
+---
+# Read-only checkpoint audit of closed work-item issues.
+name: closure-audit
+
+"on":
+  schedule:
+    - cron: "17 8 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+jobs:
+  closure-audit:
+    name: closure-audit
+    runs-on: ubuntu-latest
+    steps:
+      # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      # v4.3.0
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c
+        with:
+          version: 2026.8.6
+          install: true
+          cache: true
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: mise run checkpoint:closure-audit

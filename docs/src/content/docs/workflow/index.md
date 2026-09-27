@@ -65,11 +65,15 @@ Use `<type>/<issue>-<slug>` branches, normally `feat`, `fix`, `docs`, `exp`, `ch
 
 Commit with a Conventional Commit subject, a body explaining why, and `Refs: #<n>` as a trailer. Do not add attribution or co-author trailers. The commit-msg hook checks prose with `ai-tells` and `ai-tells-commits`. Record the harness and model in the Project Worker field and PR evidence section.
 
+The commit-msg hook rejects attribution and missing `Refs:` trailers except for subject `wip`, and PR-body CI applies the same trailer rules to the squash commit body.
+
 The shared stash stack requires explicit ownership. Prefer `git rebase --autostash` or the throwaway work-in-progress procedure in [AGENTS.md](https://github.com/tbhb/agent-orchestration-poc/blob/main/AGENTS.md). Never run bare `git stash pop` or `git stash apply`. A real commit must pass hooks.
 
 ## Pull requests, review, and merges
 
 Open one small PR per issue. Its conventional title and body become the squash commit. Include What, Why, Evidence, Docs, and Checklist sections and end with `Refs: #<n>`. For `feat` and `exp`, the Evidence section needs a link to committed output or a test run. Check green CI, docs updated or an issue filed, no secrets, and evidence committed.
+
+Before review, the coordinator runs `mise run review:preflight -- <pr>` to verify that workflow revisions added on `main` are present at the PR head. Before merge or a completion report, run `mise run pr:wait-check -- <pr> <check-name> <timeout-seconds>`. The waiter succeeds only when the requested check concludes success on the head SHA recorded when waiting began. Its timeout includes GitHub calls, and zero seconds expires immediately. Both tasks address failures in the [phase 1 retrospective](/retros/2026-09-26-phase-1/).
 
 Workers open PRs for coordinator review and do not merge them. A different harness reviews first where practical. The coordinator merges after review and green CI. Changes to security policy or credentials need an operator merge. Egress rules or installations outside the repository also need an operator merge.
 
@@ -80,13 +84,17 @@ The active [main ruleset](https://github.com/tbhb/agent-orchestration-poc/rules/
 | Job | Trigger | Checks |
 | --- | --- | --- |
 | `check` | PRs and pushes to `main` | `mise run check`, including Go build, vet, tests and lint, Ruff and pytest, formatting, prose, secrets, experiment layout, Mermaid, and workflow syntax |
+| `handoff` | Pushes to `main` | Verify that PRs described as open in the handoff are open on GitHub |
 | `mutation` | PRs and pushes to `main` | Always reports a result. Runs `mise run check:mutation` when Go or Python core code or their tests change, and succeeds without running the tools otherwise. |
 | `property-nightly` | Nightly schedule and manual dispatch | Runs Go and Python tests with random seeds and files an issue containing the seeds and output on failure. |
 | `docs` | PRs and pushes to `main` | Chromium setup and `mise run docs:check-links`, which builds the site and checks internal links and hashes |
 | `pr-body` | PR opened, edited, synchronized, or reopened | No attribution trailers, a `Refs:` trailer, and an Evidence link for `feat` or `exp` |
 | `imported-research` | PR opened, edited, synchronized, or reopened | No modification, rename, or deletion under `research/imported/`. Additions need a `research(import)` title. |
+| `closure-audit` | Weekly schedule or manual dispatch | Read-only audit of closed work-item issues without a linked merged PR or an explicit `Non-code closure:` reason. |
 
 These jobs currently run on `ubuntu-latest`. The `check` and `docs` jobs install mise 2026.8.6 with the pinned action. macOS jobs are planned when code needs Apple frameworks or Containers. See [tooling](/workflow/tooling/) for the task and hook inventory.
+
+At a checkpoint, the coordinator also runs `mise run checkpoint:closure-audit`. To record a non-code closure, put `Non-code closure: <reason and evidence>` on its own line in the issue body. The audit only reports issues for review and never changes issue state. Codex documentation dispatches use the [brief template](https://github.com/tbhb/agent-orchestration-poc/blob/main/docs/briefs/documentation-brief-template.md) and require a local Vale pass.
 
 ## Reporting
 
