@@ -29,6 +29,7 @@ type SpawnRequest struct {
 // Status joins durable group state with current tmux availability.
 type Status struct {
 	Group       roster.Group
+	TmuxSocket  string
 	TmuxRunning bool
 	Workers     []roster.Worker
 }
@@ -127,7 +128,7 @@ func (s *Service) GroupStatus(ctx context.Context) (Status, error) {
 	if err != nil {
 		return Status{}, err
 	}
-	return Status{Group: g, TmuxRunning: s.Tmux.GroupExists(ctx, g.TmuxSession), Workers: workers}, nil
+	return Status{Group: g, TmuxSocket: s.Tmux.Socket, TmuxRunning: s.Tmux.GroupExists(ctx, g.TmuxSession), Workers: workers}, nil
 }
 
 // List returns the durable worker roster.

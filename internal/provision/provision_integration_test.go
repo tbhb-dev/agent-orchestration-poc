@@ -54,7 +54,7 @@ func TestGroupOperationsOnPrivateServer(t *testing.T) {
 		t.Fatalf("group start = %+v, %v", started, err)
 	}
 	status, err := Call(t.Context(), state, Request{Operation: "group-status"})
-	if err != nil || !status.Status.TmuxRunning {
+	if err != nil || !status.Status.TmuxRunning || status.Status.TmuxSocket != service.Tmux.Socket {
 		t.Fatalf("group status = %+v, %v", status, err)
 	}
 	brief := filepath.Join(state, "standin-brief.md")
