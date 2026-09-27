@@ -180,3 +180,5 @@ New prose is linted with `ai-tells`. The baseline [alert inventory](https://gith
 - `docs/src/content/docs/guides/go-conventions.md` and `docs/src/content/docs/decisions/0001-go-linter.md`.
 
 When moving or rewriting exempt prose, resolve its alerts and remove its exemption. The moved handoff, checkpoint, retro, and devlog are linted at their site paths. The moved `docs/src/content/docs/project/plan.md` retains a specific exemption after one punctuation pass reduced its alerts from 168 to 105. Further cleanup is deferred to preserve its detailed decisions and citations during this move. Preserve facts, versions, decisions, and citations when fixing prose.
+
+The 2026-09-26 handoff prompt and generated state are verbatim historical records in `docs/src/content/docs/project/handoff-2026-09-26-*.md`. Vale exempts their original wording. Rumdl exempts only the source heading and blank-line rules (`MD025` and `MD012`) that would change the record.
