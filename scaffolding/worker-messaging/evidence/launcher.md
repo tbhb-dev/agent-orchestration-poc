@@ -44,6 +44,15 @@ Sanitized coordinator notes in this directory record interactive Codex queue tri
 - [verified] `mise run build` exited 0. `mise exec -- gitleaks dir --no-banner --redact=100 --log-level error scaffolding/worker-messaging` exited 0.
 - [verified] `mise run docs:build` exited 0 and built 54 pages. Chromium emitted a sandbox permission error during content sync, so that log is not evidence that browser rendering ran successfully.
 
+## Review correction
+
+- [schema] The pinned Codex source snapshot defines `thread/loaded/list` `data` as string thread IDs with `nextCursor` pagination, and thread status as an object tagged by `type`. The revised adapter reads every page; pure identity functions classify active, idle, and not-loaded statuses.
+- [verified] `mise run worker:test-launcher` passed 37 tests after review corrections. New tests first failed on the old loaded-list decoder, absent tagged-status handling, fixed-depth repository paths, unowned checkout adoption, and first tmux startup. The corrected tests cover paged string IDs, active/idle/not-loaded statuses, a main checkout and linked checkout, lost registry and main rejection, and absent versus failed tmux observation.
+- [verified] `git rev-parse --path-format=absolute --git-common-dir` returned the main checkout's `.git` path from this linked worktree. The command builder now receives that path, shim path, and captured `PATH` as values.
+- [inference] Native readiness still requires an operator-authorized coordinator trial with process and Unix socket access because the unit tests cannot establish live Codex `thread/read`, Claude `ListAgents`, or agy external sends under this worker's sandbox denials.
+- [verified] `mise run check:mutation` exited 0 after the review corrections. Go core killed 145 of 149 mutants (97.32%), and Python core killed 994 of 1068 mutants (93.07%). The temporary launcher scaffold is outside those mutation targets.
+- [observed] Two `mise run check` attempts failed in the newly merged workflow-forms property test because a Hypothesis example exceeded its 200 ms deadline (265.36 ms and 333.05 ms). `mise run check:workflow-forms` passed alone with 41 tests. A third aggregate run passed prose and Python coverage checks but remained in Go branch coverage for more than five minutes and was interrupted. None of those failing or slow paths was changed in this PR.
+
 ## Scope and mapping
 
 The file registry is distinct from [#153's run record](https://github.com/tbhb/agent-orchestration-poc/issues/153). The mappings and recovery steps are in [the start guide](../docs/start.md). The launcher exports the stage one author and committer environment from the operator's main-checkout launch wrapper. It does not change trust, sandbox, credentials, grants, or host settings.

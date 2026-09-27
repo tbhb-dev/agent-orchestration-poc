@@ -2,8 +2,6 @@
 
 import hashlib
 import os
-import re
-import shlex
 import subprocess
 import time
 import uuid
@@ -67,18 +65,13 @@ def _pane(pane: str) -> dict[str, Any]:
     }
 
 
-def _worktree(path: Path, branch: str) -> None:
+def _worktree(path: Path, branch: str, owned: bool) -> None:
     listings = _run(["git", "worktree", "list", "--porcelain"])
-    if path.exists():
-        if not any(
-            f"worktree {path}\n" in block + "\n"
-            and f"branch refs/heads/{branch}\n" in block + "\n"
-            for block in listings.split("\n\n")
-        ):
-            raise ValueError("worktree path is not exclusively owned by branch")
+    action = identity.worktree_action(str(path), branch, listings, path.exists(), owned)
+    if action == "inspect":
         return
-    if re.search(rf"^branch refs/heads/{re.escape(branch)}$", listings, re.MULTILINE):
-        raise ValueError("branch already owns another worktree")
+    if action != "create":
+        raise ValueError("worktree or branch is not available for this run")
     if _run(["git", "branch", "--list", branch]):
         raise ValueError("branch exists without requested worktree")
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -86,56 +79,21 @@ def _worktree(path: Path, branch: str) -> None:
 
 
 def _command(row: dict[str, Any], brief: str) -> str:
-    shim = str(ROOT.parents[1] / ".holding/shim")
-    if row["harness"] == "codex":
-        argv = [
-            "codex",
-            "-m",
-            row["model"],
-            "-c",
-            f'model_reasoning_effort="{row["effort"]}"',
-            "-a",
-            "never",
-            "-s",
-            "workspace-write",
-            "-C",
-            row["worktree"],
-            "--add-dir",
-            str(ROOT.parent.parent / ".git"),
-            brief,
-        ]
-    elif row["harness"] == "claude":
-        argv = [
-            "claude",
-            "--model",
-            row["model"],
-            "--effort",
-            row["effort"],
-            "--name",
-            row["name"],
-            brief,
-        ]
-    else:
-        argv = ["agy", "--model", row["model"], "--effort", row["effort"], "-i", brief]
-    env = {
-        "PATH": f"{shim}:{os.environ['PATH']}",
-        "ZDOTDIR": f"{shim}/zdotdir",
-        "PREK_HOME": "/private/tmp/agent-orchestration-poc-prek",
-        "GIT_AUTHOR_NAME": "tbhbagent",
-        "GIT_AUTHOR_EMAIL": "agent@tonyburns.net",
-        "GIT_COMMITTER_NAME": "tbhbagent",
-        "GIT_COMMITTER_EMAIL": "agent@tonyburns.net",
-    }
-    return "exec " + shlex.join(
-        ["env", *(f"{key}={value}" for key, value in env.items()), *argv]
+    common_git = Path(
+        _run(["git", "rev-parse", "--path-format=absolute", "--git-common-dir"])
     )
+    shim = common_git.parent / ".holding/shim"
+    return identity.command(row, brief, str(shim), str(common_git), os.environ["PATH"])
 
 
 def _new_pane(row: dict[str, Any], brief: str) -> dict[str, Any]:
     present = subprocess.run(
-        ["tmux", "has-session", "-t", SESSION], capture_output=True, check=False
+        ["tmux", "has-session", "-t", SESSION],
+        capture_output=True,
+        text=True,
+        check=False,
     )
-    if present.returncode:
+    if identity.session_missing(present.returncode, present.stderr):
         _run(["tmux", "new-session", "-d", "-s", SESSION, "-n", "control"])
     pane = _run(
         [
@@ -161,41 +119,26 @@ def _observe(row: dict[str, Any]) -> dict[str, Any]:
     seen: dict[str, Any] = {"endpoint": row["endpoint"], "native_id": row["native_id"]}
     seen.update(_pane(row["tmux_pane"]))
     capture = _run(["tmux", "capture-pane", "-p", "-S", "-80", "-t", row["tmux_pane"]])
-    seen["trust_prompt"] = (
-        "trust this folder" in capture.lower()
-        or "trust this directory" in capture.lower()
-    )
+    seen["trust_prompt"] = identity.trust_prompt(capture)
     if seen["trust_prompt"] or not seen["process_start"]:
         return seen
     if row["harness"] == "codex":
         paths = codex_launch.open_rollouts(seen["pid"])
         rollouts = [codex_launch.rollout(path) for path in paths]
-        found = identity.codex_candidate(rollouts, row["worktree"], paths)
-        seen["native_id"] = found
-        match = next((item for item in rollouts if item["id"] == found), {})
-        seen["brief_uptake"] = match.get("started", False) and row[
-            "brief_digest"
-        ] in match.get("brief_digests", [])
+        seen.update(identity.codex_facts(row, rollouts, paths))
+        found = seen["native_id"]
         if found:
-            seen["loaded"], thread = codex_launch.runtime_thread(row["endpoint"], found)
-            seen["loaded"] = (
-                seen["loaded"]
-                and thread.get("id") == found
-                and thread.get("cwd") == row["worktree"]
+            loaded, thread = codex_launch.runtime_thread(row["endpoint"], found)
+            seen.update(
+                identity.codex_runtime_facts(found, row["worktree"], loaded, thread)
             )
-            seen["busy"] = thread.get("status") == "active"
     elif row["harness"] == "claude":
-        candidate = identity.claude_candidate(
-            claude_launch.live_entries(), {**seen, "worktree": row["worktree"]}
+        seen.update(
+            identity.claude_facts(claude_launch.live_entries(), seen, row["worktree"])
         )
-        seen["native_id"] = candidate.get("sessionId") if candidate else None
-        seen["endpoint"] = candidate.get("messagingSocketPath") if candidate else None
-        seen["brief_uptake"] = bool(candidate) and claude_launch.brief_uptake(
+        seen["brief_uptake"] = bool(seen["native_id"]) and claude_launch.brief_uptake(
             seen["native_id"], row["worktree"], row["brief_digest"]
         )
-        # ListAgents has no external coordinator CLI on 2.1.283. Fail closed.
-        seen["loaded"] = False
-        seen["busy"] = candidate.get("status") == "busy" if candidate else False
     else:
         seen["loaded"] = False
     return seen
@@ -226,17 +169,23 @@ def launch(request: dict[str, Any]) -> tuple[dict[str, Any], str, str]:
     decision = identity.reservation(rows, request)
     if decision == "inspect":
         row = next(item for item in rows if item["name"] == request["name"])
+        _worktree(Path(row["worktree"]), row["branch"], True)
         result = inspect(row)
         registry.write(STORE, rows)
         return result
     if decision != "create":
         raise ValueError(decision)
-    if (
-        request["name"]
-        in _run(["tmux", "list-windows", "-a", "-F", "#{window_name}"]).splitlines()
+    windows = subprocess.run(
+        ["tmux", "list-windows", "-a", "-F", "#{window_name}"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if request["name"] in identity.window_names(
+        windows.returncode, windows.stderr, windows.stdout
     ):
         raise ValueError("tmux window name already exists")
-    _worktree(Path(request["worktree"]), request["branch"])
+    _worktree(Path(request["worktree"]), request["branch"], False)
     row = {
         **request,
         "run_id": str(uuid.uuid7()),
@@ -275,6 +224,7 @@ def status(run_id: str) -> tuple[dict[str, Any], str, str]:
     row = next((item for item in rows if item["run_id"] == run_id), None)
     if row is None:
         raise ValueError("run ID not found")
+    _worktree(Path(row["worktree"]), row["branch"], True)
     result = inspect(row)
     registry.write(STORE, rows)
     return result

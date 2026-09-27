@@ -108,3 +108,73 @@ def test_claude_candidate_property(pid: int) -> None:
     assert (
         identity.claude_candidate([{**case["entry"], "pid": pid}], case["seen"]) is None
     )
+
+
+def test_codex_native_response_decisions() -> None:
+    """A loaded string ID and tagged active status imply busy."""
+    assert identity.loaded_ids({"data": ["thread-1"], "nextCursor": None}) == {
+        "thread-1"
+    }
+    assert identity.codex_busy({"status": {"type": "active", "activeFlags": []}})
+    assert not identity.codex_busy({"status": {"type": "idle"}})
+    assert not identity.codex_busy({"status": {"type": "notLoaded"}})
+    thread = {"id": "thread-1", "cwd": "/worker", "status": {"type": "idle"}}
+    assert identity.codex_runtime_facts("thread-1", "/worker", True, thread)["loaded"]
+    assert not identity.codex_runtime_facts(
+        "thread-1", "/worker", True, {**thread, "status": {"type": "notLoaded"}}
+    )["loaded"]
+
+
+def test_worktree_ownership_decisions() -> None:
+    """Only a recorded run may inspect an existing checkout."""
+    listed = "worktree /existing\nbranch refs/heads/tooling/176-worker\n"
+    assert (
+        identity.worktree_action("/existing", "tooling/176-worker", listed, True, False)
+        == "reject"
+    )
+    assert (
+        identity.worktree_action("/existing", "tooling/176-worker", listed, True, True)
+        == "inspect"
+    )
+    assert identity.worktree_action("/new", "main", "", False, False) == "reject"
+    assert (
+        identity.worktree_action("/new", "tooling/176-worker", "", False, False)
+        == "create"
+    )
+    assert (
+        identity.worktree_action("/missing", "tooling/176-worker", "", False, True)
+        == "reject"
+    )
+
+
+def test_tmux_window_decisions() -> None:
+    """A missing server is empty; other failures remain errors."""
+    assert identity.window_names(1, "no server running", "") == []
+    assert identity.window_names(0, "", "alice\nbob\n") == ["alice", "bob"]
+    with pytest.raises(ValueError, match="tmux window observation failed"):
+        identity.window_names(1, "permission denied", "")
+    with pytest.raises(ValueError, match="tmux window observation failed"):
+        identity.window_names(
+            1, "error connecting to socket (Operation not permitted)", ""
+        )
+    assert identity.session_missing(1, "can't find session: worker-messaging")
+    assert identity.session_missing(1, "no server running")
+    assert not identity.session_missing(0, "")
+    with pytest.raises(ValueError, match="tmux session observation failed"):
+        identity.session_missing(1, "Operation not permitted")
+
+
+def test_command_uses_captured_paths() -> None:
+    """Main and linked checkout use the same common Git directory and shim."""
+    row = {"harness": "codex", "model": "m", "effort": "high", "worktree": "/new"}
+    command = identity.command(
+        row, "brief", "/repo/.holding/shim", "/repo/.git", "/usr/bin"
+    )
+    assert "--add-dir /repo/.git" in command
+    assert "PATH=/repo/.holding/shim:/usr/bin" in command
+
+
+def test_main_is_rejected_even_with_recorded_owner() -> None:
+    """A saved row never permits work on main."""
+    request = dict.fromkeys(("name", "branch", "worktree", "tmux_name"), "main")
+    assert identity.reservation([request], request) == "main branch is forbidden"

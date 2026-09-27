@@ -10,6 +10,8 @@ import subprocess
 from pathlib import Path
 from typing import Any, cast
 
+import identity
+
 
 def open_rollouts(pid: int) -> list[str]:
     """Find rollout files held by the exact TUI process."""
@@ -130,11 +132,29 @@ def runtime_thread(endpoint: str, thread_id: str) -> tuple[bool, dict[str, Any]]
             {"clientInfo": {"name": "worker-launcher", "version": "1"}},
         )
         connection.sendall(_frame({"method": "initialized"}))
-        loaded = _call(connection, 2, "thread/loaded/list", {"limit": 100})
+        ids: set[str] = set()
+        cursor: str | None = None
+        cursors: set[str] = set()
+        number = 2
+        while True:
+            params: dict[str, Any] = {"limit": 100}
+            if cursor is not None:
+                params["cursor"] = cursor
+            loaded = _call(connection, number, "thread/loaded/list", params)
+            ids.update(identity.loaded_ids(loaded))
+            cursor = loaded.get("nextCursor")
+            if cursor is None:
+                break
+            if not isinstance(cursor, str) or cursor in cursors:
+                raise ValueError("invalid loaded thread cursor")
+            cursors.add(cursor)
+            number += 1
         result = _call(
-            connection, 3, "thread/read", {"threadId": thread_id, "includeTurns": False}
+            connection,
+            number + 1,
+            "thread/read",
+            {"threadId": thread_id, "includeTurns": False},
         )
-        ids = {item.get("id") for item in loaded.get("data", [])}
         return thread_id in ids, result.get("thread", {})
     finally:
         connection.close()
