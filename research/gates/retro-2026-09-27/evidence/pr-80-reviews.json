@@ -1,0 +1,122 @@
+[
+  {
+    "id": 5328147939,
+    "node_id": "PRR_kwDOUtKbt88AAAABPZUV4w",
+    "user": {
+      "login": "tbhb-agent-reviewer",
+      "id": 152314235,
+      "node_id": "U_kgDOCRQhew",
+      "avatar_url": "https://avatars.githubusercontent.com/u/152314235?u=c28bdb49be24e8265acf00ccaee6d49eac020456&v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/tbhb-agent-reviewer",
+      "html_url": "https://github.com/tbhb-agent-reviewer",
+      "followers_url": "https://api.github.com/users/tbhb-agent-reviewer/followers",
+      "following_url": "https://api.github.com/users/tbhb-agent-reviewer/following{/other_user}",
+      "gists_url": "https://api.github.com/users/tbhb-agent-reviewer/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/tbhb-agent-reviewer/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/tbhb-agent-reviewer/subscriptions",
+      "organizations_url": "https://api.github.com/users/tbhb-agent-reviewer/orgs",
+      "repos_url": "https://api.github.com/users/tbhb-agent-reviewer/repos",
+      "events_url": "https://api.github.com/users/tbhb-agent-reviewer/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/tbhb-agent-reviewer/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "body": "Reviewer: Codex CLI 0.157.1, gpt-6-astra, medium effort. Head 83b0fca.\n\nBoth first-pass findings are resolved: 471755d returns False for unpaired surrogates, and 83b0fca rejects incomplete mutmut exports through a pure, tested decision function; direct probes confirmed both fixes. The Python suite passed (27 passed, one integration skip), and Go tests passed with race detection and shuffled order; all five GitHub checks passed at this head. One remaining core/shell violation blocks approval.\n\n- Blocking [P2]: scripts/check-gremlins-output.py:12-24 still transforms mutation results and decides completeness inside the function that reads the file and prints output. Source inspection and temporary JSON probes confirmed that this shell function owns the killed/timeout/empty-result decisions. Move that evaluation into a pure core function with plain-value regression tests, leaving file loading, reporting, and exit-code translation in the script; see the inline comment.\n- Non-blocking [P3]: docs/src/content/docs/guides/python-conventions.md:95 still shows ANN in the experiments/** exemption. Comparing the example with pyproject.toml confirms that the documented configuration contradicts issue #77 and the new strict-everywhere prose. Remove ANN from that example to match the implemented configuration.\n\nValidation limits: I did not rerun the full check aggregate or mutation engines in this read-only checkout. Tests used pinned tools through mise, existing installed Python dependencies, and temporary caches; the checkout remains unchanged.",
+    "state": "CHANGES_REQUESTED",
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/80#pullrequestreview-5328147939",
+    "pull_request_url": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/80",
+    "author_association": "MEMBER",
+    "_links": {
+      "html": {
+        "href": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/80#pullrequestreview-5328147939"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/80"
+      }
+    },
+    "submitted_at": "2026-09-26T23:52:35Z",
+    "commit_id": "83b0fcae7cf95864fb4720a9fd52982a446c0970"
+  },
+  {
+    "id": 5328173898,
+    "node_id": "PRR_kwDOUtKbt88AAAABPZV7Sg",
+    "user": {
+      "login": "tbhb",
+      "id": 17915374,
+      "node_id": "MDQ6VXNlcjE3OTE1Mzc0",
+      "avatar_url": "https://avatars.githubusercontent.com/u/17915374?u=570c35c904259c7db16a6466186b1b09af64e9d4&v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/tbhb",
+      "html_url": "https://github.com/tbhb",
+      "followers_url": "https://api.github.com/users/tbhb/followers",
+      "following_url": "https://api.github.com/users/tbhb/following{/other_user}",
+      "gists_url": "https://api.github.com/users/tbhb/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/tbhb/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/tbhb/subscriptions",
+      "organizations_url": "https://api.github.com/users/tbhb/orgs",
+      "repos_url": "https://api.github.com/users/tbhb/repos",
+      "events_url": "https://api.github.com/users/tbhb/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/tbhb/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "body": "",
+    "state": "COMMENTED",
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/80#pullrequestreview-5328173898",
+    "pull_request_url": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/80",
+    "author_association": "MEMBER",
+    "_links": {
+      "html": {
+        "href": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/80#pullrequestreview-5328173898"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/80"
+      }
+    },
+    "submitted_at": "2026-09-27T00:00:34Z",
+    "commit_id": "0cfbc6252d0c4111879e6f183140a96b7bd7d2e4"
+  },
+  {
+    "id": 5328205815,
+    "node_id": "PRR_kwDOUtKbt88AAAABPZX39w",
+    "user": {
+      "login": "tbhb-agent-reviewer",
+      "id": 152314235,
+      "node_id": "U_kgDOCRQhew",
+      "avatar_url": "https://avatars.githubusercontent.com/u/152314235?u=c28bdb49be24e8265acf00ccaee6d49eac020456&v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/tbhb-agent-reviewer",
+      "html_url": "https://github.com/tbhb-agent-reviewer",
+      "followers_url": "https://api.github.com/users/tbhb-agent-reviewer/followers",
+      "following_url": "https://api.github.com/users/tbhb-agent-reviewer/following{/other_user}",
+      "gists_url": "https://api.github.com/users/tbhb-agent-reviewer/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/tbhb-agent-reviewer/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/tbhb-agent-reviewer/subscriptions",
+      "organizations_url": "https://api.github.com/users/tbhb-agent-reviewer/orgs",
+      "repos_url": "https://api.github.com/users/tbhb-agent-reviewer/repos",
+      "events_url": "https://api.github.com/users/tbhb-agent-reviewer/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/tbhb-agent-reviewer/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "body": "Reviewer: Codex CLI 0.157.1, gpt-6-astra, medium effort. Head 0cfbc62.\n\nCommit 0cfbc62 fixes the remaining core/shell violation: gremlins result evaluation now lives in a pure core function with four plain-value regression cases, and the script handles file input, reporting, and exit status; direct JSON probes confirmed killed, timed-out, empty, and mixed results. It also removes the stale ANN exemption from the Python conventions example, and the earlier surrogate and incomplete-mutmut fixes remain covered; I resolved the fixed review thread and verified no thread remains open. The Python suite passed with 31 tests and one integration skip, Go tests passed with race detection and shuffled order, and all five CI checks passed at this head.\n\n- Blocking findings: none.\n- Non-blocking findings: none.\n\nValidation limits: I did not rerun the full check aggregate or mutation engines locally in this read-only checkout. Local tests used pinned tools through mise, existing installed Python dependencies, and temporary caches; the checkout remains unchanged.",
+    "state": "APPROVED",
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/80#pullrequestreview-5328205815",
+    "pull_request_url": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/80",
+    "author_association": "MEMBER",
+    "_links": {
+      "html": {
+        "href": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/80#pullrequestreview-5328205815"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/80"
+      }
+    },
+    "submitted_at": "2026-09-27T00:10:20Z",
+    "commit_id": "0cfbc6252d0c4111879e6f183140a96b7bd7d2e4"
+  }
+]

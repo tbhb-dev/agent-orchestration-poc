@@ -1,0 +1,394 @@
+[
+  {
+    "number": 213,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/213",
+    "title": "tooling(workers): repair launcher defects found in the live trial",
+    "state": "closed",
+    "created_at": "2026-09-27T16:48:59Z",
+    "merged_at": "2026-09-27T17:23:16Z"
+  },
+  {
+    "number": 212,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/212",
+    "title": "process(workflow): define the intake agent and the stub template",
+    "state": "closed",
+    "created_at": "2026-09-27T16:20:31Z",
+    "merged_at": "2026-09-27T16:42:03Z"
+  },
+  {
+    "number": 211,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/211",
+    "title": "tooling(workers): add the remote launch recipe and readiness check",
+    "state": "closed",
+    "created_at": "2026-09-27T14:48:44Z",
+    "merged_at": "2026-09-27T16:24:44Z"
+  },
+  {
+    "number": 210,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/210",
+    "title": "tooling(workflow): update the reference and checks for the work model",
+    "state": "closed",
+    "created_at": "2026-09-27T14:37:29Z",
+    "merged_at": "2026-09-27T16:04:18Z"
+  },
+  {
+    "number": 209,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/209",
+    "title": "tooling(project): add a reordering script for ranked Project items",
+    "state": "closed",
+    "created_at": "2026-09-27T14:12:02Z",
+    "merged_at": "2026-09-27T14:55:59Z"
+  },
+  {
+    "number": 196,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/196",
+    "title": "tooling(workers): fix launcher readiness and stopped-run status",
+    "state": "closed",
+    "created_at": "2026-09-27T13:31:43Z",
+    "merged_at": "2026-09-27T13:48:09Z"
+  },
+  {
+    "number": 195,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/195",
+    "title": "tooling(github): repair tracked monitor state through REST",
+    "state": "closed",
+    "created_at": "2026-09-27T13:31:05Z",
+    "merged_at": "2026-09-27T14:29:22Z"
+  },
+  {
+    "number": 194,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/194",
+    "title": "process(workflow): design stub refinement before issue creation",
+    "state": "closed",
+    "created_at": "2026-09-27T06:25:02Z",
+    "merged_at": null
+  },
+  {
+    "number": 193,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/193",
+    "title": "tooling(github): receive and reconcile verified webhook state",
+    "state": "closed",
+    "created_at": "2026-09-27T05:53:05Z",
+    "merged_at": "2026-09-27T06:43:25Z"
+  },
+  {
+    "number": 192,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/192",
+    "title": "tooling(workers): launch interactive workers with live native identities",
+    "state": "closed",
+    "created_at": "2026-09-27T05:51:44Z",
+    "merged_at": "2026-09-27T13:19:23Z"
+  },
+  {
+    "number": 191,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/191",
+    "title": "tooling(github): verify Project events and budget field sync",
+    "state": "closed",
+    "created_at": "2026-09-27T05:39:49Z",
+    "merged_at": "2026-09-27T07:06:29Z"
+  },
+  {
+    "number": 175,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/175",
+    "title": "research(workflow): evaluate GitHub sub-issues for Project 9",
+    "state": "closed",
+    "created_at": "2026-09-27T04:39:00Z",
+    "merged_at": "2026-09-27T05:15:02Z"
+  },
+  {
+    "number": 174,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/174",
+    "title": "docs(project): extract plan policy and references (part A)",
+    "state": "closed",
+    "created_at": "2026-09-27T04:35:04Z",
+    "merged_at": "2026-09-27T05:20:47Z"
+  },
+  {
+    "number": 162,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/162",
+    "title": "decision(security): design agent identity and signed commits",
+    "state": "closed",
+    "created_at": "2026-09-27T04:18:26Z",
+    "merged_at": "2026-09-27T05:47:44Z"
+  },
+  {
+    "number": 144,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/144",
+    "title": "decision(workflow): define Assisted-by provenance convention",
+    "state": "closed",
+    "created_at": "2026-09-27T03:36:12Z",
+    "merged_at": "2026-09-27T04:16:04Z"
+  },
+  {
+    "number": 138,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/138",
+    "title": "research(observability): profile and specify a local Grafana LGTM stack",
+    "state": "closed",
+    "created_at": "2026-09-27T03:21:54Z",
+    "merged_at": "2026-09-27T03:31:48Z"
+  },
+  {
+    "number": 137,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/137",
+    "title": "tooling(workflow): add issue and pull request form validation",
+    "state": "closed",
+    "created_at": "2026-09-27T03:18:11Z",
+    "merged_at": "2026-09-27T06:06:08Z"
+  },
+  {
+    "number": 122,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/122",
+    "title": "research(data): run the data analysis stack gate",
+    "state": "closed",
+    "created_at": "2026-09-27T02:29:49Z",
+    "merged_at": "2026-09-27T02:44:39Z"
+  },
+  {
+    "number": 119,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/119",
+    "title": "docs(handoff): refresh the coordinator handoff for the phase 2 rollover",
+    "state": "closed",
+    "created_at": "2026-09-27T02:11:18Z",
+    "merged_at": "2026-09-27T03:20:46Z"
+  },
+  {
+    "number": 115,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/115",
+    "title": "feat(bus): relay receive, ack, and status reads through agentd",
+    "state": "closed",
+    "created_at": "2026-09-27T02:01:53Z",
+    "merged_at": "2026-09-27T03:48:34Z"
+  },
+  {
+    "number": 113,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/113",
+    "title": "process(review): post reviews as pull request reviews from a reviewer account and require an approval",
+    "state": "closed",
+    "created_at": "2026-09-27T01:53:42Z",
+    "merged_at": "2026-09-27T02:50:25Z"
+  },
+  {
+    "number": 112,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/112",
+    "title": "fix(tooling): resolve lodash-es alerts in Mermaid check",
+    "state": "closed",
+    "created_at": "2026-09-27T01:47:48Z",
+    "merged_at": "2026-09-27T02:03:44Z"
+  },
+  {
+    "number": 105,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/105",
+    "title": "tooling(testing): gate branch and line coverage and raise the mutation floors",
+    "state": "closed",
+    "created_at": "2026-09-27T01:18:12Z",
+    "merged_at": "2026-09-27T02:17:09Z"
+  },
+  {
+    "number": 99,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/99",
+    "title": "docs(design): design a webhook-fed monitor for pull request state",
+    "state": "closed",
+    "created_at": "2026-09-27T00:49:48Z",
+    "merged_at": "2026-09-27T02:25:35Z"
+  },
+  {
+    "number": 95,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/95",
+    "title": "research(shell): add the shell-scripting conventions gate",
+    "state": "closed",
+    "created_at": "2026-09-27T00:16:36Z",
+    "merged_at": "2026-09-27T01:38:06Z"
+  },
+  {
+    "number": 85,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/85",
+    "title": "tooling(workflow): add the review preflight, check waiter, closure audit, and docs brief template",
+    "state": "closed",
+    "created_at": "2026-09-26T23:42:35Z",
+    "merged_at": "2026-09-27T00:35:58Z"
+  },
+  {
+    "number": 82,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/82",
+    "title": "feat(bus): embed the NATS server in agentd with JetStream, per-group accounts, and per-agent credentials",
+    "state": "closed",
+    "created_at": "2026-09-26T23:26:42Z",
+    "merged_at": "2026-09-27T00:50:01Z"
+  },
+  {
+    "number": 81,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/81",
+    "title": "tooling(workflow): add the commit trailer, ignore collision, and handoff checks",
+    "state": "closed",
+    "created_at": "2026-09-26T23:24:28Z",
+    "merged_at": "2026-09-27T00:56:42Z"
+  },
+  {
+    "number": 80,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/80",
+    "title": "tooling(testing): add property and mutation testing gates and strict typing everywhere",
+    "state": "closed",
+    "created_at": "2026-09-26T23:20:56Z",
+    "merged_at": "2026-09-27T00:11:18Z"
+  },
+  {
+    "number": 79,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/79",
+    "title": "docs(handoff): refresh the coordinator handoff after phase 1 approval",
+    "state": "closed",
+    "created_at": "2026-09-26T23:02:29Z",
+    "merged_at": "2026-09-26T23:09:16Z"
+  },
+  {
+    "number": 76,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/76",
+    "title": "tooling(gates): enforce the functional core boundary and add duplication, dead-code, and complexity gates",
+    "state": "closed",
+    "created_at": "2026-09-26T22:36:55Z",
+    "merged_at": "2026-09-26T22:56:47Z"
+  },
+  {
+    "number": 75,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/75",
+    "title": "docs(checkpoint): add the phase 1 retro, report, devlog entry, and handoff",
+    "state": "closed",
+    "created_at": "2026-09-26T22:32:21Z",
+    "merged_at": "2026-09-26T22:37:21Z"
+  },
+  {
+    "number": 68,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/68",
+    "title": "research(testing): property and mutation testing gate notes for Go and Python",
+    "state": "closed",
+    "created_at": "2026-09-26T22:20:31Z",
+    "merged_at": "2026-09-26T22:22:57Z"
+  },
+  {
+    "number": 67,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/67",
+    "title": "research(tooling): duplicate-code, dead-code, and complexity gate notes",
+    "state": "closed",
+    "created_at": "2026-09-26T22:17:02Z",
+    "merged_at": "2026-09-26T22:19:01Z"
+  },
+  {
+    "number": 66,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/66",
+    "title": "research(boundaries): compare the core and shell boundary tools for Go and Python",
+    "state": "closed",
+    "created_at": "2026-09-26T22:11:57Z",
+    "merged_at": "2026-09-26T22:14:18Z"
+  },
+  {
+    "number": 65,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/65",
+    "title": "tooling(python): switch type checking to strict pyrefly",
+    "state": "closed",
+    "created_at": "2026-09-26T22:08:52Z",
+    "merged_at": "2026-09-26T22:20:20Z"
+  },
+  {
+    "number": 64,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/64",
+    "title": "docs(workers): add AGENTS.md, CLAUDE.md, and the first docs pages",
+    "state": "closed",
+    "created_at": "2026-09-26T22:02:28Z",
+    "merged_at": "2026-09-26T22:05:15Z"
+  },
+  {
+    "number": 57,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/57",
+    "title": "chore(skeleton): create the monorepo skeleton and the Go module",
+    "state": "closed",
+    "created_at": "2026-09-26T21:47:04Z",
+    "merged_at": "2026-09-26T21:49:40Z"
+  },
+  {
+    "number": 56,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/56",
+    "title": "workflow(project): configure the Project fields and views and file the phase 2 and 3 issues",
+    "state": "closed",
+    "created_at": "2026-09-26T21:47:03Z",
+    "merged_at": "2026-09-26T21:48:16Z"
+  },
+  {
+    "number": 55,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/55",
+    "title": "chore(docs): build the Astro Starlight site with Mermaid and the devlog",
+    "state": "closed",
+    "created_at": "2026-09-26T21:44:27Z",
+    "merged_at": "2026-09-26T21:48:51Z"
+  },
+  {
+    "number": 25,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/25",
+    "title": "chore(ci): run the mise checks and the pull request rules in GitHub Actions",
+    "state": "closed",
+    "created_at": "2026-09-26T21:40:02Z",
+    "merged_at": "2026-09-26T21:44:34Z"
+  },
+  {
+    "number": 24,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/24",
+    "title": "research(import): import the peering and session research folders with a manifest",
+    "state": "closed",
+    "created_at": "2026-09-26T21:34:11Z",
+    "merged_at": "2026-09-26T21:38:08Z"
+  },
+  {
+    "number": 23,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/23",
+    "title": "docs(research): Python 3.14, uv, ruff, and pytest gate notes",
+    "state": "closed",
+    "created_at": "2026-09-26T21:32:43Z",
+    "merged_at": "2026-09-26T21:41:30Z"
+  },
+  {
+    "number": 22,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/22",
+    "title": "research(docs): record the Astro, Starlight 0.42, and starlight-blog gate",
+    "state": "closed",
+    "created_at": "2026-09-26T21:29:56Z",
+    "merged_at": "2026-09-26T21:38:55Z"
+  },
+  {
+    "number": 21,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/21",
+    "title": "chore(tooling): pin tools, configure linters, add prek hooks and the first mechanical checks",
+    "state": "closed",
+    "created_at": "2026-09-26T21:29:09Z",
+    "merged_at": "2026-09-26T21:33:59Z"
+  },
+  {
+    "number": 20,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/20",
+    "title": "research(go): Go 1.27 conventions gate notes and versions",
+    "state": "closed",
+    "created_at": "2026-09-26T21:24:11Z",
+    "merged_at": "2026-09-26T21:29:28Z"
+  },
+  {
+    "number": 19,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/19",
+    "title": "docs(retro): add the phase 0 retrospective and first devlog entry",
+    "state": "closed",
+    "created_at": "2026-09-26T21:19:16Z",
+    "merged_at": "2026-09-26T21:26:02Z"
+  },
+  {
+    "number": 2,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/2",
+    "title": "docs: mark phase 0 approved in the coordinator handoff",
+    "state": "closed",
+    "created_at": "2026-09-26T20:55:33Z",
+    "merged_at": "2026-09-26T20:55:44Z"
+  },
+  {
+    "number": 1,
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/1",
+    "title": "docs: add the phase 0 plan, checkpoint report, and assessment evidence",
+    "state": "closed",
+    "created_at": "2026-09-26T17:57:40Z",
+    "merged_at": "2026-09-26T20:53:18Z"
+  }
+]

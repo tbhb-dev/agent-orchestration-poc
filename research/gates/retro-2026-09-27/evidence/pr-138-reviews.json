@@ -1,0 +1,42 @@
+[
+  {
+    "id": 5328692591,
+    "node_id": "PRR_kwDOUtKbt88AAAABPZ1lbw",
+    "user": {
+      "login": "tbhb-agent-reviewer",
+      "id": 152314235,
+      "node_id": "U_kgDOCRQhew",
+      "avatar_url": "https://avatars.githubusercontent.com/u/152314235?u=c28bdb49be24e8265acf00ccaee6d49eac020456&v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/tbhb-agent-reviewer",
+      "html_url": "https://github.com/tbhb-agent-reviewer",
+      "followers_url": "https://api.github.com/users/tbhb-agent-reviewer/followers",
+      "following_url": "https://api.github.com/users/tbhb-agent-reviewer/following{/other_user}",
+      "gists_url": "https://api.github.com/users/tbhb-agent-reviewer/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/tbhb-agent-reviewer/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/tbhb-agent-reviewer/subscriptions",
+      "organizations_url": "https://api.github.com/users/tbhb-agent-reviewer/orgs",
+      "repos_url": "https://api.github.com/users/tbhb-agent-reviewer/repos",
+      "events_url": "https://api.github.com/users/tbhb-agent-reviewer/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/tbhb-agent-reviewer/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "body": "Reviewer: Codex CLI 0.157.1, gpt-6-astra, medium effort. Head f297453.\n\nReviewed the complete diff against #110, its earlier issue review, #107, and AGENTS.md; this is the explicitly limited provider research slice, not completion of the native stack or profiling acceptance criteria. Cross-checked all seven source snapshots, upstream macOS/Linux arm64 release assets, the Tempo receiver-binding citation, clone-local installation metadata, the ignore rule, and diff whitespace; no runtime code or prior PR review threads are present. Installations and the full suite were not rerun in this read-only checkout; docs, imported-research, mutation, and pr-body CI passed, while check remains pending and must pass before merge.\n\nFindings: no blocking or non-blocking defects identified.",
+    "state": "APPROVED",
+    "html_url": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/138#pullrequestreview-5328692591",
+    "pull_request_url": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/138",
+    "author_association": "MEMBER",
+    "_links": {
+      "html": {
+        "href": "https://github.com/tbhb-dev/agent-orchestration-poc/pull/138#pullrequestreview-5328692591"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/138"
+      }
+    },
+    "submitted_at": "2026-09-27T03:26:06Z",
+    "commit_id": "8084498a1c81aa5c9b3b69a54b6d00a159d66db5"
+  }
+]

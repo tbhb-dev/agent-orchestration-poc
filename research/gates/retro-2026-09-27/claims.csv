@@ -1,0 +1,15 @@
+claim_id,label,claim,source_ids,limit
+C01,observed,Fixed bounded REST listing completed with an empty second page,S01|S02|S03,Source time fixed and no later merges added
+C02,observed,Seventeen merge timestamps satisfy the fixed bounds,S01|S02,Raw cohort count awaiting notebook verification
+C03,observed,PR detail reviews files commits and head check runs were retained for each selected PR,SPR75|SPR76|SPR79|SPR80|SPR85|SPR82|SPR81|SPR95|SPR112|SPR105|SPR99|SPR122|SPR113|SPR119|SPR138|SPR115|SPR144,Check runs are a captured head snapshot
+C04,inference,Full 84 measured sizes and excluded raw lines cannot yet be recovered under the unsettled counter contract,S05|S15,Explicit excluded path totals are retained separately
+C05,observed,Issue 84 and issue 110 delivered partial slices after size and gate limits became clear,S06|S08,Issue 109 names a conditional split rather than an observed split
+C06,observed,PR 121 received three changes requested reviews before coordinator arbitration,S09|S10,Open contextual PR outside fixed cohort
+C07,documented,The phase 1 retro records two zsh splitting errors,S12,Underlying commands were not independently rerun here
+C08,documented,Issue 153 reports two workers blocked at commit by hook log sandbox denial,S11,Private run logs were not available in this worktree
+C09,inference,Issue 151 and 152 duplicated existing 142 and 141 work,S13|S14|S15|S16|S17,Disposition is supported by issue records but duplicate logic is qualitative
+C10,documented,The first incident note reports tbhb GraphQL exhaustion after the earlier concurrency lead,S19|S24,Original response headers were not retained in this evidence
+C11,documented,A later incident note reports agent account exhaustion and response headers,S20|S24,Header values are coordinator testimony rather than raw responses
+C12,documented,The coordinator later reported REST reconciliation and incident resolution,S21,No independent board read back was performed for this delivery
+C13,inference,The earlier no error lead cannot be extended across the later incident,S01|S19|S20,Earlier lead has no bounded raw error log in the current evidence
+C14,untested,Quantitative conclusions await issue 107 notebook tasks and independent review,S01|S22,No cohort notebook or retro conclusion in this delivery

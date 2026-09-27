@@ -1,0 +1,32 @@
+[
+  {
+    "short_sha": "e4825b5dceff",
+    "parent_count": 1,
+    "subject": "tooling(workflow): enforce phase 0 retro checks"
+  },
+  {
+    "short_sha": "358e6cd36dc8",
+    "parent_count": 1,
+    "subject": "fix(git): parse ignore matches from NUL fields"
+  },
+  {
+    "short_sha": "49836efa8a9e",
+    "parent_count": 1,
+    "subject": "fix(handoff): check open PR list claims"
+  },
+  {
+    "short_sha": "00b1153fa464",
+    "parent_count": 2,
+    "subject": "chore(workflow): merge current main into retro checks"
+  },
+  {
+    "short_sha": "4a46dde93e58",
+    "parent_count": 2,
+    "subject": "Merge branch 'main' into tooling/15-16-17-retro-checks"
+  },
+  {
+    "short_sha": "8620ba0ba9c1",
+    "parent_count": 2,
+    "subject": "Merge branch 'main' into tooling/15-16-17-retro-checks"
+  }
+]

@@ -1,0 +1,32 @@
+[
+  {
+    "short_sha": "8275d6296d87",
+    "parent_count": 1,
+    "subject": "tooling(testing): add core property and mutation gates"
+  },
+  {
+    "short_sha": "ec1ff70eece8",
+    "parent_count": 1,
+    "subject": "docs(testing): record testing gates and strict typing decision"
+  },
+  {
+    "short_sha": "7bb09bfe7ed6",
+    "parent_count": 1,
+    "subject": "fix(tooling): stabilize rumdl config formatting"
+  },
+  {
+    "short_sha": "471755ddf226",
+    "parent_count": 1,
+    "subject": "fix(subject): reject unpaired surrogates"
+  },
+  {
+    "short_sha": "83b0fcae7cf9",
+    "parent_count": 1,
+    "subject": "fix(mutation): reject incomplete mutmut runs"
+  },
+  {
+    "short_sha": "0cfbc6252d0c",
+    "parent_count": 1,
+    "subject": "fix(mutation): move gremlins decision into core"
+  }
+]
