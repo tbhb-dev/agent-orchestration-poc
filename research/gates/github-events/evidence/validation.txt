@@ -1,0 +1,15 @@
+Commands executed on 2026-09-26. Selected output, not a full transcript.
+mise run fmt: exit 0
+mise run check: exit 0
+[check:pytest] ======================== 31 passed, 1 skipped in 1.24s =========================
+[check:mermaid] mermaid: 9 block(s) in 92 file(s), 0 invalid
+[check:go] 0 issues.
+[check:vale] ✔ 0 errors, 0 warnings and 0 suggestions in 92 files.
+mise run check:mermaid: exit 0
+[check:mermaid] $ scripts/check-mermaid.sh
+mermaid: 9 block(s) in 92 file(s), 0 invalid
+mise exec -- gitleaks dir --redact --no-banner research/gates/github-events: exit 0
+8:46PM INF scanned ~260042 bytes (260.04 KB) in 33.8ms
+8:46PM INF no leaks found
+mise run docs:check-links: exit 1
+[pid=64276][err] [0926/204403.199041:FATAL:base/apple/mach_port_rendezvous_mac.cc:159] Check failed: kr == KERN_SUCCESS. bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.64276: Permission denied (1100)
