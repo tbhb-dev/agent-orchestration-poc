@@ -1,0 +1,37 @@
+[
+  {
+    "filename": "docs/src/content/docs/decisions/0131-assisted-by-provenance.md",
+    "status": "added",
+    "additions": 111,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/decisions/index.md",
+    "status": "modified",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/guides/workflow-reference.md",
+    "status": "added",
+    "additions": 22,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/assisted-by/evidence.md",
+    "status": "added",
+    "additions": 151,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/assisted-by/examples.md",
+    "status": "added",
+    "additions": 221,
+    "deletions": 0,
+    "patch_available": true
+  }
+]

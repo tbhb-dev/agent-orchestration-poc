@@ -1,0 +1,79 @@
+[
+  {
+    "filename": "cmd/agentd/main.go",
+    "status": "modified",
+    "additions": 51,
+    "deletions": 3,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/design/bus.md",
+    "status": "added",
+    "additions": 35,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "go.mod",
+    "status": "modified",
+    "additions": 18,
+    "deletions": 1,
+    "patch_available": true
+  },
+  {
+    "filename": "go.sum",
+    "status": "modified",
+    "additions": 25,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "internal/bus/bus.go",
+    "status": "added",
+    "additions": 258,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "internal/bus/bus_test.go",
+    "status": "added",
+    "additions": 406,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "internal/core/layout/layout.go",
+    "status": "added",
+    "additions": 120,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "internal/core/layout/layout_test.go",
+    "status": "added",
+    "additions": 159,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "internal/core/perms/perms.go",
+    "status": "added",
+    "additions": 59,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "internal/core/perms/perms_test.go",
+    "status": "added",
+    "additions": 61,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "reports/inputs/bus-26-evidence-2026-09-26.md",
+    "status": "added",
+    "additions": 124,
+    "deletions": 0,
+    "patch_available": true
+  }
+]

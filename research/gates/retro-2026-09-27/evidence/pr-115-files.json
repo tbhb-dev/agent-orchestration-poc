@@ -1,0 +1,128 @@
+[
+  {
+    "filename": "docs/src/content/docs/decisions/0010-agent-bus-relay.md",
+    "status": "added",
+    "additions": 30,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/decisions/index.md",
+    "status": "modified",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/design/bus.md",
+    "status": "modified",
+    "additions": 12,
+    "deletions": 4,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/project/plan.md",
+    "status": "modified",
+    "additions": 4,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "internal/bus/bus.go",
+    "status": "modified",
+    "additions": 9,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "internal/bus/bus_test.go",
+    "status": "modified",
+    "additions": 31,
+    "deletions": 37,
+    "patch_available": true
+  },
+  {
+    "filename": "internal/bus/relay.go",
+    "status": "added",
+    "additions": 246,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "internal/bus/relay_test.go",
+    "status": "added",
+    "additions": 311,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "internal/core/layout/layout.go",
+    "status": "modified",
+    "additions": 1,
+    "deletions": 1,
+    "patch_available": true
+  },
+  {
+    "filename": "internal/core/layout/layout_test.go",
+    "status": "modified",
+    "additions": 2,
+    "deletions": 2,
+    "patch_available": true
+  },
+  {
+    "filename": "internal/core/perms/perms.go",
+    "status": "modified",
+    "additions": 9,
+    "deletions": 10,
+    "patch_available": true
+  },
+  {
+    "filename": "internal/core/perms/perms_test.go",
+    "status": "modified",
+    "additions": 7,
+    "deletions": 7,
+    "patch_available": true
+  },
+  {
+    "filename": "internal/core/relay/policy.go",
+    "status": "added",
+    "additions": 62,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "internal/core/relay/relay.go",
+    "status": "added",
+    "additions": 94,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "internal/core/relay/relay_test.go",
+    "status": "added",
+    "additions": 241,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "mise.toml",
+    "status": "modified",
+    "additions": 4,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "reports/inputs/bus-relay-evidence.md",
+    "status": "added",
+    "additions": 55,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "tests/fixtures/bus_relay/exchange.json",
+    "status": "added",
+    "additions": 26,
+    "deletions": 0,
+    "patch_available": true
+  }
+]
