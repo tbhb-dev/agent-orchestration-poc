@@ -149,7 +149,7 @@ run = [
 
 [tasks."check:pyrefly"]
 description = "Type check Python with pyrefly in strict mode"
-run = "uv run pyrefly check"
+run = "uv run pyrefly check --search-path scaffolding/github-monitor"
 
 [tasks."check:mutation"]
 description = "Run the Go and Python core mutation score gates"
@@ -247,6 +247,19 @@ run = "gitleaks git --redact --no-banner ."
 [tasks."check:actions"]
 description = "Lint the GitHub Actions workflows with actionlint"
 run = "actionlint"
+
+# Temporary local GitHub monitor for issue #167.
+[tasks."monitor:start"]
+run = "uv run python scaffolding/github-monitor/cli.py start"
+
+[tasks."monitor:status"]
+run = "uv run python scaffolding/github-monitor/cli.py status"
+
+[tasks."monitor:track"]
+run = "uv run python scaffolding/github-monitor/cli.py track"
+
+[tasks."monitor:test-receiver"]
+run = "PYTHONPATH=scaffolding/github-monitor uv run pytest scaffolding/github-monitor/tests"
 
 # Coordinator preflight. These read live GitHub or git state and run separately from `check`.
 [tasks."review:preflight"]
