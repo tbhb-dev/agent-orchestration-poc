@@ -31,6 +31,8 @@ These are the exact pins in `mise.toml`. Rust uses the default profile. CI separ
 | `tombi` | 1.5.0 |
 | `vale` | 3.22.0 |
 | `actionlint` | 1.7.12 |
+| `shellcheck` | 0.11.0 |
+| `shfmt` | 3.14.0 |
 | `npm:@biomejs/biome` | 2.5.14 |
 | `pipx:ryl` | 0.22.0 |
 | `pipx:jscpd` | 5.3.2 |
@@ -45,6 +47,7 @@ Python development dependencies are locked in `uv.lock` and declared in `pyproje
 | Tool or check | Configuration |
 | --- | --- |
 | Go and gofumpt | `go.mod`, `mise.toml`, `scripts/check-gofumpt.sh` |
+| ShellCheck and shfmt | `mise.toml`, `scripts/*.sh` shebangs |
 | golangci-lint | `.golangci.yml` |
 | Go core imports and complexity | `.golangci.yml` depguard, gocognit, gocyclo, funlen, and nestif settings |
 | Duplicate code | `.jscpd.json`, with 50 tokens and 5 lines |
@@ -79,6 +82,8 @@ The `check` aggregate also runs `check:imports`, `check:dupl`, and `check:deadco
 | `check` | Run every check and the tests |
 | `fmt` | Apply every formatter |
 | `check:go` | Format check, vet, module checks, lint, build, and test the Go module |
+| `check:shell` | Lint and check formatting of repository shell scripts |
+| `fmt:shell` | Format repository shell scripts |
 | `fmt:go` | Format Go with gofumpt |
 | `build` | Build bin/agentd and bin/agentctl, stamping VERSION (default dev) into the binaries |
 | `check:ruff` | Lint and check formatting of Python with ruff |
@@ -129,7 +134,7 @@ The [documentation brief template](https://github.com/tbhb/agent-orchestration-p
 
 ## Prek hooks
 
-The built-in hooks remove trailing whitespace, fix the final newline, and reject added large files. Local pre-commit hooks check staged secrets with gitleaks, Go formatting and golangci-lint, Ruff lint and formatting, import-linter, strict pyrefly, Biome, tombi lint and formatting, ryl, rumdl, paragraph wrapping, Vale prose, Mermaid fences, and experiment layout. Tool hooks run through mise, with the shell-only experiment check invoked directly. The import-linter and pyrefly hooks pass no file names so whole-project configuration applies.
+The built-in hooks remove trailing whitespace, fix the final newline, and reject added large files. Local pre-commit hooks check staged secrets with gitleaks, Go formatting and golangci-lint, ShellCheck and shfmt on `scripts/*.sh`, Ruff lint and formatting, import-linter, strict pyrefly, Biome, tombi lint and formatting, ryl, rumdl, paragraph wrapping, Vale prose, Mermaid fences, and experiment layout. Tool hooks run through mise, with the shell-only experiment check invoked directly. The import-linter and pyrefly hooks pass no file names so whole-project configuration applies.
 
 The commit-msg hook runs Vale with `ai-tells` and `ai-tells-commits`. Real commits cannot bypass hooks. The exception is an incomplete throwaway work-in-progress commit that is removed before shared history, as described in `AGENTS.md`.
 

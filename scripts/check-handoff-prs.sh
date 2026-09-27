@@ -28,7 +28,7 @@ classify_open_pr_lines() {
                     list_open=1
                 fi
                 [[ ${#before} -gt 60 ]] && before=${before: -60}
-                if (( list_open )) ||
+                if ((list_open)) ||
                     { [[ $before =~ $before_pattern ]] && [[ ! $before =~ $no_open_pattern ]]; } ||
                     [[ ${after:0:60} =~ $after_pattern ]]; then
                     number=${reference//[^0-9]/}
@@ -53,12 +53,15 @@ if [[ -z $references ]]; then
 fi
 status=0
 while IFS= read -r number; do
-    state=$(gh pr view "$number" --json state --jq .state) || { status=1; continue; }
+    state=$(gh pr view "$number" --json state --jq .state) || {
+        status=1
+        continue
+    }
     if [[ $state == OPEN ]]; then
         printf 'PR #%s is open\n' "$number"
     else
         printf 'handoff calls PR #%s open, but GitHub reports %s\n' "$number" "$state"
         status=1
     fi
-done <<< "$references"
+done <<<"$references"
 exit "$status"
