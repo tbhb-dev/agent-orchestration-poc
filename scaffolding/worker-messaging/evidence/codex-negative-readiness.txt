@@ -1,0 +1,30 @@
+Temporary #176 negative-readiness trial capture. #28 replaces this scaffold.
+Source: coordinator holding evidence, 2026-09-27-176-live-trial, cases 4 and 7.
+Versions: Codex CLI 0.157.1, tmux 3.7b. Trial head: e4286d5.
+
+Trust prompt in the original worker pane:
+  Folder access
+  Trust this folder? Codex can read, edit, and run files here, subject to your permission settings.
+  1. Trust and continue
+  2. Back to Agent Command Center
+
+worker:launch returned exit 2:
+{"state":"blocked","reason":"folder trust prompt"}
+
+After the pane process was replaced while synthetic trust text remained visible,
+worker:readiness returned exit 2:
+{"state":"blocked","reason":"folder trust prompt"}
+The expected stale-process precedence is unknown, exit 3.
+
+After the worker window was removed, tmux 3.7b returned:
+$ tmux display-message -p -t %5 '#{session_name}|#{window_id}|#{pane_id}|#{pane_pid}'
+|||
+(exit 0)
+
+worker:readiness then returned exit 3:
+{"state":"unknown","reason":"observation failed: ValueError"}
+The expected missing-target reason is missing tmux target.
+
+The coordinator did not answer the trust prompt or start a thread. Loaded-list,
+thread readback, reported workspace roots, worker commit, and runtime restart
+remained untested in this trial.

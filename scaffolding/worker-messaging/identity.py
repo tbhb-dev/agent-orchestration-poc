@@ -117,6 +117,19 @@ def missing_tmux_target(stderr: str) -> bool:
     )
 
 
+def tmux_pane_fields(stdout: str) -> tuple[str, str, str, str] | None:
+    """Treat tmux's empty successful display as an absent target."""
+    fields = stdout.strip().split("|")
+    if len(fields) != 4 or not all(fields) or not fields[3].isdecimal():
+        return None
+    return fields[0], fields[1], fields[2], fields[3]
+
+
+def common_git_root(expected: str, reported: list[str]) -> bool:
+    """Require the server's thread roots to include the common Git directory."""
+    return expected in reported
+
+
 def codex_runtime_facts(
     found: str, row: dict[str, Any], loaded: bool, thread: dict[str, Any]
 ) -> dict[str, bool]:
@@ -253,8 +266,6 @@ def command(row: dict[str, Any], brief: str, shim: str, path_env: str) -> str:
 
 def readiness(record: dict[str, Any], seen: dict[str, Any]) -> tuple[str, str]:
     """Fail closed on stale generations, identities, and absent brief uptake."""
-    if seen.get("trust_prompt"):
-        return "blocked", "folder trust prompt"
     stale = (
         "target"
         if seen.get("tmux_missing")
@@ -286,6 +297,8 @@ def readiness(record: dict[str, Any], seen: dict[str, Any]) -> tuple[str, str]:
     )
     if stale:
         return "unknown", f"stale process {stale}"
+    if seen.get("trust_prompt"):
+        return "blocked", "folder trust prompt"
     if record["harness"] == "agy":
         return "blocked", "external send path unverified"
     checks = (
@@ -296,6 +309,10 @@ def readiness(record: dict[str, Any], seen: dict[str, Any]) -> tuple[str, str]:
         (seen.get("endpoint") != record.get("endpoint"), "runtime endpoint mismatch"),
         (not seen.get("loaded"), "recipient unloaded"),
         (not seen.get("brief_uptake"), "first brief uptake unconfirmed"),
+        (
+            record["harness"] == "codex" and not seen.get("roots_confirmed"),
+            "common Git workspace root unconfirmed",
+        ),
     )
     failed = next((reason for condition, reason in checks if condition), None)
     if failed:
