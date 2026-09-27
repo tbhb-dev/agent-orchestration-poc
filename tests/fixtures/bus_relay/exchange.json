@@ -1,0 +1,26 @@
+{
+  "note": "Redacted sample of the embedded loopback test setup, not production provisioning",
+  "account": "build",
+  "agent": "alice",
+  "request_subject": "grp.build.relay.req.send.alice",
+  "request": {
+    "id": "request",
+    "destination": "dm",
+    "to": "bob",
+    "envelope": { "body": "hello" },
+    "message_id": "same"
+  },
+  "reply_subject": "grp.build.relay.reply.alice.request",
+  "first_response": { "result": "stored", "sequence": 1 },
+  "retry_response": { "result": "duplicate", "sequence": 1 },
+  "receive_response": {
+    "result": "delivered",
+    "sequence": 1,
+    "subject": "grp.build.msg.dm.bob.alice",
+    "envelope": { "body": "hello" },
+    "token": "<redacted>"
+  },
+  "ack_response": { "result": "acked" },
+  "absent_bucket_response": { "result": "not-provisioned" },
+  "absent_key_response": { "result": "not-found" }
+}
