@@ -10,7 +10,7 @@ import sys
 import time
 from datetime import UTC, datetime, timedelta
 from typing import Any
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, urlencode, urlparse
 
 PROJECT = "users/tbhb/projectsV2/9"
 REPO = "repos/tbhb/agent-orchestration-poc"
@@ -18,6 +18,7 @@ VERSION = "2026-03-10"
 FIELDS = ("Status", "Priority", "Phase", "Worker")
 MAX_PAGES = 5
 PAGE_SIZE = 100
+MAX_DELIVERY_DETAILS = 10
 
 
 def next_cursor(link: str) -> str | None:
@@ -36,6 +37,90 @@ def next_cursor(link: str) -> str | None:
         cursors = parse_qs(parsed.query).get("after", [])
         return cursors[0] if len(cursors) == 1 else None
     return None
+
+
+def item_request(fields: str, cursor: str | None) -> str:
+    """Build an item request without changing an opaque cursor value."""
+    query = f"per_page={PAGE_SIZE}&fields={fields}"
+    if cursor is not None:
+        query += "&" + urlencode({"after": cursor})
+    return f"{PROJECT}/items?{query}"
+
+
+def field_selection(status: int, fields: object) -> tuple[str, bool]:
+    """Select requested IDs and determine whether field definitions are complete."""
+    if status != 200 or not isinstance(fields, list):
+        return "", False
+    definitions = {
+        field["name"]: field["id"]
+        for field in fields
+        if isinstance(field, dict)
+        and field.get("name") in FIELDS
+        and isinstance(field.get("id"), int)
+    }
+    query = ",".join(str(definitions[name]) for name in FIELDS if name in definitions)
+    return query, len(definitions) == len(FIELDS) and len(fields) < PAGE_SIZE
+
+
+def page_decision(
+    status: int, items: object, link: str, page: int
+) -> tuple[bool, str | None, bool]:
+    """Return whether to retain a page, request another, and mark the end complete."""
+    if status != 200 or not isinstance(items, list):
+        return False, None, False
+    if 'rel="next"' not in link:
+        return True, None, True
+    cursor = next_cursor(link)
+    return True, cursor if page < MAX_PAGES else None, False
+
+
+def source_complete(
+    account_status: int, definitions_complete: bool, pages_complete: bool
+) -> bool:
+    """Confirm a source only when every required read is complete."""
+    return account_status == 200 and definitions_complete and pages_complete
+
+
+def subscription_state(status: int, app: object) -> str:
+    """Classify readable App subscription metadata."""
+    if (
+        status != 200
+        or not isinstance(app, dict)
+        or not isinstance(app.get("events"), list)
+    ):
+        return "unknown"
+    return "subscribed" if "projects_v2_item" in app["events"] else "not_subscribed"
+
+
+def observed_action(
+    delivery: object, detail: object, project_node_id: str, start: str, end: str
+) -> str | None:
+    """Confirm a delivery action in the window for the target Project."""
+    if not isinstance(delivery, dict) or not isinstance(detail, dict):
+        return None
+    if not candidate_delivery(delivery, start, end):
+        return None
+    request = detail.get("request")
+    payload = request.get("payload") if isinstance(request, dict) else None
+    item = payload.get("projects_v2_item") if isinstance(payload, dict) else None
+    if not isinstance(item, dict) or item.get("project_node_id") != project_node_id:
+        return None
+    action = delivery.get("action")
+    return action if action in ("created", "deleted", "edited") else None
+
+
+def candidate_delivery(delivery: object, start: str, end: str) -> bool:
+    """Select bounded Project event deliveries for read-only detail checks."""
+    if not isinstance(delivery, dict) or delivery.get("event") != "projects_v2_item":
+        return False
+    at = delivery.get("delivered_at")
+    if not isinstance(at, str):
+        return False
+    try:
+        observed = datetime.fromisoformat(at)
+        return datetime.fromisoformat(start) <= observed <= datetime.fromisoformat(end)
+    except TypeError, ValueError:
+        return False
 
 
 def classify_items(
@@ -177,33 +262,16 @@ def rest_matrix() -> dict[str, Any]:
     )
     fields_path = f"{PROJECT}/fields?per_page={PAGE_SIZE}"
     field_status, field_headers, fields = _api(fields_path)
-    definitions: dict[str, int] = (
-        {
-            field["name"]: field["id"]
-            for field in fields
-            if isinstance(field, dict) and field.get("name") in FIELDS
-        }
-        if isinstance(fields, list)
-        else {}
-    )
-    query = ",".join(str(definitions[name]) for name in FIELDS if name in definitions)
+    query, definitions_complete = field_selection(field_status, fields)
     pages: list[list[dict[str, Any]]] = []
     records = [
         _record("user", account_status, account_headers),
         _record(fields_path, field_status, field_headers),
     ]
     cursor: str | None = None
-    complete = (
-        account_status == 200
-        and bool(query)
-        and len(definitions) == len(FIELDS)
-        and isinstance(fields, list)
-        and len(fields) < PAGE_SIZE
-    )
+    pages_complete = False
     for page_number in range(MAX_PAGES):
-        path = f"{PROJECT}/items?per_page={PAGE_SIZE}&fields={query}"
-        if cursor:
-            path += f"&after={cursor}"
+        path = item_request(query, cursor)
         status, headers, items = _api(path)
         records.append(
             _record(
@@ -213,20 +281,18 @@ def rest_matrix() -> dict[str, Any]:
                 page_number + 1,
             )
         )
-        if status != 200 or not isinstance(items, list):
-            complete = False
+        retain, cursor, pages_complete = page_decision(
+            status, items, headers.get("link", ""), page_number + 1
+        )
+        if not retain:
             break
         pages.append(items)
-        link = headers.get("link", "")
-        if 'rel="next"' not in link:
-            break
-        cursor = next_cursor(link)
-        if cursor is None or page_number == MAX_PAGES - 1:
-            complete = False
+        if cursor is None:
             break
     issue_path = f"{REPO}/issues/172"
     label_status, label_headers, issue = _api(issue_path)
     records.append(_record(issue_path, label_status, label_headers))
+    complete = source_complete(account_status, definitions_complete, pages_complete)
     summary = classify_items(pages, FIELDS, complete)
     return {
         "account": account_name,
@@ -247,9 +313,43 @@ def observe(seconds: int) -> dict[str, Any]:
     start = datetime.now(tz=UTC)
     account_status, account_headers, account = _api("user")
     hook_status, hook_headers, _ = _api(f"{REPO}/hooks?per_page=100")
-    delivery_status, delivery_headers, _ = _api("app/hook/deliveries?per_page=100")
+    app_status, app_headers, app = _api("app")
+    project_status, project_headers, project = _api(PROJECT)
     time.sleep(seconds)
     end = datetime.now(tz=UTC)
+    delivery_path = "app/hook/deliveries?per_page=100"
+    delivery_status, delivery_headers, deliveries = _api(delivery_path)
+    actions: list[tuple[str, int]] = []
+    detail_records: list[dict[str, Any]] = []
+    project_node_id = project.get("node_id") if isinstance(project, dict) else None
+    if (
+        project_status == 200
+        and isinstance(project_node_id, str)
+        and isinstance(deliveries, list)
+    ):
+        for delivery in deliveries:
+            if len(detail_records) == MAX_DELIVERY_DETAILS:
+                break
+            if not candidate_delivery(delivery, start.isoformat(), end.isoformat()):
+                continue
+            delivery_id = delivery.get("id")
+            if not isinstance(delivery_id, int):
+                continue
+            detail_path = f"app/hook/deliveries/{delivery_id}"
+            detail_status, detail_headers, detail = _api(detail_path)
+            detail_records.append(
+                _record("app/hook/deliveries/<id>", detail_status, detail_headers)
+            )
+            if detail_status == 200:
+                action = observed_action(
+                    delivery,
+                    detail,
+                    project_node_id,
+                    start.isoformat(),
+                    end.isoformat(),
+                )
+                if action is not None:
+                    actions.append((action, 0))
     return {
         "window_start": start.isoformat(),
         "window_end": end.isoformat(),
@@ -259,14 +359,15 @@ def observe(seconds: int) -> dict[str, Any]:
         "requests": [
             _record("user", account_status, account_headers),
             _record(f"{REPO}/hooks?per_page=100", hook_status, hook_headers),
-            _record(
-                "app/hook/deliveries?per_page=100", delivery_status, delivery_headers
-            ),
+            _record("app", app_status, app_headers),
+            _record(PROJECT, project_status, project_headers),
+            _record(delivery_path, delivery_status, delivery_headers),
+            *detail_records,
         ],
         "documented_availability": "organization-level projects_v2_item only",
         "user_owned_project_availability": "unknown",
-        "subscription": "unknown",
-        "delivery": classify_delivery([], 0, seconds, False),
+        "subscription": subscription_state(app_status, app),
+        "delivery": classify_delivery(actions, 0, seconds, True),
         "live_target_authorized": False,
     }
 
