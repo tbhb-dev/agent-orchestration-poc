@@ -9,7 +9,10 @@ type Label = tuple[str, str]
 
 TITLE = re.compile(r"^([a-z]+)\(([a-z][a-z0-9-]*)\): ([a-z]+) (.+)$")
 INCIDENT = re.compile(r"^inc(?:\(([a-z][a-z0-9-]*)\))?: (\S.*)$")
-PARENT = re.compile(r"^(initiative|epic): ([a-z][^\n]+)$")
+PARENT = re.compile(r"^(initiative|epic): ([^\n]*)$")
+PARENT_PREFIX = re.compile(
+    r"^(?:\d|(?:[IiEe]\d+(?:-[IiEe]\d+)*|[IVXLCDMivxlcdm]+)(?:[.:-]|\)|\s|$))"
+)
 HEADING = re.compile(r"(?m)^#{2,3} ([^\n]+)\s*$")
 REF = re.compile(r"^Refs: #(\d+)$")
 
@@ -20,8 +23,13 @@ def validate_title(
     """Check a conventional subject against the closed reference."""
     if issue and title in reference["title_label_exceptions"]:
         return ()
-    if issue and PARENT.fullmatch(title):
-        return ()
+    if issue and (parent := PARENT.fullmatch(title)):
+        summary = parent.group(2).strip()
+        return (
+            ("parent summary needs text without a leading key or ordinal",)
+            if not summary or PARENT_PREFIX.match(summary)
+            else ()
+        )
     if issue and (match_incident := INCIDENT.fullmatch(title)):
         scope = match_incident.group(1)
         return (

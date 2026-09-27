@@ -283,6 +283,34 @@ def test_parent_exempts_form_and_other_label_families(title: str, label: str) ->
 
 
 @pytest.mark.parametrize(
+    ("title", "label", "valid"),
+    [
+        ("initiative: I1 repository foundation", "type/initiative", False),
+        ("initiative: 1 repository foundation", "type/initiative", False),
+        ("initiative: 1st repository foundation", "type/initiative", False),
+        ("epic: I2-E3 quality gates", "type/epic", False),
+        ("epic: E3 quality gates", "type/epic", False),
+        ("epic: e3: quality gates", "type/epic", False),
+        ("epic: i. quality gates", "type/epic", False),
+        ("epic: IV: quality gates", "type/epic", False),
+        ("epic: IV quality gates", "type/epic", False),
+        ("epic: quality gates", "type/epic", True),
+        ("epic: GitHub monitor", "type/epic", True),
+        ("initiative: Codex integration", "type/initiative", True),
+        ("epic: ", "type/epic", False),
+    ],
+)
+def test_parent_title_contract(title: str, label: str, valid: bool) -> None:
+    assert (validate_issue(title, "", (label,), REFERENCE) == ()) is valid
+
+
+@given(st.integers(min_value=1), st.sampled_from(("I", "E", "i", "e", "I2-E", "i.")))
+def test_parent_rejects_generated_leading_keys(number: int, prefix: str) -> None:
+    key = f"{prefix}{number}" if not prefix.endswith(".") else prefix
+    assert validate_issue(f"epic: {key} GitHub monitor", "", ("type/epic",), REFERENCE)
+
+
+@pytest.mark.parametrize(
     "title", ["inc: tracking stopped", "inc(workflow): tracking stopped"]
 )
 def test_incident_title_is_issue_only_and_has_no_verb_rule(title: str) -> None:
