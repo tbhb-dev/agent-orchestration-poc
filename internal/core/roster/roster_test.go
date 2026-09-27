@@ -66,7 +66,7 @@ func TestTransition(t *testing.T) {
 func TestValidateWorker(t *testing.T) {
 	w := Worker{
 		ID: "id", GroupID: "group", Name: "codex-impl", Harness: "codex", Model: "gpt-6-sol", Effort: "high", Issue: 28,
-		Kind: "feat", Slug: "registry-tmux", Branch: "feat/28-registry-tmux", WorktreePath: "/repo/.worktrees/feat-28-registry-tmux", BriefPath: "/brief", CreatedAt: "2026-09-26T00:00:00Z",
+		Kind: "feat", Slug: "registry-tmux", Branch: "feat/28-registry-tmux", WorktreePath: "/repo/.worktrees/feat-28-registry-tmux", BriefPath: "/brief", CredentialPath: "/state/seed", CreatedAt: "2026-09-26T00:00:00Z",
 	}
 	if err := ValidateWorker(w); err != nil {
 		t.Fatal(err)
@@ -122,7 +122,7 @@ func TestStateAndAgentProperties(t *testing.T) {
 		}
 		worker := Worker{
 			ID: "id", GroupID: "build", Name: name + "/bad", Harness: "codex", Model: "gpt-6-sol", Effort: "high", Issue: 28,
-			Kind: "feat", Slug: "registry", Branch: "feat/28-registry", WorktreePath: "/repo/.worktrees/feat-28-registry", BriefPath: "/brief", CreatedAt: "now",
+			Kind: "feat", Slug: "registry", Branch: "feat/28-registry", WorktreePath: "/repo/.worktrees/feat-28-registry", BriefPath: "/brief", CredentialPath: "/state/seed", CreatedAt: "now",
 		}
 		if err := ValidateWorker(worker); err == nil {
 			t.Fatalf("accepted invalid worker name %q", worker.Name)

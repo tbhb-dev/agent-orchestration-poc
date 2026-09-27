@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
 )
 
 func TestRegisterAgent(t *testing.T) {
@@ -18,7 +19,6 @@ func TestRegisterAgent(t *testing.T) {
 	defer b.Close()
 	cfg.Groups[0].Agents = []string{"claude", "codex"}
 	cfg.Port = b.server.Addr().(*net.TCPAddr).Port
-	url := b.URL()
 	if err := b.RegisterAgent(ctx, cfg, "build", "codex"); err != nil {
 		t.Fatal(err)
 	}
@@ -30,26 +30,38 @@ func TestRegisterAgent(t *testing.T) {
 	if err != nil || info.Mode().Perm() != 0o600 {
 		t.Fatalf("credential file = %v, %v", info, err)
 	}
+	client := connectAgent(t, b, "codex")
+	client.Close()
+	oldClient := connectAgent(t, b, "claude")
+	oldClient.Close()
+	operator := connectAgent(t, b, "operator")
+	defer operator.Close()
+	js, err := jetstream.New(operator)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stream, err := js.Stream(ctx, "GROUP_BUILD")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := stream.Consumer(ctx, "codex"); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func connectAgent(t *testing.T, b *Bus, name string) *nats.Conn {
+	t.Helper()
+	path, err := b.CredentialPath("build", name)
+	if err != nil {
+		t.Fatal(err)
+	}
 	option, err := nats.NkeyOptionFromSeed(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	client, err := nats.Connect(url, option)
+	conn, err := nats.Connect(b.URL(), option)
 	if err != nil {
 		t.Fatal(err)
 	}
-	client.Close()
-	oldPath, err := b.CredentialPath("build", "claude")
-	if err != nil {
-		t.Fatal(err)
-	}
-	oldOption, err := nats.NkeyOptionFromSeed(oldPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	oldClient, err := nats.Connect(url, oldOption)
-	if err != nil {
-		t.Fatalf("existing agent lost access after reload: %v", err)
-	}
-	oldClient.Close()
+	return conn
 }

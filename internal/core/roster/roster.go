@@ -126,15 +126,15 @@ func ValidateWorker(w Worker) error {
 	if err := layout.ValidAgent(w.Name); err != nil {
 		return err
 	}
-	if w.ID == "" || w.GroupID == "" || w.Model == "" || w.Effort == "" || w.BriefPath == "" || w.CreatedAt == "" {
+	if w.ID == "" || w.GroupID == "" || w.Model == "" || w.Effort == "" || w.CreatedAt == "" {
 		return fmt.Errorf("worker is missing required fields")
 	}
 	branch, err := Branch(w.Kind, w.Issue, w.Slug)
 	if err != nil {
 		return err
 	}
-	if w.Branch != branch || !filepath.IsAbs(w.WorktreePath) {
-		return fmt.Errorf("worker branch or worktree is invalid")
+	if w.Branch != branch || !filepath.IsAbs(w.WorktreePath) || !filepath.IsAbs(w.BriefPath) || !filepath.IsAbs(w.CredentialPath) {
+		return fmt.Errorf("worker branch or paths are invalid")
 	}
 	switch w.Harness {
 	case "claude", "codex", "agy":

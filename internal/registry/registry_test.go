@@ -21,7 +21,7 @@ func TestFileRegistryRoundTrip(t *testing.T) {
 	}
 	w := roster.Worker{
 		ID: "w1", GroupID: g.ID, Name: "codex-impl", Harness: "codex", Model: "gpt-6-sol", Effort: "high", Issue: 28,
-		Kind: "feat", Slug: "registry-tmux", Branch: "feat/28-registry-tmux", WorktreePath: "/repo/.worktrees/feat-28-registry-tmux", BriefPath: "/brief", State: roster.Requested,
+		Kind: "feat", Slug: "registry-tmux", Branch: "feat/28-registry-tmux", WorktreePath: "/repo/.worktrees/feat-28-registry-tmux", BriefPath: "/brief", CredentialPath: "/state/seed", State: roster.Requested,
 		CreatedAt: g.CreatedAt, UpdatedAt: g.CreatedAt,
 	}
 	if err := r.CreateWorker(ctx, w); err != nil {
