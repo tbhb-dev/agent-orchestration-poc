@@ -19,3 +19,6 @@ exclude = ["research/imported/**", ".worktrees/", ".venv/", "node_modules/"]
 "experiments/00-system-assessment/harness-research.md" = ["MD024"]
 # Claude's root instructions begin with the cross-harness import.
 "CLAUDE.md" = ["MD041"]
+# Preserve the source heading and blank lines in the verbatim rollover archive.
+"docs/src/content/docs/project/handoff-2026-09-26-prompt.md" = ["MD012", "MD025"]
+"docs/src/content/docs/project/handoff-2026-09-26-state.md" = ["MD025"]
