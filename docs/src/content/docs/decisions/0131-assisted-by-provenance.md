@@ -5,7 +5,7 @@ description: Proposed agent provenance syntax, aggregation, and cutover cases fo
 
 ## Status
 
-Proposed 2026-09-27 for [issue #131](https://github.com/tbhb/agent-orchestration-poc/issues/131), without activating attribution trailers. The phase 0 prohibition remains binding until #134. Reference integration with #84 and the issue-linking examples from #124 remain pending. The issue-number filename avoids claiming a sequential decision number reserved by another worker.
+Proposed 2026-09-27 for [issue #131](https://github.com/tbhb/agent-orchestration-poc/issues/131), without activating attribution trailers. The phase 0 prohibition remains binding until #134. The [workflow reference](/guides/workflow-reference/#agent-provenance) publishes this proposed contract. Linking examples cover both options under #124. Selecting its policy remains with that issue. The issue-number filename avoids claiming a sequential decision number reserved by another worker.
 
 ## Context
 
@@ -35,7 +35,21 @@ Effort is the explicitly selected control value, not an estimate of reasoning pe
 
 Agent is a stable public run identifier matching `[a-z0-9][a-z0-9-]{0,63}`. The coordinator allocates distinct IDs before contribution and retains their mapping in dispatch evidence. Reuse the ID when resuming that run, but give each separate worker, delegated agent, and coordinator run a distinct ID, even with identical harness/model settings. Do not embed private session IDs, credentials, or email addresses. Account and signing design remains #132's responsibility.
 
-The verifier checks both grammar and the evidence-backed catalog of harness/version/model/effort combinations. Syntactically valid but unknown values fail until the catalog is deliberately extended. The table is the initial documented snapshot, not a promise that future versions or model choices will work.
+The verifier checks both grammar and the evidence-backed catalog of harness/version/model/effort combinations. Syntactically valid but unknown values fail until the catalog is deliberately extended. The admitted-combinations table is the complete initial catalog. The reference values illustrate it. New versions require deliberate catalog changes with retained evidence.
+
+### Admitted combinations
+
+A tuple passes catalog lookup only through a row below. Match the harness and version exactly, then require membership in both the literal model list and the literal effort list for that row. Expand each row as the Cartesian product of its model and effort columns. No other tuple is admitted. The value `unavailable` is excluded. This catalog admits provenance records. It does not authorize launches or claim runtime verification of every pair.
+
+| Harness | Version | Models | Efforts |
+| --- | --- | --- | --- |
+| `codex-cli` | `0.157.1` | `gpt-6-astra`, `gpt-6-sol`, `gpt-5.6-sol`, `gpt-5.6-terra` | `low`, `medium`, `high`, `xhigh`, `max`, `ultra` |
+| `codex-cli` | `0.157.1` | `gpt-6-luna`, `gpt-5.6-luna`, `gpt-reserve`, `codex-auto-review` | `low`, `medium`, `high`, `xhigh`, `max` |
+| `codex-cli` | `0.157.1` | `gpt-5.5` | `low`, `medium`, `high`, `xhigh` |
+| `claude-code` | `2.1.283` | `claude-fable-5-1`, `claude-opus-5-5`, `claude-sonnet-5`, `claude-haiku-4-5-20251001` | `low`, `medium`, `high`, `xhigh`, `max` |
+| `agy` | `1.2.11` | `gemini-3.8-flash-high`, `gemini-3.8-flash-medium`, `gemini-3.8-flash-low`, `gemini-3.7-flash-high`, `gemini-3.7-flash-medium`, `gemini-3.7-flash-low`, `gemini-3.6-flash-high`, `gemini-3.6-flash-medium`, `gemini-3.6-flash-low`, `gemini-3.1-pro-high`, `gemini-3.1-pro-low`, `claude-sonnet-4-6`, `claude-opus-4-6-thinking`, `gpt-oss-120b-medium` | `low`, `medium`, `high`, `max` |
+
+[Documented in retained evidence] This is the complete normalized inventory in `experiments/00-system-assessment/model-inventory.md` at `cc1f59c7f7a932f7f9dba7073e1e63789d1328e5`: 124 tuples. Codex efforts come from model-list or cache data. Claude and agy efforts come from harness help. Model reachability calls did not test every effort. Hidden Codex entries and models prohibited by current launch policy remain identifiable as provenance. Aliases and context-window variants normalize to the recorded resolved model before lookup. agy requested variants remain distinct. The plan's Sol-medium documentation, Astra-medium review, and Claude Opus-medium/high assignments all have admitted tuples.
 
 ### Reference values
 
@@ -70,9 +84,15 @@ End an agent-authored review verdict with its own canonical trailer block, ident
 
 An agent-authored issue body ends with author trailers. Agent-authored role comments, including refinement, dispatch, status, arbitration, and coordinator merge explanations, include their own trailers. Exact-body command protocols such as #83's arbitration text need an explicit parser migration at cutover that separates the command from the final attribution block. Before that migration, the exact existing command remains binding. Appending a trailer now would invalidate it. Bot-generated transport notifications with no contributing agent have no fabricated trailer.
 
+After #134 cutover, agent-authored issue bodies, comments, PR bodies, implementer replies, Project draft items and field edits, and coordinator notes use `tbhbagent`. Reviews and reviewer thread resolution use `tbhbbot`. Until cutover, implementers continue as `tbhb`. These are the coordinator's clarified roles in #132, #134, and #135, not a change to today's account policy.
+
+Project draft bodies include their contributing agents' final trailer block. A field edit cannot contain a text trailer in the field value. Retain a separate provenance record containing the Project and item IDs, field ID, old and new values, timestamp, API actor, and canonical contributor block. Tie it to the successful mutation's returned identity and a readback. Missing attribution or an incomplete mutation/readback record fails verification. Keep trailers out of status and other typed fields. #133/#139 supply collection and checks against the expected record defined here.
+
+Provenance never grants operator authority. After the recorded cutover, use the API author and timestamp to identify a human `tbhb` comment, never a role claim in its text. Before cutover, `tbhb` authorship alone proves no human instruction. The configuration agent under #135 is limited to configuration endpoints and must not post comments or Project edits as `tbhb`. The later coordinator notes retain token access for now, require explicit account wrappers and detection, and select `tbhbagent` as the default. They do not establish credential isolation. Human approval and sensitive-action authorization remain governed by #132/#134.
+
 The squash subject is the PR title. Its body is the final PR body, preserving the canonical union exactly. Revalidate head, target, body, and union before merge. Do not replace contributors with the merging account or add a merge-only coordinator line. An agent whose only act is mechanically submitting the approved merge has no new contribution. Substantive coordinator edits require the provenance commit and union refresh before the merge. Signing and account policy remains separate.
 
-`Refs:` identifies related issues and is not attribution. The closing-link contract is assigned to issue #124. Preserve current `Refs:` requirements while that decision is pending. If #124 selects a closing keyword, its line remains separate from the attribution block and does not make every referenced issue completed. The exact completed-issue/closing-line examples cannot be finalized until that decision is available.
+`Refs:` identifies related issues and is not attribution. The closing-link contract is assigned to issue #124. Preserve current `Refs:` requirements while that decision is pending. The proposed examples cover both closing keywords and explicit closure automation, including a completed issue retained in `Refs:` and a related issue that remains open. A closing-keyword line belongs in prose before the final trailer block. It is never an attribution line. Both options distinguish references from completed issues. Use the examples only after #124 selects an option and its assigned follow-up activates that policy.
 
 ### Open pull requests at cutover
 

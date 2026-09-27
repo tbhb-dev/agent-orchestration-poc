@@ -59,7 +59,7 @@ The first kernel REST command omitted quotes around the query string. zsh reject
 
 [Untested] `examples.md` contains exact synthetic values and expected verdicts for the future verifier. The verifier has not run these specification fixtures. They include commit sets, reviews, comments, squash propagation, and both possible open-PR cutover answers. The examples use synthetic IDs without account secrets.
 
-## Integration status
+## Original integration status
 
 At the baseline, the workflow reference page is absent. PR #137 is open and generates the entire page from `config/workflow-reference.toml`. Editing its future provenance section needs agreement with #84's owner about preservation by the generator. Issue #124 is ready for research. Finalizing the closing-line examples requires its selected contract. Shared index and reference edits are pending the coordinator's reservation response.
 
@@ -87,3 +87,41 @@ At the baseline, the workflow reference page is absent. PR #137 is open and gene
 [Inference] The first mutation attempt overlapped tasks that generated files. A second run started after those tasks finished and passed both mutation gates. The tool discards the underlying working-directory error, so the first result alone does not establish a sandbox denial or prove the cause.
 
 The first decision commit passed the normal hooks, including staged secret scanning and the existing attribution prohibition. The proposed trailers appear only in documentation examples.
+
+## Review revision on 2026-09-27
+
+[Observed] Latest changes-requested review `5328728403` by `tbhbbot` at `c06fa9ac3cb7828fdb2f3cab57c27bcb88e3c722` has two inline blockers: `4113989750` (catalog admission) and `4113989752` (reference and linking examples). The body repeats those findings. The base is `main`, not a stacked PR. `git fetch origin && git merge origin/main` fetched successfully but exited 128 because local merge configuration requires fast-forward. `git merge --no-ff origin/main` with a Conventional Commit message and `Refs: #131` succeeded without conflicts, producing `01993eee9ad9e32a73e4cba270a298d5a12c2b33` over target `734985cf312c3fa1002e33595bec3c1633f9bf6e`.
+
+[Verified] Before edits, a document-presence probe exited 1. Its four named checks all failed, as listed in the probe below. The same probe after edits exited 0 with all four passing. It checks document completeness only. Runtime verifier behavior remains untested and assigned to #133. The probe was run through `mise exec -- python`:
+
+```python
+from pathlib import Path
+
+p = Path("docs/src/content/docs/decisions/0131-assisted-by-provenance.md").read_text()
+e = Path("research/gates/assisted-by/examples.md").read_text()
+checks = {
+    "explicit admission catalog": "### Admitted combinations" in p,
+    "Sol medium passing fixture": "model=gpt-6-sol effort=medium" in e,
+    "workflow provenance reference": Path(
+        "docs/src/content/docs/guides/workflow-reference.md"
+    ).exists(),
+    "completed issue linking fixtures": "Closes #131" in e,
+}
+for name, ok in checks.items():
+    print(f"{name}: {'PASS' if ok else 'FAIL'}")
+raise SystemExit(not all(checks.values()))
+```
+
+[Verified] Re-read the complete kernel file from the existing source checkout with `git -C /private/tmp/issue-131-linux show fd179f8a05be3ccae366b9b96e176b51fbe54aab:Documentation/process/coding-assistants.rst` (exit 0). Lines 31 through 41 reserve DCO certification for humans. Lines 43 through 58 define generic `LLM` attribution, optional specialized analyzers, and exclusion of basic development tools. They do not specify harness, version, model, effort, run ID, PR unions, Project records, or review trailers. All such rules here are project choices. Re-read Git's trailer passage with `git -C /private/tmp/issue-131-git show c44beea485f0f2feaf460e2ac87fdd5608d63cf0:Documentation/git-interpret-trailers.adoc` (exit 0). The reads left dependency sources and host configuration unchanged.
+
+[Documented] Read `gh pr view 144 --comments`, `gh query repos/tbhb/agent-orchestration-poc/pulls/144/reviews`, and `gh query repos/tbhb/agent-orchestration-poc/pulls/144/comments` (all exit 0). Read `gh issue view N --json body,comments` for N = 131, 124, 132, 134, 135 (all exit 0), including all coordinator clarifications. The newest #132 note selects `tbhbagent` as default at cutover. Earlier notes in #132/#134/#135 require agent-account comments and Project edits, API authorship checks, and configuration-only use by the `tbhb` agent. The later token-retention note supersedes removal as a prerequisite and requires wrappers plus detection. This revision records those distinctions without activating them.
+
+[Documented] Catalog rows now define exactly 124 admitted tuples from the retained inventory at `cc1f59c7f7a932f7f9dba7073e1e63789d1328e5`. Exact harness and version matching selects a row whose model/effort Cartesian product defines admission. Sol-medium and the plan's Claude Opus assignments are included. The retained inventory limits claims about per-pair runtime behavior.
+
+The reserved workflow page now publishes the provenance section and links to the authoritative decision catalog. The decisions index also links to the record. `git show origin/tooling/84-conventions-reference:docs/src/content/docs/guides/workflow-reference.md` confirms #84's unmerged generator produces the future full page. Its integration must preserve or generate this section. Importing that unrelated forms/validator branch into this decision would exceed the assigned scope.
+
+Issue #124 still has no selected decision in the inspected records. The examples spell out both candidates, with completed-issue-only and multiple-reference cases, a related issue left open, failure cases, and squash propagation. They cannot claim conformance to a selected #124 policy until that selection exists. The worker requested clarification and proceeded with conditional examples while preserving #124's decision ownership, as instructed not to wait for another PR to merge.
+
+## Revision validation
+
+Results below supersede the original validation table for this revision. Local rendered-link validation remains limited by Chromium's sandbox denial. This documentation change preserves the existing functional core and imperative shell boundaries.
