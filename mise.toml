@@ -63,181 +63,169 @@ depends = [
 description = "Apply every formatter"
 depends = ["fmt:go", "fmt:shell", "fmt:ruff", "fmt:biome", "fmt:rumdl", "fmt:tombi"]
 
+[tasks."check-timings:record"]
+description = "Record one command in the main clone's timing store"
+run = "scripts/record-check.sh ad-hoc --"
+
+[tasks."check:timing-inventory"]
+description = "Check task and hook timing coverage against the local store"
+run = "scripts/record-check.sh task:check:timing-inventory -- sh -c 'uv run python scripts/check-timing-inventory.py'"
+
 # Shell
 [tasks."check:shell"]
 description = "Lint and check formatting of repository shell scripts"
-run = ["shellcheck --severity=style scripts/*.sh", "shfmt -d -i 4 -ci scripts/*.sh"]
+run = "scripts/record-check.sh task:check:shell -- sh -ec 'shellcheck --severity=style scripts/*.sh\nshfmt -d -i 4 -ci scripts/*.sh'"
 
 [tasks."fmt:shell"]
 description = "Format repository shell scripts"
-run = "shfmt -w -i 4 -ci scripts/*.sh"
+run = "scripts/record-check.sh task:fmt:shell -- sh -c 'shfmt -w -i 4 -ci scripts/*.sh'"
 
 # Go
 [tasks."check:go"]
 description = "Format check, vet, module checks, lint, build, and test the Go module"
-run = [
-  "scripts/check-gofumpt.sh",
-  "go vet ./...",
-  "go mod tidy -diff",
-  "go mod verify",
-  "golangci-lint run ./...",
-  "go build ./...",
-  "go test -race -shuffle=on ./...",
-]
+run = "scripts/record-check.sh task:check:go -- sh -ec 'scripts/check-gofumpt.sh\ngo vet ./...\ngo mod tidy -diff\ngo mod verify\ngolangci-lint run ./...\ngo build ./...\ngo test -race -shuffle=on ./...'"
 
 [tasks."check:bus-relay"]
 description = "Run the embedded relay security and lifecycle suite"
-run = "go test -race -v ./internal/bus ./internal/core/relay ./internal/core/perms ./internal/core/layout"
+run = "scripts/record-check.sh task:check:bus-relay -- go test -race -v ./internal/bus ./internal/core/relay ./internal/core/perms ./internal/core/layout"
 
 [tasks."fmt:go"]
 description = "Format Go with gofumpt"
-run = "gofumpt -w ."
+run = "scripts/record-check.sh task:fmt:go -- sh -c 'gofumpt -w .'"
 
 [tasks.build]
 description = "Build bin/agentd and bin/agentctl, stamping VERSION (default dev) into the binaries"
-run = [
-  "go build -ldflags \"-X github.com/tbhb/agent-orchestration-poc/internal/version.Version=${VERSION:-dev}\" -o bin/agentd ./cmd/agentd",
-  "go build -ldflags \"-X github.com/tbhb/agent-orchestration-poc/internal/version.Version=${VERSION:-dev}\" -o bin/agentctl ./cmd/agentctl",
-]
+run = "scripts/record-check.sh task:build -- sh -ec 'go build -ldflags \"-X github.com/tbhb/agent-orchestration-poc/internal/version.Version=${VERSION:-dev}\" -o bin/agentd ./cmd/agentd\ngo build -ldflags \"-X github.com/tbhb/agent-orchestration-poc/internal/version.Version=${VERSION:-dev}\" -o bin/agentctl ./cmd/agentctl'"
 
 # Python
 [tasks."check:ruff"]
 description = "Lint and check formatting of Python with ruff"
-run = ["uv run ruff check .", "uv run ruff format --check ."]
+run = "scripts/record-check.sh task:check:ruff -- sh -ec 'uv run ruff check .\nuv run ruff format --check .'"
 
 [tasks."check:imports"]
 description = "Check Python core and shell import contracts"
-run = "uv run lint-imports --no-logo"
+run = "scripts/record-check.sh task:check:imports -- sh -c 'uv run lint-imports --no-logo'"
 
 [tasks."check:dupl"]
 description = "Fail on duplicated code in Go, Python, and TypeScript with jscpd"
-run = "jscpd --config .jscpd.json --exit-code=1 cmd internal src tests experiments scripts apps packages"
+run = "scripts/record-check.sh task:check:dupl -- sh -c 'jscpd --config .jscpd.json --exit-code=1 cmd internal src tests experiments scripts apps packages'"
 
 [tasks."check:deadcode"]
 description = "Fail on unreachable Go functions and unused Python names"
-run = ["scripts/check-deadcode.sh", "uv run vulture"]
+run = "scripts/record-check.sh task:check:deadcode -- sh -ec 'scripts/check-deadcode.sh\nuv run vulture'"
 
 [tasks."fmt:ruff"]
 description = "Fix and format Python with ruff"
-run = ["uv run ruff check --fix .", "uv run ruff format ."]
+run = "scripts/record-check.sh task:fmt:ruff -- sh -ec 'uv run ruff check --fix .\nuv run ruff format .'"
 
 [tasks."check:pytest"]
 description = "Run the Python tests"
-run = "uv run pytest"
+run = "scripts/record-check.sh task:check:pytest -- sh -c 'uv run pytest'"
 
 [tasks."check:review-identity"]
 description = "Run reviewer policy and wrapper process fixtures"
-run = "uv run pytest tests/fixtures/review_identity/test_policy.py tests/fixtures/review_identity/test_wrapper.py --run-integration"
+run = "scripts/record-check.sh task:check:review-identity -- uv run pytest tests/fixtures/review_identity/test_policy.py tests/fixtures/review_identity/test_wrapper.py --run-integration"
 
 [tasks."check:coverage"]
 description = "Gate Python lines and branches and Go statements and branches"
-run = [
-  "mkdir -p .coverage-reports",
-  "uv run pytest --run-integration --cov=agent_orchestration_poc --cov-report=json:.coverage-reports/python.json --cov-report=term",
-  "go test -tags=integration -coverprofile=.coverage-reports/go.out ./...",
-  "uv run python scripts/check-coverage.py",
-]
+run = "scripts/record-check.sh task:check:coverage -- sh -ec 'mkdir -p .coverage-reports\nuv run pytest --run-integration --cov=agent_orchestration_poc --cov-report=json:.coverage-reports/python.json --cov-report=term\ngo test -tags=integration -coverprofile=.coverage-reports/go.out ./...\nuv run python scripts/check-coverage.py'"
 
 [tasks."check:pyrefly"]
 description = "Type check Python with pyrefly in strict mode"
-run = "uv run pyrefly check"
+run = "scripts/record-check.sh task:check:pyrefly -- sh -c 'uv run pyrefly check'"
 
 [tasks."check:mutation"]
 description = "Run the Go and Python core mutation score gates"
-run = ["mise run check:mutation:go", "mise run check:mutation:python"]
+run = "scripts/record-check.sh task:check:mutation -- sh -ec 'mise run check:mutation:go\nmise run check:mutation:python'"
 
 [tasks."check:mutation:go"]
 description = "Mutation test the Go core with gremlins"
 env = { RAPID_NOFAILFILE = "1", RAPID_SHRINKTIME = "1s" }
-run = [
-  "rm -f gremlins.json",
-  "gremlins unleash ./internal/core --output-statuses lct --output gremlins.json",
-  "uv run python scripts/check-gremlins-output.py",
-]
+run = "scripts/record-check.sh task:check:mutation:go -- sh -ec 'rm -f gremlins.json\ngremlins unleash ./internal/core --output-statuses lct --output gremlins.json\nuv run python scripts/check-gremlins-output.py'"
 
 [tasks."check:mutation:python"]
 description = "Check Python core mutation score"
-run = "uv run python scripts/check-mutation-score.py"
+run = "scripts/record-check.sh task:check:mutation:python -- sh -c 'uv run python scripts/check-mutation-score.py'"
 
 [tasks."check:property:nightly:go"]
 description = "Run Go core properties with the nightly random seed"
-run = "go test -race -shuffle=on ./internal/core/..."
+run = "scripts/record-check.sh task:check:property:nightly:go -- sh -c 'go test -race -shuffle=on ./internal/core/...'"
 
 [tasks."check:property:nightly:python"]
 description = "Run Python tests with the nightly random seed"
-run = 'uv run pytest --hypothesis-profile=default --hypothesis-seed="$HYPOTHESIS_SEED"'
+run = "scripts/record-check.sh task:check:property:nightly:python -- sh -c 'uv run pytest --hypothesis-profile=default --hypothesis-seed=\"$HYPOTHESIS_SEED\"'"
 
 # JavaScript, TypeScript, CSS, JSON, HTML
 [tasks."check:biome"]
 description = "Lint and check formatting with Biome"
-run = "biome check --no-errors-on-unmatched ."
+run = "scripts/record-check.sh task:check:biome -- sh -c 'biome check --no-errors-on-unmatched .'"
 
 [tasks."fmt:biome"]
 description = "Fix and format with Biome"
-run = "biome check --write --no-errors-on-unmatched ."
+run = "scripts/record-check.sh task:fmt:biome -- sh -c 'biome check --write --no-errors-on-unmatched .'"
 
 # Prose
 [tasks."vale:sync"]
 description = "Download the pinned Vale styles into .vale/styles"
-run = "vale sync"
+run = "scripts/record-check.sh task:vale:sync -- sh -c 'vale sync'"
 
 [tasks."check:vale"]
 description = "Lint prose with Vale (ai-tells)"
-run = "scripts/check-vale.sh"
+run = "scripts/record-check.sh task:check:vale -- scripts/check-vale.sh"
 
 [tasks."check:rumdl"]
 description = "Lint Markdown with rumdl"
-run = "rumdl check ."
+run = "scripts/record-check.sh task:check:rumdl -- sh -c 'rumdl check .'"
 
 [tasks."fmt:rumdl"]
 description = "Fix Markdown with rumdl"
-run = "rumdl fmt ."
+run = "scripts/record-check.sh task:fmt:rumdl -- sh -c 'rumdl fmt .'"
 
 [tasks."check:guard-markdown"]
 description = "Check that no Markdown paragraph is hard-wrapped"
-run = "scripts/markdown-files.sh | xargs -r guard-markdown"
+run = "scripts/record-check.sh task:check:guard-markdown -- sh -c 'scripts/markdown-files.sh | xargs -r guard-markdown'"
 
 [tasks."check:mermaid"]
 description = "Parse every fenced mermaid block"
-run = "scripts/check-mermaid.sh"
+run = "scripts/record-check.sh task:check:mermaid -- sh -c scripts/check-mermaid.sh"
 
 # YAML and TOML
 [tasks."check:ryl"]
 description = "Lint YAML with ryl"
-run = "ryl check ."
+run = "scripts/record-check.sh task:check:ryl -- sh -c 'ryl check .'"
 
 [tasks."check:tombi"]
 description = "Lint and check formatting of TOML with tombi"
-run = ["tombi lint", "tombi format --check"]
+run = "scripts/record-check.sh task:check:tombi -- sh -ec 'tombi lint\ntombi format --check'"
 
 [tasks."fmt:tombi"]
 description = "Format TOML with tombi"
-run = "tombi format"
+run = "scripts/record-check.sh task:fmt:tombi -- sh -c 'tombi format'"
 
 # Repository rules
 [tasks."check:experiments"]
 description = "Check that every experiment directory has README.md, evidence/, and versions.md"
-run = "scripts/check-experiments.sh"
+run = "scripts/record-check.sh task:check:experiments -- sh -c scripts/check-experiments.sh"
 
 [tasks."check:ignore-collisions"]
 description = "Fail on ignored tracked paths and warn about case-folded directory matches"
-run = ["scripts/check-ignore-collisions.sh", "scripts/test-ignore-collisions.sh"]
+run = "scripts/record-check.sh task:check:ignore-collisions -- sh -ec 'scripts/check-ignore-collisions.sh\nscripts/test-ignore-collisions.sh'"
 
 [tasks."check:handoff"]
 description = "Verify PRs described as open in the handoff are open on GitHub"
-run = "scripts/check-handoff-prs.sh"
+run = "scripts/record-check.sh task:check:handoff -- sh -c scripts/check-handoff-prs.sh"
 
 [tasks."check:handoff-classifier"]
 description = "Test open PR classification with handoff line fixtures"
-run = "scripts/test-handoff-pr-classifier.sh"
+run = "scripts/record-check.sh task:check:handoff-classifier -- sh -c scripts/test-handoff-pr-classifier.sh"
 
 [tasks."check:secrets"]
 description = "Scan the git history for secrets with gitleaks"
-run = "gitleaks git --redact --no-banner ."
+run = "scripts/record-check.sh task:check:secrets -- sh -c 'gitleaks git --redact --no-banner .'"
 
 [tasks."check:actions"]
 description = "Lint the GitHub Actions workflows with actionlint"
-run = "actionlint"
+run = "scripts/record-check.sh task:check:actions -- sh -c actionlint"
 
 # Coordinator preflight. These read live GitHub or git state and run separately from `check`.
 [tasks."review:preflight"]
@@ -256,22 +244,22 @@ run = "uv run python -m agent_orchestration_poc.shell.coordinator_preflight clos
 # and by hand, never as part of the `check` aggregate.
 [tasks."check:pr-body"]
 description = "Check a PR body on stdin against the commit convention: mise run check:pr-body -- '<title>' < body.md"
-run = "scripts/check-pr-body.sh"
+run = "scripts/record-check.sh task:check:pr-body -- sh -c 'scripts/check-pr-body.sh \"$@\"' --"
 
 [tasks."check:imported-research"]
 description = "Check that research/imported/ is unchanged against a base ref: mise run check:imported-research -- <base> '<title>'"
-run = "scripts/check-imported-research.sh"
+run = "scripts/record-check.sh task:check:imported-research -- sh -c 'scripts/check-imported-research.sh \"$@\"' --"
 
 # Docs site (Astro Starlight in docs/). Not part of `check`; CI runs a separate docs job.
 [tasks."docs:install"]
 description = "Install the docs site dependencies from the committed lockfile"
 dir = "docs"
-run = "pnpm install --frozen-lockfile"
+run = "../scripts/record-check.sh task:docs:install -- sh -c 'pnpm install --frozen-lockfile'"
 
 [tasks."docs:browsers"]
 description = "Install the Playwright Chromium that rehype-mermaid renders diagrams with"
 dir = "docs"
-run = "pnpm exec playwright install --with-deps chromium"
+run = "../scripts/record-check.sh task:docs:browsers -- sh -c 'pnpm exec playwright install --with-deps chromium'"
 
 [tasks."docs:dev"]
 description = "Serve the docs site with live reload"
@@ -283,11 +271,11 @@ run = "pnpm exec astro dev"
 description = "Build the docs site into docs/dist"
 dir = "docs"
 depends = ["docs:install"]
-run = "pnpm exec astro build"
+run = "../scripts/record-check.sh task:docs:build -- sh -c 'pnpm exec astro build'"
 
 [tasks."docs:check-links"]
 description = "Build the docs site with starlight-links-validator enabled"
 dir = "docs"
 depends = ["docs:install"]
 env = { CHECK_LINKS = "1" }
-run = "pnpm exec astro build"
+run = "../scripts/record-check.sh task:docs:check-links -- sh -c 'pnpm exec astro build'"

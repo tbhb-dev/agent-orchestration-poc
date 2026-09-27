@@ -1,0 +1,3 @@
+Command: mise run check:timing-inventory
+Exit status: 1
+Stderr: timing store unavailable: unable to open database file

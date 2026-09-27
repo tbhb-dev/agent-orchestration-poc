@@ -1,0 +1,5 @@
+{
+  "stdout": "fixture stdout\n",
+  "stderr": "fixture stderr\n",
+  "exit_status": 7
+}

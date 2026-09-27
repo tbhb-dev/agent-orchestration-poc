@@ -9,21 +9,36 @@ default_install_hook_types = ["pre-commit", "commit-msg"]
 exclude = '^(research/imported/|\.worktrees/|\.venv/|node_modules/)'
 
 [[repos]]
-repo = "builtin"
-hooks = [
-  { id = "trailing-whitespace" },
-  { id = "end-of-file-fixer" },
-  { id = "check-added-large-files" },
-]
-
-[[repos]]
 repo = "local"
+
+[[repos.hooks]]
+id = "trailing-whitespace"
+name = "trim trailing whitespace"
+language = "system"
+entry = "mise exec -- scripts/record-check.sh hook:trailing-whitespace -- __builtin__ trailing-whitespace"
+types = ["text"]
+stages = ["pre-commit", "pre-push", "manual"]
+
+[[repos.hooks]]
+id = "end-of-file-fixer"
+name = "fix end of files"
+language = "system"
+entry = "mise exec -- scripts/record-check.sh hook:end-of-file-fixer -- __builtin__ end-of-file-fixer"
+types = ["text"]
+stages = ["pre-commit", "pre-push", "manual"]
+
+[[repos.hooks]]
+id = "check-added-large-files"
+name = "check for added large files"
+language = "system"
+entry = "mise exec -- scripts/record-check.sh hook:check-added-large-files -- __builtin__ check-added-large-files"
+stages = ["pre-commit", "pre-push", "manual"]
 
 [[repos.hooks]]
 id = "gitleaks"
 name = "gitleaks (staged secrets)"
 language = "system"
-entry = "mise exec -- gitleaks git --pre-commit --redact --staged --verbose --no-banner"
+entry = "mise exec -- scripts/record-check.sh hook:gitleaks -- mise exec -- gitleaks git --pre-commit --redact --staged --verbose --no-banner"
 pass_filenames = false
 always_run = true
 
@@ -31,28 +46,28 @@ always_run = true
 id = "shellcheck"
 name = "ShellCheck"
 language = "system"
-entry = "mise exec -- shellcheck --severity=style"
+entry = "mise exec -- scripts/record-check.sh hook:shellcheck -- shellcheck --severity=style"
 files = '^scripts/.*\.sh$'
 
 [[repos.hooks]]
 id = "shfmt"
 name = "shfmt (format check)"
 language = "system"
-entry = "mise exec -- shfmt -d -i 4 -ci"
+entry = "mise exec -- scripts/record-check.sh hook:shfmt -- shfmt -d -i 4 -ci"
 files = '^scripts/.*\.sh$'
 
 [[repos.hooks]]
 id = "gofumpt"
 name = "gofumpt (format check)"
 language = "system"
-entry = "mise exec -- scripts/check-gofumpt.sh"
+entry = "mise exec -- scripts/record-check.sh hook:gofumpt -- scripts/check-gofumpt.sh"
 types = ["go"]
 
 [[repos.hooks]]
 id = "golangci-lint"
 name = "golangci-lint run"
 language = "system"
-entry = "mise exec -- golangci-lint run ./..."
+entry = "mise exec -- scripts/record-check.sh hook:golangci-lint -- golangci-lint run ./..."
 types = ["go"]
 pass_filenames = false
 
@@ -60,21 +75,21 @@ pass_filenames = false
 id = "ruff"
 name = "ruff check"
 language = "system"
-entry = "mise exec -- uv run ruff check --force-exclude"
+entry = "mise exec -- scripts/record-check.sh hook:ruff -- uv run ruff check --force-exclude"
 types = ["python"]
 
 [[repos.hooks]]
 id = "ruff-format"
 name = "ruff format --check"
 language = "system"
-entry = "mise exec -- uv run ruff format --check --force-exclude"
+entry = "mise exec -- scripts/record-check.sh hook:ruff-format -- uv run ruff format --check --force-exclude"
 types = ["python"]
 
 [[repos.hooks]]
 id = "import-linter"
 name = "import-linter contracts"
 language = "system"
-entry = "mise exec -- uv run lint-imports --no-logo"
+entry = "mise exec -- scripts/record-check.sh hook:import-linter -- uv run lint-imports --no-logo"
 types = ["python"]
 pass_filenames = false
 
@@ -82,7 +97,7 @@ pass_filenames = false
 id = "pyrefly"
 name = "pyrefly check"
 language = "system"
-entry = "mise exec -- uv run pyrefly check"
+entry = "mise exec -- scripts/record-check.sh hook:pyrefly -- uv run pyrefly check"
 types = ["python"]
 pass_filenames = false
 
@@ -90,63 +105,63 @@ pass_filenames = false
 id = "biome"
 name = "biome check"
 language = "system"
-entry = "mise exec -- biome check --no-errors-on-unmatched"
+entry = "mise exec -- scripts/record-check.sh hook:biome -- biome check --no-errors-on-unmatched"
 files = '\.(js|mjs|cjs|jsx|ts|mts|cts|tsx|json|jsonc|css|html)$'
 
 [[repos.hooks]]
 id = "tombi-lint"
 name = "tombi lint"
 language = "system"
-entry = "mise exec -- tombi lint"
+entry = "mise exec -- scripts/record-check.sh hook:tombi-lint -- tombi lint"
 types = ["toml"]
 
 [[repos.hooks]]
 id = "tombi-format"
 name = "tombi format --check"
 language = "system"
-entry = "mise exec -- tombi format --check"
+entry = "mise exec -- scripts/record-check.sh hook:tombi-format -- tombi format --check"
 types = ["toml"]
 
 [[repos.hooks]]
 id = "ryl"
 name = "ryl check"
 language = "system"
-entry = "mise exec -- ryl check"
+entry = "mise exec -- scripts/record-check.sh hook:ryl -- ryl check"
 types = ["yaml"]
 
 [[repos.hooks]]
 id = "rumdl"
 name = "rumdl check"
 language = "system"
-entry = "mise exec -- rumdl check"
+entry = "mise exec -- scripts/record-check.sh hook:rumdl -- rumdl check"
 types = ["markdown"]
 
 [[repos.hooks]]
 id = "guard-markdown"
 name = "guard-markdown"
 language = "system"
-entry = "mise exec -- guard-markdown"
+entry = "mise exec -- scripts/record-check.sh hook:guard-markdown -- guard-markdown"
 types = ["markdown"]
 
 [[repos.hooks]]
 id = "vale"
 name = "vale (prose)"
 language = "system"
-entry = "mise exec -- scripts/check-vale.sh"
+entry = "mise exec -- scripts/record-check.sh hook:vale -- scripts/check-vale.sh"
 types = ["markdown"]
 
 [[repos.hooks]]
 id = "mermaid"
 name = "mermaid (fenced blocks)"
 language = "system"
-entry = "mise exec -- scripts/check-mermaid.sh"
+entry = "mise exec -- scripts/record-check.sh hook:mermaid -- scripts/check-mermaid.sh"
 types = ["markdown"]
 
 [[repos.hooks]]
 id = "experiments"
 name = "experiment directory layout"
 language = "system"
-entry = "scripts/check-experiments.sh"
+entry = "mise exec -- scripts/record-check.sh hook:experiments -- scripts/check-experiments.sh"
 files = "^experiments/"
 pass_filenames = false
 
@@ -154,7 +169,7 @@ pass_filenames = false
 id = "ignore-collisions"
 name = "tracked path ignore and case collisions"
 language = "system"
-entry = "scripts/check-ignore-collisions.sh"
+entry = "mise exec -- scripts/record-check.sh hook:ignore-collisions -- scripts/check-ignore-collisions.sh"
 pass_filenames = false
 always_run = true
 
@@ -162,12 +177,12 @@ always_run = true
 id = "commit-trailers"
 name = "commit attribution and Refs trailers"
 language = "system"
-entry = "scripts/check-pr-body.sh --commit-msg"
+entry = "mise exec -- scripts/record-check.sh hook:commit-trailers -- scripts/check-pr-body.sh --commit-msg"
 stages = ["commit-msg"]
 
 [[repos.hooks]]
 id = "vale-commit-msg"
 name = "vale (commit message)"
 language = "system"
-entry = "mise exec -- vale --ext=.md"
+entry = "mise exec -- scripts/record-check.sh hook:vale-commit-msg -- vale --ext=.md"
 stages = ["commit-msg"]
