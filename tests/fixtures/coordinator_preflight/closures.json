@@ -1,0 +1,47 @@
+[
+  {
+    "case": "unmerged PR",
+    "number": 1,
+    "state": "closed",
+    "body": "Work completed.",
+    "labels": ["type/feature"],
+    "linked_prs": [{ "number": 10, "merged": false }],
+    "expected": true
+  },
+  {
+    "case": "merged PR",
+    "number": 2,
+    "state": "closed",
+    "body": "Work completed.",
+    "labels": ["type/feature"],
+    "linked_prs": [{ "number": 11, "merged": true }],
+    "expected": false
+  },
+  {
+    "case": "reopened issue",
+    "number": 3,
+    "state": "open",
+    "body": "Work remains.",
+    "labels": ["type/bug"],
+    "linked_prs": [],
+    "expected": false
+  },
+  {
+    "case": "recorded non-code closure",
+    "number": 4,
+    "state": "closed",
+    "body": "Non-code closure: Decision recorded in docs/decisions/0001-go-linter.md.",
+    "labels": ["type/decision"],
+    "linked_prs": [],
+    "expected": false
+  },
+  {
+    "case": "legacy decision record",
+    "number": 14,
+    "state": "closed",
+    "body": "Decided from the comparison in #4's notes. Closed by the decision record in the docs site.",
+    "labels": ["type/decision"],
+    "linked_prs": [],
+    "expected": false
+  }
+]
