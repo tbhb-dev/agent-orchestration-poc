@@ -1,6 +1,7 @@
 """Temporary #176 identity decisions; #28 replaces this scaffold."""
 
 import hashlib
+import json
 import shlex
 from datetime import datetime
 from pathlib import Path
@@ -8,7 +9,7 @@ from typing import Any
 
 
 def reservation(rows: list[dict[str, Any]], request: dict[str, Any]) -> str:
-    """Choose create, inspect, or reject from recorded ownership values."""
+    """Choose create, retry, inspect, or reject from recorded ownership values."""
     if request["branch"] in {"main", "refs/heads/main"}:
         return "main branch is forbidden"
     owned = ("name", "branch", "worktree", "tmux_name")
@@ -20,7 +21,7 @@ def reservation(rows: list[dict[str, Any]], request: dict[str, Any]) -> str:
         for key, value in request.items()
         if key != "brief_file"
     ):
-        return "inspect"
+        return "retry" if matches[0].get("preparation_failed") else "inspect"
     return "duplicate ownership"
 
 
@@ -277,12 +278,18 @@ def trust_readback(response: dict[str, Any], worktree: str, value: str | None) -
         return False
     entry = projects.get(worktree) if isinstance(projects, dict) else None
     if value is None:
-        return entry is None or isinstance(entry, dict) and "trust_level" not in entry
+        return (
+            entry is None
+            or isinstance(entry, dict)
+            and entry.get("trust_level") is None
+        )
     return isinstance(entry, dict) and entry.get("trust_level") == value
 
 
 def trust_gate(row: dict[str, Any]) -> tuple[str, str] | None:
     """Keep failed trust operations and completed cleanup ineligible for sends."""
+    if row.get("preparation_failed"):
+        return "blocked", row["reason"]
     if row.get("trust_blocked"):
         return "blocked", row["reason"]
     if row.get("trust_registered") is False:
@@ -352,6 +359,15 @@ def session_missing(code: int, stderr: str) -> bool:
 
 def command(row: dict[str, Any], brief: str, shim: str, path_env: str) -> str:
     """Build a harness command from captured values without reading the host."""
+    env = {
+        "PATH": f"{shim}:{path_env}",
+        "ZDOTDIR": f"{shim}/zdotdir",
+        "PREK_HOME": "/private/tmp/agent-orchestration-poc-prek",
+        "GIT_AUTHOR_NAME": "tbhb-agent",
+        "GIT_AUTHOR_EMAIL": "agent@tonyburns.net",
+        "GIT_COMMITTER_NAME": "tbhb-agent",
+        "GIT_COMMITTER_EMAIL": "agent@tonyburns.net",
+    }
     if row["harness"] == "codex":
         codex_endpoint(row.get("endpoint"))
         argv = [
@@ -362,14 +378,22 @@ def command(row: dict[str, Any], brief: str, shim: str, path_env: str) -> str:
             row["model"],
             "-c",
             f'model_reasoning_effort="{row["effort"]}"',
-            "-a",
-            "never",
-            "-s",
-            "workspace-write",
-            "-C",
-            row["worktree"],
-            brief,
         ]
+        for key, value in env.items():
+            argv.extend(
+                ["-c", f"shell_environment_policy.set.{key}={json.dumps(value)}"]
+            )
+        argv.extend(
+            [
+                "-a",
+                "never",
+                "-s",
+                "workspace-write",
+                "-C",
+                row["worktree"],
+                brief,
+            ]
+        )
     elif row["harness"] == "claude":
         argv = [
             "claude",

@@ -229,6 +229,44 @@ def inspect(row: dict[str, Any]) -> tuple[dict[str, Any], str, str]:
     return row, state, reason
 
 
+def _prepare(row: dict[str, Any], rows: list[dict[str, Any]]) -> bool:
+    """Sync styles and persist a retryable failure before any remote write."""
+    try:
+        subprocess.run(
+            ["mise", "run", "vale:sync"],
+            cwd=Path(row["worktree"]),
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except (OSError, subprocess.CalledProcessError) as error:
+        row.update(
+            preparation_failed=True,
+            state="blocked",
+            reason=f"Vale preparation failed: {type(error).__name__}",
+            observed_at=_now(),
+        )
+        registry.write(STORE, rows)
+        return False
+    row.update(preparation_failed=False, state="starting", launch_time=_now())
+    registry.write(STORE, rows)
+    return True
+
+
+def _require_window_available(name: str) -> None:
+    windows = subprocess.run(
+        ["tmux", "list-windows", "-a", "-F", "#{window_name}"],
+        capture_output=True,
+        text=True,
+        errors="replace",
+        check=False,
+    )
+    if name in identity.window_names(
+        windows.returncode, windows.stderr, windows.stdout
+    ):
+        raise ValueError("tmux window name already exists")
+
+
 def launch(request: dict[str, Any]) -> tuple[dict[str, Any], str, str]:  # noqa: C901
     """Reserve ownership, launch one TUI, and make a bounded readiness check."""
     common_git = None
@@ -249,41 +287,37 @@ def launch(request: dict[str, Any]) -> tuple[dict[str, Any], str, str]:  # noqa:
     request = {**request, "brief_digest": digest}
     rows = registry.read(STORE)
     decision = identity.reservation(rows, request)
-    if decision == "inspect":
+    if decision in {"inspect", "retry"}:
         row = next(item for item in rows if item["name"] == request["name"])
         _worktree(Path(row["worktree"]), row["branch"], True)
-        result = inspect(row)
-        registry.write(STORE, rows)
-        return result
-    if decision != "create":
+        if decision == "inspect":
+            result = inspect(row)
+            registry.write(STORE, rows)
+            return result
+    elif decision != "create":
         raise ValueError(decision)
-    windows = subprocess.run(
-        ["tmux", "list-windows", "-a", "-F", "#{window_name}"],
-        capture_output=True,
-        text=True,
-        errors="replace",
-        check=False,
-    )
-    if request["name"] in identity.window_names(
-        windows.returncode, windows.stderr, windows.stdout
-    ):
-        raise ValueError("tmux window name already exists")
-    created = _worktree(Path(request["worktree"]), request["branch"], False)
-    row = {
-        **request,
-        "run_id": str(uuid.uuid7()),
-        "launch_time": _now(),
-        "endpoint": request.get("endpoint") if request["harness"] == "codex" else None,
-        "native_id": None,
-        "state": "starting",
-        "observed_at": _now(),
-    }
-    if request["harness"] == "codex":
-        row["trust_created"] = created
-        row["git_common_dir"] = common_git
-    row.pop("brief_file")
-    rows.append(row)
-    registry.write(STORE, rows)
+    _require_window_available(request["name"])
+    if decision == "create":
+        created = _worktree(Path(request["worktree"]), request["branch"], False)
+        row = {
+            **request,
+            "run_id": str(uuid.uuid7()),
+            "launch_time": _now(),
+            "endpoint": request.get("endpoint")
+            if request["harness"] == "codex"
+            else None,
+            "native_id": None,
+            "state": "starting",
+            "observed_at": _now(),
+        }
+        if request["harness"] == "codex":
+            row["trust_created"] = created
+            row["git_common_dir"] = common_git
+        row.pop("brief_file")
+        rows.append(row)
+        registry.write(STORE, rows)
+    if not _prepare(row, rows):
+        return row, "blocked", row["reason"]
     if request["harness"] == "codex" and not _change_trust(row, rows, remove=False):
         return row, "blocked", row["reason"]
     try:
