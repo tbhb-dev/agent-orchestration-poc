@@ -438,6 +438,10 @@ Build `agentd` v0 and `agentctl` with subagents, then switch to provisioned work
 6. Experiments that gate the design: host loopback settings for each harness (which Codex setting, whether `agy` reaches loopback), initial-prompt behavior for each harness, and waiter semantics across compaction and restart.
 7. How the coordinator itself uses the bus: `agentctl` from the coordinator's shell, with a background `receive` as its wake mechanism.
 
+### Phase 2 bus departure
+
+Issue #96 replaces direct agent message publication and JetStream calls with an authenticated `agentd` relay. Agent credentials publish only to their exact relay request subjects, while the operator credential publishes to the acknowledged message stream and performs pull, ack, and KV reads. The [relay decision](/decisions/0010-agent-bus-relay/) records the broker reply attack and protocol. Issue #27 adapts `agentctl` to that protocol and waits for issue #29's production status and roster buckets and safe writes. Issue #28 integrates dynamic registration and must demonstrate a newly registered agent fetching and acknowledging through the relay before provisioned-worker acceptance.
+
 Checkpoint: one worker of each harness receives a brief, exchanges messages with the coordinator and each other, and reports status. Revisit concurrency and every model and effort assignment with observed rate-limit and quality data. Regenerate `HANDOFF.md`. The phase retro runs before the checkpoint report is written.
 
 ### Phase 3: research and experiments
