@@ -119,7 +119,9 @@ def validate_issue(
         for name in reference["forms"]["issue_fields"]
         if not parts.get(name)
     )
-    if parts.get("Acceptance criteria") and "- [ ]" not in parts["Acceptance criteria"]:
+    if parts.get("Acceptance criteria") and not re.search(
+        r"(?m)^\s*[-*+] \[[ xX]\] ", parts["Acceptance criteria"]
+    ):
         findings.append("Acceptance criteria needs a checkbox")
     dependencies = parts.get("Dependencies and paths", "")
     if not re.search(r"(?:#\d+|https://github\.com/[^\s)]+/issues/\d+)", dependencies):
@@ -262,6 +264,18 @@ def changed_forms(
     return tuple(
         path for path, content in expected.items() if actual.get(path) != content
     )
+
+
+def generated_files(reference: Reference) -> dict[str, str]:
+    """Choose generated paths and render their expected content."""
+    expected = {
+        f".github/ISSUE_TEMPLATE/{kind}.yml": render_issue_form(kind, reference)
+        for kind in reference["titles"]["types"]
+    }
+    expected["docs/src/content/docs/guides/workflow-reference.md"] = (
+        render_reference_page(reference)
+    )
+    return expected
 
 
 def render_issue_form(kind: str, reference: Reference) -> str:

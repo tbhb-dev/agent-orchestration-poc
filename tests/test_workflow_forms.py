@@ -15,6 +15,7 @@ from agent_orchestration_poc.core.workflow_forms import (
     changed_forms,
     enforcement_mode,
     expected_labels,
+    generated_files,
     issue_records,
     label_names,
     open_reference_numbers,
@@ -72,6 +73,23 @@ def test_issue_with_separate_allowed_paths_field() -> None:
             case["title"], body.replace("## ", "### "), tuple(case["labels"]), REFERENCE
         )
         == ()
+    )
+
+
+@pytest.mark.parametrize(
+    ("checklist", "expected"),
+    [
+        ("- [x] Forms exist.", ()),
+        ("- [x] Forms exist.\n- [ ] Tests pass.", ()),
+        ("Forms exist.", ("Acceptance criteria needs a checkbox",)),
+    ],
+)
+def test_issue_acceptance_checklist(checklist: str, expected: tuple[str, ...]) -> None:
+    case = _cases("issue_cases.json")[0]
+    body = case["body"].replace("- [ ] Forms exist.", checklist)
+    assert (
+        validate_issue(case["title"], body, tuple(case["labels"]), REFERENCE)
+        == expected
     )
 
 
@@ -148,6 +166,71 @@ def test_render_form_has_every_field(kind: str) -> None:
         f'label: "{field}"' in form for field in REFERENCE["forms"]["issue_fields"]
     )
     assert 'label: "Allowed paths"' in form
+
+
+def test_generated_file_mapping_comes_from_core() -> None:
+    expected = generated_files(REFERENCE)
+    assert set(expected) == {
+        *(
+            f".github/ISSUE_TEMPLATE/{kind}.yml"
+            for kind in REFERENCE["titles"]["types"]
+        ),
+        "docs/src/content/docs/guides/workflow-reference.md",
+    }
+    assert expected[".github/ISSUE_TEMPLATE/tooling.yml"] == render_issue_form(
+        "tooling", REFERENCE
+    )
+    assert expected["docs/src/content/docs/guides/workflow-reference.md"] == (
+        render_reference_page(REFERENCE)
+    )
+
+
+@pytest.mark.parametrize(
+    ("title", "finding"),
+    [
+        ("unknown(workflow): add form", "unknown type: unknown"),
+        ("tooling(unknown): add form", "unknown scope: unknown"),
+        (
+            "tooling(workflow): added form",
+            "subject needs a listed imperative verb and an object",
+        ),
+        ("tooling(workflow): add form.", "subject ends in a period"),
+    ],
+)
+def test_title_rejects_individual_rule_violations(title: str, finding: str) -> None:
+    assert finding in validate_title(title, REFERENCE)
+
+
+def test_issue_reports_missing_paths_and_evidence() -> None:
+    case = _cases("issue_cases.json")[0]
+    body = case["body"].replace(
+        "Allowed paths: `config/workflow-reference.toml`, `.github/ISSUE_TEMPLATE/**`.",
+        "",
+    )
+    body = body.replace("`reports/inputs/workflow-forms-evidence.md`", "evidence")
+    findings = validate_issue(case["title"], body, tuple(case["labels"]), REFERENCE)
+    assert "issue needs an Allowed paths list" in findings
+    assert "evidence needs a named path and exact command" in findings
+
+
+def test_pr_rejects_duplicate_trailers() -> None:
+    case = _cases("pr_cases.json")[0]
+    body = case["body"] + "\nRefs: #84"
+    assert "duplicate Refs trailer" in validate_pr(
+        case["title"], body, tuple(case["labels"]), frozenset({84}), REFERENCE
+    )
+
+
+@pytest.mark.parametrize(
+    ("created", "cutoff"),
+    [
+        ("not-a-date", "2026-09-27T00:00:00Z"),
+        ("2026-09-27T00:00:00", "2026-09-27T00:00:00Z"),
+        ("2026-09-27T00:00:00Z", "2026-09-27T00:00:00"),
+    ],
+)
+def test_enforcement_rejects_invalid_timestamps(created: str, cutoff: str) -> None:
+    assert enforcement_mode(created, cutoff) == "invalid"
 
 
 @given(

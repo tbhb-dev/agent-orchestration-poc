@@ -14,14 +14,13 @@ from agent_orchestration_poc.core.workflow_forms import (
     Reference,
     blocking_findings,
     changed_forms,
+    generated_files,
     issue_records,
     label_names,
     open_reference_numbers,
     page_items,
     refs,
     remote_mode,
-    render_issue_form,
-    render_reference_page,
     validate_issue,
     validate_pr,
 )
@@ -124,14 +123,7 @@ def check_forms(reference: Reference, *, write: bool) -> int:
     directory = ROOT / ".github/ISSUE_TEMPLATE"
     if write:
         directory.mkdir(parents=True, exist_ok=True)
-    expected = {}
-    for kind in reference["titles"]["types"]:
-        expected[f".github/ISSUE_TEMPLATE/{kind}.yml"] = render_issue_form(
-            kind, reference
-        )
-    expected["docs/src/content/docs/guides/workflow-reference.md"] = (
-        render_reference_page(reference)
-    )
+    expected = generated_files(reference)
     if write:
         for relative_path, content in expected.items():
             (ROOT / relative_path).write_text(content)
