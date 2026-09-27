@@ -8,7 +8,6 @@ from hypothesis import given
 from hypothesis import strategies as st
 
 from agent_orchestration_poc.core.work_model_backfill import (
-    PROJECT_FIELDS,
     Item,
     Page,
     Snapshot,
@@ -46,18 +45,6 @@ def snapshot() -> Snapshot:
             state_reason=row["state reason"],
             issue_id=row["number"],
             item_id="item-" + row["number"],
-            source_project=tuple(
-                sorted(
-                    (
-                        field,
-                        row.get(
-                            "size" if field == "Size" else "project " + field.lower(),
-                            "",
-                        ),
-                    )
-                    for field in PROJECT_FIELDS
-                )
-            ),
         )
         for row in tables().assignments
         if row["number"]
@@ -161,11 +148,13 @@ def test_shared_edge_keys_must_be_unique(table: int, old: str, new: str) -> None
         ("title", "drift", "missing or changed source issue title"),
         ("state", "closed", "changed source issue state"),
         ("parent", "other", "initial child already has a parent"),
-        ("source_project", (), "changed source Project values"),
+        ("source_project", (("Status", "drift"),), "changed source Project values"),
         ("issue_id", "", "unresolved source issue id"),
     ],
 )
-def test_stale_issue_fails(field: str, value: str | tuple[()], message: str) -> None:
+def test_stale_issue_fails(
+    field: str, value: str | tuple[tuple[str, str], ...], message: str
+) -> None:
     """Reject changed source issue values before any closure."""
     cp1 = snapshot()
     match field:
@@ -176,7 +165,7 @@ def test_stale_issue_fails(field: str, value: str | tuple[()], message: str) -> 
         case "parent":
             changed = replace(cp1.items[0], parent=str(value))
         case "source_project":
-            changed = replace(cp1.items[0], source_project=())
+            changed = replace(cp1.items[0], source_project=(("Status", "drift"),))
         case _:
             changed = replace(cp1.items[0], issue_id="")
     cp1 = replace(cp1, items=(changed, *cp1.items[1:]))
@@ -192,6 +181,67 @@ def test_stale_issue_fails(field: str, value: str | tuple[()], message: str) -> 
         )
     with pytest.raises(ValueError, match=f"^{message}$"):
         validate_cp1(tables(), cp1)
+
+
+def test_approved_closure_uses_source_project_values() -> None:
+    """Accept #168 before closure, then reject drift from its saved old Project values."""
+    inputs = next(
+        path / "reports/inputs/work-model-tables"
+        for path in Path(__file__).resolve().parents
+        if (path / "reports/inputs/work-model-tables").is_dir()
+    )
+    approved = parse_tables(
+        (inputs / "2026-09-27-work-model-v3-final.tsv").read_text(),
+        (inputs / "2026-09-27-work-model-v3-final-parents.tsv").read_text(),
+        (inputs / "2026-09-27-work-model-v3-final-edges.tsv").read_text(),
+    )
+    row = next(row for row in approved.assignments if row["number"] == "168")
+    source = tuple(
+        sorted(
+            (
+                ("Status", "Refinement"),
+                ("Phase", "2"),
+                ("Priority", "P0"),
+                ("Size", ""),
+                ("Area", ""),
+                ("Harness", ""),
+                ("Worker", ""),
+            )
+        )
+    )
+    item = Item(
+        key="#168",
+        title=row["title"],
+        state="open",
+        state_reason="not_planned",
+        issue_id="168",
+        source_project=source,
+    )
+    pages = tuple(
+        Page(name, 1, count, 1, count)
+        for name, count in (
+            ("issues", 1),
+            ("project", 0),
+            ("drafts", 0),
+            ("native", 1),
+            ("parents", 1),
+            ("blockers", 1),
+        )
+    )
+    cp1 = Snapshot(1, (item,), pages, "sha")
+    selected = Tables(approved.version, (row,), (), ())
+    validate_cp1(selected, cp1)
+    drift = replace(
+        item,
+        source_project=tuple(
+            sorted(
+                ("Status", "Done") if field == "Status" else (field, value)
+                for field, value in source
+            )
+        ),
+    )
+    with pytest.raises(ValueError, match="^changed source Project values$"):
+        validate_cp1(selected, replace(cp1, items=(drift,)))
 
 
 def test_complete_and_draft_guards() -> None:

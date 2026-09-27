@@ -2,6 +2,7 @@
 
 import csv
 import io
+import json
 from dataclasses import dataclass
 
 VERSION = 1
@@ -13,14 +14,14 @@ NATIVE_OPTIONS = {
     "Severity": frozenset({"", "SEV1", "SEV2", "SEV3"}),
     "Work type": frozenset({"Planned", "Unplanned"}),
 }
-PROJECT_FIELDS = (
+SOURCE_PROJECT_FIELDS = (
     "Status",
     "Size",
     "Area",
     "Harness",
     "Worker",
-    "Validation",
-    "Validation detail",
+    "Phase",
+    "Priority",
 )
 ASSIGNMENT_COLUMNS = (
     "number",
@@ -337,13 +338,13 @@ def _validate_source_issue(row: dict[str, str], item: Item) -> None:
         raise ValueError("changed source issue state")
     if item.parent:
         raise ValueError("initial child already has a parent")
-    expected = _pairs(
-        {
-            field: row.get(
-                "size" if field == "Size" else "project " + field.lower(), ""
-            )
-            for field in PROJECT_FIELDS
-        }
+    old_fields: dict[str, str | None] = (
+        json.loads(row["old project fields"]) if row["old project fields"] else {}
+    )
+    expected = (
+        _pairs({field: old_fields.get(field) or "" for field in SOURCE_PROJECT_FIELDS})
+        if old_fields
+        else ()
     )
     if item.source_project != expected:
         raise ValueError("changed source Project values")
