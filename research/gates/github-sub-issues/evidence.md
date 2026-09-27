@@ -40,6 +40,22 @@ All successful responses reported `X-Ratelimit-Limit: 5000`, `X-Ratelimit-Resour
 
 The `404` from `/parent` was a targeted observation for children with no parent. The `/sub_issues/summary` probe was an unsupported path, so it is not used as a progress read. No GraphQL polling was used. REST cannot read the current Project board's rendered parent or progress fields.
 
+## Direction check after review
+
+[Observed] #104's Dependencies and paths section, read with `gh api repos/tbhb/agent-orchestration-poc/issues/104 --jq '{number,body,updated_at}'`, says this research precedes #107; its `updated_at` was `2026-09-27T02:44:42Z`. The earlier `/issues/104/dependencies/blocked_by` read tested whether #104 had a blocker, so it could not support an inference about #104 blocking #107. [Observed] The following direction-matched reads at `2026-09-27T04:46:35Z` both returned HTTP `200`, exit `0`, and `[]` under API version `2026-03-10`:
+
+| Path | `X-Ratelimit-Remaining` | `X-Ratelimit-Used` | `X-Ratelimit-Reset` |
+| --- | --- | --- | --- |
+| `/issues/104/dependencies/blocking?per_page=100` | 4710 | 290 | 1790487275 |
+| `/issues/107/dependencies/blocked_by?per_page=100` | 4952 | 48 | 1790487266 |
+
+```sh
+gh api -i -H 'X-GitHub-Api-Version: 2026-03-10' 'repos/tbhb/agent-orchestration-poc/issues/104/dependencies/blocking?per_page=100' --jq '[.[] | {id,number,state}]'
+gh api -i -H 'X-GitHub-Api-Version: 2026-03-10' 'repos/tbhb/agent-orchestration-poc/issues/107/dependencies/blocked_by?per_page=100' --jq '[.[] | {id,number,state}]'
+```
+
+Both responses reported `X-Ratelimit-Limit: 5000`, `X-Ratelimit-Resource: core`, and `X-Github-Api-Version-Selected: 2026-03-10`; neither had a next-page link. These are two additional relationship requests beyond the fourteen counted above. [Inference] The present body declaration and native edges disagree in the direction #104 to #107. The coordinator's account of the earlier dispatch and arbitration is historical context, not an outcome measured by these reads.
+
 ## UI and live trial
 
 The UI attempt used `cua.createBrowserTab('chrome', 'https://github.com/users/tbhb/projects/9', {sessionName:'🔎 Issue 125 research'})` and then `cua.createBrowserTab('iab', 'https://github.com/users/tbhb/projects/9', {visible:true})`. Both returned `Browser is not available`. No screenshot or structured Project 9 observation exists. Project 9 field visibility, grouping, filter, progress, and dependency icon are untested.
@@ -64,3 +80,5 @@ The first `mise run check` exited `123` because Vale reported seven alerts in th
 `mise run check:mutation` exited `0`. Go core mutation efficacy was 97.32% with 145 killed of 149, and Python core scored 97.22% with 454 killed of 467. This PR changed documentation and evidence only, so these scores cover the existing core.
 
 After the revisions, `mise run docs:build`, `mise run check:rumdl`, `mise run check:guard-markdown`, `mise run check:vale`, and `mise run build` each exited `0`. The final `mise run docs:check-links` again exited `1` on the same five unchanged-page links, with no new-page link reported. The browser launch denial also recurred. No sandbox permission was changed.
+
+For the direction correction above, `mise run fmt`, `git diff --check`, `mise run check`, `mise run check:vale`, `mise run check:mutation`, `mise run build`, and `mise run docs:build` exited `0`. The aggregate check took 372.33 seconds, with Python core lines and branches at 100.00% and 94.00%, and Go core statements and branches at 96.43% and 94.74%. Mutation scored 97.32% for Go core and 97.22% for Python core. `mise run docs:check-links` exited `1` on the same five links in unchanged pages listed above, and the same Chromium Mach registration denial occurred. The link checker reported no link in a file changed by this correction.
