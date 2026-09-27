@@ -30,13 +30,25 @@
 
 [Observed] Before the fix, `go test -race ./internal/bus -run '^TestRelayOutOfOrderDelivery$' -count=1` failed after fetching stream sequence 1 at consumer delivery generations 1 and 2 and installing them in order 2 then 1: the stale call returned `delivered`. The test now requires rejection of the stale generation and a successful ack with the newer token. The plain-value core tests initially failed to compile because the policy functions did not exist, then passed after the move.
 
-[Verified] The expanded `TestRelayAttackMatrix` observes each attacked reply target through the operator connection, waits for Alice's legitimate response, tries send, receive, ack, status, and roster with forged Bob identity and consumer fields, and checks that Bob's seeded private message and consumer state remain intact. A temporary local overlay that redirected only a Bob relay inbox reply made the test fail with `lost legitimate response: nats: timeout`; the overlay was restored before commit. The unmodified server passed the strengthened test.
+[Observed] The first expanded `TestRelayAttackMatrix` used the operator connection for every attacked reply target, waited for Alice's legitimate response, tried send, receive, ack, status, and roster with forged Bob identity and consumer fields, and checked that Bob's seeded private message and consumer state remained intact. Its operator subscription to Bob's relay inbox lacked permission, so that target was not observed. A temporary redirection-only overlay made the test fail because Alice lost her legitimate response; that result did not establish victim-inbox observation.
 
 [Verified] `mise run check:go` and `mise run build` exited 0. `mise run check:coverage` exited 0: Go core statements 96.43%, core branches 94.74%, shell statements 74.58%; Python core lines 100.00%, branches 93.75%, shell lines 75.93%. `mise run check:mutation` exited 0: Go core 145 killed of 149 classified mutants, 97.32% efficacy and 100% mutant coverage with no timeout; Python core 418 killed of 427, 97.89%.
 
 [Verified] The final `mise run check` exited 0 on fix commit `d64827b`, including Go lint, race tests, import rules, formatting, and all raised coverage floors. `mise run docs:build` exited 0 with the updated decision sentence, and `mise run check:vale` reported no alerts after a wording adjustment. The docs build logged a Chromium launch denial in the sandbox but completed 39 pages using its fallback rendering path.
 
 [Observed] The merge hook first attempted to write `/Users/tony/.cache/prek/prek.log`, and the new gobco pin first attempted an install under `/Users/tony/.local/share/mise` and a Go checksum write under `/Users/tony/go/pkg/sumdb`; the sandbox denied those writes. Checks and commits succeeded with temporary cache, mise data, and Go path directories under `/tmp`. No host setting or sandbox policy changed.
+
+## Review round two
+
+[Observed] At head `ef65b70`, `GOCACHE=/tmp/review-115-go-cache GOPATH=/tmp/bus-26-gopath RAPID_NOFAILFILE=1 mise exec -- go test -race -overlay=/tmp/review-115-round2/overlay-impl.json ./internal/bus -run '^TestRelayAttackMatrix$' -count=1 -v` exited 0. The overlay retained Alice's legitimate response and additionally published it to `grp.build.relay.reply.bob.request`. This reproduced the review finding: a cross-agent duplicate publication passed the committed attack matrix.
+
+[Verified] The corrected matrix uses Bob's authorized connection for his relay inbox and the operator for targets its grant permits. It checks asynchronous connection errors around the observer wait. With the same duplicate-publication overlay, the command exited 1 at `send published to victim target grp.build.relay.reply.bob.request`; without the overlay, the targeted race test exited 0. No agent grant changed.
+
+[Verified] `mise run fmt`, `mise run check`, and `mise run build` exited 0 with temporary Go, lint, and hook caches under `/tmp`. The aggregate checked race tests, imports, prose, secrets, and coverage. Its coverage results were Go core statements 96.43%, Go core branches 94.74%, Go shell statements 74.58%, Python core lines 100.00%, Python core branches 94.00%, and Python shell lines 77.54%. Targeted Vale and rumdl checks of this evidence update also exited 0.
+
+[Verified] `mise run check:mutation` exited 0. The Go core run killed 145 of 149 classified mutants, with 97.32% efficacy, 100% mutant coverage, and no timeouts. The Python core run killed 454 of 467 mutants for 97.22%.
+
+[Verified] `mise run docs:build` exited 0 and built 44 pages. Chromium could not launch in the macOS sandbox, so the build used its fallback rendering path.
 
 ## Pending integration
 

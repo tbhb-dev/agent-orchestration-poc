@@ -166,7 +166,7 @@ func TestRelayAttackMatrix(t *testing.T) {
 	checkRelayForeignGrants(t, alice)
 	for _, reply := range []string{"grp.build.msg.all.bob", "grp.build.relay.req.send.bob", "grp.build.relay.reply.bob.request", "_INBOX.bob.attack"} {
 		for _, operation := range []string{"send", "receive", "ack", "status", "roster"} {
-			attackRelayReply(t, alice, operator, reply, operation)
+			attackRelayReply(t, alice, bob, operator, reply, operation)
 		}
 	}
 	after, err := consumer.Info(t.Context())
@@ -196,10 +196,17 @@ func checkRelayForeignGrants(t *testing.T, alice testClient) {
 	}
 }
 
-func attackRelayReply(t *testing.T, alice, operator testClient, target, operation string) {
+func attackRelayReply(t *testing.T, alice, bob, operator testClient, target, operation string) {
 	t.Helper()
-	observer := subscribeReply(t, operator.conn, target)
+	observerClient := operator
+	if target == "grp.build.relay.reply.bob.request" {
+		observerClient = bob
+	}
+	observer := subscribeReply(t, observerClient.conn, target)
 	defer func() { _ = observer.Unsubscribe() }()
+	if err := observerClient.conn.LastError(); err != nil {
+		t.Fatalf("%s observer subscription to %s: %v", operation, target, err)
+	}
 	legitimate := subscribeReply(t, alice.conn, "grp.build.relay.reply.alice.attack")
 	defer func() { _ = legitimate.Unsubscribe() }()
 	data := []byte(`{"id":"attack","destination":"dm","to":"alice","envelope":{"body":"safe"},"token":"forged","key":"alice","timeout_ms":50,"agent":"bob","consumer":"bob"}`)
@@ -211,6 +218,9 @@ func attackRelayReply(t *testing.T, alice, operator testClient, target, operatio
 	}
 	if msg, err := observer.NextMsg(50 * time.Millisecond); err != nats.ErrTimeout {
 		t.Fatalf("%s published to victim target %s: %v, %v", operation, target, msg, err)
+	}
+	if err := observerClient.conn.LastError(); err != nil {
+		t.Fatalf("%s observer subscription to %s: %v", operation, target, err)
 	}
 }
 
