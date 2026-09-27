@@ -3,17 +3,11 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
-	"github.com/tbhb/agent-orchestration-poc/internal/version"
+	"github.com/tbhb/agent-orchestration-poc/internal/cli"
 )
 
 func main() {
-	if len(os.Args) == 2 && os.Args[1] == "version" {
-		fmt.Println("agentd", version.String())
-		return
-	}
-	fmt.Fprintln(os.Stderr, "usage: agentd version")
-	os.Exit(2)
+	os.Exit(cli.Run("agentd", os.Args[1:], os.Stdout, os.Stderr))
 }

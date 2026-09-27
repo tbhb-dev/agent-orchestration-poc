@@ -37,6 +37,7 @@ These are the exact pins in `mise.toml`. Rust uses the default profile. CI separ
 | `go:golang.org/x/tools/cmd/deadcode` | 0.50.0 |
 | `go:github.com/tbhb/repotools/cmd/guard-markdown` | 0.9.0 |
 | `go:github.com/go-gremlins/gremlins/cmd/gremlins` | 0.6.0 |
+| `go:github.com/rillig/gobco` | 1.3.4 |
 
 Python development dependencies are locked in `uv.lock` and declared in `pyproject.toml`, including Ruff 0.16.9, pytest 9.1.1, pyrefly 1.3.1, import-linter 2.15, vulture 2.16, Hypothesis 6.168.1, mutmut 3.8.0, and pytest-cov 7.0.0. Go properties use rapid 1.3.0 from `go.mod`. Site package versions are in `docs/package.json` and `pnpm-lock.yaml`, with their rationale in [docs stack conventions](/guides/docs-stack-conventions/). Vale downloads `ai-tells` and `ai-tells-commits` v1.37.0 through the release URLs in `.vale.ini`.
 
@@ -51,8 +52,10 @@ Python development dependencies are locked in `uv.lock` and declared in `pyproje
 | Go dead code | `scripts/check-deadcode.sh` fails on deadcode output |
 | Ruff and pytest | `pyproject.toml`, with test markers in `tests/conftest.py` |
 | pyrefly | `[tool.pyrefly]` in `pyproject.toml`, strict for source, tests, and experiments |
-| Gremlins | `.gremlins.yaml`, floors of 80 percent for the share of covered mutants killed and for mutant coverage |
-| mutmut and pytest-cov | `[tool.mutmut]` in `pyproject.toml`, `scripts/check-mutation-score.py`, 80 percent score and 90 percent line coverage |
+| Gremlins | `.gremlins.yaml`, floors of 90 percent for the share of covered mutants killed and for mutant coverage |
+| mutmut | `[tool.mutmut]` in `pyproject.toml`, `scripts/check-mutation-score.py`, 90 percent score |
+| Coverage.py and pytest-cov | `[tool.coverage.run]` in `pyproject.toml`, `scripts/check-coverage.py`, separate Python line and branch floors |
+| Go coverage and gobco | `go test -coverprofile`, gobco 1.3.4, `scripts/check-coverage.py`, separate statement and branch floors |
 | Python imports | `[tool.importlinter]` in `pyproject.toml` and the core's nested `ruff.toml` |
 | Python dead code | `[tool.vulture]` in `pyproject.toml` at confidence 60 |
 | Biome | `biome.json` |
@@ -69,6 +72,8 @@ Python development dependencies are locked in `uv.lock` and declared in `pyproje
 `GOTOOLCHAIN=local` prevents an implicit Go download. `UV_PYTHON_PREFERENCE=only-system` selects mise's Python. Go checks include module tidiness and verification, then lint, build, and race-enabled shuffled tests. `check:pyrefly` runs in the `check` aggregate and CI.
 
 Property tests run in `check` with ordinary Go and Python tests. Required CI fixes the rapid seed at 20260926 and uses Hypothesis's built-in `ci` profile. Nightly tasks use random seeds and file an issue with their output on failure. Mutation tests run separately through `check:mutation`, and its CI job succeeds without running the tools when no core code or test changed.
+
+`check:coverage` runs in `check` on every pull request. It requires 95 percent Go core statements, 90 percent Go core branches, and 70 percent Go shell statements. Python requires 95 percent core lines, 90 percent core branches, and 70 percent shell lines when shell code exists. The coverage pytest run includes integration tests. Coverage.py 7.16.1 JSON supplies separate line and branch counts because pytest-cov 7.0.0 `--cov-fail-under` checks a combined total. The pure decisions and failure probes are in `scripts/check-coverage.py`, `agent_orchestration_poc.core.coverage_floors`, and `reports/inputs/coverage-floors-87-evidence-2026-09-26.md`.
 
 The `check` aggregate also runs `check:imports`, `check:dupl`, and `check:deadcode`. Go and Python complexity checks run in their existing linter tasks. Biome checks the TypeScript complexity rules at error level. Recalibrate thresholds at the first retro with phase 2 code.
 
@@ -87,10 +92,11 @@ The `check` aggregate also runs `check:imports`, `check:dupl`, and `check:deadco
 | `check:deadcode` | Fail on unreachable Go functions and unused Python names |
 | `fmt:ruff` | Fix and format Python with ruff |
 | `check:pytest` | Run the Python tests |
+| `check:coverage` | Gate Go core and shell statements, Go core branches, and Python core and shell lines and core branches |
 | `check:pyrefly` | Type check Python with pyrefly in strict mode |
 | `check:mutation` | Enforce both core mutation gates outside `check` |
 | `check:mutation:go` | Score the share of covered Go mutants killed and mutant coverage |
-| `check:mutation:python` | Enforce Python core line coverage and mutation score |
+| `check:mutation:python` | Enforce Python core mutation score |
 | `check:property:nightly:go` | Run Go core properties with a random seed from CI |
 | `check:property:nightly:python` | Run Python tests with the default Hypothesis profile and a random seed |
 | `check:biome` | Lint and check formatting with Biome |
@@ -138,6 +144,7 @@ The commit-msg hook runs Vale with `ai-tells` and `ai-tells-commits`. Real commi
 | `scripts/check-imported-research.sh` | Compares imports against a base ref and permits additions only for import PRs |
 | `scripts/check-mutation-score.py` | Runs mutmut from a fresh cache and enforces the exported score |
 | `scripts/check-gremlins-output.py` | Rejects timed-out Go mutants that gremlins excludes from its score |
+| `scripts/check-coverage.py` | Checks Go and Python coverage reports against separate floors, including gobco branches |
 
 ## Vale exemptions
 
