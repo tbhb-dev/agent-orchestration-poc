@@ -3,7 +3,7 @@ title: Repository workflow
 description: Issues, Project fields, review, merge policy, and CI.
 ---
 
-Work starts with an issue in [Project 9](https://github.com/users/tbhb/projects/9). The coordinator dispatches a worker into its own branch and worktree. Review and green CI precede a squash merge.
+Approved work has an issue in [Project 9](https://github.com/users/tbhb/projects/9). The coordinator dispatches a worker into its own branch and worktree. Review and green CI precede a squash merge.
 
 New unrefined work starts as a [Project draft stub](/workflow/stub-refinement/) in Backlog. An approved issue enters Refined. Ready means dispatchable now and is capped at eight. The later [coordinator direction](https://github.com/tbhb/agent-orchestration-poc/issues/161#issuecomment-5853040703) governs these states while this page's historical Project table awaits the coordinator's shared-file integration.
 
@@ -17,7 +17,7 @@ flowchart LR
 
 ## Project fields and views
 
-The fields configured on 2026-09-26 are recorded in [Project configuration evidence](https://github.com/tbhb/agent-orchestration-poc/blob/main/reports/inputs/project-configuration-2026-09-26.md).
+The table below preserves the fields configured on 2026-09-26, as recorded in [Project configuration evidence](https://github.com/tbhb/agent-orchestration-poc/blob/main/reports/inputs/project-configuration-2026-09-26.md). Its former In review value is historical under the later coordinator direction.
 
 | Field | Type | Values |
 | --- | --- | --- |
@@ -41,7 +41,7 @@ PR #56 left the Phase grouping and Ready sorting for the operator because the AP
 
 ## Issues and labels
 
-Use one issue per work item with the following body template. There is no checked-in issue form yet.
+Use one issue per approved work item. The checked [issue forms](/guides/workflow-reference/) require these body sections.
 
 ```markdown
 ## Goal
@@ -59,13 +59,13 @@ Use one issue per work item with the following body template. There is no checke
 ## Out of scope
 ```
 
-Use `area/<area>`, `phase/<n>`, and `harness/<claude|codex|agy|any>`. Type labels are `type/feature`, `type/experiment`, `type/research`, `type/docs`, `type/tooling`, `type/process`, `type/bug`, and `type/decision`. Add `blocked` or `needs-operator` when applicable. Use blocked-by relationships for dependencies and sub-issues to split larger work. Decision issues close with a [decision record](/decisions/).
+Use exactly one label in each of `area/`, `type/`, `phase/`, and `harness/`. The checked [workflow reference](/guides/workflow-reference/) lists the names, descriptions, colors, title types, scopes, and type mapping. Add `blocked` or `needs-operator` when applicable. Use blocked-by relationships for dependencies and sub-issues to split larger work. Decision issues close with a [decision record](/decisions/).
 
 For a dependency, state the blocking issue number in Dependencies and paths and record the matching native GitHub blocked-by relationship. [Decision 0015](/decisions/0015-sub-issues/) proposes native edges as the script-readable source and assigns body-to-edge checks and open-blocker dispatch refusal to #158. Until that check exists, the coordinator verifies both directions before a fresh #90 verdict and immediately before dispatch, treating an incomplete read or mismatch as a refusal. Parent-child links group work and do not satisfy dependency gates. Each executable child requires a separate issue review and PR. Project 9 parent grouping remains proposed pending the reversible trial, and closing links follow #124's separate decision.
 
 ## Branches and commits
 
-Use `<type>/<issue>-<slug>` branches, normally `feat`, `fix`, `docs`, `exp`, `chore`, or `research`. The Project setup used `workflow/12-project-config`. Worktrees belong under `.worktrees/<type>-<issue>-<slug>/`. Workers have separate checkouts and never work on `main`.
+Use the branch type and form in the [workflow reference](/guides/workflow-reference/). The Project setup used the now retired `workflow/12-project-config` type. Worktrees belong under `.worktrees/<type>-<issue>-<slug>/`. Workers have separate checkouts and never work on `main`.
 
 Commit with a Conventional Commit subject, a body explaining why, and `Refs: #<n>` as a trailer. Do not add attribution or co-author trailers. The commit-msg hook checks prose with `ai-tells` and `ai-tells-commits`. Record the harness and model in the Project Worker field and PR evidence section.
 
@@ -76,6 +76,10 @@ The shared stash stack requires explicit ownership. Merge `main` into a pushed b
 ## Pull requests, review, and merges
 
 Open one small PR per issue. Its conventional title and body become the squash commit. Include What, Why, Evidence, Docs, and Checklist sections and end with `Refs: #<n>`. For `feat` and `exp`, the Evidence section needs a link to committed output or a test run. Check green CI, docs updated or an issue filed, no secrets, and evidence committed.
+
+The PR template also has Size justification and Gate justifications sections. Several final `Refs:` trailers may name open issues when one PR edits shared files. The [workflow reference](/guides/workflow-reference/) defines the 400-unit target, 800-unit limit, exclusions, and Project Size bands.
+
+The PR form check uses the PR's `created_at` and the validator PR's retained merge time. It reports pre-cutoff PRs for coordinator repair and blocks newer PRs, including those from older branches. Missing creation metadata fails closed. Local-only refs appear in a separate report and do not block CI.
 
 Before review, the coordinator runs `mise run review:preflight -- <pr>` to verify that workflow revisions added on `main` are present at the PR head. Before merge or a completion report, run `mise run pr:wait-check -- <pr> <check-name> <timeout-seconds>`. The waiter succeeds only when the requested check concludes success on the head SHA recorded when waiting began. Its timeout includes GitHub calls, and zero seconds expires immediately. Both tasks address failures in the [phase 1 retrospective](/retros/2026-09-26-phase-1/).
 
