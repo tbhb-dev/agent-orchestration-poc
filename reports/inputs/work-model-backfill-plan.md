@@ -16,7 +16,7 @@
 
 ## Verification record
 
-[Verified] Before splitting, `mise run check:imports` exited 0 and `mise run check:ruff` exited 0 on the larger prototype. `mise run check` exited 3 when `check:deadcode` found two unreferenced dataclass fields. A later `mise run check:coverage` exited 1 on that prototype with Python core lines 94.68% and branches 86.58%. The implementation was reduced to the 502-code-line snapshot and parser slice measured by `mise exec -- go run github.com/boyter/scc/v4@v4.1.0 --by-file` on the two changed Python files. Verification below records the final slice's results.
+[Verified] Before splitting, `mise run check:imports` exited 0 and `mise run check:ruff` exited 0 on the larger prototype. `mise run check` exited 3 when `check:deadcode` found two unreferenced dataclass fields. A later `mise run check:coverage` exited 1 on that prototype with Python core lines 94.68% and branches 86.58%. The implementation was reduced to the 504-code-line snapshot and parser slice measured by `mise exec -- go run github.com/boyter/scc/v4@v4.1.0 --by-file` on the two changed Python files. Verification below records the final slice's results.
 
 | Final command | Exit code | Result |
 | --- | --- | --- |
