@@ -132,6 +132,7 @@ func credential(path string) (string, error) {
 	if errors.Is(err, os.ErrNotExist) {
 		seed, err = createCredential(path)
 	}
+	defer clear(seed)
 	if err != nil {
 		return "", err
 	}
@@ -157,6 +158,7 @@ func createCredential(path string) ([]byte, error) {
 	}
 	defer pair.Wipe()
 	seed, err := pair.Seed()
+	defer clear(seed)
 	if err != nil {
 		return nil, err
 	}

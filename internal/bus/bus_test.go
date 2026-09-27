@@ -106,6 +106,25 @@ func TestPublishPermissions(t *testing.T) {
 	}
 }
 
+func TestAgentCannotPublishJetStreamControlSubjects(t *testing.T) {
+	broker := testBus(t)
+	alice := connectTest(t, broker, "build", "alice")
+	for _, subject := range []string{
+		"$JS.API.INFO",
+		"$JS.API.STREAM.INFO.GROUP_BUILD",
+		"$JS.API.CONSUMER.INFO.GROUP_BUILD.alice",
+		"$JS.API.CONSUMER.MSG.NEXT.GROUP_BUILD.alice",
+		"$JS.API.DIRECT.GET.GROUP_BUILD.grp.build.msg.all.alice",
+		"$JS.API.any.future.route",
+		"$JS.ACK.GROUP_BUILD.alice.1.1.1.1.1",
+		"$JS.ACK.any.future.route",
+	} {
+		t.Run(subject, func(t *testing.T) {
+			expectPublishDenied(t, alice, subject)
+		})
+	}
+}
+
 func TestSubscribePermissions(t *testing.T) {
 	broker := testBus(t)
 	alice := connectTest(t, broker, "build", "alice")

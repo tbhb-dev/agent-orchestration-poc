@@ -98,4 +98,27 @@ Test efficacy: 100.00%
 Mutator coverage: 100.00%
 ```
 
-[Untested] `mise run check:mutation` is absent from this branch's `mise tasks ls --no-header`; no post-merge mutation run was possible without rebasing, which this review run excludes. The preliminary scores above cover only this branch's core packages.
+[Observed] After merging `origin/main` as `6711b42`, this branch has `mise run check:mutation`; the preliminary scores above cover the pre-merge core packages only. The post-merge result is recorded below.
+
+## Relay decision raw notes
+
+[Observed] On the merged branch, temporary failing tests run with `mise exec -- go test -run '^TestReviewProbe' -count=1 -v ./internal/bus` reproduced both open blocking findings. `TestReviewProbePublishConfirmation` used the group operator credential and a 300 ms context; `js.Publish` returned `context deadline exceeded`. `TestReviewProbeAgentPullAccess` used Alice's credential on `$JS.API.CONSUMER.MSG.NEXT.GROUP_BUILD.alice`; the server reported `Permissions Violation for Publish to "$JS.API.CONSUMER.MSG.NEXT.GROUP_BUILD.alice"`. The temporary probe file was removed after the run. These results describe the intentional bootstrap limitation, not an implemented relay.
+
+[Observed] The `tbhbbot` second review of PR #82 reports a live probe at nats-server v2.15.0: when Alice was hypothetically granted her own `$JS.API.CONSUMER.MSG.NEXT.GROUP_BUILD.alice` route, she supplied `grp.build.msg.all.bob` as its reply subject, and the broker delivered stored content on Bob's subject without a permission error. The review cites `server/consumer.go` pull-request reply handling and `server/stream.go` `jsOutQ`. This is the same sender-attribution failure class as the earlier publish acknowledgment finding. The second review did not probe every other API route, so those routes remain unverified individually.
+
+[Inference] The safe boundary for this bootstrap PR is to keep agents without any `$JS.API.` or `$JS.ACK.` publish grant, keep stream acknowledgments disabled, and let the operator credential alone make JetStream requests. A private inbox prefix alone does not constrain a malicious reply subject placed on a JetStream request. A broader agent grant would reopen the demonstrated pull-delivery flaw. The coordinator's [PR #82 decision](https://github.com/tbhb/agent-orchestration-poc/pull/82#issuecomment-5851224406) assigns an authenticated `agentd` relay to [issue #96](https://github.com/tbhb/agent-orchestration-poc/issues/96) and blocks #27 on it. This departs from the messaging sketch's direct agent pull-consumer path. Issue #96 owns the decision record and the tests for the mediated operations; this file provides the raw notes for that record.
+
+[Observed] `TestAgentCannotPublishJetStreamControlSubjects` uses Alice's real credential against the embedded server and receives permission errors for stream, consumer, direct-get, generic future-shaped API, and ack subjects. This checks concrete representatives of both denied prefixes; the literal `grp.<group>...<agent>` allow list in `internal/core/perms/perms.go` excludes the entire `$JS.API.` and `$JS.ACK.` namespaces by construction. The targeted test command and result are recorded below.
+
+```text
+XDG_CACHE_HOME=/tmp/agent-26-cache GOCACHE=/tmp/agent-26-go-cache GOPATH=/tmp/agent-26-gopath mise exec -- go test -run '^TestAgentCannotPublishJetStreamControlSubjects$' -count=1 -v ./internal/bus
+--- PASS: TestAgentCannotPublishJetStreamControlSubjects (0.02s)
+PASS
+ok github.com/tbhb/agent-orchestration-poc/internal/bus 0.382s
+```
+
+[Verified] `credential()` now clears the seed byte slice after deriving the public key, including error returns after a read. `createCredential()` clears the original slice returned by `pair.Seed()` after writing the file and returning a separate copy. The caller clears that copy. The key pair is still wiped with `pair.Wipe()` (`internal/bus/bus.go`). This is a source inspection claim; no heap-forensics test was run.
+
+[Observed] After merging `origin/main`, `mise run check` passed with zero Go lint issues, race-enabled bus and core tests, 31 Python tests passed and one integration test skipped, zero Vale alerts, and all other required repository checks. `mise run check:mutation` passed: the Go core run killed 85 of 85 viable mutants with zero survivors, uncovered mutants, or timeouts; the Python core run killed 74 of 83 mutants for 89.16%, with 100% line coverage. The command used temporary cache paths under `/tmp` because the sandbox denied writes to default user caches.
+
+[Observed] `mise run build` passed. `mise run docs:build` exited zero and emitted the bus page, but Chromium could not register a Mach port in this sandbox during Mermaid rendering. `mise run docs:check-links` then failed because `workflow/index.md` did not render and three existing links to `/workflow/` were reported invalid. No changed file contains those links. The docs site and links need the unsandboxed CI check before they can be called green.
