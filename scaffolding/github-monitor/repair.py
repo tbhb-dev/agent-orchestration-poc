@@ -94,6 +94,7 @@ def authoritative(name: str, pages: tuple[object, ...]) -> str:
                 item.get("id"),
                 item.get("body"),
                 item.get("state"),
+                item.get("labels"),
                 item.get("updated_at"),
             )
         )
@@ -128,7 +129,7 @@ def complete(
 
 
 def component_reason(
-    component: str, change: str | None, captured: int, current: int
+    kind: str, component: str, change: str | None, captured: int, current: int
 ) -> str | None:
     """Keep unsupported PR evidence visibly unknown."""
     reason = change or complete({}, {}, captured, current)
@@ -136,6 +137,8 @@ def component_reason(
         return reason or "review_thread_resolution_unsupported"
     if component == "checks":
         return reason or "latest_attempt_selection_unsupported"
+    if kind == "pr" and component == "comments":
+        return reason or "review_comments_not_rechecked"
     return reason
 
 

@@ -167,6 +167,9 @@ def test_digests_and_authority() -> None:
     assert authoritative(
         "issue", ({"id": 1, "body": "a", "state": "open"},)
     ) != authoritative("issue", ({"id": 1, "body": "b", "state": "open"},))
+    assert authoritative("issue", ({"id": 1, "labels": ["a"]},)) != authoritative(
+        "issue", ({"id": 1, "labels": ["b"]},)
+    )
     pull = {"head": {"sha": "a"}, "base": {"sha": "b"}, "state": "open"}
     assert authoritative("pull", (pull,)) != authoritative(
         "pull", ({**pull, "head": {"sha": "c"}},)
@@ -210,20 +213,21 @@ def test_complete(
 
 
 @pytest.mark.parametrize(
-    ("component", "reason"),
+    ("kind", "component", "reason"),
     [
-        ("identity", None),
-        ("checks", "latest_attempt_selection_unsupported"),
-        ("reviews", "review_thread_resolution_unsupported"),
+        ("issue", "identity", None),
+        ("pr", "checks", "latest_attempt_selection_unsupported"),
+        ("pr", "reviews", "review_thread_resolution_unsupported"),
+        ("pr", "comments", "review_comments_not_rechecked"),
     ],
 )
-def test_component_reason(component: str, reason: str | None) -> None:
-    assert component_reason(component, None, 1, 1) == reason
+def test_component_reason(kind: str, component: str, reason: str | None) -> None:
+    assert component_reason(kind, component, None, 1, 1) == reason
 
 
 @given(st.integers(), st.integers())
 def test_component_reason_property(captured: int, current: int) -> None:
-    assert (component_reason("identity", None, captured, current) is None) == (
+    assert (component_reason("issue", "identity", None, captured, current) is None) == (
         captured == current
     )
 

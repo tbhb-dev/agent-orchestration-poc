@@ -223,7 +223,11 @@ def repair_object(  # noqa: C901 - one bounded collection transaction
         )
         for component, names in by_component.items():
             reason = component_reason(
-                component, outcome, components[component], current.get(component, -1)
+                kind,
+                component,
+                outcome,
+                components[component],
+                current.get(component, -1),
             )
             if reason is None:
                 saved = store.complete_component(

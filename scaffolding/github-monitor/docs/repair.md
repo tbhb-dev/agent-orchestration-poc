@@ -20,7 +20,7 @@ The conditional cache is stored under ignored `.local-cache/github-monitor/` and
 | Issue and PR labels | Issue detail and `GET /repos/tbhb/agent-orchestration-poc/issues/{n}/labels?per_page=100` | Follow Link pagination. The issue body reread guards the authoritative detail. |
 | PR head, base, body, and state | Issue detail and `GET /repos/tbhb/agent-orchestration-poc/pulls/{n}` | Initial and final issue body and PR head, base, state, and update digest must match. |
 | PR reviews | `GET /repos/tbhb/agent-orchestration-poc/pulls/{n}/reviews?per_page=100` | Review pages are read, but complete thread resolution is unsupported and the component remains unknown. |
-| PR review comments and threads | `GET /repos/tbhb/agent-orchestration-poc/pulls/{n}/comments?per_page=100` | Review comment pages are read. Resolved thread state has no implemented authoritative REST read and remains unknown. |
+| PR review comments and threads | `GET /repos/tbhb/agent-orchestration-poc/pulls/{n}/comments?per_page=100` | Review comment pages are read, but not reread at the end. Resolved thread state also lacks an implemented authoritative REST read. The component remains unknown. |
 | Check runs and statuses | `GET /repos/tbhb/agent-orchestration-poc/commits/{head}/check-runs?per_page=100` and `GET /repos/tbhb/agent-orchestration-poc/commits/{head}/status` | Both are reread after collection. Latest workflow attempt selection is unsupported and checks remain unknown. |
 | Required ruleset and last pusher | Repository ruleset and PR commit sources | These sources are not implemented, so merge readiness remains unknown. |
 | Project fields | Source investigation in #172 | Excluded from this repair. No Project field is published as complete. |
