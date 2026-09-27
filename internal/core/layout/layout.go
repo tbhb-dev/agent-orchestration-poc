@@ -89,7 +89,7 @@ func Stream(group string) (StreamDefinition, error) {
 		Subjects:  []string{"grp." + group + ".msg.>", "grp." + group + ".evt.>"},
 		Storage:   "file",
 		Retention: "limits",
-		NoAck:     true,
+		NoAck:     false,
 	}, nil
 }
 
