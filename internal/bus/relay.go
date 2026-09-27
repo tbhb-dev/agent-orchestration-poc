@@ -131,22 +131,18 @@ func (s *relayServer) send(ctx context.Context, identity relay.Request, request 
 		options = append(options, jetstream.WithMsgID(id))
 	}
 	ack, err := s.js.Publish(ctx, subject, request.Envelope, options...)
-	if err != nil || ack == nil || ack.Stream != definition.Name || ack.Sequence == 0 {
-		return relayResponse{Result: "unknown"}
+	confirmed := relay.PublishAck{}
+	if err == nil && ack != nil {
+		confirmed = relay.PublishAck{Received: true, Stream: ack.Stream, Sequence: ack.Sequence, Duplicate: ack.Duplicate}
 	}
-	if ack.Duplicate {
-		return relayResponse{Result: "duplicate", Sequence: ack.Sequence}
-	}
-	return relayResponse{Result: "stored", Sequence: ack.Sequence}
+	result, sequence := relay.ClassifyPublish(definition.Name, confirmed)
+	return relayResponse{Result: result, Sequence: sequence}
 }
 
 func (s *relayServer) receive(ctx context.Context, identity relay.Request, request relayRequest) relayResponse {
-	if request.TimeoutMS < 0 || request.TimeoutMS > 5000 {
+	waitMS, valid := relay.ReceiveWait(request.TimeoutMS)
+	if !valid {
 		return relayResponse{Result: "rejected"}
-	}
-	wait := time.Second
-	if request.TimeoutMS > 0 {
-		wait = time.Duration(request.TimeoutMS) * time.Millisecond
 	}
 	definition, err := layout.Stream(identity.Group)
 	if err != nil {
@@ -160,7 +156,7 @@ func (s *relayServer) receive(ctx context.Context, identity relay.Request, reque
 	if err != nil {
 		return relayResponse{Result: "unknown"}
 	}
-	batch, err := consumer.Fetch(1, jetstream.FetchMaxWait(wait))
+	batch, err := consumer.Fetch(1, jetstream.FetchMaxWait(time.Duration(waitMS)*time.Millisecond))
 	if err != nil {
 		return relayResponse{Result: "unknown"}
 	}
@@ -176,19 +172,29 @@ func (s *relayServer) receive(ctx context.Context, identity relay.Request, reque
 
 func (s *relayServer) hold(identity relay.Request, stream string, message jetstream.Msg) relayResponse {
 	metadata, err := message.Metadata()
-	if err != nil || metadata.Consumer != identity.Agent || metadata.Stream != stream {
+	if err != nil {
+		return relayResponse{Result: "unknown"}
+	}
+	owner, valid := relay.DeliveryFromMetadata(identity, stream, metadata.Stream, metadata.Consumer, metadata.Sequence.Stream, metadata.Sequence.Consumer)
+	if !valid {
 		return relayResponse{Result: "unknown"}
 	}
 	token, err := randomToken()
 	if err != nil {
 		return relayResponse{Result: "unknown"}
 	}
-	owner := relay.Delivery{Group: identity.Group, Agent: identity.Agent, Consumer: metadata.Consumer, Sequence: metadata.Sequence.Stream, Generation: metadata.Sequence.Consumer}
 	s.mu.Lock()
+	owners := make(map[string]relay.Delivery, len(s.held))
 	for old, held := range s.held {
-		if held.owner.Group == owner.Group && held.owner.Consumer == owner.Consumer && held.owner.Sequence == owner.Sequence {
-			delete(s.held, old)
-		}
+		owners[old] = held.owner
+	}
+	install, remove := relay.PlanInstall(owners, owner)
+	if !install {
+		s.mu.Unlock()
+		return relayResponse{Result: "unknown"}
+	}
+	for _, old := range remove {
+		delete(s.held, old)
 	}
 	s.held[token] = heldDelivery{owner: owner, msg: message}
 	s.mu.Unlock()
@@ -198,7 +204,7 @@ func (s *relayServer) hold(identity relay.Request, stream string, message jetstr
 func (s *relayServer) ack(ctx context.Context, identity relay.Request, request relayRequest) relayResponse {
 	s.mu.Lock()
 	held, exists := s.held[request.Token]
-	if !exists || !relay.Owns(held.owner, identity, identity.Agent, held.owner.Sequence, held.owner.Generation) {
+	if !relay.CanConsume(held.owner, exists, identity) {
 		s.mu.Unlock()
 		return relayResponse{Result: "unknown-token"}
 	}

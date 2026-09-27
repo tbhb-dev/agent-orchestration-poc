@@ -165,3 +165,77 @@ func TestDeliveryOwnerProperty(t *testing.T) {
 		}
 	}))
 }
+
+func TestClassifyPublish(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		ack      PublishAck
+		want     string
+		sequence uint64
+	}{
+		{"missing", PublishAck{}, "unknown", 0},
+		{"wrong stream", PublishAck{Received: true, Stream: "OTHER", Sequence: 4}, "unknown", 0},
+		{"zero sequence", PublishAck{Received: true, Stream: "GROUP_BUILD"}, "unknown", 0},
+		{"stored", PublishAck{Received: true, Stream: "GROUP_BUILD", Sequence: 4}, "stored", 4},
+		{"duplicate", PublishAck{Received: true, Stream: "GROUP_BUILD", Sequence: 4, Duplicate: true}, "duplicate", 4},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			result, sequence := ClassifyPublish("GROUP_BUILD", tc.ack)
+			if result != tc.want || sequence != tc.sequence {
+				t.Fatalf("got %s/%d, want %s/%d", result, sequence, tc.want, tc.sequence)
+			}
+		})
+	}
+}
+
+func TestReceiveWait(t *testing.T) {
+	for _, tc := range []struct {
+		input, wait int
+		valid       bool
+	}{{-1, 0, false}, {0, 1000, true}, {1, 1, true}, {5000, 5000, true}, {5001, 0, false}} {
+		wait, valid := ReceiveWait(tc.input)
+		if wait != tc.wait || valid != tc.valid {
+			t.Fatalf("ReceiveWait(%d) = %d/%v", tc.input, wait, valid)
+		}
+	}
+}
+
+func TestDeliveryTransitions(t *testing.T) {
+	req := Request{Group: "build", Agent: "alice"}
+	first, ok := DeliveryFromMetadata(req, "GROUP_BUILD", "GROUP_BUILD", "alice", 9, 1)
+	if !ok || first.Sequence != 9 || first.Generation != 1 {
+		t.Fatalf("first metadata: %+v/%v", first, ok)
+	}
+	for _, tc := range []struct {
+		stream, consumer     string
+		sequence, generation uint64
+	}{
+		{"OTHER", "alice", 9, 1},
+		{"GROUP_BUILD", "bob", 9, 1},
+		{"GROUP_BUILD", "alice", 0, 1},
+		{"GROUP_BUILD", "alice", 9, 0},
+	} {
+		if _, valid := DeliveryFromMetadata(req, "GROUP_BUILD", tc.stream, tc.consumer, tc.sequence, tc.generation); valid {
+			t.Fatalf("accepted metadata %+v", tc)
+		}
+	}
+}
+
+func TestTokenTransitions(t *testing.T) {
+	req := Request{Group: "build", Agent: "alice"}
+	first := Delivery{Group: "build", Agent: "alice", Consumer: "alice", Sequence: 9, Generation: 1}
+	second := first
+	second.Generation = 2
+	if install, remove := PlanInstall(map[string]Delivery{"old": first}, second); !install || len(remove) != 1 || remove[0] != "old" {
+		t.Fatalf("new generation: %v/%v", install, remove)
+	}
+	if install, remove := PlanInstall(map[string]Delivery{"new": second}, first); install || len(remove) != 0 {
+		t.Fatalf("stale generation: %v/%v", install, remove)
+	}
+	if install, remove := PlanInstall(map[string]Delivery{"new": second}, second); install || len(remove) != 0 {
+		t.Fatalf("same generation: %v/%v", install, remove)
+	}
+	if !CanConsume(second, true, req) || CanConsume(second, false, req) || CanConsume(second, true, Request{Group: "build", Agent: "bob"}) {
+		t.Fatal("token ownership changed")
+	}
+}

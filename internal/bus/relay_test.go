@@ -151,9 +151,10 @@ func TestRelayAttackMatrix(t *testing.T) {
 	alice := connectTest(t, broker, "build", "alice")
 	bob := connectTest(t, broker, "build", "bob")
 	operator := connectTest(t, broker, "build", "operator")
-	victim := subscribeReply(t, operator.conn, "grp.build.msg.all.bob")
-	defer func() { _ = victim.Unsubscribe() }()
-	_, stream := openTestStream(t, broker)
+	js, stream := openTestStream(t, broker)
+	if _, err := js.Publish(t.Context(), "grp.build.msg.dm.bob.alice", []byte(`{"body":"private"}`)); err != nil {
+		t.Fatal(err)
+	}
 	consumer, err := stream.Consumer(t.Context(), "bob")
 	if err != nil {
 		t.Fatal(err)
@@ -162,6 +163,28 @@ func TestRelayAttackMatrix(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	checkRelayForeignGrants(t, alice)
+	for _, reply := range []string{"grp.build.msg.all.bob", "grp.build.relay.req.send.bob", "grp.build.relay.reply.bob.request", "_INBOX.bob.attack"} {
+		for _, operation := range []string{"send", "receive", "ack", "status", "roster"} {
+			attackRelayReply(t, alice, operator, reply, operation)
+		}
+	}
+	after, err := consumer.Info(t.Context())
+	if err != nil || after.Delivered != before.Delivered || after.AckFloor != before.AckFloor {
+		t.Fatalf("victim consumer changed after forged receive: before=%+v after=%+v error=%v", before.Delivered, after.Delivered, err)
+	}
+	delivered := relayCall(t, bob, "build", "bob", "receive", relayRequest{TimeoutMS: 100})
+	if delivered.Result != "delivered" || delivered.Subject != "grp.build.msg.dm.bob.alice" {
+		t.Fatalf("victim private message unavailable: %+v", delivered)
+	}
+	if result := relayCall(t, bob, "build", "bob", "ack", relayRequest{Token: delivered.Token}); result.Result != "acked" {
+		t.Fatalf("victim ack: %+v", result)
+	}
+	t.Log("foreign subjects denied, forged payload identity ignored, malicious reply had no victim delivery or consumer progress")
+}
+
+func checkRelayForeignGrants(t *testing.T, alice testClient) {
+	t.Helper()
 	for _, subject := range []string{
 		"grp.build.relay.req.send.bob", "grp.other.relay.req.send.alice",
 		"grp.build.relay.reply.bob.request", "grp.build.msg.all.alice",
@@ -171,26 +194,78 @@ func TestRelayAttackMatrix(t *testing.T) {
 	for _, subject := range []string{"grp.build.relay.reply.bob.>", "grp.build.msg.dm.bob.*"} {
 		expectSubscribeDenied(t, alice, subject)
 	}
-	for _, reply := range []string{"grp.build.msg.all.bob", "grp.build.relay.req.send.bob", "grp.build.relay.reply.bob.request", "_INBOX.bob.attack"} {
-		data := []byte(`{"id":"request","destination":"dm","to":"alice","envelope":{"body":"safe"},"agent":"bob"}`)
-		if err := alice.conn.PublishRequest("grp.build.relay.req.send.alice", reply, data); err != nil {
+}
+
+func attackRelayReply(t *testing.T, alice, operator testClient, target, operation string) {
+	t.Helper()
+	observer := subscribeReply(t, operator.conn, target)
+	defer func() { _ = observer.Unsubscribe() }()
+	legitimate := subscribeReply(t, alice.conn, "grp.build.relay.reply.alice.attack")
+	defer func() { _ = legitimate.Unsubscribe() }()
+	data := []byte(`{"id":"attack","destination":"dm","to":"alice","envelope":{"body":"safe"},"token":"forged","key":"alice","timeout_ms":50,"agent":"bob","consumer":"bob"}`)
+	if err := alice.conn.PublishRequest("grp.build.relay.req."+operation+".alice", target, data); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := legitimate.NextMsg(2 * time.Second); err != nil {
+		t.Fatalf("%s to %s lost legitimate response: %v", operation, target, err)
+	}
+	if msg, err := observer.NextMsg(50 * time.Millisecond); err != nats.ErrTimeout {
+		t.Fatalf("%s published to victim target %s: %v, %v", operation, target, msg, err)
+	}
+}
+
+func TestRelayOutOfOrderDelivery(t *testing.T) {
+	broker := testBus(t)
+	alice := connectTest(t, broker, "build", "alice")
+	_, stream := openTestStream(t, broker)
+	info, err := stream.Consumer(t.Context(), "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	config, err := info.Info(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	config.Config.AckWait = 20 * time.Millisecond
+	consumer, err := stream.CreateOrUpdateConsumer(t.Context(), config.Config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stored := relayCall(t, alice, "build", "alice", "send", relayRequest{Destination: "all", Envelope: jsontext.Value(`{"body":"ordering"}`)})
+	if stored.Result != "stored" {
+		t.Fatal(stored)
+	}
+	fetch := func() jetstream.Msg {
+		t.Helper()
+		batch, err := consumer.Fetch(1, jetstream.FetchMaxWait(time.Second))
+		if err != nil {
 			t.Fatal(err)
 		}
-		if err := alice.conn.Flush(); err != nil {
-			t.Fatal(err)
+		message := <-batch.Messages()
+		if message == nil {
+			t.Fatalf("fetch: %v", batch.Error())
 		}
+		return message
 	}
-	if msg, err := victim.NextMsg(100 * time.Millisecond); err != nats.ErrTimeout {
-		t.Fatalf("victim received broker reply: %v, %v", msg, err)
+	first := fetch()
+	time.Sleep(40 * time.Millisecond)
+	second := fetch()
+	firstMeta, firstErr := first.Metadata()
+	secondMeta, secondErr := second.Metadata()
+	if firstErr != nil || secondErr != nil || firstMeta.Sequence.Consumer >= secondMeta.Sequence.Consumer || firstMeta.Sequence.Stream != secondMeta.Sequence.Stream {
+		t.Fatalf("expected two generations: first=%+v second=%+v errors=%v,%v", firstMeta, secondMeta, firstErr, secondErr)
 	}
-	if result := relayCall(t, bob, "build", "bob", "receive", relayRequest{TimeoutMS: 100}); result.Result != "empty" {
-		t.Fatalf("victim consumer altered or sender forged: %+v", result)
+	newer := broker.relays[0].hold(relay.Request{Group: "build", Agent: "alice"}, "GROUP_BUILD", second)
+	stale := broker.relays[0].hold(relay.Request{Group: "build", Agent: "alice"}, "GROUP_BUILD", first)
+	if stale.Result == "delivered" {
+		t.Fatalf("stale generation replaced newer: %+v", stale)
 	}
-	after, err := consumer.Info(t.Context())
-	if err != nil || after.Delivered != before.Delivered || after.AckFloor != before.AckFloor {
-		t.Fatalf("victim consumer state changed: before=%+v after=%+v error=%v", before.Delivered, after.Delivered, err)
+	if newer.Result != "delivered" {
+		t.Fatalf("newer generation: %+v", newer)
 	}
-	t.Log("foreign subjects denied, forged payload identity ignored, malicious reply had no victim delivery or consumer progress")
+	if result := relayCall(t, alice, "build", "alice", "ack", relayRequest{Token: newer.Token}); result.Result != "acked" {
+		t.Fatalf("newer token invalidated: %+v", result)
+	}
 }
 
 func TestRelayRestartToken(t *testing.T) {
