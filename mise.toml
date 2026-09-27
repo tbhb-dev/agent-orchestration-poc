@@ -196,6 +196,19 @@ run = "gitleaks git --redact --no-banner ."
 description = "Lint the GitHub Actions workflows with actionlint"
 run = "actionlint"
 
+# Coordinator preflight. These read live GitHub or git state and run separately from `check`.
+[tasks."review:preflight"]
+description = "Check that a PR branch includes current main workflows: mise run review:preflight -- <pr>"
+run = "uv run python -m agent_orchestration_poc.shell.coordinator_preflight review"
+
+[tasks."pr:wait-check"]
+description = "Wait for a named check on the current PR head: mise run pr:wait-check -- <pr> <name> <timeout-seconds>"
+run = "uv run python -m agent_orchestration_poc.shell.coordinator_preflight wait-check"
+
+[tasks."checkpoint:closure-audit"]
+description = "Audit closed work-item issues for linked merged PRs or recorded non-code closure"
+run = "uv run python -m agent_orchestration_poc.shell.coordinator_preflight closure-audit"
+
 # Pull request checks. These need a PR title, body, or base ref, so they run in CI (see .github/workflows/)
 # and by hand, never as part of the `check` aggregate.
 [tasks."check:pr-body"]
