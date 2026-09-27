@@ -9,7 +9,7 @@ from typing import Any
 
 
 def reservation(rows: list[dict[str, Any]], request: dict[str, Any]) -> str:
-    """Choose create, inspect, or reject from recorded ownership values."""
+    """Choose create, retry, inspect, or reject from recorded ownership values."""
     if request["branch"] in {"main", "refs/heads/main"}:
         return "main branch is forbidden"
     owned = ("name", "branch", "worktree", "tmux_name")
@@ -21,7 +21,7 @@ def reservation(rows: list[dict[str, Any]], request: dict[str, Any]) -> str:
         for key, value in request.items()
         if key != "brief_file"
     ):
-        return "inspect"
+        return "retry" if matches[0].get("preparation_failed") else "inspect"
     return "duplicate ownership"
 
 
@@ -288,6 +288,8 @@ def trust_readback(response: dict[str, Any], worktree: str, value: str | None) -
 
 def trust_gate(row: dict[str, Any]) -> tuple[str, str] | None:
     """Keep failed trust operations and completed cleanup ineligible for sends."""
+    if row.get("preparation_failed"):
+        return "blocked", row["reason"]
     if row.get("trust_blocked"):
         return "blocked", row["reason"]
     if row.get("trust_registered") is False:

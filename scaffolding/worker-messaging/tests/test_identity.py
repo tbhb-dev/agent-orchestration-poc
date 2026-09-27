@@ -353,6 +353,10 @@ def test_reservation(field: str) -> None:
     assert identity.reservation([], request) == "create"
     assert identity.reservation([request], request) == "inspect"
     assert (
+        identity.reservation([{**request, "preparation_failed": True}], request)
+        == "retry"
+    )
+    assert (
         identity.reservation([request], {**request, field: "different"})
         == "duplicate ownership"
     )

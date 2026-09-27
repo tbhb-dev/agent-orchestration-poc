@@ -107,6 +107,69 @@ def test_launch_syncs_vale_before_codex_trust_and_pane(
     assert calls == ["vale", "trust", "pane"]
 
 
+def test_failed_vale_sync_retains_owner_and_retries_before_start(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A failed preparation keeps its run addressable and retries safely."""
+    store = tmp_path / "registry.json"
+    monkeypatch.setattr(launcher, "STORE", store)
+    monkeypatch.setattr(launcher, "_run", lambda _argv: "/repo/.git")
+    brief = tmp_path / "brief.md"
+    brief.write_text("brief")
+    created = False
+    calls: list[str] = []
+
+    def worktree(_path: Path, _branch: str, owned: bool) -> bool:
+        nonlocal created
+        assert owned is created
+        created = True
+        return not owned
+
+    def run(argv: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        if argv[:2] == ["mise", "run"]:
+            calls.append("vale")
+            if calls.count("vale") == 1:
+                raise subprocess.CalledProcessError(1, argv)
+        return subprocess.CompletedProcess(argv, 1, "", "no server running")
+
+    monkeypatch.setattr(launcher, "_worktree", worktree)
+    monkeypatch.setattr(launcher.subprocess, "run", run)
+    monkeypatch.setattr(
+        launcher,
+        "_change_trust",
+        lambda *_args, **_kwargs: calls.append("trust") or True,
+    )
+    monkeypatch.setattr(
+        launcher, "_new_pane", lambda *_args: calls.append("pane") or {}
+    )
+    monkeypatch.setattr(launcher, "inspect", lambda row: (row, "ready", "test"))
+    request = {
+        "name": "worker",
+        "issue": 176,
+        "harness": "codex",
+        "model": "gpt-6-sol",
+        "effort": "high",
+        "branch": "tooling/176-worker",
+        "worktree": "/repo/.worktrees/worker",
+        "tmux_name": "worker",
+        "brief_file": str(brief),
+        "endpoint": "unix:///private/tmp/fake.sock",
+    }
+    failed, state, _ = launcher.launch(request)
+    assert state == "blocked"
+    assert calls == ["vale"]
+    assert registry.read(store)[0]["run_id"] == failed["run_id"]
+    assert registry.read(store)[0]["preparation_failed"] is True
+    assert identity.trust_gate(failed) == ("blocked", failed["reason"])
+    with pytest.raises(ValueError, match="duplicate ownership"):
+        launcher.launch({**request, "endpoint": "unix:///private/tmp/other.sock"})
+
+    retried, state, _ = launcher.launch(request)
+    assert state == "ready"
+    assert retried["run_id"] == failed["run_id"]
+    assert calls == ["vale", "vale", "trust", "pane"]
+
+
 def test_codex_launch_requires_endpoint_before_side_effects() -> None:
     """An omitted remote endpoint cannot create a worktree or tmux pane."""
     with pytest.raises(ValueError, match="explicit absolute"):
