@@ -19,7 +19,7 @@ func privateService(t *testing.T) (*Service, string) {
 	if _, err := exec.LookPath("tmux"); err != nil {
 		t.Skip("tmux is not installed")
 	}
-	state, err := os.MkdirTemp("/private/tmp", "agentd28-review-")
+	state, err := os.MkdirTemp("", "agentd28-review-")
 	if err != nil {
 		t.Fatal(err)
 	}
