@@ -3,7 +3,7 @@
 name: "docs work item"
 description: "Open a docs work item"
 title: "docs(scope): "
-labels: ["type/docs"]
+labels: ["type/chore"]
 body:
   - type: textarea
     attributes:

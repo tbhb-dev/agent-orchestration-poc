@@ -8,12 +8,42 @@ type Reference = dict[str, Any]
 type Label = tuple[str, str]
 
 TITLE = re.compile(r"^([a-z]+)\(([a-z][a-z0-9-]*)\): ([a-z]+) (.+)$")
+INCIDENT = re.compile(r"^inc(?:\(([a-z][a-z0-9-]*)\))?: (\S.*)$")
+PARENT = re.compile(r"^(initiative|epic): ([^\n]*)$")
+PARENT_KEY = re.compile(r"^[A-Z]\d+(?:-[A-Z]\d+)*(?=$|\s|[.:)])")
+PARENT_ORDINAL = re.compile(r"^(?:\d+|[IVXLCDM]{1,4})(?:[.:)]| ?-(?:\s|$))")
+PARENT_STAGE = re.compile(r"^(?i:phase|part|step) ?\d+(?=$|\s|[.:)])")
 HEADING = re.compile(r"(?m)^#{2,3} ([^\n]+)\s*$")
 REF = re.compile(r"^Refs: #(\d+)$")
 
 
-def validate_title(title: str, reference: Reference) -> tuple[str, ...]:
+def valid_parent_summary(summary: str) -> bool:
+    """Accept text without a leading parent key, ordinal, or numbered stage."""
+    summary = summary.strip()
+    return bool(summary) and not any(
+        pattern.match(summary) for pattern in (PARENT_KEY, PARENT_ORDINAL, PARENT_STAGE)
+    )
+
+
+def validate_title(
+    title: str, reference: Reference, *, issue: bool = False
+) -> tuple[str, ...]:
     """Check a conventional subject against the closed reference."""
+    if issue and title in reference["title_label_exceptions"]:
+        return ()
+    if issue and (parent := PARENT.fullmatch(title)):
+        return (
+            ("parent summary needs text without a leading key or ordinal",)
+            if not valid_parent_summary(parent.group(2))
+            else ()
+        )
+    if issue and (match_incident := INCIDENT.fullmatch(title)):
+        scope = match_incident.group(1)
+        return (
+            (f"unknown scope: {scope}",)
+            if scope and scope not in reference["titles"]["scopes"]
+            else ()
+        )
     match = TITLE.fullmatch(title)
     if not match:
         return ("title must be type(scope): verb object",)
@@ -21,6 +51,8 @@ def validate_title(title: str, reference: Reference) -> tuple[str, ...]:
     findings = []
     if kind not in reference["titles"]["types"]:
         findings.append(f"unknown type: {kind}")
+    if kind in reference["titles"]["issue_only"]:
+        findings.append(f"issue-only type: {kind}")
     if scope not in reference["titles"]["scopes"]:
         findings.append(f"unknown scope: {scope}")
     if verb not in reference["titles"]["verbs"] or not obj.strip():
@@ -67,6 +99,15 @@ def expected_labels(reference: Reference) -> dict[str, Label]:
             ("phase", labels["phases"]),
             ("harness", labels["harnesses"]),
             ("type", {name.split("/", 1)[1] for name in reference["types"].values()}),
+            (
+                "type",
+                {
+                    name.split("/", 1)[1]
+                    for name in reference["titles"]["parent_labels"]
+                },
+            ),
+            ("invalid", labels["invalid"]),
+            ("review", labels["review"]),
         )
         for value in values
     }
@@ -75,6 +116,11 @@ def expected_labels(reference: Reference) -> dict[str, Label]:
         labels["operator_description"],
         labels["operator_color"],
     )
+    for old, new in reference["migration"].get("labels", {}).items():
+        expected[old] = (
+            labels["type_description"].format(value=old.split("/", 1)[1]),
+            expected[new][1],
+        )
     return expected
 
 
@@ -82,9 +128,18 @@ def validate_labels(names: tuple[str, ...], reference: Reference) -> tuple[str, 
     """Require one known label in each workflow family."""
     expected = expected_labels(reference)
     findings = []
+    if any(name in reference["titles"]["parent_labels"] for name in names):
+        return (
+            ()
+            if len([name for name in names if name.startswith("type/")]) == 1
+            else ("expected exactly one type/ label",)
+        )
     for prefix in ("area/", "type/", "phase/", "harness/"):
         family = [name for name in names if name.startswith(prefix)]
-        if len(family) != 1:
+        classes = {
+            reference["migration"].get("labels", {}).get(name, name) for name in family
+        }
+        if len(classes) != 1:
             findings.append(f"expected exactly one {prefix} label")
         findings.extend(
             f"unknown label: {name}" for name in family if name not in expected
@@ -93,26 +148,44 @@ def validate_labels(names: tuple[str, ...], reference: Reference) -> tuple[str, 
 
 
 def validate_type_label(
-    title: str, labels: tuple[str, ...], reference: Reference
+    title: str, labels: tuple[str, ...], reference: Reference, *, issue: bool = False
 ) -> tuple[str, ...]:
     """Match the title type to its required type label."""
     match = TITLE.fullmatch(title)
-    return (
-        ("title type does not match type/ label",)
-        if match and reference["types"].get(match.group(1)) not in labels
-        else ()
-    )
+    if issue and (parent := PARENT.fullmatch(title)):
+        required = f"type/{parent.group(1)}"
+    elif issue and INCIDENT.fullmatch(title):
+        required = "type/incident"
+    elif issue and title in reference["title_label_exceptions"]:
+        required = reference["title_label_exceptions"][title]
+    elif match:
+        required = reference["types"].get(match.group(1))
+    else:
+        return ()
+    actual = {
+        reference["migration"].get("labels", {}).get(label, label) for label in labels
+    }
+    return ("title type does not match type/ label",) if required not in actual else ()
 
 
 def validate_issue(
     title: str, body: str, labels: tuple[str, ...], reference: Reference
 ) -> tuple[str, ...]:
     """Report all issue form findings from supplied values."""
+    parent_labels = set(reference["titles"]["parent_labels"]) & set(labels)
+    if parent_labels:
+        return (
+            validate_title(title, reference, issue=True)
+            + validate_labels(labels, reference)
+            + validate_type_label(title, labels, reference, issue=True)
+        )
     findings = list(
-        validate_title(title, reference)
+        validate_title(title, reference, issue=True)
         + validate_labels(labels, reference)
-        + validate_type_label(title, labels, reference)
+        + validate_type_label(title, labels, reference, issue=True)
     )
+    if INCIDENT.fullmatch(title):
+        return tuple(findings)
     parts = sections(body)
     findings.extend(
         f"missing or empty section: {name}"
@@ -282,17 +355,25 @@ def generated_files(reference: Reference) -> dict[str, str]:
 
 def render_issue_form(kind: str, reference: Reference) -> str:
     """Render one generated GitHub issue form from the reference."""
-    fields = reference["forms"]["issue_fields"]
+    incident = kind in reference["titles"]["issue_only"]
+    fields = reference["forms"]["incident_fields" if incident else "issue_fields"]
     lines = [
         "---",
         "# do not edit: generated from config/workflow-reference.toml",
-        f'name: "{kind} work item"',
-        f'description: "Open a {kind} work item"',
-        f'title: "{kind}(scope): "',
+        f'name: "{"incident" if incident else f"{kind} work item"}"',
+        f'description: "{"Open an incident" if incident else f"Open a {kind} work item"}"',
+        f'title: "{kind}: "'
+        if kind in reference["titles"]["optional_scope"]
+        else f'title: "{kind}(scope): "',
         f'labels: ["{reference["types"][kind]}"]',
         "body:",
     ]
-    for name in fields[:3] + [reference["forms"]["allowed_paths_field"]] + fields[3:]:
+    form_fields = (
+        fields
+        if incident
+        else fields[:3] + [reference["forms"]["allowed_paths_field"]] + fields[3:]
+    )
+    for name in form_fields:
         lines.extend(
             ("  - type: textarea", "    attributes:", f'      label: "{name}"')
         )
@@ -333,6 +414,10 @@ def render_reference_page(reference: Reference) -> str:
     type_table = "\n".join(
         f"| `{kind}` | `{label}` |" for kind, label in reference["types"].items()
     )
+    migration_table = "\n".join(
+        f"| `{old}` | `{new}` |"
+        for old, new in reference["migration"].get("labels", {}).items()
+    )
     return f"""---
 title: Workflow reference
 description: Checked types, scopes, labels, forms, and pull request size rules.
@@ -350,6 +435,8 @@ Subject verbs: {verbs}.
 
 Titles use `type(scope): verb object` without a final period. Commit subjects have at most {titles["max_length"]} characters. Branches use `{titles["branch_pattern"]}`. A new scope needs a reference edit in the same PR.
 
+Issues also admit `inc: summary` and `inc(scope): summary` with no imperative verb. Parent issues use `initiative: summary` or `epic: summary` without a key or ordinal. PR titles keep the conventional pattern.
+
 `workflow` remains an area and scope, but is retired as a commit type because `process` and `tooling` describe the two kinds of workflow changes without a separate overlapping type.
 
 ## Labels
@@ -360,9 +447,17 @@ Titles use `type(scope): verb object` without a final period. Commit subjects ha
 
 Each issue and PR has exactly one `area/`, `type/`, `phase/`, and `harness/` label. Type-to-label mapping:
 
+Parent issues require one `type/initiative` or `type/epic` label and are exempt from form, `area/`, `phase/`, and `harness/` checks. An old and new label for the same class count as one during migration.
+
 | Type | Label |
 | --- | --- |
 {type_table}
+
+The relabel-only exceptions are keyed by their exact issue titles in the reference. These issues keep their titles. The migration table remains until the final read-back in issue #200:
+
+| Old label | New label |
+| --- | --- |
+{migration_table}
 
 ## Forms and references
 

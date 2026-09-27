@@ -3,7 +3,7 @@
 name: "process work item"
 description: "Open a process work item"
 title: "process(scope): "
-labels: ["type/process"]
+labels: ["type/chore"]
 body:
   - type: textarea
     attributes:

@@ -3,7 +3,7 @@
 name: "test work item"
 description: "Open a test work item"
 title: "test(scope): "
-labels: ["type/tooling"]
+labels: ["type/chore"]
 body:
   - type: textarea
     attributes:

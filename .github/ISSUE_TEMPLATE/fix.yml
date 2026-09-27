@@ -3,7 +3,7 @@
 name: "fix work item"
 description: "Open a fix work item"
 title: "fix(scope): "
-labels: ["type/bug"]
+labels: ["type/defect"]
 body:
   - type: textarea
     attributes:

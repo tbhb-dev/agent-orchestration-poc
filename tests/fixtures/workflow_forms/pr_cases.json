@@ -3,7 +3,7 @@
     "case": "single",
     "title": "tooling(workflow): add forms",
     "body": "## What\nForms.\n## Why\nNeeded.\n## Evidence\n[Checks](reports/inputs/workflow-forms-evidence.md).\n## Docs\nUpdated.\n## Size justification\nWithin limit.\n## Gate justifications\nNone.\n## Checklist\n- [x] CI green.\n\nRefs: #84",
-    "labels": ["area/workflow", "type/tooling", "phase/1", "harness/codex"],
+    "labels": ["area/workflow", "type/chore", "phase/1", "harness/codex"],
     "open": [84],
     "expected": []
   },
@@ -32,7 +32,7 @@
     "case": "trailer-not-final",
     "title": "tooling(workflow): add forms",
     "body": "## What\nForms.\nRefs: #84\nAfter trailer.",
-    "labels": ["area/workflow", "type/tooling", "phase/1", "harness/codex"],
+    "labels": ["area/workflow", "type/chore", "phase/1", "harness/codex"],
     "open": [84],
     "expected": [
       "missing section: Why",
