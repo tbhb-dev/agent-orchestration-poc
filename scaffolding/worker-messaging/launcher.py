@@ -134,12 +134,9 @@ def _observe(row: dict[str, Any]) -> dict[str, Any]:
     if seen["trust_prompt"] or not seen["process_start"]:
         return seen
     if row["harness"] == "codex":
-        paths = codex_launch.open_rollouts(seen["pid"])
-        rollouts = [codex_launch.rollout(path) for path in paths]
-        seen.update(identity.codex_facts(row, rollouts, paths))
-        found = seen["native_id"]
+        found, loaded, thread = codex_launch.discover_thread(row["endpoint"], row)
+        seen.update(native_id=found, brief_uptake=bool(found))
         if found:
-            loaded, thread = codex_launch.runtime_thread(row["endpoint"], found)
             seen.update(identity.codex_runtime_facts(found, row, loaded, thread))
     elif row["harness"] == "claude":
         seen.update(

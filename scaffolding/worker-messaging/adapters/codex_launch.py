@@ -5,33 +5,9 @@ import json
 import os
 import socket
 import struct
-import subprocess
-from pathlib import Path
 from typing import Any, cast
 
 import identity
-
-
-def open_rollouts(pid: int) -> list[str]:
-    """Find rollout files held by the exact TUI process."""
-    result = subprocess.run(
-        ["lsof", "-Fn", "-p", str(pid)],
-        capture_output=True,
-        text=True,
-        errors="replace",
-        check=True,
-    )
-    return [
-        line[1:]
-        for line in result.stdout.splitlines()
-        if line.startswith("n/") and "/sessions/" in line and "rollout-" in line
-    ]
-
-
-def rollout(path: str) -> dict[str, Any]:
-    """Read only identity and first-prompt evidence from a persisted rollout."""
-    rows = [json.loads(line) for line in Path(path).read_text().splitlines() if line]
-    return identity.codex_rollout(rows, path)
 
 
 def _frame(payload: dict[str, Any]) -> bytes:
@@ -93,6 +69,52 @@ def _call(
 
 def runtime_thread(endpoint: str, thread_id: str) -> tuple[bool, dict[str, Any]]:
     """Read the named thread from its runtime and check the loaded inventory."""
+    connection = _connect(endpoint)
+    try:
+        return _runtime_thread(connection, thread_id, 2)
+    finally:
+        connection.close()
+
+
+def discover_thread(
+    endpoint: str, row: dict[str, Any]
+) -> tuple[str | None, bool, dict[str, Any]]:
+    """Find the launched thread through the owning endpoint, then verify it."""
+    connection = _connect(endpoint)
+    try:
+        threads: list[dict[str, Any]] = []
+        cursor: str | None = None
+        cursors: set[str] = set()
+        number = 2
+        while True:
+            params: dict[str, Any] = {"limit": 100, "cwd": row["worktree"]}
+            if cursor is not None:
+                params["cursor"] = cursor
+            page = _call(connection, number, "thread/list", params)
+            data = page.get("data")
+            if not isinstance(data, list) or not all(
+                isinstance(item, dict) for item in data
+            ):
+                raise ValueError("invalid thread list")
+            threads.extend(data)
+            cursor = page.get("nextCursor")
+            if cursor is None:
+                break
+            if not isinstance(cursor, str) or cursor in cursors:
+                raise ValueError("invalid thread list cursor")
+            cursors.add(cursor)
+            number += 1
+        found = identity.codex_candidate(threads, row)
+        if found is None:
+            return None, False, {}
+        loaded, thread = _runtime_thread(connection, found, number + 1)
+        return found, loaded, thread
+    finally:
+        connection.close()
+
+
+def _connect(endpoint: str) -> socket.socket:
+    """Open and initialize one WebSocket client on the selected Unix endpoint."""
     socket_path = identity.codex_endpoint(endpoint)
     connection = socket.socket(socket.AF_UNIX)
     connection.settimeout(5)
@@ -117,29 +139,36 @@ def runtime_thread(endpoint: str, thread_id: str) -> tuple[bool, dict[str, Any]]
             {"clientInfo": {"name": "worker-launcher", "version": "1"}},
         )
         connection.sendall(_frame({"method": "initialized"}))
-        ids: set[str] = set()
-        cursor: str | None = None
-        cursors: set[str] = set()
-        number = 2
-        while True:
-            params: dict[str, Any] = {"limit": 100}
-            if cursor is not None:
-                params["cursor"] = cursor
-            loaded = _call(connection, number, "thread/loaded/list", params)
-            ids.update(identity.loaded_ids(loaded))
-            cursor = loaded.get("nextCursor")
-            if cursor is None:
-                break
-            if not isinstance(cursor, str) or cursor in cursors:
-                raise ValueError("invalid loaded thread cursor")
-            cursors.add(cursor)
-            number += 1
-        result = _call(
-            connection,
-            number + 1,
-            "thread/read",
-            {"threadId": thread_id, "includeTurns": False},
-        )
-        return thread_id in ids, result.get("thread", {})
-    finally:
+        return connection
+    except Exception:
         connection.close()
+        raise
+
+
+def _runtime_thread(
+    connection: socket.socket, thread_id: str, number: int
+) -> tuple[bool, dict[str, Any]]:
+    """Match a discovered ID in loaded inventory and read it back."""
+    ids: set[str] = set()
+    cursor: str | None = None
+    cursors: set[str] = set()
+    while True:
+        params: dict[str, Any] = {"limit": 100}
+        if cursor is not None:
+            params["cursor"] = cursor
+        loaded = _call(connection, number, "thread/loaded/list", params)
+        ids.update(identity.loaded_ids(loaded))
+        cursor = loaded.get("nextCursor")
+        if cursor is None:
+            break
+        if not isinstance(cursor, str) or cursor in cursors:
+            raise ValueError("invalid loaded thread cursor")
+        cursors.add(cursor)
+        number += 1
+    result = _call(
+        connection,
+        number + 1,
+        "thread/read",
+        {"threadId": thread_id, "includeTurns": False},
+    )
+    return thread_id in ids, result.get("thread", {})

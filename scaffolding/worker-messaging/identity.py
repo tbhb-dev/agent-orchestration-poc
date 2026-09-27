@@ -23,40 +23,22 @@ def reservation(rows: list[dict[str, Any]], request: dict[str, Any]) -> str:
     return "duplicate ownership"
 
 
-def codex_candidate(
-    rollouts: list[dict[str, Any]], worktree: str, open_files: list[str]
-) -> str | None:
-    """Accept only a rollout held open by the exact tmux process in this cwd."""
+def codex_candidate(threads: list[dict[str, Any]], row: dict[str, Any]) -> str | None:
+    """Identify one remote startup by worktree, launch time, and first brief."""
+    launched = int(datetime.fromisoformat(row["launch_time"]).timestamp())
     matches = [
-        row["id"]
-        for row in rollouts
-        if row.get("cwd") == worktree and row.get("path") in open_files
+        thread["id"]
+        for thread in threads
+        if isinstance(thread.get("id"), str)
+        and thread.get("cwd") == row["worktree"]
+        and isinstance(thread.get("createdAt"), int)
+        and thread["createdAt"] >= launched
+        and isinstance(thread.get("preview"), str)
+        and hashlib.sha256(thread["preview"].encode()).hexdigest()
+        == row["brief_digest"]
+        and (not row.get("native_id") or thread["id"] == row["native_id"])
     ]
     return matches[0] if len(matches) == 1 else None
-
-
-def codex_rollout(rows: list[dict[str, Any]], path: str) -> dict[str, Any]:
-    """Interpret captured rollout rows without reading the transcript file."""
-    meta = next((row["payload"] for row in rows if row["type"] == "session_meta"), {})
-    prompts = [
-        part["text"]
-        for row in rows
-        if row["type"] == "response_item" and row["payload"].get("role") == "user"
-        for part in row["payload"].get("content", [])
-        if part.get("type") == "input_text"
-    ]
-    return {
-        "id": meta.get("id"),
-        "cwd": meta.get("cwd"),
-        "path": path,
-        "brief_digests": [
-            hashlib.sha256(prompt.encode()).hexdigest() for prompt in prompts
-        ],
-        "started": any(
-            row["type"] == "event_msg" and row["payload"].get("type") == "task_started"
-            for row in rows
-        ),
-    }
 
 
 def claude_brief_uptake(
@@ -126,19 +108,6 @@ def missing_tmux_target(stderr: str) -> bool:
             "No such file or directory",
         )
     )
-
-
-def codex_facts(
-    row: dict[str, Any], rollouts: list[dict[str, Any]], paths: list[str]
-) -> dict[str, Any]:
-    """Derive native identity and brief uptake from process-held rollouts."""
-    found = codex_candidate(rollouts, row["worktree"], paths)
-    match = next((item for item in rollouts if item.get("id") == found), {})
-    return {
-        "native_id": found,
-        "brief_uptake": bool(match.get("started"))
-        and row["brief_digest"] in match.get("brief_digests", []),
-    }
 
 
 def codex_runtime_facts(

@@ -76,18 +76,40 @@ def test_reservation_property(field: str, suffix: str) -> None:
 
 
 def test_codex_candidate() -> None:
-    """A thread needs one process-held rollout in the worktree."""
-    rows = [{"id": "one", "cwd": "worktree", "path": "rollout"}]
-    assert identity.codex_candidate(rows, "worktree", ["rollout"]) == "one"
-    assert identity.codex_candidate(rows, "worktree", []) is None
-    assert identity.codex_candidate(rows * 2, "worktree", ["rollout"]) is None
+    """One remote thread must match the launch time, cwd, and exact brief."""
+    row = {
+        "worktree": "/worker",
+        "launch_time": "2026-09-27T01:00:00+00:00",
+        "brief_digest": hashlib.sha256(b"first brief").hexdigest(),
+    }
+    thread = {
+        "id": "one",
+        "cwd": "/worker",
+        "createdAt": 1790470800,
+        "preview": "first brief",
+    }
+    assert identity.codex_candidate([thread], row) == "one"
+    assert identity.codex_candidate([thread, {**thread, "id": "two"}], row) is None
+    assert identity.codex_candidate([thread], {**row, "native_id": "two"}) is None
+    assert identity.codex_candidate([{**thread, "createdAt": 1790470799}], row) is None
+    assert identity.codex_candidate([{**thread, "preview": "other"}], row) is None
 
 
 @given(st.text(min_size=1))
 def test_codex_candidate_property(other: str) -> None:
-    """A different cwd cannot claim the process-held rollout."""
-    rows = [{"id": "one", "cwd": "worktree", "path": "rollout"}]
-    assert identity.codex_candidate(rows, "worktree/" + other, ["rollout"]) is None
+    """A different cwd cannot claim a remote thread."""
+    row = {
+        "worktree": "/worker/" + other,
+        "launch_time": "2026-09-27T01:00:00+00:00",
+        "brief_digest": hashlib.sha256(b"first brief").hexdigest(),
+    }
+    thread = {
+        "id": "one",
+        "cwd": "/worker",
+        "createdAt": 1790470800,
+        "preview": "first brief",
+    }
+    assert identity.codex_candidate([thread], row) is None
 
 
 @pytest.mark.parametrize(
@@ -325,42 +347,6 @@ def test_main_is_rejected_even_with_recorded_owner() -> None:
     """A saved row never permits work on main."""
     request = dict.fromkeys(("name", "branch", "worktree", "tmux_name"), "main")
     assert identity.reservation([request], request) == "main branch is forbidden"
-
-
-def test_codex_rollout_interpretation() -> None:
-    """Native transcript rows supply metadata, prompt digest, and task start."""
-    rows = [
-        {"type": "session_meta", "payload": {"id": "thread-1", "cwd": "/worker"}},
-        {
-            "type": "response_item",
-            "payload": {
-                "role": "user",
-                "content": [{"type": "input_text", "text": "first brief"}],
-            },
-        },
-        {"type": "event_msg", "payload": {"type": "task_started"}},
-    ]
-    result = identity.codex_rollout(rows, "/rollout")
-    assert result == {
-        "id": "thread-1",
-        "cwd": "/worker",
-        "path": "/rollout",
-        "brief_digests": [hashlib.sha256(b"first brief").hexdigest()],
-        "started": True,
-    }
-    assert identity.codex_facts(
-        {"worktree": "/worker", "brief_digest": result["brief_digests"][0]},
-        [result],
-        ["/rollout"],
-    )["brief_uptake"]
-    assert not identity.codex_facts(
-        {"worktree": "/other", "brief_digest": result["brief_digests"][0]},
-        [result],
-        ["/rollout"],
-    )["brief_uptake"]
-    assert not identity.codex_facts(
-        {"worktree": "/worker", "brief_digest": "wrong"}, [result], ["/rollout"]
-    )["brief_uptake"]
 
 
 def test_claude_transcript_brief_acceptance() -> None:

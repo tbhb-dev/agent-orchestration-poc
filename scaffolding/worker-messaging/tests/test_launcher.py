@@ -1,6 +1,7 @@
 """Temporary #176 registry and command tests; #28 replaces this scaffold."""
 # ruff: noqa: S101
 
+import hashlib
 import json
 import socket
 import subprocess
@@ -297,6 +298,146 @@ def test_remote_inventory_on_temporary_unix_socket(loaded: bool) -> None:
             "thread/loaded/list",
             "thread/read",
         ]
+
+
+def _serve_fake_endpoint(
+    server: socket.socket,
+    replies: dict[str, dict[str, object]],
+    methods: list[str],
+    errors: list[Exception],
+) -> None:
+    """Answer requests on a disposable Unix socket with fixed results."""
+    try:
+        conn, _ = server.accept()
+        with conn:
+            handshake = bytearray()
+            while not handshake.endswith(b"\r\n\r\n"):
+                handshake.extend(conn.recv(1))
+            conn.sendall(b"HTTP/1.1 101 Switching Protocols\r\n\r\n")
+            while True:
+                try:
+                    request = codex_launch._receive(conn)
+                except EOFError:
+                    break
+                method = request["method"]
+                methods.append(method)
+                if "id" in request:
+                    conn.sendall(
+                        codex_launch._frame(
+                            {"id": request["id"], "result": replies[method]}
+                        )
+                    )
+    except (OSError, ValueError, KeyError) as error:
+        errors.append(error)
+
+
+@pytest.mark.parametrize(
+    ("change", "state"),
+    [
+        ("matching", "ready"),
+        ("wrong_id", "unknown"),
+        ("wrong_cwd", "unknown"),
+        ("wrong_read_cwd", "unknown"),
+        ("unloaded", "unknown"),
+        ("wrong_brief", "unknown"),
+    ],
+)
+def test_remote_discovery_without_tui_rollout(
+    monkeypatch: pytest.MonkeyPatch, change: str, state: str
+) -> None:
+    """Readiness discovers the remote startup thread through its owning endpoint."""
+    with tempfile.TemporaryDirectory(prefix="worker176-", dir="/private/tmp") as folder:
+        path = f"{folder}/app.sock"
+        server = socket.socket(socket.AF_UNIX)
+        server.bind(path)
+        server.listen(1)
+        server.settimeout(2)
+        methods: list[str] = []
+        errors: list[Exception] = []
+        brief = "first brief"
+        listed_id = "other" if change == "wrong_id" else "thread-1"
+        cwd = "/other" if change == "wrong_cwd" else "/worker"
+        read_cwd = "/other" if change == "wrong_read_cwd" else cwd
+        preview = "other brief" if change == "wrong_brief" else brief
+
+        replies: dict[str, dict[str, object]] = {
+            "initialize": {},
+            "thread/list": {
+                "data": [
+                    {
+                        "id": listed_id,
+                        "cwd": cwd,
+                        "createdAt": 1790470800,
+                        "preview": preview,
+                    }
+                ],
+                "nextCursor": None,
+            },
+            "thread/loaded/list": {
+                "data": [] if change == "unloaded" else ["thread-1"],
+                "nextCursor": None,
+            },
+            "thread/read": {
+                "thread": {
+                    "id": "thread-1",
+                    "cwd": read_cwd,
+                    "preview": preview,
+                    "model": "gpt-6-sol",
+                    "reasoningEffort": "high",
+                    "status": {"type": "idle"},
+                }
+            },
+        }
+
+        row = {
+            "harness": "codex",
+            "run_id": "run-1",
+            "worktree": "/worker",
+            "model": "gpt-6-sol",
+            "effort": "high",
+            "native_id": None,
+            "brief_digest": hashlib.sha256(brief.encode()).hexdigest(),
+            "launch_time": "2026-09-27T01:00:00+00:00",
+            "endpoint": f"unix://{path}",
+            "tmux_session": "worker-messaging",
+            "tmux_window": "@7",
+            "tmux_pane": "%13",
+            "pane_generation": "%13:100:start",
+            "pid": 100,
+            "process_start": "start",
+        }
+        monkeypatch.setattr(
+            launcher,
+            "_pane",
+            lambda _pane: {
+                key: row[key]
+                for key in (
+                    "tmux_session",
+                    "tmux_window",
+                    "tmux_pane",
+                    "pane_generation",
+                    "pid",
+                    "process_start",
+                )
+            },
+        )
+        monkeypatch.setattr(launcher, "_run", lambda _argv: "")
+        thread = threading.Thread(
+            target=_serve_fake_endpoint, args=(server, replies, methods, errors)
+        )
+        thread.start()
+        try:
+            _, actual, _ = launcher.inspect(row)
+        finally:
+            server.close()
+            thread.join(timeout=5)
+        assert not thread.is_alive()
+        assert not errors
+        assert actual == state
+        assert "thread/list" in methods
+        if change == "matching":
+            assert row["native_id"] == "thread-1"
+            assert methods[-2:] == ["thread/loaded/list", "thread/read"]
 
 
 @pytest.mark.parametrize("reply", [b"", b"HTTP/1.1 101 Switching Protocols\r\n\r\n"])
