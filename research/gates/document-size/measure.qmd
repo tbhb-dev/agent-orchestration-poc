@@ -1,0 +1,160 @@
+---
+title: Document size measurement
+format: html
+execute:
+  echo: true
+---
+
+## Population and method
+
+This notebook counts the tracked Markdown, MDX, and QMD files at commit `d2add70d5ce58d89c188b7944f561ab9b30477b9` without reading the mutable worktree. The output files are `inventory.csv`, `counts.csv`, and `summary.csv` beside this notebook. It includes imported research as read-only input. The method and its limits are in `method.md`.
+
+```{python}
+#| label: document-counts
+import csv
+import hashlib
+import re
+import random
+import subprocess
+import unicodedata
+from collections import defaultdict
+from pathlib import Path
+
+SNAPSHOT = "d2add70d5ce58d89c188b7944f561ab9b30477b9"
+OUT = Path("research/gates/document-size")
+WORD = re.compile(r"[^\W_]+(?:[_'’\-][^\W_]+)*", re.UNICODE)
+
+
+def normalize(raw: bytes) -> str:
+    value = raw.decode("utf-8", errors="strict")
+    return unicodedata.normalize("NFC", value.replace("\r\n", "\n").replace("\r", "\n"))
+
+
+def document_class(path: str) -> str:
+    if path in {"AGENTS.md", "CLAUDE.md"} or path.startswith(".claude/rules/"):
+        return "always-loaded instructions"
+    if path.startswith((".claude/agents/", "docs/briefs/", "docs/src/content/docs/workflow/documentation-brief")):
+        return "worker briefs"
+    if path in {"PLAN.md", "HANDOFF.md", "FABLE_HANDOFF.md"} or path.startswith("docs/src/content/docs/project/"):
+        return "plan and handoff"
+    if path.startswith("docs/src/content/docs/decisions/"):
+        return "decisions"
+    if path.startswith("docs/src/content/docs/design/") or path.startswith("design-sketch/"):
+        return "design pages"
+    if path.startswith(("research/", "experiments/", "reports/", "docs/src/content/docs/research/", "docs/src/content/docs/experiments/", "docs/src/content/docs/retros/", "docs/src/content/docs/devlog/")):
+        return "research notes and evidence"
+    return "on-demand reference pages"
+
+
+def word_count(value: str) -> int:
+    return len(WORD.findall(value))
+
+
+for raw, expected in ((b"caf\xc3\xa9\r\nnext\r", "café\nnext\n"), (b"plain\n", "plain\n")):
+    assert normalize(raw) == expected
+for value, expected in (("one two-three can't résumé", 4), ("", 0), ("a_b 42", 2)):
+    assert word_count(value) == expected
+for path, expected in (
+    ("AGENTS.md", "always-loaded instructions"),
+    ("research/imported/example.md", "research notes and evidence"),
+    ("docs/src/content/docs/decisions/example.md", "decisions"),
+    ("docs/briefs/example.md", "worker briefs"),
+    ("docs/src/content/docs/guides/example.md", "on-demand reference pages"),
+):
+    assert document_class(path) == expected
+samples = ("a", "café", "x-y", "front matter", "```code```")
+for sample in samples:
+    assert word_count(sample + " " + sample) == 2 * word_count(sample)
+    assert normalize(normalize(sample.encode()).encode()) == normalize(sample.encode())
+generator = random.Random(100)
+for _ in range(100):
+    sample = "".join(generator.choices("abc_-' 123", k=generator.randrange(30)))
+    assert word_count(sample + " " + sample) == 2 * word_count(sample)
+    assert normalize(normalize(sample.encode()).encode()) == normalize(sample.encode())
+    assert document_class("docs/briefs/" + sample + ".md") == "worker briefs"
+
+paths = subprocess.run(
+    ["git", "ls-tree", "-r", "--name-only", SNAPSHOT],
+    check=True,
+    capture_output=True,
+    text=True,
+).stdout.splitlines()
+population = sorted(
+    path for path in paths
+    if path.endswith((".md", ".mdx", ".qmd"))
+    and not path.startswith((".holding/", ".worktrees/", "docs/dist/", "docs/.astro/"))
+    and not path.endswith((".html.md",))
+)
+inventory = []
+counts = []
+for path in population:
+    raw = subprocess.run(
+        ["git", "show", f"{SNAPSHOT}:{path}"], check=True, capture_output=True
+    ).stdout
+    value = normalize(raw)
+    digest = hashlib.sha256(value.encode("utf-8")).hexdigest()
+    kind = document_class(path)
+    inventory.append((path, kind, digest, len(raw)))
+    counts.append((path, kind, word_count(value), "unavailable", "unavailable", "unavailable", "operator keys not provided"))
+
+for name, header, rows in (
+    ("inventory.csv", ("path", "class", "normalized_sha256", "source_bytes"), inventory),
+    ("counts.csv", ("path", "class", "words", "openai_tokens", "anthropic_tokens", "google_tokens", "token_status_reason"), counts),
+):
+    with (OUT / name).open("w", encoding="utf-8", newline="") as stream:
+        writer = csv.writer(stream, lineterminator="\n")
+        writer.writerow(header)
+        writer.writerows(rows)
+
+distribution = defaultdict(list)
+for _, kind, words, *_ in counts:
+    distribution[kind].append(words)
+summary = []
+for kind, values in sorted(distribution.items()):
+    ordered = sorted(values)
+    summary.append((kind, len(ordered), sum(ordered)))
+    print(kind, len(ordered), sum(ordered), ordered[(len(ordered) - 1) // 2], ordered[-1])
+summary.append(("TOTAL", len(counts), sum(row[2] for row in counts)))
+with (OUT / "summary.csv").open("w", encoding="utf-8", newline="") as stream:
+    writer = csv.writer(stream, lineterminator="\n")
+    writer.writerow(("row_id", "documents", "words"))
+    writer.writerows(summary)
+print("documents", len(counts), "words", sum(row[2] for row in counts))
+```
+
+## Independent sample
+
+The second method scans characters rather than applying the first cell's regular expression. It checks every row, every class total, the headline total, and the ten rows with the lowest SHA-256 of `100|` plus their path bytes. A different-model review remains pending with #107.
+
+```{python}
+#| label: independent-word-check
+sample = set(
+    row[0]
+    for row in sorted(counts, key=lambda row: (hashlib.sha256(("100|" + row[0]).encode()).hexdigest(), row[0]))[:10]
+)
+independent_totals = defaultdict(lambda: [0, 0])
+for path, kind, expected, *_ in counts:
+    raw = subprocess.run(
+        ["git", "show", f"{SNAPSHOT}:{path}"], check=True, capture_output=True
+    ).stdout
+    value = normalize(raw)
+    found = 0
+    active = False
+    for index, character in enumerate(value):
+        if character.isalnum():
+            found += not active
+            active = True
+        elif character in "_'-’" and active and index + 1 < len(value) and value[index + 1].isalnum():
+            pass
+        else:
+            active = False
+    assert found == expected, path
+    independent_totals[kind][0] += 1
+    independent_totals[kind][1] += found
+    if path in sample:
+        print("sample", path, found)
+assert sum(value[0] for value in independent_totals.values()) == 128
+assert sum(value[1] for value in independent_totals.values()) == 266716
+for kind, value in sorted(independent_totals.items()):
+    print("verified", kind, *value)
+```

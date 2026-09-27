@@ -10,5 +10,6 @@ Read the conventions for the language or stack before editing it:
 - [Shell conventions](/guides/shell-conventions/) cover portable scripts, harness hooks, and shell tooling.
 - [Docs stack conventions](/guides/docs-stack-conventions/) cover Astro, Starlight, Mermaid, the devlog, and builds.
 - [Data analysis conventions](/guides/data-analysis-conventions/) cover notebooks, private inputs, claims, and charts.
+- [Document size conventions](/guides/document-size-conventions/) propose whole-document and loaded-instruction budgets.
 
 A research gate precedes first code in each new language or stack. A worker reads the pinned release notes, source documentation, and migration guides and records raw notes under `research/gates/`. Codex writes the conventions and worker rules before coding starts. A PR that changes a pin updates the affected guidance. See the [research gate policy](/project/plan/#research-gates-for-languages-and-stacks).

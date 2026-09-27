@@ -16,3 +16,4 @@ Use a numbered `NNNN-slug.md` page with `title` and `description` frontmatter. F
 - [0007, Webhook-fed pull request monitor](/decisions/0007-github-event-monitor/), [untested] proposed 2026-09-26 for issue #98.
 - [0008, Analysis notebooks use Quarto text](/decisions/0008-analysis-notebooks/), accepted 2026-09-26 for issue #104.
 - [0009, Analysis charts use Matplotlib SVG](/decisions/0009-analysis-visualization/), accepted 2026-09-26 for issue #104.
+- [0011, Document size budgets](/decisions/0011-document-size-budgets/), proposed 2026-09-26 for issue #100.
