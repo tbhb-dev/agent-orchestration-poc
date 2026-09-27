@@ -3,6 +3,7 @@
 
 import hashlib
 import json
+import shlex
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, cast
@@ -167,6 +168,7 @@ def test_trust_write_confirmed_property(status: str) -> None:
         (None, "trusted", False),
         (None, None, True),
         ({}, None, True),
+        ({"trust_level": None}, None, True),
         ({"trust_level": "trusted"}, None, False),
     ],
 )
@@ -666,10 +668,25 @@ def test_command_uses_captured_paths() -> None:
         "endpoint": "unix:///private/tmp/worker.sock",
     }
     command = identity.command(row, "brief", "/repo/.holding/shim", "/usr/bin")
+    words = shlex.split(command)
+    assert words[-1] == "brief"
+    overrides = [
+        words[index + 1] for index, word in enumerate(words[:-1]) if word == "-c"
+    ]
     assert "--remote unix:///private/tmp/worker.sock" in command
     assert "--add-dir" not in command
     assert "writable_roots" not in command
     assert "PATH=/repo/.holding/shim:/usr/bin" in command
+    for key, value in (
+        ("PATH", "/repo/.holding/shim:/usr/bin"),
+        ("ZDOTDIR", "/repo/.holding/shim/zdotdir"),
+        ("PREK_HOME", "/private/tmp/agent-orchestration-poc-prek"),
+        ("GIT_AUTHOR_NAME", "tbhbagent"),
+        ("GIT_AUTHOR_EMAIL", "agent@tonyburns.net"),
+        ("GIT_COMMITTER_NAME", "tbhbagent"),
+        ("GIT_COMMITTER_EMAIL", "agent@tonyburns.net"),
+    ):
+        assert f"shell_environment_policy.set.{key}={json.dumps(value)}" in overrides
 
 
 def test_main_is_rejected_even_with_recorded_owner() -> None:

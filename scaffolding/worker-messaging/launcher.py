@@ -269,6 +269,13 @@ def launch(request: dict[str, Any]) -> tuple[dict[str, Any], str, str]:  # noqa:
     ):
         raise ValueError("tmux window name already exists")
     created = _worktree(Path(request["worktree"]), request["branch"], False)
+    subprocess.run(
+        ["mise", "run", "vale:sync"],
+        cwd=Path(request["worktree"]),
+        capture_output=True,
+        text=True,
+        check=True,
+    )
     row = {
         **request,
         "run_id": str(uuid.uuid7()),

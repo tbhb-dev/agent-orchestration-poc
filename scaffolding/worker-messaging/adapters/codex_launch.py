@@ -193,7 +193,7 @@ def _connect(endpoint: str) -> socket.socket:
     """Open and initialize one WebSocket client on the selected Unix endpoint."""
     socket_path = identity.codex_endpoint(endpoint)
     connection = socket.socket(socket.AF_UNIX)
-    connection.settimeout(5)
+    connection.settimeout(15)
     try:
         connection.connect(socket_path)
         key = base64.b64encode(os.urandom(16)).decode()

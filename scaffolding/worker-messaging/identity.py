@@ -1,6 +1,7 @@
 """Temporary #176 identity decisions; #28 replaces this scaffold."""
 
 import hashlib
+import json
 import shlex
 from datetime import datetime
 from pathlib import Path
@@ -277,7 +278,11 @@ def trust_readback(response: dict[str, Any], worktree: str, value: str | None) -
         return False
     entry = projects.get(worktree) if isinstance(projects, dict) else None
     if value is None:
-        return entry is None or isinstance(entry, dict) and "trust_level" not in entry
+        return (
+            entry is None
+            or isinstance(entry, dict)
+            and entry.get("trust_level") is None
+        )
     return isinstance(entry, dict) and entry.get("trust_level") == value
 
 
@@ -352,6 +357,15 @@ def session_missing(code: int, stderr: str) -> bool:
 
 def command(row: dict[str, Any], brief: str, shim: str, path_env: str) -> str:
     """Build a harness command from captured values without reading the host."""
+    env = {
+        "PATH": f"{shim}:{path_env}",
+        "ZDOTDIR": f"{shim}/zdotdir",
+        "PREK_HOME": "/private/tmp/agent-orchestration-poc-prek",
+        "GIT_AUTHOR_NAME": "tbhbagent",
+        "GIT_AUTHOR_EMAIL": "agent@tonyburns.net",
+        "GIT_COMMITTER_NAME": "tbhbagent",
+        "GIT_COMMITTER_EMAIL": "agent@tonyburns.net",
+    }
     if row["harness"] == "codex":
         codex_endpoint(row.get("endpoint"))
         argv = [
@@ -362,14 +376,22 @@ def command(row: dict[str, Any], brief: str, shim: str, path_env: str) -> str:
             row["model"],
             "-c",
             f'model_reasoning_effort="{row["effort"]}"',
-            "-a",
-            "never",
-            "-s",
-            "workspace-write",
-            "-C",
-            row["worktree"],
-            brief,
         ]
+        for key, value in env.items():
+            argv.extend(
+                ["-c", f"shell_environment_policy.set.{key}={json.dumps(value)}"]
+            )
+        argv.extend(
+            [
+                "-a",
+                "never",
+                "-s",
+                "workspace-write",
+                "-C",
+                row["worktree"],
+                brief,
+            ]
+        )
     elif row["harness"] == "claude":
         argv = [
             "claude",
@@ -383,15 +405,6 @@ def command(row: dict[str, Any], brief: str, shim: str, path_env: str) -> str:
         ]
     else:
         argv = ["agy", "--model", row["model"], "--effort", row["effort"], "-i", brief]
-    env = {
-        "PATH": f"{shim}:{path_env}",
-        "ZDOTDIR": f"{shim}/zdotdir",
-        "PREK_HOME": "/private/tmp/agent-orchestration-poc-prek",
-        "GIT_AUTHOR_NAME": "tbhbagent",
-        "GIT_AUTHOR_EMAIL": "agent@tonyburns.net",
-        "GIT_COMMITTER_NAME": "tbhbagent",
-        "GIT_COMMITTER_EMAIL": "agent@tonyburns.net",
-    }
     return "exec " + shlex.join(
         ["env", *(f"{key}={value}" for key, value in env.items()), *argv]
     )

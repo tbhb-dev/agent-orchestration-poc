@@ -64,6 +64,49 @@ def test_no_tmux_server_is_first_launch(monkeypatch: pytest.MonkeyPatch) -> None
     assert calls == ["pane"]
 
 
+def test_launch_syncs_vale_before_codex_trust_and_pane(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A new worktree gets pinned prose styles before its sandboxed TUI starts."""
+    calls: list[str] = []
+    monkeypatch.setattr(launcher, "STORE", tmp_path / "registry.json")
+    monkeypatch.setattr(launcher, "_worktree", lambda *_args: True)
+    monkeypatch.setattr(launcher, "_run", lambda _argv: "/repo/.git")
+    brief = tmp_path / "brief.md"
+    brief.write_text("brief")
+
+    def run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        if argv[:2] == ["mise", "run"]:
+            assert kwargs["cwd"] == Path("/repo/.worktrees/worker")
+            calls.append("vale")
+        return subprocess.CompletedProcess(argv, 1, "", "no server running")
+
+    monkeypatch.setattr(launcher.subprocess, "run", run)
+    monkeypatch.setattr(
+        launcher,
+        "_change_trust",
+        lambda *_args, **_kwargs: calls.append("trust") or True,
+    )
+    monkeypatch.setattr(
+        launcher, "_new_pane", lambda *_args: calls.append("pane") or {}
+    )
+    monkeypatch.setattr(launcher, "inspect", lambda row: (row, "ready", "test"))
+    request = {
+        "name": "worker",
+        "issue": 176,
+        "harness": "codex",
+        "model": "gpt-6-sol",
+        "effort": "high",
+        "branch": "tooling/176-worker",
+        "worktree": "/repo/.worktrees/worker",
+        "tmux_name": "worker",
+        "brief_file": str(brief),
+        "endpoint": "unix:///private/tmp/fake.sock",
+    }
+    launcher.launch(request)
+    assert calls == ["vale", "trust", "pane"]
+
+
 def test_codex_launch_requires_endpoint_before_side_effects() -> None:
     """An omitted remote endpoint cannot create a worktree or tmux pane."""
     with pytest.raises(ValueError, match="explicit absolute"):
@@ -213,9 +256,11 @@ class HandshakeConnection:
         self, reply: bytes = b"HTTP/1.1 101 Switching Protocols\r\n\r\n"
     ) -> None:
         self.reply = bytearray(reply)
+        self.timeout: int | None = None
 
-    def settimeout(self, _timeout: int) -> None:
+    def settimeout(self, timeout: int) -> None:
         """Accept the adapter timeout."""
+        self.timeout = timeout
 
     def connect(self, _endpoint: str) -> None:
         """Accept the endpoint."""
@@ -231,6 +276,30 @@ class HandshakeConnection:
 
     def close(self) -> None:
         """Close the fake connection."""
+
+
+def test_remote_socket_timeout_allows_slow_thread_inventory(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The observed 1.5 to 3 second list leaves room for server variance."""
+    connection = HandshakeConnection()
+    monkeypatch.setattr(codex_launch.socket, "socket", lambda _family: connection)
+    monkeypatch.setattr(codex_launch, "_call", lambda *_args: {})
+    assert codex_launch._connect("unix:///sock") is connection
+    assert connection.timeout == 15
+
+
+def test_remote_timeout_fails_closed(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A slow endpoint cannot leave a prior ready result eligible for sends."""
+    row = {"harness": "codex", "native_id": "thread-1", "state": "ready"}
+
+    def timed_out(_row: dict[str, object]) -> dict[str, object]:
+        raise TimeoutError("slow endpoint")
+
+    monkeypatch.setattr(launcher, "_observe", timed_out)
+    _, state, reason = launcher.inspect(row)
+    assert state == "unknown"
+    assert reason == "observation failed: TimeoutError"
 
 
 def test_loaded_inventory_pages(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -434,7 +503,7 @@ def test_trust_write_and_readback_on_fake_endpoint(  # noqa: C901, PLR0915
                             )
                             projects = (
                                 {worktree: {"trust_level": actual}}
-                                if actual is not None
+                                if actual is not None or value is None
                                 else {}
                             )
                             response = {"config": {"projects": projects}, "layers": []}
