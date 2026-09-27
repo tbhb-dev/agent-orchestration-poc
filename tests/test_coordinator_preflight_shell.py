@@ -29,14 +29,13 @@ def _invoke(tmp_path: Path, *args: str) -> subprocess.CompletedProcess[str]:
 @pytest.mark.integration
 def test_wait_check_bounds_stalled_github_cli(tmp_path: Path) -> None:
     gh = tmp_path / "gh"
-    gh.write_text(
-        '#!/bin/sh\nsleep 2\nprintf \'{"headRefOid":"abc","statusCheckRollup":[]}\'\n'
-    )
+    gh.write_text("#!/bin/sh\nexec sleep 4\n")
     gh.chmod(0o755)
     started = time.monotonic()
     result = _invoke(tmp_path, "wait-check", "85", "check", "1")
     assert result.returncode == 1
-    assert time.monotonic() - started < 2
+    assert "did not succeed" in result.stderr
+    assert time.monotonic() - started < 3
 
 
 @pytest.mark.integration
