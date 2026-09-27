@@ -1,0 +1,23 @@
+{
+  "pages": [
+    [
+      {
+        "id": 1,
+        "content": { "number": 172 },
+        "fields": [
+          { "name": "Status", "value": { "name": "Ready" } },
+          { "name": "Priority", "value": { "name": "P0" } },
+          { "name": "Phase", "value": { "name": "2" } },
+          { "name": "Worker", "value": null }
+        ]
+      }
+    ],
+    [
+      {
+        "id": 2,
+        "content": { "number": 173 },
+        "fields": [{ "name": "Status", "value": { "name": "In progress" } }]
+      }
+    ]
+  ]
+}

@@ -126,6 +126,14 @@ run = ["uv run ruff check --fix .", "uv run ruff format ."]
 description = "Run the Python tests"
 run = "uv run pytest"
 
+[tasks."monitor:project-probe"]
+description = "Read-only Project 9 source and event feasibility probe"
+run = "uv run python scaffolding/github-monitor/project_probe.py"
+
+[tasks."monitor:test-project-probe"]
+description = "Test the disposable Project 9 probe"
+run = "uv run pytest tests/test_project_probe.py"
+
 [tasks."check:review-identity"]
 description = "Run reviewer policy and wrapper process fixtures"
 run = "uv run pytest tests/fixtures/review_identity/test_policy.py tests/fixtures/review_identity/test_wrapper.py --run-integration"
