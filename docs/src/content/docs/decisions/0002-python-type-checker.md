@@ -21,9 +21,9 @@ Run `uv run pyrefly check` with no file names through `check:pyrefly`. The prek 
 
 `check:pyrefly` runs in the `check` aggregate and CI. Warnings fail under `min-severity = "warn"` (research/gates/pyrefly/notes.md §§3, 9).
 
-The `tests/**` and `experiments/**` sub-configs turn off `implicit-any-parameter` and `unannotated-return` only, matching ruff's `ANN` per-file ignores. The operator may overturn this relaxation at the phase 1 checkpoint (research/gates/pyrefly/notes.md §4).
+The operator decided "Strict everywhere" at the phase 1 checkpoint on 2026-09-26. The `tests/**` and `experiments/**` sub-configs and matching ruff `ANN` exemptions were removed in issue #77. Parameter and return annotations are required in source, tests, and experiments.
 
-Reopen the decision if the operator changes the gate requirement, pyrefly loses timely Python support, or sustained false positives or runtime cost make the gate unsuitable. Review the annotation relaxation at the phase 1 checkpoint (research/gates/pyrefly/notes.md §§4, 7).
+Reopen the decision if the operator changes the gate requirement, pyrefly loses timely Python support, or sustained false positives or runtime cost make the gate unsuitable.
 
 ## Evidence
 

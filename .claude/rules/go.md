@@ -31,6 +31,8 @@ See [Go conventions](../../docs/src/content/docs/guides/go-conventions.md).
 - Go 1.25: Use `synctest.Test` for internal time logic, never real I/O or subprocesses.
 - Go 1.27: Put external tmux or NATS tests behind `//go:build integration` and skip when the executable is missing; keep embedded NATS tests untagged.
 - Go 1.27: Use named table tests with `t.Run`, `_test.go`, `testdata/`, and Go 1.26 `t.ArtifactDir()` for captured logs.
+- rapid 1.3.0: Put pure core properties in named `t.Run` subtests through `rapid.MakeCheck`; label draws and turn a shrunk failure into a table case.
+- gremlins 0.6.0: Run `mise run check:mutation:go` for core changes. Keep efficacy and mutant coverage at or above 80 percent, with shell packages outside the scope.
 
 ## Core and shell
 

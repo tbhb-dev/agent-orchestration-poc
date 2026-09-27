@@ -1,5 +1,5 @@
 ---
-title: "0005: shell scripts use ShellCheck and shfmt"
+title: "0006: shell scripts use ShellCheck and shfmt"
 description: Pinned shell analysis and formatting for repository scripts and future hooks.
 ---
 

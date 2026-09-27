@@ -37,6 +37,6 @@ Quote path and user-data expansions. Use `printf '%s\n'` instead of `echo` for d
 
 ## Checks and exemptions
 
-ShellCheck 0.11.0 checks the current `scripts/*.sh` files at `--severity=style`. shfmt 3.14.0 checks them with `-d -i 4 -ci`. Both versions are pinned in `mise.toml`, run in `mise run check:shell`, and are part of `mise run check` and the prek hooks. `mise run fmt:shell` applies the formatter. The [tooling decision](/decisions/0005-shell-tooling/) records the choice. Add new hook and image script paths to the gate and prek matcher when they are introduced.
+ShellCheck 0.11.0 checks the current `scripts/*.sh` files at `--severity=style`. shfmt 3.14.0 checks them with `-d -i 4 -ci`. Both versions are pinned in `mise.toml`, run in `mise run check:shell`, and are part of `mise run check` and the prek hooks. `mise run fmt:shell` applies the formatter. The [tooling decision](/decisions/0006-shell-tooling/) records the choice. Add new hook and image script paths to the gate and prek matcher when they are introduced.
 
 ShellCheck follows the declared shell dialect for portability findings, but it does not analyze zsh or fish semantics. shfmt can format zsh but does not check behavior. Test interpreter selection, external commands, GNU and BSD flags, process failures, and hook JSON on the target host and image when writing hooks.

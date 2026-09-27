@@ -40,6 +40,8 @@ See [Python conventions](../../docs/src/content/docs/guides/python-conventions.m
 - pytest 9.1.1: treat warnings as errors and document any exception in `filterwarnings`.
 - pytest 9.1.1: use `@pytest.fixture` without parentheses and yield fixtures for child processes. In teardown, call `terminate()` and wait with a timeout. Call `kill()` if necessary. Place Unix socket paths under a short temporary directory, not `tmp_path`.
 - pytest 9.1.1: add the verified async plugin before writing `async def` tests.
+- hypothesis 6.168.1: test properties of pure functions with `@given`. Keep the built-in `ci` profile for required CI and use random seeds in local and nightly runs.
+- mutmut 3.8.0, pytest-cov 7.0.0: run `mise run check:mutation:python` for core changes. Delete `mutants/` before scoring, require at least 80 percent mutation score and 90 percent line coverage.
 
 ## Core and shell
 
@@ -59,4 +61,4 @@ See [Python conventions](../../docs/src/content/docs/guides/python-conventions.m
 ## Typing
 
 - pyrefly 1.3.1: run `mise run check:pyrefly` from the repository root. It gates `mise run check`, CI, and prek. Pass no file names because per-file mode ignores `project-excludes`.
-- pyrefly 1.3.1: keep `preset = "strict"` and `min-severity = "warn"` in `pyproject.toml`. Annotate parameters and returns in `src/`, use `typing.override` for overrides, and list re-exports in `__all__` or alias imports to themselves. Tests and experiments may omit parameter and return annotations until the phase 1 checkpoint. Suppress a named kind only with `# pyrefly: ignore[kind]` and a same-line reason. Move the exact pin in a PR with run evidence.
+- pyrefly 1.3.1, ruff 0.16.9: strict typing applies to source, tests, and experiments after the operator's 2026-09-26 decision. Annotate parameters and returns everywhere, use `typing.override` for overrides, and list re-exports in `__all__` or alias imports to themselves. Suppress a named kind only with `# pyrefly: ignore[kind]` and a same-line reason. Move the exact pin in a PR with run evidence.
