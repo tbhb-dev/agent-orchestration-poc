@@ -1,0 +1,77 @@
+Worktree: exp/228-host-gateway-attribution
+Commands ran from the repository root on macOS 26.5.1 build 25F80 unless the command enters the disposable tmux session.
+
+mise run vale:sync
+exit 0
+
+PYTHONSAFEPATH=1 mise exec -- uv run python experiments/02-host-socket-attribution/run_fixture.py > experiments/02-host-socket-attribution/evidence/two-workload.jsonl
+exit 0
+
+PYTHONSAFEPATH=1 mise exec -- uv run python experiments/02-host-socket-attribution/edge_cases.py > experiments/02-host-socket-attribution/evidence/edge-cases.jsonl
+exit 0
+
+for run in {1..10}; do PYTHONSAFEPATH=1 mise exec -- uv run python experiments/02-host-socket-attribution/run_fixture.py > experiments/02-host-socket-attribution/evidence/churn-${run}.jsonl || exit 1; done
+exit 0
+
+mise exec -- uv run pytest experiments/02-host-socket-attribution/test_probe.py > experiments/02-host-socket-attribution/evidence/core-tests.txt
+exit 0
+
+find /tmp -maxdepth 1 -type d -name 'bv01-*' -print > experiments/02-host-socket-attribution/evidence/cleanup-before.txt
+exit 0
+
+PYTHONSAFEPATH=1 mise exec -- uv run python experiments/02-host-socket-attribution/run_fixture.py > experiments/02-host-socket-attribution/evidence/two-workload.jsonl
+exit 0
+
+find /tmp -maxdepth 1 -type d -name 'bv01-*' -print > experiments/02-host-socket-attribution/evidence/cleanup-after.txt
+exit 0
+
+cmp experiments/02-host-socket-attribution/evidence/cleanup-before.txt experiments/02-host-socket-attribution/evidence/cleanup-after.txt
+exit 0
+
+mise run fmt
+exit 0
+
+NO_COLOR=1 mise run check > experiments/02-host-socket-attribution/evidence/check.txt 2>&1
+exit 0
+
+mise exec -- gzip -n -c experiments/02-host-socket-attribution/evidence/check.txt > experiments/02-host-socket-attribution/evidence/check.raw.gz
+exit 0
+
+sed -i 's/[[:blank:]]\+$//' experiments/02-host-socket-attribution/evidence/check.txt
+exit 0
+
+check.raw.gz retains the exact aggregate output. check.txt removes trailing spaces for the repository whitespace hook.
+
+NO_COLOR=1 mise run check:mutation > experiments/02-host-socket-attribution/evidence/mutation.txt 2>&1
+exit 0
+
+The mutation task was rerun after attribution_core.py was extracted from probe.py. It scores only src/agent_orchestration_poc/core and internal/core, which were unchanged by that extraction.
+
+test ! -e /private/tmp/bv01-228-tmux.sock
+exit 0
+
+tmux -S /private/tmp/bv01-228-tmux.sock -f /dev/null new-session -d -s bv01 'cd /Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.worktrees/exp-228-host-gateway-attribution && PYTHONSAFEPATH=1 mise exec -- uv run python experiments/02-host-socket-attribution/run_fixture.py > experiments/02-host-socket-attribution/evidence/tmux.jsonl'
+exit 0
+
+wc -l experiments/02-host-socket-attribution/evidence/tmux.jsonl
+exit 0, 9 lines
+
+tmux -S /private/tmp/bv01-228-tmux.sock list-sessions
+exit 1, no server running on the dedicated socket
+
+tmux -S /private/tmp/bv01-228-tmux.sock kill-server
+exit 1, no server running on the dedicated socket
+
+rm -f /private/tmp/bv01-228-tmux.sock
+blocked by command guard, which rejects rm -f style commands
+
+rm /private/tmp/bv01-228-tmux.sock
+exit 0
+
+test ! -e /private/tmp/bv01-228-tmux.sock
+exit 0
+
+find /tmp -maxdepth 1 -type d -name 'bv01-*' -print
+exit 0, empty output
+
+The detached tmux command does not expose the fixture process exit code. Both server_exit fields are 0 and all seven case replies are present in tmux.jsonl.
