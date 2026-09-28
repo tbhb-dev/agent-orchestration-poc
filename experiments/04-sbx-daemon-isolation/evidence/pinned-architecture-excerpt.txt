@@ -1,0 +1,21 @@
+    44	## Storage and persistence
+    45
+    46	When you create a sandbox, everything inside it persists until you remove it:
+    47	Docker images and containers built or pulled by the agent, installed packages,
+    48	agent state and history, and files in mountless or cloned workspaces. Files in
+    49	a directly mounted workspace live on the host instead.
+    50
+    51	Each sandbox maintains its own Docker daemon state, image cache, and package
+    52	installations. Multiple sandboxes don't share images or layers. The
+    53	[shared agent skills store](workflows/agent-skills.md) is an exception:
+    54	supported agents mount the same host-side store read-write unless you opt out
+    55	when creating the sandbox.
+   119	`sbx run` initializes a VM for a specified agent and starts the agent. You can
+   120	stop and restart without recreating the VM, preserving installed packages,
+   121	Docker images, and in-sandbox files.
+   122
+   123	Sandboxes persist until explicitly removed. Stopping an agent doesn't delete
+   124	the VM; environment setup carries over between runs. Use `sbx rm` to delete
+   125	the sandbox, its VM, and all of its contents. If the sandbox used
+   126	[`--clone`](usage.md#clone-mode), the `sandbox-<name>` Git remote is also
+   127	removed from your host repository.

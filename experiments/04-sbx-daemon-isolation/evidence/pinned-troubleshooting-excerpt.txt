@@ -1,0 +1,57 @@
+   423	## Daemon fails to start after downgrading
+   424
+   425	If you downgrade `sbx` to a version older than the one that last managed your
+   426	local state, the daemon may fail to start with a database version mismatch:
+   427
+   428	```text
+   429	ERROR: failed to start backend in-process: start backend: creating containerd
+   430	server: ... database is at major version 6, but this binary only supports up
+   431	to major version 1
+   432	```
+   433
+   434	A newer version of `sbx` upgraded the local database to a schema that older
+   435	binaries don't understand. To recover, reset all sandbox state:
+   436
+   437	```console
+   438	$ sbx reset --preserve-secrets
+   439	```
+   440
+   441	This stops all VMs and deletes all sandbox data. You'll need to create new
+   442	sandboxes afterwards. The `--preserve-secrets` flag keeps any secrets you've
+   443	set so you don't have to reconfigure them.
+   444
+   445	## Removing all state
+   446
+   447	As a last resort, if `sbx reset` doesn't resolve your issue, you can remove the
+   448	`sbx` state directory entirely. This deletes all sandbox data, configuration, and
+   449	cached images. Stop all running sandboxes first with `sbx reset`.
+   450
+   451	{{< tabs >}}
+   452	{{< tab name="macOS" >}}
+   453
+   454	```console
+   455	$ rm -rf ~/Library/Application\ Support/com.docker.sandboxes/
+   456	```
+   457
+   458	{{< /tab >}}
+   459	{{< tab name="Windows" >}}
+   460
+   461	```powershell
+   462	> Remove-Item -Recurse -Force "$env:LOCALAPPDATA\DockerSandboxes"
+   463	```
+   464
+   465	{{< /tab >}}
+   466	{{< tab name="Linux" >}}
+   467
+   468	Sandbox state on Linux follows the XDG Base Directory specification and is
+   469	spread across three directories:
+   470
+   471	```console
+   472	$ rm -rf ~/.local/state/sandboxes/
+   473	$ rm -rf ~/.cache/sandboxes/
+   474	$ rm -rf ~/.config/sandboxes/
+   475	```
+   476
+   477	If you have set custom `XDG_STATE_HOME`, `XDG_CACHE_HOME`, or
+   478	`XDG_CONFIG_HOME` environment variables, replace `~/.local/state`,
+   479	`~/.cache`, and `~/.config` with the corresponding values.
