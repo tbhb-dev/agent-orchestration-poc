@@ -241,7 +241,7 @@ def run() -> None:  # noqa: PLR0915 - fixed probe stages belong in one teardown 
                 "shared_A": (workspace / "A.txt").read_text().strip(),
                 "shared_B": (workspace / "B.txt").read_text().strip(),
                 "A_private": (root / "private" / "A" / "marker").read_text(),
-                "B_reads_A_private": (root / "private" / "A" / "marker").read_text(),
+                "A_reads_B_private": (root / "private" / "B" / "marker").read_text(),
             }
         )
     cases.append({"case": "cleanup", "fixture_retained": root.exists()})

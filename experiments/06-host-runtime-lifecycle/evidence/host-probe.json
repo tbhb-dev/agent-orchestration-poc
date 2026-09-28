@@ -25,7 +25,7 @@
     "case": "tmux-interactive-reconnect",
     "create_exit": 0,
     "ready": true,
-    "pane_pid": "15112",
+    "pane_pid": "8122",
     "first_attach_exit": 1,
     "after_first_has_session": 0,
     "second_attach_exit": 1,
@@ -51,7 +51,7 @@
     "shared_A": "written by A",
     "shared_B": "written by B",
     "A_private": "A",
-    "B_reads_A_private": "A"
+    "A_reads_B_private": "B"
   },
   {
     "case": "cleanup",
