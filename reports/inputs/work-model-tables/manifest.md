@@ -35,15 +35,15 @@
 
 ## Approved final revision copied for the second slice
 
-[Verified] The five operator-approved source files under `/Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.holding/reorg/` were read at source checkout `6448b1175dbc2c8f22f68fa126b5b344db9b74b0`. The files are untracked holding inputs, so their SHA-256 digests below define the revision. The supplied `verify.txt` reports `RESULT: PASS` for the final review edits. Its `verify.py` checks earlier round-four source hashes and generated final content, so its `SOURCE_HASHES` are not hashes of these final files.
+[Verified] The five operator-approved source files under `/Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.holding/reorg/` were first read at source checkout `6448b1175dbc2c8f22f68fa126b5b344db9b74b0`. The model and change Markdown copies were refreshed from the corrected 18:42 holding files under the [coordinator disposition](https://github.com/tbhb-dev/agent-orchestration-poc/pull/223#issuecomment-5861216316). The files are untracked holding inputs, so their SHA-256 digests below define the current revision. The earlier supplied `verify.txt` reports `RESULT: PASS` for the original final review edits; it does not verify the two later Markdown corrections.
 
 | Final source suffix | Source SHA-256 | Committed copy SHA-256 |
 | --- | --- | --- |
-| `.md` | `481ec7a76c802bfaba639e17cb157b42dfbd0dd16e6ed6095b223b92a2b0d6ed` | `481ec7a76c802bfaba639e17cb157b42dfbd0dd16e6ed6095b223b92a2b0d6ed` |
+| `.md` | `a448f379a3a151b0c871dcf4785fbfd50fddd84d4d8921e68b21b4898c48ca3f` | `a448f379a3a151b0c871dcf4785fbfd50fddd84d4d8921e68b21b4898c48ca3f` |
 | `.tsv` | `a06c4a16a9301d309c23f4c804222497dee20f7113e60f1be32109d0810b8f31` | `9ae24b7f1f5d871adf6ee57b7dd0b6e8d702a168fea9790dddc6510b549e38d6` |
 | `-parents.tsv` | `36393c7ee940f3aa4281ff3ad43d6105ebcb58ee09fe7c54f8c42784b4b61453` | `36393c7ee940f3aa4281ff3ad43d6105ebcb58ee09fe7c54f8c42784b4b61453` |
 | `-edges.tsv` | `475e4378833d0af755ab147bb169fee7f09cfb9440d96a54c7e367d0f3d35d98` | `964c3fc89a679da2eff88ba051743c6a16d09f189442a909e0f28563fc7896ec` |
-| `-changes.md` | `7d630e091bb7b9804d56b16f2ccd1d3ff50a2ed5248f6a0a53c44e6e9a8bf9fe` | Sanitized copy has digest `2cd3cbba70f9cc6699c5e040ee90b313f5e1559697893f0502a2b155f5750f0e` |
+| `-changes.md` | `af7e2c4d5868143fb5a824a919da309800033569c192cd0dac344840a05e4b54` | Sanitized copy has digest `1e3b843b37dd79d59b7aa333dc12d1e08f19b0eb751cc0534faa52c3da093aee` |
 
 [Verified] The repository copy of `-changes.md` redacts eight embedded issue-body values and includes three whitespace fixes required by rumdl. The exact source remains in the operator's holding directory at the source digest above and is not committed. The assignment and edge copies quote 121 and 34 terminal empty cells, respectively, to satisfy the commit whitespace hook. A `csv.DictReader` comparison found every parsed row equal to its source row. The work model Markdown and parent TSV match their holding inputs byte for byte. `mise exec -- gitleaks dir --redact --no-banner --log-level error reports/inputs/work-model-tables` exited 0.
 

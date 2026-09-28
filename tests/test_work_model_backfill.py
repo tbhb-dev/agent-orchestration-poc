@@ -1,24 +1,42 @@
 """Synthetic table and initial snapshot tests for the work model."""
 
-from dataclasses import replace
+import json
+import tomllib
+from dataclasses import asdict, replace
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
 from agent_orchestration_poc.core.work_model_backfill import (
+    SOURCE_PROJECT_FIELDS,
+    Difference,
     Item,
     Page,
+    RollbackExtras,
     Snapshot,
     Tables,
+    TargetInputs,
+    compare_cp13,
     complete,
     cycle_nodes,
+    expected_cp13,
+    operation_plan,
     parse_tables,
+    rollback_values,
+    title_exemptions,
+    title_repairs,
     validate_cp1,
 )
 
 FIXTURES = Path(__file__).parent / "fixtures/work_model_backfill/plan"
+ROOT = Path(__file__).resolve().parents[1]
+CONFIG_ROOT = (
+    ROOT if (ROOT / "config/workflow-reference.toml").is_file() else ROOT.parent
+)
+REFERENCE = tomllib.loads((CONFIG_ROOT / "config/workflow-reference.toml").read_text())
 
 
 def texts() -> tuple[str, str, str]:
@@ -65,6 +83,869 @@ def snapshot() -> Snapshot:
         )
     )
     return Snapshot(1, (*issues, *drafts), pages, "sha")
+
+
+def creation_inputs() -> TargetInputs:
+    """Represent only returned identities and saved content from creation calls."""
+    return TargetInputs(
+        {
+            "title:Draft A": Item(
+                "title:Draft A",
+                "Draft A",
+                "draft",
+                draft_id="draft-a",
+                item_id="item-a",
+            ),
+            "title:epic: migration": Item(
+                "#3",
+                "epic: migration",
+                "open",
+                issue_id="3",
+                item_id="item-3",
+                body="Goal and finish line",
+            ),
+        },
+        {"title:Draft B": ""},
+        frozenset({"2"}),
+        frozenset(),
+        REFERENCE,
+    )
+
+
+def final_snapshot(items: tuple[Item, ...]) -> Snapshot:
+    """Build independently counted complete CP13 pagination receipts."""
+    issues = sum(bool(item.issue_id) for item in items)
+    drafts = sum(bool(item.draft_id) for item in items)
+    project = sum(bool(item.item_id) for item in items)
+    pages = tuple(
+        Page(name, 1, count, 1, count)
+        for name, count in (
+            ("issues", issues),
+            ("project", project),
+            ("drafts", drafts),
+            ("native", issues),
+            ("parents", issues),
+            ("blockers", issues),
+        )
+    )
+    return Snapshot(1, items, pages, "after", "final")
+
+
+def approved_tables() -> Tables:
+    """Read the committed final revision by supplied paths."""
+    inputs = next(
+        path / "reports/inputs/work-model-tables"
+        for path in Path(__file__).resolve().parents
+        if (path / "reports/inputs/work-model-tables").is_dir()
+    )
+    return parse_tables(
+        (inputs / "2026-09-27-work-model-v3-final.tsv").read_text(),
+        (inputs / "2026-09-27-work-model-v3-final-parents.tsv").read_text(),
+        (inputs / "2026-09-27-work-model-v3-final-edges.tsv").read_text(),
+    )
+
+
+def approved_cp1_and_tables() -> tuple[Tables, Snapshot]:
+    """Construct a complete plain-value CP1 from approved saved row values."""
+    approved = approved_tables()
+    items = []
+    for row in approved.assignments:
+        if row["number"]:
+            old: dict[str, str | None] = (
+                json.loads(row["old project fields"])
+                if row["old project fields"]
+                else {}
+            )
+            source = (
+                tuple(
+                    sorted(
+                        (name, old.get(name) or "") for name in SOURCE_PROJECT_FIELDS
+                    )
+                )
+                if old
+                else ()
+            )
+            items.append(
+                Item(
+                    f"#{row['number']}",
+                    row["title"],
+                    row["live state"],
+                    row["state reason"],
+                    source_project=source,
+                    project=tuple(
+                        sorted(
+                            (name, old.get(name) or "")
+                            for name in ("Status", "Size", "Area", "Harness", "Worker")
+                        )
+                    )
+                    if old
+                    else (),
+                    issue_id=row["target content id"] or row["number"],
+                    item_id=row["target project item"] or f"copied-{row['number']}",
+                )
+            )
+        elif row["backfill mode"] == "existing draft":
+            items.append(
+                Item(
+                    f"title:{row['title']}",
+                    row["title"],
+                    "draft",
+                    draft_id=row["target content id"],
+                    item_id=row["target project item"],
+                )
+            )
+    cp1 = replace(
+        final_snapshot(tuple(items)),
+        branch_sha="approved-input-cp1",
+        run_state="initial",
+    )
+    return approved, cp1
+
+
+def approved_creation_inputs(approved: Tables, cp1: Snapshot) -> TargetInputs:
+    """Supply synthetic returned IDs and reviewed issue bodies for the final table."""
+    present = {item.key for item in cp1.items}
+    created = {}
+    next_issue = 20000
+    for row in approved.assignments:
+        key = f"#{row['number']}" if row["number"] else f"title:{row['title']}"
+        if row["backfill mode"] in {"draft", "issue"} and key not in present:
+            issue = row["backfill mode"] == "issue"
+            created[key] = Item(
+                f"#{next_issue}" if issue else key,
+                row["title"],
+                "open" if issue else "draft",
+                draft_id=f"new-draft-{key}" if not issue else "",
+                issue_id=str(next_issue) if issue else "",
+                item_id=f"new-item-{key}",
+            )
+            if issue:
+                next_issue += 1
+    for index, row in enumerate(approved.parents, 10000):
+        created[f"title:{row['proposed title']}"] = Item(
+            f"#{index}",
+            row["proposed title"],
+            "open",
+            issue_id=str(index),
+            item_id=f"new-item-{index}",
+        )
+    bodies = {
+        f"#{row['number']}": "reviewed"
+        for row in approved.assignments
+        if row["body revision"] == "required"
+    }
+    bodies.update(
+        (item.key, item.body)
+        for item in cp1.items
+        if item.draft_id and item.key not in bodies
+    )
+    closed = frozenset(
+        row["number"]
+        for row in approved.assignments
+        if row["number"] and row["live state"] == "open" and row["state"] == "closed"
+    )
+    return TargetInputs(created, bodies, closed, frozenset(), REFERENCE)
+
+
+def test_approved_incidents_are_open_numbered_issues_at_cp13() -> None:
+    """A real issue read-back must match the planned incident creations."""
+    approved, cp1 = approved_cp1_and_tables()
+    inputs = approved_creation_inputs(approved, cp1)
+    target = expected_cp13(approved, cp1, inputs)
+    incidents = {}
+    for row in approved.assignments:
+        if row["backfill mode"] != "issue":
+            continue
+        identity = inputs.created[f"title:{row['title']}"]
+        native = (("Priority", ""), ("Severity", "SEV2"), ("Work type", "Unplanned"))
+        project = tuple(
+            sorted(
+                {
+                    "Status": row["project status"],
+                    "Size": row["size"],
+                    "Area": row["project area"],
+                    "Harness": row["project harness"],
+                    "Worker": row["project worker"],
+                    "Type": "Incident",
+                    **dict(native),
+                }.items()
+            )
+        )
+        incidents[identity.key] = Item(
+            identity.key,
+            row["title"],
+            "open",
+            issue_type="Incident",
+            native=native,
+            project=project,
+            issue_id=identity.issue_id,
+            item_id=identity.item_id,
+        )
+    assert len(incidents) == 2
+    actual = final_snapshot(tuple(incidents.get(item.key, item) for item in target))
+    assert compare_cp13(target, actual, "after") == ()
+
+
+@pytest.mark.parametrize("kind", ["draft", "incident", "parent"])
+def test_cp13_rejects_wrong_creation_kind(kind: str) -> None:
+    """Creation identities must have the resource kind the row requested."""
+    approved, cp1 = approved_cp1_and_tables()
+    inputs = approved_creation_inputs(approved, cp1)
+    if kind == "parent":
+        key = f"title:{approved.parents[0]['proposed title']}"
+        wrong = replace(
+            inputs.created[key], key="title:wrong", issue_id="", draft_id="wrong"
+        )
+    elif kind == "incident":
+        row = next(
+            row for row in approved.assignments if row["backfill mode"] == "issue"
+        )
+        key = f"title:{row['title']}"
+        wrong = replace(
+            inputs.created[key], key="title:wrong", issue_id="", draft_id="wrong"
+        )
+    else:
+        row = next(
+            row for row in approved.assignments if row["backfill mode"] == "draft"
+        )
+        key = f"title:{row['title']}"
+        wrong = replace(
+            inputs.created[key], key="#20002", issue_id="20002", draft_id=""
+        )
+    with pytest.raises(ValueError, match="creation resource kind"):
+        expected_cp13(
+            approved,
+            cp1,
+            replace(inputs, created={**inputs.created, key: wrong}),
+        )
+
+
+def test_cp1_rejects_changed_existing_draft_content_id() -> None:
+    """The approved draft content ID is part of the preclosure identity."""
+    approved, cp1 = approved_cp1_and_tables()
+    d2 = next(item for item in cp1.items if item.draft_id)
+    changed = replace(
+        cp1,
+        items=tuple(
+            replace(item, draft_id="wrong-id") if item == d2 else item
+            for item in cp1.items
+        ),
+    )
+    with pytest.raises(ValueError, match="changed existing draft identity"):
+        operation_plan(approved, changed)
+
+
+def test_approved_table_counts_and_numbered_exemptions() -> None:
+    """Derive the final revision's counts and manifest from its supplied rows."""
+    approved, cp1 = approved_cp1_and_tables()
+    assert (len(approved.assignments), len(approved.parents), len(approved.edges)) == (
+        191,
+        22,
+        387,
+    )
+    validate_cp1(approved, cp1)
+    closures = frozenset(
+        row["number"]
+        for row in approved.assignments
+        if row["number"] and row["live state"] == "open" and row["state"] == "closed"
+    )
+    exemptions = title_exemptions(approved, cp1, closures, frozenset(), REFERENCE)
+    assert exemptions == (
+        "3",
+        "4",
+        "5",
+        "6",
+        "8",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "26",
+        "30",
+        "58",
+        "59",
+        "60",
+        "61",
+        "62",
+        "63",
+        "69",
+        "71",
+        "72",
+        "77",
+        "78",
+        "83",
+        "84",
+        "87",
+        "96",
+        "104",
+        "110",
+        "114",
+        "125",
+        "132",
+        "154",
+        "161",
+        "167",
+        "168",
+        "169",
+        "173",
+        "177",
+        "178",
+        "184",
+        "185",
+        "187",
+    )
+    repairs = title_repairs(approved, REFERENCE)
+    assert len(repairs) == 70
+    assert sum(changed for _, changed in repairs) == 18
+    plan = {step.number: step for step in operation_plan(approved, cp1)}
+    assert len(plan["0"].targets) == 13
+    assert len(plan["6T"].targets) == 70
+    assert len(plan["9"].targets) == 22
+    assert all(title.startswith("initiative:") for title in plan["9"].targets[:5])
+    assert len(plan["12"].targets) == 2
+
+
+def test_cp1_rejects_copied_drift_and_accepts_reviewed_status() -> None:
+    """A copied Project value must match OLD unless its Status override was reviewed."""
+    approved, cp1 = approved_cp1_and_tables()
+    first = cp1.items[0]
+    drift = replace(first, project=(("Status", "wrong-copy"),))
+    changed = replace(cp1, items=(drift, *cp1.items[1:]))
+    with pytest.raises(ValueError, match="changed copied Project values"):
+        operation_plan(approved, changed)
+    reviewed = replace(
+        first, project=tuple(sorted({**dict(first.project), "Status": "Done"}.items()))
+    )
+    changed = replace(cp1, items=(reviewed, *cp1.items[1:]))
+    operation_plan(approved, changed, {first.key: "Done"})
+    closures = frozenset(
+        row["number"]
+        for row in approved.assignments
+        if row["number"] and row["live state"] == "open" and row["state"] == "closed"
+    )
+    title_exemptions(
+        approved,
+        changed,
+        closures,
+        frozenset(),
+        REFERENCE,
+        reviewed_status={first.key: "Done"},
+    )
+    inputs = replace(
+        approved_creation_inputs(approved, changed),
+        reviewed_status={first.key: "Done"},
+    )
+    expected_cp13(approved, changed, inputs)
+    with pytest.raises(ValueError, match="changed copied Project values"):
+        operation_plan(approved, changed, {first.key: "In progress"})
+
+
+def test_native_write_pinning_and_ordered_inverse() -> None:
+    """Payloads omit unpinned fields and restore fields before the saved type."""
+    steps = {step.number: step for step in operation_plan(tables(), snapshot())}
+    assert steps["6"].native_writes[0].fields == (
+        ("Priority", "Standard"),
+        ("Work type", "Planned"),
+    )
+    assert steps["9"].native_writes[0].issue_type == "Epic"
+    assert steps["9"].native_writes[0].fields == (("Work type", "Planned"),)
+    assert "type=" in steps["9"].calls[0]
+    assert "type=" in steps["12"].calls[0]
+    assert steps["6"].reversal.index("restore saved native fields") < steps[
+        "6"
+    ].reversal.index("restore saved type")
+
+
+@pytest.mark.parametrize(
+    ("issue_type", "expected_fields"),
+    [
+        ("Feature", {"Priority", "Work type"}),
+        ("Defect", {"Severity", "Work type"}),
+        ("Chore", {"Priority", "Work type"}),
+        ("Spike", {"Priority", "Work type"}),
+        ("Incident", {"Severity", "Work type"}),
+        ("Epic", {"Work type"}),
+        ("Initiative", {"Work type"}),
+    ],
+)
+def test_native_write_fields_follow_type_pins(
+    issue_type: str, expected_fields: set[str]
+) -> None:
+    """Each type's write payload contains only fields pinned to that type."""
+    parsed = tables()
+    row = dict(parsed.assignments[0])
+    row["issue type"] = issue_type
+    row["severity"] = "SEV2"
+    changed = replace(parsed, assignments=(row, *parsed.assignments[1:]))
+    write = {step.number: step for step in operation_plan(changed, snapshot())}[
+        "6"
+    ].native_writes[0]
+    assert write.issue_type == issue_type
+    assert {name for name, _ in write.fields} == expected_fields
+
+
+def test_added_membership_uses_existing_issue_identity() -> None:
+    """Adding an existing issue to the Project changes only its item identity."""
+    parsed, cp1 = tables(), snapshot()
+    first = replace(cp1.items[0], item_id="")
+    cp1 = replace(
+        cp1,
+        items=(first, *cp1.items[1:]),
+        pages=tuple(
+            replace(page, count=page.count - 1, total_count=page.total_count - 1)
+            if page.collection == "project"
+            else page
+            for page in cp1.pages
+        ),
+    )
+    operation_plan(parsed, cp1)
+    with pytest.raises(ValueError, match="added Project membership is incomplete"):
+        expected_cp13(parsed, cp1, creation_inputs())
+    inputs = replace(creation_inputs(), added_items={"#1": "new-item-1"})
+    target = expected_cp13(parsed, cp1, inputs)
+    assert target[0].issue_id == first.issue_id
+    assert target[0].item_id == "new-item-1"
+    assert compare_cp13(target, final_snapshot(target), "after") == ()
+    rollback = rollback_values(
+        tables(),
+        cp1,
+        {},
+        tuple(item.item_id for item in cp1.items if item.item_id),
+        "open",
+        extras=RollbackExtras(added_items=inputs.added_items),
+    )
+    assert rollback.added_items == (("#1", "new-item-1"),)
+
+
+def test_existing_d2_draft_requires_corrected_body() -> None:
+    """The approved D2 correction is required even with an empty revision cell."""
+    approved, cp1 = approved_cp1_and_tables()
+    d2 = next(
+        item
+        for item in cp1.items
+        if item.title == "tooling(docs): move diagrams from Mermaid to D2"
+    )
+    cp1 = replace(
+        cp1,
+        items=tuple(
+            replace(item, body="old planned") if item == d2 else item
+            for item in cp1.items
+        ),
+    )
+    incomplete = approved_creation_inputs(approved, cp1)
+    with pytest.raises(ValueError, match="reviewed body is missing"):
+        expected_cp13(
+            approved,
+            cp1,
+            replace(
+                incomplete,
+                bodies={
+                    key: body
+                    for key, body in incomplete.bodies.items()
+                    if key != d2.key
+                },
+            ),
+        )
+    inputs = approved_creation_inputs(approved, cp1)
+    inputs = replace(inputs, bodies={**inputs.bodies, d2.key: "corrected unplanned"})
+    target = expected_cp13(approved, cp1, inputs)
+    corrected = next(item for item in target if item.key == d2.key)
+    assert (corrected.item_id, corrected.draft_id) == (d2.item_id, d2.draft_id)
+    assert any(
+        d.field == "body"
+        for d in compare_cp13(
+            target,
+            final_snapshot(
+                tuple(
+                    replace(item, body="old planned") if item.key == d2.key else item
+                    for item in target
+                )
+            ),
+            "after",
+        )
+    )
+    already_correct = replace(
+        cp1,
+        items=tuple(
+            replace(item, body="corrected unplanned") if item.key == d2.key else item
+            for item in cp1.items
+        ),
+    )
+    target = expected_cp13(approved, already_correct, inputs)
+    assert (
+        next(item for item in target if item.key == d2.key).body
+        == "corrected unplanned"
+    )
+
+
+def test_revoked_closed_title_needs_valid_replacement() -> None:
+    """Reclosing after revocation cannot bless the old invalid title."""
+    inputs = replace(creation_inputs(), revoked=frozenset({"2"}))
+    with pytest.raises(ValueError, match="invalid non-exempt title"):
+        expected_cp13(tables(), snapshot(), inputs)
+
+
+def test_partial_created_issue_is_rollback_input() -> None:
+    """An issue creation remains reversible before its Project item exists."""
+    cp1 = snapshot()
+    partial = Item("#3", "epic: migration", "open", issue_id="3")
+    rollback = rollback_values(
+        tables(),
+        cp1,
+        {"title:epic: migration": partial},
+        tuple(item.item_id for item in cp1.items),
+        "open",
+    )
+    assert rollback.created == (partial,)
+
+
+@pytest.mark.parametrize("native", [(), (("Work type", "Planned"),)])
+def test_partial_issue_before_project_addition_keeps_number(
+    native: tuple[tuple[str, str], ...],
+) -> None:
+    """Failure before or after field write leaves a closable created issue."""
+    cp1 = snapshot()
+    created = Item("#3", "epic: migration", "open", issue_id="3", native=native)
+    result = rollback_values(
+        tables(),
+        cp1,
+        {"title:epic: migration": created},
+        tuple(item.item_id for item in cp1.items),
+        "open",
+    )
+    assert result.created[0].issue_id == "3"
+    assert result.created[0].item_id == ""
+
+
+@pytest.mark.parametrize(
+    ("key", "field", "value"),
+    [
+        ("title:epic: migration", "key", "#1"),
+        ("title:epic: migration", "issue_id", "1"),
+        ("title:epic: migration", "item_id", "item-1"),
+        ("title:Draft A", "draft_id", "draft-b"),
+    ],
+)
+def test_rollback_rejects_created_identity_colliding_with_cp1(
+    key: str, field: str, value: str
+) -> None:
+    """An inverse must never delete or close a resource saved at CP1."""
+    cp1 = snapshot()
+    created = creation_inputs().created
+    changed = {**created, key: replace(created[key], **cast("Any", {field: value}))}
+    with pytest.raises(ValueError, match="created identity collides with CP1"):
+        rollback_values(
+            tables(), cp1, changed, tuple(item.item_id for item in cp1.items), "open"
+        )
+
+
+@pytest.mark.parametrize("field", ["key", "issue_id", "item_id", "draft_id"])
+def test_rollback_rejects_created_identity_colliding_with_creation(field: str) -> None:
+    """Two creation results cannot claim the same returned resource."""
+    approved, cp1 = approved_cp1_and_tables()
+    created = approved_creation_inputs(approved, cp1).created
+    if field == "draft_id":
+        keys = [key for key, item in created.items() if item.draft_id]
+    else:
+        keys = [f"title:{row['proposed title']}" for row in approved.parents]
+    first, second = keys[:2]
+    created[second] = replace(
+        created[second], **cast("Any", {field: getattr(created[first], field)})
+    )
+    with pytest.raises(ValueError, match="created identity"):
+        rollback_values(
+            approved, cp1, created, tuple(item.item_id for item in cp1.items), "open"
+        )
+
+
+@pytest.mark.parametrize("kind", ["draft", "parent", "incident"])
+def test_rollback_rejects_wrong_creation_kind(kind: str) -> None:
+    """Rollback must follow the planned draft or numbered issue operation."""
+    if kind == "incident":
+        planned, cp1 = approved_cp1_and_tables()
+        created = approved_creation_inputs(planned, cp1).created
+        row = next(
+            row for row in planned.assignments if row["backfill mode"] == "issue"
+        )
+        key = f"title:{row['title']}"
+    else:
+        planned, cp1 = tables(), snapshot()
+        created = creation_inputs().created
+        key = "title:Draft A" if kind == "draft" else "title:epic: migration"
+    item = created[key]
+    wrong = (
+        replace(item, key="#9", draft_id="", issue_id="9")
+        if kind == "draft"
+        else replace(item, key="title:wrong", draft_id="wrong", issue_id="")
+    )
+    with pytest.raises(ValueError, match="creation resource kind differs from plan"):
+        rollback_values(
+            planned,
+            cp1,
+            {key: wrong},
+            tuple(item.item_id for item in cp1.items),
+            "open",
+        )
+
+
+def test_ordered_plan_covers_every_stage_and_saved_reversal() -> None:
+    """Keep every approved step, target disposition, checkpoint, and reversal."""
+    steps = operation_plan(tables(), snapshot())
+    assert tuple(step.number for step in steps) == (
+        "1",
+        "0",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "6T",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+    )
+    assert all(step.saved_inputs and step.check and step.reversal for step in steps)
+    assert {step.number for step in steps if not step.calls} == {"2", "14"}
+    by_number = {step.number: step for step in steps}
+    assert by_number["0"].targets == ("2",)
+    assert by_number["6"].targets == ("1", "2", "title:Draft A", "title:Draft B")
+    assert by_number["6T"].targets == ("1",)
+    assert by_number["9"].targets == ("epic: migration",)
+    assert by_number["10"].targets == ("#1", "#2")
+    assert by_number["11"].targets == ("1 <- 2",)
+    assert "no link" not in repr(by_number["11"].targets)
+    assert "judgment" not in repr(by_number["11"].targets)
+    assert by_number["13"].calls
+    assert "operator confirmation" in by_number["13"].check
+
+
+def test_operation_contract_matches_reviewed_fixture() -> None:
+    """Freeze every stage's calls, saved values, check, and reversal."""
+    saved = json.loads((FIXTURES / "operations.json").read_text())
+    actual = [asdict(step) for step in operation_plan(tables(), snapshot())]
+    assert json.loads(json.dumps(actual)) == saved
+
+
+def test_exemptions_require_closure_and_reopen_revokes_permanently() -> None:
+    """A target-closed invalid title is keyed by number only after CP0."""
+    with pytest.raises(ValueError, match="planned closure is not confirmed"):
+        title_exemptions(tables(), snapshot(), frozenset(), frozenset(), REFERENCE)
+    assert title_exemptions(
+        tables(), snapshot(), frozenset({"2"}), frozenset(), REFERENCE
+    ) == ("2",)
+    assert (
+        title_exemptions(
+            tables(), snapshot(), frozenset({"2"}), frozenset({"2"}), REFERENCE
+        )
+        == ()
+    )
+    assert title_repairs(tables(), REFERENCE) == (("1", False),)
+
+
+@given(st.sets(st.sampled_from(["1", "2", "999"])))
+def test_exemption_revocation_never_adds_a_number(revoked: set[str]) -> None:
+    """Any persisted reopen history only removes eligible exemptions."""
+    result = title_exemptions(
+        tables(), snapshot(), frozenset({"2"}), frozenset(revoked), REFERENCE
+    )
+    assert set(result) <= {"2"} - revoked
+
+
+def test_scope_change_requires_new_verdict_and_replacement_validity() -> None:
+    """Only a changed scope token needs a new refinement verdict."""
+    parsed = tables()
+    first = dict(parsed.assignments[0])
+    first["proposed title"] = "tooling(workflow): build a model"
+    first["refinement verdict"] = "new verdict required"
+    changed = replace(parsed, assignments=(first, *parsed.assignments[1:]))
+    assert title_repairs(changed, REFERENCE) == (("1", True),)
+    first["refinement verdict"] = "preserve prior verdict if body unchanged"
+    with pytest.raises(ValueError, match="scope-change verdict disposition differs"):
+        title_repairs(changed, REFERENCE)
+    first["proposed title"] = "invalid"
+    with pytest.raises(ValueError, match="invalid replacement title"):
+        title_repairs(changed, REFERENCE)
+
+
+def test_cp13_uses_created_ids_and_compares_every_saved_value() -> None:
+    """Build from table and CP1 values, then detect read-back drift by identity."""
+    target = expected_cp13(tables(), snapshot(), creation_inputs())
+    by_key = {item.key: item for item in target}
+    assert by_key["#2"].title == "legacy title"
+    assert by_key["#2"].state_reason == "not_planned"
+    assert by_key["#1"].parent == "#3"
+    assert by_key["#1"].blockers == ("#2",)
+    assert by_key["#3"].issue_type == "Epic"
+    assert dict(by_key["#1"].native)["Priority"] == "Standard"
+    assert dict(by_key["#1"].project)["Type"] == "Chore"
+    assert dict(by_key["title:Draft A"].project)["Priority"] == ""
+    assert by_key["title:Held"].draft_id == "draft-held"
+    assert compare_cp13(target, final_snapshot(target), "after") == ()
+    assert compare_cp13(target, final_snapshot(target), "before") == (
+        Difference("branch", "sha", "before", "after"),
+    )
+    changed = replace(by_key["#1"], native=(("Priority", "Intangible"),), parent="")
+    after = final_snapshot(
+        tuple(changed if item.key == "#1" else item for item in target)
+    )
+    assert {
+        difference.field for difference in compare_cp13(target, after, "after")
+    } == {
+        "native",
+        "parent",
+    }
+
+
+def test_target_matches_reviewed_snapshot_fixture() -> None:
+    """Freeze every expected synthetic value, including held draft identity."""
+    saved = json.loads((FIXTURES / "expected-cp13.json").read_text())
+    actual = [
+        asdict(item) for item in expected_cp13(tables(), snapshot(), creation_inputs())
+    ]
+    assert json.loads(json.dumps(actual)) == saved
+
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        "title",
+        "state",
+        "issue_type",
+        "native",
+        "project",
+        "parent",
+        "blockers",
+        "body",
+        "labels",
+        "issue_id",
+        "item_id",
+    ],
+)
+def test_cp13_reports_each_changed_field(field: str) -> None:
+    """No expected issue read-back value is silently omitted."""
+    target = expected_cp13(tables(), snapshot(), creation_inputs())
+    before = target[0]
+    value = getattr(before, field)
+    changed = cast("Any", replace)(
+        before,
+        **{
+            field: value + ("unexpected",)
+            if isinstance(value, tuple)
+            else str(value) + "unexpected"
+        },
+    )
+    actual = final_snapshot((changed, *target[1:]))
+    assert any(
+        difference.key == before.key and difference.field == field
+        for difference in compare_cp13(target, actual, "after")
+    )
+
+
+def test_cp13_refuses_missing_page_or_item() -> None:
+    """A partial collection cannot compare equal to a full target."""
+    target = expected_cp13(tables(), snapshot(), creation_inputs())
+    actual = final_snapshot(target)
+    with pytest.raises(ValueError, match="incomplete or incompatible CP13"):
+        compare_cp13(target, replace(actual, pages=actual.pages[:-1]), "after")
+    missing = target[:-1]
+    assert compare_cp13(target, final_snapshot(missing), "after")[0].field == "presence"
+
+
+def test_cp13_refuses_missing_creation_or_reviewed_body() -> None:
+    """Do not infer returned IDs or revised body text from a title."""
+    inputs = creation_inputs()
+    with pytest.raises(ValueError, match="creation map is incomplete or unexpected"):
+        expected_cp13(tables(), snapshot(), replace(inputs, created={}))
+    first = dict(tables().assignments[0])
+    first["body revision"] = "required"
+    changed = replace(tables(), assignments=(first, *tables().assignments[1:]))
+    with pytest.raises(ValueError, match="reviewed body is missing"):
+        expected_cp13(changed, snapshot(), inputs)
+    supplied = expected_cp13(
+        changed, snapshot(), replace(inputs, bodies={**inputs.bodies, "#1": "reviewed"})
+    )
+    assert supplied[0].body == "reviewed"
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "error"),
+    [
+        ("issue_id", "1", "created identity collides with CP1"),
+        ("item_id", "item-1", "created identity collides with CP1"),
+        ("key", "#1", "created identity collides with CP1"),
+        ("key", "wrong", "creation resource kind differs from plan"),
+    ],
+)
+def test_created_parent_identity_must_be_new(
+    field: str, value: str, error: str
+) -> None:
+    """Returned parent IDs cannot alias CP1 or lose their numbered identity."""
+    inputs = creation_inputs()
+    parent = inputs.created["title:epic: migration"]
+    changed = replace(parent, **cast("Any", {field: value}))
+    created = {**inputs.created, "title:epic: migration": changed}
+    with pytest.raises(ValueError, match=error):
+        expected_cp13(tables(), snapshot(), replace(inputs, created=created))
+
+
+def test_comparison_refuses_duplicate_returned_identity() -> None:
+    """Two CP13 records with the same key are ambiguous even with full pages."""
+    target = expected_cp13(tables(), snapshot(), creation_inputs())
+    duplicated = final_snapshot((target[0], *target[:-1]))
+    with pytest.raises(ValueError, match="duplicate CP13 identity"):
+        compare_cp13(target, duplicated, "after")
+
+
+def test_rollback_uses_exact_saved_values_and_created_ids() -> None:
+    """Retain prior fields, labels, links, body, state, title, and order."""
+    cp1 = snapshot()
+    old = replace(
+        cp1.items[0],
+        body="prior",
+        labels=("type/tooling", "keep"),
+        blockers=("#2",),
+        native=(("Priority", "Standard"),),
+        project=(("Status", "Ready"),),
+    )
+    cp1 = replace(cp1, items=(old, *cp1.items[1:]))
+    created = creation_inputs().created
+    order = tuple(item.item_id for item in cp1.items)
+    rollback = rollback_values(
+        tables(), cp1, created, order, "open", extras=RollbackExtras(("2",))
+    )
+    assert rollback.prior[0] == old
+    assert set(rollback.created) == set(created.values())
+    assert rollback.order == order
+    assert rollback.pr_state == "open"
+    assert rollback.branch_sha == "sha"
+    assert rollback.exemptions == ("2",)
+    with pytest.raises(ValueError, match="incomplete saved Project order"):
+        rollback_values(tables(), cp1, created, order[:-1], "open")
+    with pytest.raises(ValueError, match="created identity is incomplete"):
+        rollback_values(
+            tables(),
+            cp1,
+            {"parent": replace(next(iter(created.values())), item_id="", draft_id="")},
+            order,
+            "open",
+        )
+
+
+@given(st.permutations(["item-1", "item-2", "item-b", "item-held"]))
+def test_rollback_preserves_any_complete_order(order: list[str]) -> None:
+    """A reviewed reversal can restore the exact original sequence."""
+    assert rollback_values(
+        tables(), snapshot(), {}, tuple(order), "open"
+    ).order == tuple(order)
 
 
 def test_parse_preserves_dispositions() -> None:
@@ -185,16 +1066,7 @@ def test_stale_issue_fails(
 
 def test_approved_closure_uses_source_project_values() -> None:
     """Accept #168 before closure, then reject drift from its saved old Project values."""
-    inputs = next(
-        path / "reports/inputs/work-model-tables"
-        for path in Path(__file__).resolve().parents
-        if (path / "reports/inputs/work-model-tables").is_dir()
-    )
-    approved = parse_tables(
-        (inputs / "2026-09-27-work-model-v3-final.tsv").read_text(),
-        (inputs / "2026-09-27-work-model-v3-final-parents.tsv").read_text(),
-        (inputs / "2026-09-27-work-model-v3-final-edges.tsv").read_text(),
-    )
+    approved = approved_tables()
     row = next(row for row in approved.assignments if row["number"] == "168")
     source = tuple(
         sorted(

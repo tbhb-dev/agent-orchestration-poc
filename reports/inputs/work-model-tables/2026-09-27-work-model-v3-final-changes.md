@@ -26,6 +26,8 @@
 | 9 | Every question answered by the 14:00 operator decisions | Task rule |
 | 10 | New target Project, old values snapshot, request recount and GraphQL alternative | Task and issue types proposal section 7 |
 | 10 | Delete unused default organization fields, exact operator settings | Operator override to issue types proposal section 8 |
+| 8, 10 | Correction A: derive 45 closed-title exemptions, adding #3, #10, #16, #84, and #87; update the final model counts and manifest; TSVs contain no manifest and remain unchanged | coordinator disposition on #223, issuecomment 5860337409 |
+| 4, 5, 6, 10 | Correction B: pin Priority to Chore, Spike, and Feature; Severity to Defect and Incident; Work type to all seven types (Feature, Defect, Chore, Spike, Incident, Epic, Initiative) | operator confirmation, 2026-09-27 17:27 |
 
 [Inference] Intake fits the backfill and Actions epics by deliverable, so no extra intake epic was added. #183 and workflow-owned synchronization/checks go to Actions. The declaration that the move epic is closed with an open cleanup child is the operator's explicit exception, not an inferred automatic-parent-closure policy.
 
@@ -667,7 +669,7 @@
 
 ### Operator-only actions still pending
 
-- [Operator decision] Pin Priority to the five leaf types Feature, Defect, Chore, Spike, and Incident. Pin Severity to Defect and Incident. Pin Work type to all seven types. Confirm repository field visibility. [Untested] Pinning and visibility were not read back.
+- [Operator decision] Pin Priority to Chore, Spike, and Feature. Pin Severity to Defect and Incident. Pin Work type to all seven types (Feature, Defect, Chore, Spike, Incident, Epic, Initiative), per operator confirmation, 2026-09-27 17:27. Confirm repository field visibility. [Untested] Pinning and visibility were not read back.
 - [Operator decision] Approve the seed rank before step 8, explicitly confirm the comparison at step 13 to release feature dispatch.
 - [Operator decision] Retain operator control of credentials, secrets, permissions, security policy, and host setup. No App installation-scope change is part of this backfill. Keep definition permissions read-only.
 

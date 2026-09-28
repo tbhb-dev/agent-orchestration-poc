@@ -1,0 +1,150 @@
+[
+  {
+    "key": "#1",
+    "title": "tooling(project): build a model",
+    "state": "open",
+    "state_reason": "",
+    "issue_type": "Chore",
+    "native": [
+      ["Priority", "Standard"],
+      ["Severity", ""],
+      ["Work type", "Planned"]
+    ],
+    "project": [
+      ["Area", "tooling"],
+      ["Harness", "codex"],
+      ["Priority", "Standard"],
+      ["Severity", ""],
+      ["Size", "M"],
+      ["Status", "Ready"],
+      ["Type", "Chore"],
+      ["Work type", "Planned"],
+      ["Worker", "worker"]
+    ],
+    "source_project": [],
+    "parent": "#3",
+    "blockers": ["#2"],
+    "body": "",
+    "labels": [],
+    "issue_id": "1",
+    "item_id": "item-1",
+    "draft_id": ""
+  },
+  {
+    "key": "#2",
+    "title": "legacy title",
+    "state": "closed",
+    "state_reason": "not_planned",
+    "issue_type": "Spike",
+    "native": [
+      ["Priority", "Intangible"],
+      ["Severity", ""],
+      ["Work type", "Unplanned"]
+    ],
+    "project": [
+      ["Area", "research"],
+      ["Harness", "codex"],
+      ["Priority", "Intangible"],
+      ["Severity", ""],
+      ["Size", "S"],
+      ["Status", "Done"],
+      ["Type", "Spike"],
+      ["Work type", "Unplanned"],
+      ["Worker", "worker"]
+    ],
+    "source_project": [],
+    "parent": "#3",
+    "blockers": [],
+    "body": "",
+    "labels": [],
+    "issue_id": "2",
+    "item_id": "item-2",
+    "draft_id": ""
+  },
+  {
+    "key": "title:Draft B",
+    "title": "Draft B",
+    "state": "draft",
+    "state_reason": "",
+    "issue_type": "",
+    "native": [],
+    "project": [
+      ["Priority", ""],
+      ["Severity", ""],
+      ["Status", "Backlog"],
+      ["Type", ""],
+      ["Work type", ""]
+    ],
+    "source_project": [],
+    "parent": "",
+    "blockers": [],
+    "body": "",
+    "labels": [],
+    "issue_id": "",
+    "item_id": "item-b",
+    "draft_id": "draft-b"
+  },
+  {
+    "key": "title:Held",
+    "title": "Held",
+    "state": "draft",
+    "state_reason": "",
+    "issue_type": "",
+    "native": [],
+    "project": [],
+    "source_project": [],
+    "parent": "",
+    "blockers": [],
+    "body": "",
+    "labels": [],
+    "issue_id": "",
+    "item_id": "item-held",
+    "draft_id": "draft-held"
+  },
+  {
+    "key": "title:Draft A",
+    "title": "Draft A",
+    "state": "draft",
+    "state_reason": "",
+    "issue_type": "",
+    "native": [],
+    "project": [
+      ["Priority", ""],
+      ["Severity", ""],
+      ["Status", "Backlog"],
+      ["Type", ""],
+      ["Work type", ""]
+    ],
+    "source_project": [],
+    "parent": "",
+    "blockers": [],
+    "body": "",
+    "labels": [],
+    "issue_id": "",
+    "item_id": "item-a",
+    "draft_id": "draft-a"
+  },
+  {
+    "key": "#3",
+    "title": "epic: migration",
+    "state": "open",
+    "state_reason": "",
+    "issue_type": "Epic",
+    "native": [["Priority", ""], ["Severity", ""], ["Work type", "Planned"]],
+    "project": [
+      ["Priority", ""],
+      ["Severity", ""],
+      ["Status", "Backlog"],
+      ["Type", "Epic"],
+      ["Work type", "Planned"]
+    ],
+    "source_project": [],
+    "parent": "",
+    "blockers": [],
+    "body": "Goal and finish line",
+    "labels": [],
+    "issue_id": "3",
+    "item_id": "item-3",
+    "draft_id": ""
+  }
+]
