@@ -4,6 +4,8 @@
 
 **Observed.** The [deterministic fixture](probe.py) launched Python stand-ins directly and in a tmux 3.7b server at a dedicated `/private/tmp/bv08-243-*/tmux.sock`. One disposable directory contained a shared workspace and mode 700 private A/B directories. The fixture didn't use a daemon, local kit, trust configuration, harness settings, provider credential, VM, or sandbox name. The worker ran inside an existing tmux client, but the fixture addressed only its dedicated socket and cleared inherited `TMUX` variables for its attach clients. [Raw results](evidence/host-probe.json) record each observed exit and marker. [Versions](versions.md) pin the host, tools, source revisions, and imported design snapshot.
 
+**Proposed.** The [host harness runbook](host-harness-runbook.md) and [fixture package](fixture/) prepare the four later live cells approved conditionally by BV-20. They record native conversation ID, A-1 and A-2 process incarnation, private-state fingerprints, and a fresh controller observation separately from tmux attachment. The launcher computes its exact argv and environment in a pure function. The read-only observer compares PID and process start time. Table and property tests exercise validation, process identity, state retention, and launch selection. The resume responder adapter loads the merged experiment 02 responder with separate frames that ask A to test B's harmless private marker. Loopback integration tests check the frame bytes and two-request limit. Experiment 02 remains unchanged. The live harness commands did not run in this delivery.
+
 **Documented.** The [BV-08 source](../../research/imported/design-wiki-8384ca7/backend-validation-spikes.md#bv-08-runtime-and-launcher-lifecycle-with-storage) supplies the required cases. The [mental model](../../research/imported/design-wiki-8384ca7/mental-model.md#task-lifecycle-and-backend-contracts) separates readiness, outcome, retained artifacts, and native conversation from process attachment. The [authentication design](../../research/imported/design-wiki-8384ca7/spiffe-mtls-authentication.md#launch-rotation-suspension-and-resume) places authority fencing in a later integration. Host mode has no VM or sandbox name, so those mapping fields are not applicable here.
 
 ## Reproduction
@@ -21,7 +23,7 @@
 | Collision and interrupted prepare | Reject a duplicate name and clean only the partially created path | Existing A name was rejected. Two concurrent `mkdir` calls returned 0 and 1. The partial provisioner created its owned marker, received SIGTERM and exited -15, and the controller removed that owned path. Second cleanup found it absent; an unrelated workspace file remained | `host-probe.json` `collision-and-interrupted-create` | observed, allowed for this fixture; controller crash rollback untested |
 | Workspace and private state | Retain shared files and locate A/B state | A and B workspace files remained through their runs. After B wrote its marker, a new A worker read it and wrote the value to A's private path under the same host UID | `host-probe.json` `storage` | observed, no host same-UID privacy boundary |
 | Controller restart | A new observer can inspect a live pane | Each `tmux has-session` call was a fresh client process after an attach client exited. No agentd controller restart was tested | `host-probe.json` `tmux-interactive-reconnect` | observed for tmux clients, untested for agentd |
-| Native harness resume | Resume a native conversation in a new process | No harness invocation was authorized under disposable settings | Issue #243 operator boundary | blocked pending operator approval |
+| Native harness resume | Resume a native conversation in a new process | The fixture and exact commands are prepared, but no harness invocation ran | [Runbook](host-harness-runbook.md) | untested pending artifact review and the later host run |
 
 ## Capability and ownership table
 
@@ -34,7 +36,7 @@
 | Codex, interactive | untested | untested | untested | untested | untested | Harness state ownership and recovery need an authorized isolated-home run |
 | Codex, headless | untested | untested | untested | not applicable | untested | Harness state ownership and recovery need an authorized isolated-home run |
 
-Claude Code and Codex harness rows remain unqualified. The probe didn't use a real provider credential or run a harness process. The BV-01 fake-credential pattern is a proposal at `.holding/reorg/2026-09-28-bv01-harness-creds-proposal.md`, and its harness invocations are outside this item's authorization. The same-UID private-path read establishes only this fixture's host behavior.
+Claude Code and Codex harness rows remain unqualified. The probe didn't use a real provider credential or run a harness process. BV-20 conditionally approved a later fake-credential run after review of its exact fixtures and commands. The same-UID private-path read establishes only this fixture's host behavior.
 
 ## Proposed minimal host contract
 
@@ -50,14 +52,18 @@ Claude Code and Codex harness rows remain unqualified. The probe didn't use a re
 
 **Observed.** Before cleanup, the fixture contained `workspace/unrelated.txt`, A/B shared output, A/B private markers, A's copy of B's marker, ready markers, a direct A outcome marker, and a dedicated tmux socket. Direct cancellation didn't produce a B outcome marker. The interrupted provisioner's partial marker existed before SIGTERM; the controller removed its owned path after the process exited, while the workspace sentinel remained. After cleanup, the fixture root was absent. Cleanup removed artifacts only within the unique fixture directory.
 
-**Untested.** Harness conversation IDs, native resume, private harness-state retention across a harness stop/start, cross-profile state access, authenticated authority lifetime, controller crash rollback and recovery, and real wrapper cancellation remain open for Claude Code and Codex. Their interactive and headless profiles require reviewed disposable homes, fake credentials, and a loopback model responder before execution.
+**Untested.** Harness conversation IDs, native resume, private harness-state retention across a harness stop/start, harness-mediated A-to-B state access, authenticated authority lifetime, controller crash rollback and recovery, and real wrapper cancellation remain open for Claude Code and Codex.
+
+The new resume frames ask a live A harness to test B's private marker. The shared-file command remains a host probe because the model frames do not ask a harness to write the workspace file. The live four-profile run remains necessary to qualify the harness cells.
 
 **Blocked.** `pgrep -fl 'bv08-243|tmux -S'` reported that the sysmond service was unavailable, and `ps -eo pid,etime,args` returned `operation not permitted`. The fixture used recorded child exit codes, marker files, and dedicated-socket tmux status instead. It cannot independently prove the tmux pane PID exited after server shutdown.
 
 ## Proposed decision
 
-**Proposed.** Retain direct host launch and dedicated-socket tmux attachment as separate capabilities. Use a durable owner map and explicit outcome states before a production launcher can claim recovery. Leave issue #243 open until the four harness cells and native conversation/storage cases have evidence or reproducible unsupported results.
+**Proposed.** Retain direct host launch and dedicated-socket tmux attachment as separate capabilities. Use a durable owner map and explicit outcome states before a production launcher can claim recovery. This is a partial delivery. Issue #243 remains open until the four harness cells and native conversation/storage cases have evidence or reproducible unsupported results.
 
 ## Validation
 
 **Verified.** `mise run fmt`, `mise run check`, `mise run check:mutation`, and `mise run build` exited 0 on this worktree. The [check log](evidence/check.log) records the repository gates, and the [mutation summary](evidence/mutation-summary.txt) records both scores. Mutation testing killed 97.32% of Go core mutants and 90.14% of Python core mutants. `mise exec -- gitleaks dir --redact --no-banner experiments/06-host-runtime-lifecycle` exited 0 with no leaks found. The deterministic probe exited 0 and its JSON remained valid after formatting.
+
+**Verified.** This fixture delivery's [validation record](evidence/fixture-validation.md) links the new aggregate log and 52 focused tests, including loopback checks of the resume frames. `mise run check` and `mise run check:mutation` exited 0. Python core mutation score was 90.19% at the newer checkout. These results validate the fixtures and repository gates, while the four live harness profiles remain untested.
