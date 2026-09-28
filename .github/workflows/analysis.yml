@@ -1,0 +1,33 @@
+---
+name: analysis
+
+"on":
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  analysis:
+    runs-on: ubuntu-latest
+    steps:
+      # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      # v4.3.0
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c
+        with:
+          version: 2026.8.6
+          install: true
+          cache: true
+      - run: mise exec -- uv sync --locked --group analysis
+      - run: mise run vale:sync
+      - run: mise run notebooks:lint
+      - run: mise run notebooks:ci
+      - run: test -s research/gates/data-analysis/example-results.csv
+      - run: test -s research/gates/data-analysis/example-chart-light.svg
+      - run: test -s research/gates/data-analysis/example-chart-dark.svg
+      - run: >-
+          git diff --exit-code --
+          research/gates/data-analysis/example-results.csv

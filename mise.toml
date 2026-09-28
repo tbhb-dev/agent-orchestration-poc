@@ -17,6 +17,7 @@ vale = "3.22.0"
 actionlint = "1.7.12"
 shellcheck = "0.11.0"
 shfmt = "3.14.0"
+"aqua:quarto-dev/quarto-cli" = "1.10.18"
 "npm:@biomejs/biome" = "2.5.14"
 "pipx:ryl" = "0.22.0"
 "pipx:jscpd" = "5.3.2"
@@ -57,6 +58,7 @@ depends = [
   "check:handoff-classifier",
   "check:secrets",
   "check:actions",
+  "notebooks:lint",
   "check:workflow-forms",
 ]
 
@@ -150,7 +152,7 @@ run = "uv run pytest tests/fixtures/review_identity/test_policy.py tests/fixture
 description = "Gate Python lines and branches and Go statements and branches"
 run = [
   "mkdir -p .coverage-reports",
-  "uv run pytest --run-integration --cov=agent_orchestration_poc --cov-report=json:.coverage-reports/python.json --cov-report=term",
+  "uv run --group analysis pytest --run-integration --cov=agent_orchestration_poc --cov-report=json:.coverage-reports/python.json --cov-report=term",
   "go test -tags=integration -coverprofile=.coverage-reports/go.out ./...",
   "uv run python scripts/check-coverage.py",
 ]
@@ -256,6 +258,23 @@ run = "gitleaks git --redact --no-banner ."
 [tasks."check:actions"]
 description = "Lint the GitHub Actions workflows with actionlint"
 run = "actionlint"
+
+# Analysis notebooks. The shell selects the locked interpreter for Quarto.
+[tasks."notebooks:lint"]
+description = "Lint prose, Python cells, and privacy in committed Quarto notebooks"
+run = "uv run --group analysis python -m agent_orchestration_poc.shell.analysis.notebooks lint"
+
+[tasks."notebooks:render"]
+description = "Execute one Quarto notebook from source without cache"
+run = "uv run --group analysis python -m agent_orchestration_poc.shell.analysis.notebooks render"
+
+[tasks."notebooks:verify"]
+description = "Lint and execute one Quarto notebook from source"
+run = "uv run --group analysis python -m agent_orchestration_poc.shell.analysis.notebooks verify"
+
+[tasks."notebooks:ci"]
+description = "Render every notebook with committed or synthetic inputs"
+run = "uv run --group analysis python -m agent_orchestration_poc.shell.analysis.notebooks ci"
 
 # Temporary local GitHub monitor for issue #167.
 [tasks."monitor:start"]

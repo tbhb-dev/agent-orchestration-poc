@@ -1,0 +1,146 @@
+---
+title: Synthetic duration analysis
+format: html
+engine: jupyter
+execute:
+  echo: false
+  warning: false
+---
+
+## Question and source
+
+What is the total duration of the twelve synthetic events, and how does it divide between categories? The input is the committed `example-data.csv` file. Each row is invented for this gate.
+
+Documented claim `Q-01`: DuckDB 1.5.5 accepts explicit columns in `read_ndjson`, as shown by the [tagged source](https://github.com/duckdb/duckdb/blob/d8cdaa33fda8df955cc76ef58a280f68f4cd43fa/extension/json/json_functions/read_json.cpp). This example uses a separate typed CSV reader for the invented input.
+
+## Query and results
+
+The DuckDB query below creates the numerical result table. It types the fields used in the claims and counts the source rows before aggregation.
+
+```{python}
+#| label: query-results
+import csv
+import hashlib
+from collections import defaultdict
+from pathlib import Path
+
+import duckdb
+import matplotlib.pyplot as plt
+
+data = Path("example-data.csv")
+rows = duckdb.sql(
+    """SELECT id, category, minutes FROM read_csv(?,
+       auto_detect=false,
+       header=true,
+       columns={'id':'VARCHAR','category':'VARCHAR','minutes':'INTEGER'})
+       ORDER BY id""",
+    params=[str(data)],
+).fetchall()
+groups = duckdb.sql(
+    """SELECT category, SUM(minutes) AS minutes FROM read_csv(?,
+       auto_detect=false,
+       header=true,
+       columns={'id':'VARCHAR','category':'VARCHAR','minutes':'INTEGER'})
+       GROUP BY category ORDER BY category""",
+    params=[str(data)],
+).fetchall()
+total = sum(value for _, value in groups)
+result = Path("example-results.csv")
+with result.open("w", newline="") as output:
+    writer = csv.writer(output, lineterminator="\n")
+    writer.writerow(("row_id", "kind", "category", "minutes"))
+    writer.writerows((id_, "supporting", category, minutes) for id_, category, minutes in rows)
+    writer.writerows((f"G-{category}", "group", category, minutes) for category, minutes in groups)
+    writer.writerow(("TOTAL", "headline", "all", total))
+assert len(rows) == 12
+assert total == 48
+assert {category: value for category, value in groups} == {"A": 21, "B": 27}
+```
+
+The verified headline `N-01` is 48 minutes across twelve rows. Category A has 21 minutes and category B has 27 minutes.
+
+## Independent recomputation
+
+Python's CSV reader loads the original file independently of the DuckDB result table. The second calculation checks the headline, both chart rows, and ten supporting rows selected by the issue 107 sample rule.
+
+```{python}
+#| label: independent-check
+with data.open(newline="") as source:
+    independent_rows = list(csv.DictReader(source))
+assert len(independent_rows) == len(rows) == 12
+independent_groups = defaultdict(int)
+independent_counts = defaultdict(int)
+for row in independent_rows:
+    independent_groups[row["category"]] += int(row["minutes"])
+    independent_counts[row["category"]] += 1
+assert dict(independent_groups) == dict(groups)
+assert dict(independent_counts) == {"A": 6, "B": 6}
+assert sum(int(row["minutes"]) for row in independent_rows) == total
+with Path("example-claims.csv").open(newline="") as source:
+    claims = {row["claim_id"]: row for row in csv.DictReader(source)}
+for claim_id, value, row_id, denominator in (
+    ("N-01", total, "TOTAL", 12),
+    ("N-02", independent_groups["A"], "G-A", 6),
+    ("N-03", independent_groups["B"], "G-B", 6),
+):
+    claim = claims[claim_id]
+    assert (claim["value"], claim["result_row_id"], claim["denominator"]) == (
+        str(value), row_id, str(denominator)
+    )
+row_ids = [row["id"] for row in independent_rows]
+sample = sorted(
+    row_ids,
+    key=lambda row_id: (hashlib.sha256(f"107|{row_id}".encode()).hexdigest(), row_id),
+)[:10]
+source_by_id = {row["id"]: row for row in independent_rows}
+query_by_id = {id_: (category, minutes) for id_, category, minutes in rows}
+for row_id in sample:
+    row = source_by_id[row_id]
+    assert query_by_id[row_id] == (row["category"], int(row["minutes"]))
+print("Sample row IDs:", ", ".join(sample))
+print("Independent headline:", sum(independent_groups.values()))
+```
+
+## Chart and source table
+
+The chart source table is the two group rows of `example-results.csv`. Both SVG variants use the same values, row order, labels, and units.
+
+```{python}
+#| label: render-chart
+for theme, background, foreground, bar in (
+    ("light", "#ffffff", "#18212b", "#166678"),
+    ("dark", "#17212b", "#f4f6f8", "#6dd3e1"),
+):
+    with result.open(newline="") as source:
+        chart_rows = [row for row in csv.DictReader(source) if row["kind"] == "group"]
+    assert [(row["category"], int(row["minutes"])) for row in chart_rows] == groups
+    with plt.rc_context({"svg.hashsalt": "issue-107", "svg.fonttype": "none", "font.family": ["DejaVu Sans", "sans-serif"]}):
+        figure, axis = plt.subplots(figsize=(5, 3))
+        figure.patch.set_facecolor(background)
+        axis.set_facecolor(background)
+        bars = axis.bar(
+            [row["category"] for row in chart_rows],
+            [int(row["minutes"]) for row in chart_rows],
+            color=bar,
+        )
+        axis.set_ylabel("Minutes", color=foreground)
+        axis.set_xlabel("Category", color=foreground)
+        axis.tick_params(colors=foreground)
+        for spine in axis.spines.values():
+            spine.set_color(foreground)
+        for mark, row in zip(bars, chart_rows, strict=True):
+            value = int(row["minutes"])
+            axis.text(mark.get_x() + mark.get_width() / 2, value + 0.4, str(value), ha="center", color=foreground)
+        axis.set_ylim(0, 32)
+        figure.tight_layout()
+        chart = Path(f"example-chart-{theme}.svg")
+        figure.savefig(
+            chart,
+            format="svg",
+            metadata={"Date": None, "Title": "Synthetic category duration"},
+        )
+        chart.write_text("\n".join(line.rstrip() for line in chart.read_text().splitlines()) + "\n")
+        plt.close(figure)
+```
+
+The bars show A at 21 minutes and B at 27 minutes. The text alternative is the two-row group table in `example-results.csv`.
