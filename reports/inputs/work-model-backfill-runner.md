@@ -6,6 +6,8 @@
 
 [Verified] The focused rollback and loopback shell suite passed 49 tests after the first corrections; the final aggregate `mise run -j 1 check` exited 0 with 580 integration coverage Python tests, Python core coverage 97.08% lines and 93.27% branches, and shell coverage 72.49% lines. `mise run check:mutation` first exited 1: Go core passed at 97.32% (145/149), while Python core scored 89.74% (7,587/8,454). Added plain-value cases for interrupted inverse state and the retained closed issue; `mise run check:mutation:python` then exited 0 at 90.06% (7,614/8,454). `mise run check:pyrefly` and `git diff --check` exited 0. These tests use plain values and a loopback fake; no live Project or issue write was made.
 
+[Verified] Pinned scc 4.1.0 `--trace`, intersected with changed line positions against `origin/main`, counted 987 changed code units after the review fix: rollback core 301, shell 101, rollback tests 453, and shell tests 132. The JSON fixture and this report remain excluded by the workflow size contract. This exceeds the usual 800-unit limit; the review correction is kept on the same branch so its recovery behavior and regression evidence remain attached to PR #260.
+
 ## Slice C selective rollback
 
 [Verified] Against base `1c141a12cee97fea6136858f0ac61cdac8097068` and later merged `main` at `320738f4947f6c2354757714662bb5672dc6e365`, the rollback planner reads only verified forward journal operations, checks the complete CP1 and current snapshot and retained branch, and produces inverse actions in reverse verification order. A completed closed-blocker add and cleanup trial has no net inverse. An unverified forward write stops rollback until it is safely resumed and read back.
