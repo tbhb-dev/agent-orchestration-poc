@@ -639,3 +639,17 @@ This run completes no required case for an integrated cell. The recorded blocker
 ## Evidence files
 
 Raw per-cell outputs are copied under [claude-headless](claude-headless/), [claude-interactive](claude-interactive/), [codex-headless](codex-headless/), and [codex-interactive](codex-interactive/). Each JSON and TOML output file carries a `.raw` suffix, which keeps the repository formatter from rewriting the recorded bytes. The two `settings.json.raw` files match the files in the homes byte for byte. Empty `listener.jsonl` and `listener.err` files record that no listener received a connection or wrote an error. The capture file, Codex databases, Claude `.claude.json`, and plugin clones are not copied. A `gitleaks dir --redact` scan of this directory found nothing, and the fake key literal appears only inside the recorded `sed` command. The repository end-of-file hook removed one trailing blank line from `codex-headless/attempt-1/harness.err`.
+
+## Audit loss from the capture replacement
+
+The coordinator reported that at about 17:21 EDT the operator re-ran the capture restart block by mistake, because the ask still showed it. The block ran `rm -f file-opens.json` and started a second capture (sudo PID 36396, grep PID 36397) into a new `file-opens.json`, created at 17:21:55 EDT. The 17:13 capture (sudo PID 28387, grep PID 28388) keeps writing into the deleted file. The operator stops the orphaned capture. The executor signalled neither capture.
+
+Events from 17:13 to 17:21:55 EDT are gone from disk. That window covers three items:
+
+- The second positive control (PID 46032 at 17:14:57 EDT). Its one matching line is kept only as the `jq` excerpt quoted in "Positive control, second attempt".
+- The claude-headless cell (root 767, 17:18:49 to about 17:19:16 EDT) and the claude-interactive cell (root 14780, 17:20:00 to 17:20:31 EDT). The executor had saved only the summaries in "Audit trace for the Claude cells", read at 17:21:16 and 17:21:43 EDT. They cover child processes and per-path open counts with the username replaced by `~`. A separate `claude-501` directory listing was also saved. The executor copied the summaries but never the raw event lines. **The raw audit for both Claude cells is lost**, and the summaries are the only retained record.
+- codex-headless attempt 1 (root 75591, 17:16:56 to about 17:17:11 EDT). The executor never summarized it. **Its audit is lost.** That attempt exited at config load before any model request, and attempt 2 covers the same cell in the new file.
+
+The executor did not re-run the Claude cells. A rerun would meet the same responder rejection and leave another `claude-501` residue directory. It wouldn't reach the socket, so the integrated-cell outcome would be unchanged. The loss is recorded instead, and the operator can ask for a rerun if raw Claude events are needed for the trace review. The third positive control passed against the new file at 17:23:16 EDT, before codex-headless attempt 2 and codex-interactive launched. Both Codex cells' events are in the new file.
+
+`/private/tmp/claude-501/-private-tmp-bv01-228-claude-headless-workspace/` is a finding: a claude-headless write outside the four approved homes. It is left in place for the operator's review and belongs on the teardown list.
