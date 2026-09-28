@@ -25,6 +25,7 @@ inc = "type/incident"
 
 [title_label_exceptions]
 "research(import): import the peering and session research folders with a manifest" = "type/chore"
+"research(import): add the frozen design wiki snapshot" = "type/chore"
 "docs(design): design a webhook-fed monitor for pull request state" = "type/spike"
 "research(data): activate the analysis notebook gates" = "type/chore"
 "research(observability): run the native stack lifecycle" = "type/chore"
