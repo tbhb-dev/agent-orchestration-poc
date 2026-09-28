@@ -25,7 +25,7 @@
     "case": "tmux-interactive-reconnect",
     "create_exit": 0,
     "ready": true,
-    "pane_pid": "8122",
+    "pane_pid": "96100",
     "first_attach_exit": 1,
     "after_first_has_session": 0,
     "second_attach_exit": 1,
@@ -42,7 +42,9 @@
     "case": "collision-and-interrupted-create",
     "collision": "rejected",
     "concurrent_create_exits": [0, 1],
-    "interrupted_retained": false,
+    "partial_marker_before_interrupt": true,
+    "provisioner_exit": -15,
+    "owned_path_after_rollback": false,
     "second_cleanup": "already absent",
     "unrelated_retained": true
   },
@@ -51,7 +53,8 @@
     "shared_A": "written by A",
     "shared_B": "written by B",
     "A_private": "A",
-    "A_reads_B_private": "B"
+    "A_worker_read_exit": 0,
+    "A_worker_reads_B_private": "B"
   },
   {
     "case": "cleanup",

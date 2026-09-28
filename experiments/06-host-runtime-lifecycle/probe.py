@@ -5,6 +5,7 @@ import json
 import os
 import pty
 import shlex
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -12,17 +13,27 @@ import time
 from pathlib import Path
 
 
-def worker(root: Path, name: str, delay: float) -> None:
+def worker(root: Path, name: str, delay: float, read_other: bool = False) -> None:
     """Run a deterministic stand-in for a host wrapper and harness."""
     private = root / "private" / name
     shared = root / "workspace"
     (private / "marker").write_text(name)
     (shared / f"{name}.txt").write_text(f"written by {name}\n")
+    if read_other:
+        (private / "B-read").write_text((root / "private" / "B" / "marker").read_text())
     (root / f"{name}.ready").write_text(str(os.getpid()))
     print(f"{name}: ready", flush=True)
     time.sleep(delay)
     print(f"{name}: complete", flush=True)
     (root / f"{name}.exit").write_text("0")
+
+
+def prepare_partial(root: Path) -> None:
+    """Create part of an owned private path and wait for interruption."""
+    owned = root / "private" / "interrupted"
+    owned.mkdir()
+    (owned / "partial-marker").write_text("created before interruption")
+    time.sleep(30)
 
 
 def tmux(socket: Path, *args: str) -> subprocess.CompletedProcess[str]:
@@ -217,8 +228,22 @@ def run() -> None:  # noqa: PLR0915 - fixed probe stages belong in one teardown 
         ]
         race_exits = sorted(racer.wait(timeout=5) for racer in racers)
         interrupted = root / "private" / "interrupted"
-        interrupted.mkdir()
-        interrupted.rmdir()
+        provisioner = subprocess.Popen(
+            [
+                sys.executable,
+                str(Path(__file__).resolve()),
+                "prepare-partial",
+                str(root),
+            ]
+        )
+        try:
+            partial_marker = wait_for(interrupted / "partial-marker")
+            if not partial_marker:
+                raise RuntimeError("partial provisioner did not create its marker")
+        finally:
+            provisioner.terminate()
+            provisioner.wait(timeout=5)
+        shutil.rmtree(interrupted)
         try:
             interrupted.rmdir()
         except FileNotFoundError:
@@ -230,10 +255,15 @@ def run() -> None:  # noqa: PLR0915 - fixed probe stages belong in one teardown 
                 "case": "collision-and-interrupted-create",
                 "collision": collision,
                 "concurrent_create_exits": race_exits,
-                "interrupted_retained": interrupted.exists(),
+                "partial_marker_before_interrupt": partial_marker,
+                "provisioner_exit": provisioner.returncode,
+                "owned_path_after_rollback": interrupted.exists(),
                 "second_cleanup": second_cleanup,
                 "unrelated_retained": (workspace / "unrelated.txt").exists(),
             }
+        )
+        a_read = subprocess.run(
+            [*command, "--read-other"], capture_output=True, text=True, check=False
         )
         cases.append(
             {
@@ -241,7 +271,10 @@ def run() -> None:  # noqa: PLR0915 - fixed probe stages belong in one teardown 
                 "shared_A": (workspace / "A.txt").read_text().strip(),
                 "shared_B": (workspace / "B.txt").read_text().strip(),
                 "A_private": (root / "private" / "A" / "marker").read_text(),
-                "A_reads_B_private": (root / "private" / "B" / "marker").read_text(),
+                "A_worker_read_exit": a_read.returncode,
+                "A_worker_reads_B_private": (
+                    root / "private" / "A" / "B-read"
+                ).read_text(),
             }
         )
     cases.append({"case": "cleanup", "fixture_retained": root.exists()})
@@ -251,15 +284,20 @@ def run() -> None:  # noqa: PLR0915 - fixed probe stages belong in one teardown 
 def main() -> None:
     """Select the fixed probe or stand-in worker entry point."""
     parser = argparse.ArgumentParser()
-    parser.add_argument("mode", choices=("run", "worker"))
+    parser.add_argument("mode", choices=("run", "worker", "prepare-partial"))
     parser.add_argument("root", nargs="?", type=Path)
     parser.add_argument("name", nargs="?")
     parser.add_argument("delay", nargs="?", type=float)
+    parser.add_argument("--read-other", action="store_true")
     args = parser.parse_args()
     if args.mode == "worker":
         if args.root is None or args.name is None or args.delay is None:
             parser.error("worker requires root, name, and delay")
-        worker(args.root, args.name, args.delay)
+        worker(args.root, args.name, args.delay, args.read_other)
+    elif args.mode == "prepare-partial":
+        if args.root is None:
+            parser.error("prepare-partial requires root")
+        prepare_partial(args.root)
     else:
         run()
 
