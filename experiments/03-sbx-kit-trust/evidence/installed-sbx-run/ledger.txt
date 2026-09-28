@@ -1,0 +1,914 @@
+### 2026-09-28T15:43:05-0400
+$ sbx version
+sbx version: v0.45.1 9d79d90ee4c5d297fb3d36b75384e8cea7a4fbcb
+[exit 0]
+
+### 2026-09-28T15:43:06-0400
+$ sbx daemon status
+Status: stopped
+Socket: /Users/tony/Library/Application Support/com.docker.sandboxes/sandboxes/sandboxd/sandboxd.sock (not connected)
+[exit 0]
+
+### 2026-09-28T15:43:06-0400
+$ sbx ls --json
+Starting sandboxd daemon...
+{
+  "sandboxes": []
+}
+[exit 0]
+
+### 2026-09-28T15:43:16-0400
+$ sbx daemon status
+Status: running
+Socket: /Users/tony/Library/Application Support/com.docker.sandboxes/sandboxes/sandboxd/sandboxd.sock
+Logs: /Users/tony/Library/Application Support/com.docker.sandboxes/sandboxes/sandboxd/daemon.log
+[exit 0]
+
+### 2026-09-28T15:43:17-0400
+$ sbx settings --help
+View and manage settings for Docker Sandboxes.
+
+Settings can come from defaults, environment variables, or user overrides.
+These commands use the local daemon to read evaluated values and manage
+overrides, starting it if necessary.
+
+Most changes take effect within about five seconds. Some require a daemon
+restart.
+
+Usage:
+  sbx settings COMMAND
+
+Available Commands:
+  get         Get the value of a setting
+  list        List settings
+  set         Set a setting override
+  unset       Remove a setting override
+
+Flags:
+  -h, --help   help for settings
+
+Global Flags:
+      --cloud   Dispatch to Docker Cloud Sandboxes API instead of local sandboxd (supported by a growing set of verbs — run 'sbx --cloud --help' for the current list)
+  -D, --debug   Enable debug logging
+
+Use "sbx settings COMMAND --help" for more information about a command.
+[exit 0]
+
+### 2026-09-28T15:43:18-0400
+$ sbx settings get --help
+Print the evaluated value of a setting.
+
+Use --json to print the complete setting record, including its source, type,
+default, and description.
+
+Usage:
+  sbx settings get <key> [flags]
+
+Examples:
+  # Get a setting value
+  sbx settings get proxy.daemon
+
+  # Get in JSON format with source info
+  sbx settings get --json proxy.daemon
+
+Flags:
+  -h, --help   help for get
+      --json   Print the complete setting record as JSON
+
+Global Flags:
+      --cloud   Dispatch to Docker Cloud Sandboxes API instead of local sandboxd (supported by a growing set of verbs — run 'sbx --cloud --help' for the current list)
+  -D, --debug   Enable debug logging
+[exit 0]
+
+### 2026-09-28T15:43:23-0400
+$ sbx settings get --json kit.allowLocalKits
+{
+  "default": true,
+  "description": "Allow installing kits from local directories or ZIP files. Set to false to require a remote source.",
+  "env_var": "DOCKER_SANDBOXES_KIT_ALLOW_LOCAL",
+  "key": "kit.allowLocalKits",
+  "source": "default",
+  "type": "bool",
+  "value": true
+}
+[exit 0]
+
+### 2026-09-28T15:43:23-0400
+$ sbx settings list --json
+[
+  {
+    "default": false,
+    "description": "Allow Claude Code's /remote-control channel to authenticate with its own session token instead of the host credential.",
+    "env_var": "DOCKER_SANDBOXES_CLAUDE_REMOTE_CONTROL",
+    "key": "claude.remoteControl",
+    "source": "default",
+    "type": "bool",
+    "value": false
+  },
+  {
+    "default": false,
+    "description": "Allow sandboxed agents to read the host clipboard for image paste (Ctrl+V).",
+    "env_var": "DOCKER_SANDBOXES_CLIPBOARD_IMAGE_PASTE",
+    "key": "clipboard.imagePaste",
+    "source": "default",
+    "type": "bool",
+    "value": false
+  },
+  {
+    "default": "",
+    "description": "Tri-state consent for automatic diagnostics bundle upload on error: \"\" (never asked; prompts and uploads nothing), \"yes\" (accepted; upload), \"no\" (declined; never prompt again).",
+    "key": "diagnostics.autoUpload",
+    "source": "default",
+    "type": "string",
+    "value": ""
+  },
+  {
+    "default": 1,
+    "description": "Minimum days between automatic diagnostics uploads. The cooldown is global: the first eligible error uploads one bundle, then no further upload happens until this many days have passed.",
+    "key": "diagnostics.autoUploadErrorCooldownInDays",
+    "source": "default",
+    "type": "int",
+    "value": 1
+  },
+  {
+    "default": false,
+    "description": "Let an approval of an environment's host commands cover later runs of the same commands, instead of asking each time.",
+    "key": "env.rememberHostCommands",
+    "source": "default",
+    "type": "bool",
+    "value": false
+  },
+  {
+    "default": true,
+    "description": "Admit the pinned kit references that replace formerly built-in agents even when kit.allowedSources does not list them, and exempt those references from kit.requireSignature. Credential trust for the fetched content is decided separately, by comparing it against the engine's compiled-in digest. Set to false to require an explicit allowlist entry.",
+    "env_var": "DOCKER_SANDBOXES_KIT_ALLOW_EXTRACTED_AGENTS",
+    "key": "kit.allowExtractedAgents",
+    "source": "default",
+    "type": "bool",
+    "value": true
+  },
+  {
+    "default": true,
+    "description": "Allow installing kits from local directories or ZIP files. Set to false to require a remote source.",
+    "env_var": "DOCKER_SANDBOXES_KIT_ALLOW_LOCAL",
+    "key": "kit.allowLocalKits",
+    "source": "default",
+    "type": "bool",
+    "value": true
+  },
+  {
+    "default": [
+      "docker.io/"
+    ],
+    "description": "JSON array of allowed kit source prefixes (e.g. [\"docker.io/\", \"ghcr.io/docker/\"]). Use [\"*\"] to allow any remote source.",
+    "env_var": "DOCKER_SANDBOXES_KIT_ALLOWED_SOURCES",
+    "key": "kit.allowedSources",
+    "source": "default",
+    "type": "json",
+    "value": [
+      "docker.io/"
+    ]
+  },
+  {
+    "default": false,
+    "description": "Verify keyless kit signatures without requiring a Rekor transparency-log entry (for private kits signed with --tlog-upload=false).",
+    "env_var": "DOCKER_SANDBOXES_KIT_IGNORE_TLOG",
+    "key": "kit.ignoreTransparencyLog",
+    "source": "default",
+    "type": "bool",
+    "value": false
+  },
+  {
+    "default": false,
+    "description": "Require a valid signature from a trusted signer (kit.trustedSigners) before installing a kit. The pinned kit references that replace formerly built-in agents are exempt while kit.allowExtractedAgents is true.",
+    "env_var": "DOCKER_SANDBOXES_KIT_REQUIRE_SIGNATURE",
+    "key": "kit.requireSignature",
+    "source": "default",
+    "type": "bool",
+    "value": false
+  },
+  {
+    "default": [
+      {
+        "identityRegexp": "^.*@docker\\.com$",
+        "issuer": "https://accounts.google.com"
+      }
+    ],
+    "description": "JSON array of trusted signer policies (key-based {\"key\":path} or keyless {\"issuer\":...,\"identity\":...}). Defaults to Docker employee identities (*@docker.com via https://accounts.google.com).",
+    "env_var": "DOCKER_SANDBOXES_KIT_TRUSTED_SIGNERS",
+    "key": "kit.trustedSigners",
+    "source": "default",
+    "type": "json",
+    "value": [
+      {
+        "identityRegexp": "^.*@docker\\.com$",
+        "issuer": "https://accounts.google.com"
+      }
+    ]
+  },
+  {
+    "default": false,
+    "description": "Force the local MCP gateway even when entitled to the SaaS gateway.",
+    "key": "mcp.forceLocalGateway",
+    "requires_restart": true,
+    "source": "default",
+    "type": "bool",
+    "value": false
+  },
+  {
+    "default": {},
+    "description": "JSON object of inference endpoints for `sbx run --model <model> --provider <id>`, keyed by id, e.g. {\"gpubox\": {\"url\": \"http://gpubox:8000/v1\"}}. Fields: url (required, absolute http(s)), wire (\"openai\" default or \"anthropic\"), apiKeyEnv (variable llmman serve reads the API key from), name.",
+    "env_var": "DOCKER_SANDBOXES_MODEL_PROVIDERS",
+    "key": "model.providers",
+    "source": "default",
+    "type": "json",
+    "value": {}
+  },
+  {
+    "default": "",
+    "description": "No-proxy exception list for sandbox, daemon, and supported CLI host egress (comma-separated hosts, domain suffixes, and CIDRs).",
+    "key": "no_proxy",
+    "requires_restart": true,
+    "source": "default",
+    "type": "string",
+    "value": ""
+  },
+  {
+    "default": "",
+    "description": "No-proxy exception list for daemon and supported CLI host egress (overrides no_proxy).",
+    "key": "no_proxy.daemon",
+    "requires_restart": true,
+    "source": "default",
+    "type": "string",
+    "value": ""
+  },
+  {
+    "default": "",
+    "description": "No-proxy exception list for sandbox egress only (overrides no_proxy).",
+    "env_var": "DOCKER_SANDBOXES_NO_PROXY",
+    "key": "no_proxy.sandbox",
+    "requires_restart": true,
+    "source": "default",
+    "type": "string",
+    "value": ""
+  },
+  {
+    "default": true,
+    "description": "Allow experimental features.",
+    "env_var": "DOCKER_SANDBOXES_ALLOW_EXPERIMENTAL_FEATURES",
+    "key": "platform.allowExperimentalFeatures",
+    "source": "default",
+    "type": "bool",
+    "value": true
+  },
+  {
+    "default": "",
+    "description": "Registry mirror host for Docker Hub-resolving template and kit images (e.g. \"artifactory.corp/docker-remote\"). A bare host that is not a loopback or wildcard address also mirrors Docker Hub pulls made inside the sandbox, provided the sandbox trusts its certificate. Empty disables mirroring.",
+    "key": "platform.images.registryMirror",
+    "source": "default",
+    "type": "string",
+    "value": ""
+  },
+  {
+    "default": false,
+    "description": "Use Docker Hardened Image (DHI) equivalents (dhi/sbx-templates) for agent template images.",
+    "env_var": "DOCKER_SANDBOXES_USE_DHI",
+    "key": "platform.images.useDHI",
+    "source": "default",
+    "type": "bool",
+    "value": false
+  },
+  {
+    "default": "",
+    "description": "Upstream proxy for sandbox, daemon, and supported CLI host egress (URL, PAC source, \"system\", or \"direct\"; empty = automatic: HTTP(S)_PROXY if set, otherwise the host OS proxy).",
+    "key": "proxy",
+    "requires_restart": true,
+    "source": "default",
+    "type": "string",
+    "value": ""
+  },
+  {
+    "default": "",
+    "description": "Upstream proxy for daemon and supported CLI host egress (overrides proxy).",
+    "key": "proxy.daemon",
+    "requires_restart": true,
+    "source": "default",
+    "type": "string",
+    "value": ""
+  },
+  {
+    "default": false,
+    "description": "Enable integrated NTLM/Kerberos authentication (Windows SSPI) for sandbox, daemon, and supported CLI host egress.",
+    "key": "proxy.integratedAuth",
+    "requires_restart": true,
+    "source": "default",
+    "type": "bool",
+    "value": false
+  },
+  {
+    "default": "",
+    "description": "Upstream proxy for sandbox egress only (overrides proxy).",
+    "env_var": "DOCKER_SANDBOXES_PROXY",
+    "key": "proxy.sandbox",
+    "requires_restart": true,
+    "source": "default",
+    "type": "string",
+    "value": ""
+  },
+  {
+    "default": "10g",
+    "description": "Size of a sandbox's /var/lib/docker volume (minimum 512 MiB; e.g. \"10g\"). Applies to sandboxes created after the change; existing volumes are never resized. Set DOCKER_SANDBOXES_DOCKER_SIZE to override one sandbox.",
+    "key": "sandbox.disk.dockerVolume",
+    "source": "default",
+    "type": "string",
+    "value": "10g"
+  },
+  {
+    "default": "readonly",
+    "description": "Default for an omitted --skills flag or sbx.yaml `skills:` key: \"off\", \"readonly\", or \"readwrite\". Applies to sandboxes created after the change; existing sandboxes' mounts are never retroactively changed.",
+    "key": "skills.defaultMode",
+    "source": "default",
+    "type": "string",
+    "value": "readonly"
+  },
+  {
+    "default": true,
+    "description": "Allow clients to forward an SSH agent into sandboxes. Existing forwarders require a daemon restart after changes.",
+    "key": "ssh.agentForwardingEnabled",
+    "requires_restart": true,
+    "source": "default",
+    "type": "bool",
+    "value": true
+  },
+  {
+    "default": "",
+    "description": "Optional fixed host SSH agent socket path. Empty uses each client's current SSH_AUTH_SOCK. Existing forwarders require a daemon restart after changes.",
+    "key": "ssh.agentSocketPath",
+    "requires_restart": true,
+    "source": "default",
+    "type": "string",
+    "value": ""
+  },
+  {
+    "default": false,
+    "description": "Create a sandbox on SSH connect when it does not exist.",
+    "env_var": "DOCKER_SANDBOXES_SSH_AUTO_CREATE",
+    "key": "ssh.autoCreate",
+    "requires_restart": true,
+    "source": "default",
+    "type": "bool",
+    "value": false
+  },
+  {
+    "default": "shell",
+    "description": "Built-in agent used for SSH auto-created sandboxes.",
+    "env_var": "DOCKER_SANDBOXES_SSH_DEFAULT_AGENT",
+    "key": "ssh.defaultAgent",
+    "requires_restart": true,
+    "source": "default",
+    "type": "string",
+    "value": "shell"
+  },
+  {
+    "default": "",
+    "description": "Template image override for SSH auto-created sandboxes (agent default if empty).",
+    "env_var": "DOCKER_SANDBOXES_SSH_DEFAULT_TEMPLATE",
+    "key": "ssh.defaultTemplate",
+    "requires_restart": true,
+    "source": "default",
+    "type": "string",
+    "value": ""
+  },
+  {
+    "default": "",
+    "description": "Host directory holding SSH auto-created sandbox workspaces (empty = mount-less, container-internal).",
+    "env_var": "DOCKER_SANDBOXES_SSH_WORKSPACE_ROOT",
+    "key": "ssh.workspaceRoot",
+    "requires_restart": true,
+    "source": "default",
+    "type": "string",
+    "value": ""
+  },
+  {
+    "default": false,
+    "description": "Accept server certificates with a negative serial number (needed by some TLS-inspecting proxies).",
+    "env_var": "DOCKER_SANDBOXES_TLS_ALLOW_NEGATIVE_SERIAL",
+    "key": "tls.allowNegativeSerial",
+    "requires_restart": true,
+    "source": "default",
+    "type": "bool",
+    "value": false
+  }
+]
+[exit 0]
+
+### 2026-09-28T15:43:42-0400
+$ sbx secret ls --help
+List stored secrets across global and sandbox scopes.
+
+With no scope flag, all stored secrets are shown. Use --global to show only
+global secrets, or --sandbox to show only secrets scoped to one sandbox.
+
+Usage:
+  sbx secret ls [flags]
+
+Aliases:
+  ls, list
+
+Examples:
+  # List all secrets
+  sbx secret ls
+
+  # List only global secrets
+  sbx secret ls -g
+
+  # List secrets for a specific sandbox
+  sbx secret ls --sandbox my-sandbox
+
+  # Filter by service
+  sbx secret ls --service github
+
+  # Machine-readable output for scripting
+  sbx secret ls --json
+
+Flags:
+  -g, --global           Only list global secrets
+  -h, --help             help for ls
+      --json             Output in JSON format
+  -q, --quiet            Only display secret names
+      --sandbox string   Only list secrets for one sandbox
+      --service string   Filter by secret service name
+
+Global Flags:
+      --cloud   Dispatch to Docker Cloud Sandboxes API instead of local sandboxd (supported by a growing set of verbs — run 'sbx --cloud --help' for the current list)
+  -D, --debug   Enable debug logging
+[exit 0]
+
+### 2026-09-28T15:43:43-0400
+$ sbx policy ls --help
+List active sandbox policies.
+
+Without SANDBOX, the command shows one overview row per policy with its source,
+where it applies, and a summary of decisions by resource type. With SANDBOX, it
+summarizes active rules that apply to that sandbox.
+
+Use --wide to show the detailed rule-level table with separate POLICY,
+POLICY_ID, RULE, and RULE_ID columns plus resources, status, and rule
+metadata. RULE_ID is the identifier accepted by "sbx policy rm network --id"
+(local rules only). Use --json for the filtered daemon response.
+
+When remote governance is active, inactive policy rules are hidden by default.
+Use --include-inactive to show inactive rules for troubleshooting.
+Use "sbx policy inspect <policy-or-rule>" for full detail on a selected policy or
+rule.
+
+Usage:
+  sbx policy ls [SANDBOX] [flags]
+
+Examples:
+  # List all policies
+  sbx policy ls
+
+  # List the policies that apply to one sandbox
+  sbx policy ls my-sandbox
+
+  # Show detailed rule-level rows with rule IDs and resources
+  sbx policy ls --wide
+
+  # Output filtered rules as JSON
+  sbx policy ls --json
+
+  # List only network policies
+  sbx policy ls --type network
+
+  # List organization policies that deny access
+  sbx policy ls --source org --decision deny
+
+  # List persistent rules created from approval prompts
+  sbx policy ls --wide --created-via approval
+
+  # Include inactive rules hidden by remote governance
+  sbx policy ls --include-inactive
+
+Flags:
+      --created-via string   Filter policies by how they were created: "default", "added", "provisioned", or "approval"
+      --decision string      Filter policies by decision: "allow" or "deny"
+  -h, --help                 help for ls
+      --include-inactive     Show inactive policy rules hidden by remote governance
+      --json                 Output filtered policy rules as JSON
+      --profile string       Filter policies by governance profile
+      --protocol tcp|udp     Filter network rules by protocol: tcp or udp
+      --source string        Filter policies by source: "local", "org", or "kit"
+      --type string          Filter policies by type: "all", "network", "http", "filesystem" (default "all") (default "all")
+      --wide                 Show detailed rule-level output with rule IDs and resources
+
+Global Flags:
+      --cloud   Dispatch to Docker Cloud Sandboxes API instead of local sandboxd (supported by a growing set of verbs — run 'sbx --cloud --help' for the current list)
+  -D, --debug   Enable debug logging
+[exit 0]
+
+### 2026-09-28T15:44:36-0400 DENIED (auto mode classifier, reason: Credential Exploration), not executed
+$ rec.sh 'n=$(sbx secret ls -q | wc -l); h=$(sbx secret ls -q | sort | sha256sum | cut -c1-16); echo "secret names: count=$n sha256-16=$h"'
+
+### 2026-09-28T15:44:36-0400
+$ sbx policy ls
+error: global network policy has not been initialized
+  try: sbx policy init <allow-all|balanced|deny-all>
+[exit 1]
+
+### 2026-09-28T15:44:57-0400
+$
+
+[exit 0]
+
+### 2026-09-28T15:48:08-0400
+$ cd /Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.worktrees/exp-229-sbx-kit-trust-3 && PYTHONSAFEPATH=1 mise exec -- python experiments/03-sbx-kit-trust/fixture.py pki --root /private/tmp/bv05-pki
+{
+  "at": "2026-09-28T19:48:09.474703+00:00",
+  "ca_issued": {
+    "ca": true,
+    "unrelated-ca": true,
+    "client-ca": true
+  },
+  "leaves": {
+    "valid": "A8:05:92:23:0E:F4:08:35:9C:40:1D:C2:28:0E:82:85:76:17:EF:34:41:40:9D:9E:E2:AC:CA:E1:28:03:F0:1A",
+    "hdi-only": "50:2A:0A:3C:AC:8B:99:7F:46:0F:61:2A:63:65:68:FD:27:FD:48:F4:97:70:4C:A7:22:F8:53:99:C3:91:C1:93",
+    "localhost-only": "0E:13:B4:FA:AD:11:D2:44:7B:EA:29:19:D1:3A:77:A0:AB:21:EB:56:F4:11:26:98:AF:31:A5:16:66:52:4D:3E",
+    "wrong-host": "D6:95:6F:5E:76:9A:69:18:CA:D1:F4:32:CF:F3:87:EE:EC:77:0E:95:93:BA:65:6C:67:D5:68:E9:2F:81:52:B5",
+    "expired": "0F:4B:6D:99:89:8E:06:FA:D2:81:60:D5:CD:04:A4:B6:EC:45:68:F6:8C:E4:34:43:94:87:68:52:9C:CE:D3:8F",
+    "unrelated": "7F:11:1E:DA:71:D3:10:0D:E1:10:06:04:A1:86:D3:07:FD:73:A2:0A:A9:D9:7A:21:06:3B:58:F7:C3:13:E6:E7",
+    "client": "BF:8A:4E:92:29:71:AA:57:45:76:2D:71:D4:B3:8F:9A:20:44:6F:C9:9A:31:FD:7B:56:8B:1F:D8:E8:1A:08:E9"
+  }
+}
+[exit 0]
+
+### 2026-09-28T15:48:43-0400
+$ cd /Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.worktrees/exp-229-sbx-kit-trust-3 && PYTHONSAFEPATH=1 mise exec -- python experiments/03-sbx-kit-trust/fixture.py kit --root /private/tmp/bv05-pki --kit /private/tmp/bv05-kit --port 18443
+/private/tmp/bv05-kit/spec.yaml
+[exit 0]
+
+### 2026-09-28T15:49:01-0400
+$ sbx kit validate /private/tmp/bv05-kit
+VALID: /private/tmp/bv05-kit (directory)
+[exit 0]
+
+### 2026-09-28T15:49:18-0400
+$ curl -sS --cacert /private/tmp/bv05-pki/ca.crt https://localhost:18443/host-control
+{"method": "GET", "path": "/host-control", "sni": "localhost", "tls": "TLSv1.3", "client_cert_sha256": null, "host": "localhost:18443", "auth_scheme": null, "auth_sha256_16": null, "header_names": ["Accept", "Host", "User-Agent"]}
+[exit 0]
+
+### 2026-09-28T15:49:18-0400
+$ curl -sS https://localhost:18443/host-untrusted
+curl: (60) SSL certificate OpenSSL verify result: unable to get local issuer certificate (20)
+More details here: https://curl.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the webpage mentioned above.
+[exit 60]
+
+### 2026-09-28T15:50:11-0400 DENIED (auto mode classifier, reason: Credential Exploration), not executed
+$ rec.sh 'stat -c "%n|%F|%s bytes|mtime %y" ~/.config/sbx ~/.config/sbx/credentials.yaml 2>&1'
+
+### 2026-09-28T15:50:11-0400
+$ curl -sS https://localhost:18443/host-untrusted-2
+curl: (60) SSL certificate OpenSSL verify result: unable to get local issuer certificate (20)
+More details here: https://curl.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the webpage mentioned above.
+[exit 60]
+
+### 2026-09-28T15:50:21-0400
+$ sbx settings set kit.allowLocalKits false
+Setting "kit.allowLocalKits" updated: value=false source=override
+[exit 0]
+
+### 2026-09-28T15:50:22-0400
+$ sbx settings get --json kit.allowLocalKits
+{
+  "default": true,
+  "description": "Allow installing kits from local directories or ZIP files. Set to false to require a remote source.",
+  "env_var": "DOCKER_SANDBOXES_KIT_ALLOW_LOCAL",
+  "key": "kit.allowLocalKits",
+  "source": "override",
+  "type": "bool",
+  "value": false
+}
+[exit 0]
+
+### 2026-09-28T15:50:29-0400
+$ sbx create --name bv05-kit shell --kit /private/tmp/bv05-kit < /dev/null
+error: global network policy has not been initialized
+  try: sbx policy init <allow-all|balanced|deny-all>
+[exit 1]
+
+### 2026-09-28T15:50:29-0400
+$ sbx ls --json
+{
+  "sandboxes": []
+}
+[exit 0]
+
+### 2026-09-28T15:50:40-0400
+$ sbx kit validate /private/tmp/bv05-kit
+error: local kit sources are disabled (kit.allowLocalKits=false); the reference "/private/tmp/bv05-kit" points at a local directory or ZIP file; artifact validation failed
+  try: sbx settings set kit.allowLocalKits true
+[exit 1]
+
+### 2026-09-28T15:50:41-0400
+$ sbx policy check network localhost:18443
+error: check network policy: request failed: 412 Precondition Failed: global network policy has not been initialized; run: sbx policy init <allow-all|balanced|deny-all>
+[exit 1]
+
+### 2026-09-28T15:50:42-0400
+$ sbx settings set kit.allowLocalKits true
+Setting "kit.allowLocalKits" updated: value=true source=default
+[exit 0]
+
+### 2026-09-28T15:50:42-0400
+$ sbx settings get --json kit.allowLocalKits
+{
+  "default": true,
+  "description": "Allow installing kits from local directories or ZIP files. Set to false to require a remote source.",
+  "env_var": "DOCKER_SANDBOXES_KIT_ALLOW_LOCAL",
+  "key": "kit.allowLocalKits",
+  "source": "default",
+  "type": "bool",
+  "value": true
+}
+[exit 0]
+
+### 2026-09-28T15:50:43-0400
+$ sbx settings unset kit.allowLocalKits
+Override for "kit.allowLocalKits" removed; setting now evaluates from env var or default.
+[exit 0]
+
+### 2026-09-28T15:50:43-0400
+$ sbx settings get --json kit.allowLocalKits
+{
+  "default": true,
+  "description": "Allow installing kits from local directories or ZIP files. Set to false to require a remote source.",
+  "env_var": "DOCKER_SANDBOXES_KIT_ALLOW_LOCAL",
+  "key": "kit.allowLocalKits",
+  "source": "default",
+  "type": "bool",
+  "value": true
+}
+[exit 0]
+
+### 2026-09-28T15:51:21-0400
+$ sbx settings list --json | sha256sum
+0477633d77404d7c39490df322dc92a5aa0f84181b2eec02debd4b3d2a9af0f4  -
+[exit 0]
+
+### 2026-09-28T15:51:22-0400
+$ sbx create --name bv05-clean shell < /dev/null
+error: global network policy has not been initialized
+  try: sbx policy init <allow-all|balanced|deny-all>
+[exit 1]
+
+### 2026-09-28T15:51:23-0400
+$ sbx create --name bv05-kit shell --kit /private/tmp/bv05-kit < /dev/null
+error: global network policy has not been initialized
+  try: sbx policy init <allow-all|balanced|deny-all>
+[exit 1]
+
+### 2026-09-28T15:51:24-0400
+$ sbx ls --json
+{
+  "sandboxes": []
+}
+[exit 0]
+
+### 2026-09-28T15:51:25-0400
+$ sbx kit validate /private/tmp/bv05-kit
+VALID: /private/tmp/bv05-kit (directory)
+[exit 0]
+
+### 2026-09-28T15:51:46-0400
+$ sbx policy init --help
+Initialize the global network policy that applies to all sandboxes.
+
+This sets the initial global network policy and must be run before adding
+custom allow/deny rules or starting a sandbox for the first time. It is a
+one-time setup: once initialized, use "sbx policy reset" to start over.
+
+This is the initial global policy, not a per-sandbox default; you can change
+it later. Per-sandbox rules, including those added by kits such as the
+built-in agent kits, apply on top for individual sandboxes.
+
+Available policies:
+  allow-all   All outbound network traffic is allowed
+  balanced    Typical development traffic is allowed, such as AI services and package registries
+  deny-all    All outbound network traffic is blocked
+
+After initializing, use "sbx policy allow/deny/rm" to change the global policy.
+Use "sbx policy reset" to clear all policies and start over.
+
+With --cloud:
+Set the default network mode of the cloud policy.
+
+There is no one-time setup: init sets the default mode for the account, or for
+one sandbox with --sandbox, keeps the existing allow and deny rules, and can be
+run again. balanced is deny-all plus the balanced allow list added to the scope.
+Use "sbx --cloud policy reset" to clear the rules first.
+
+Usage:
+  sbx policy init <allow-all|balanced|deny-all> [flags]
+
+Examples:
+  # Initialize with the balanced policy — recommended
+  sbx policy init balanced
+
+  # Allow all traffic
+  sbx policy init allow-all
+
+  # Block everything, then allow specific sites
+  sbx policy init deny-all
+  sbx policy allow network api.example.com:443
+
+  # Set the account default to balanced
+  sbx --cloud policy init balanced
+
+  # Block everything for one sandbox, keeping its allow rules
+  sbx --cloud policy init deny-all --sandbox my-sandbox
+
+Flags:
+  -h, --help             help for init
+      --sandbox string   Target a single cloud sandbox's policy (cloud only)
+
+Global Flags:
+      --cloud   Dispatch to Docker Cloud Sandboxes API instead of local sandboxd (supported by a growing set of verbs — run 'sbx --cloud --help' for the current list)
+  -D, --debug   Enable debug logging
+[exit 0]
+
+### 2026-09-28T15:51:47-0400
+$ sbx policy reset --help
+Remove all custom policies and restart the daemon to restore defaults.
+
+This deletes the local policy store and stops the daemon. The daemon restarts
+automatically on the next command, then prompts you to initialize the global
+network policy again.
+
+If sandboxes are currently running, they will be stopped when the daemon
+shuts down. You will be prompted for confirmation unless --force is used.
+
+With --cloud, deletes the custom cloud network policy for your account and
+leaves the local daemon alone. You will be prompted for confirmation unless
+--force is used. Afterwards the default the server now stores is printed.
+
+Usage:
+  sbx policy reset [flags]
+
+Examples:
+  # Reset policies — prompts if sandboxes are running
+  sbx policy reset
+
+  # Reset policies without confirmation
+  sbx policy reset --force
+
+Flags:
+  -f, --force   Skip confirmation prompt
+  -h, --help    help for reset
+
+Global Flags:
+      --cloud   Dispatch to Docker Cloud Sandboxes API instead of local sandboxd (supported by a growing set of verbs — run 'sbx --cloud --help' for the current list)
+  -D, --debug   Enable debug logging
+[exit 0]
+
+### 2026-09-28T15:52:11-0400
+$ curl -sS --cacert /private/tmp/bv05-pki/ca.crt -H 'Authorization: Bearer <fake-bearer-redacted>' https://localhost:18443/sim-bearer-no-client-cert
+{"method": "GET", "path": "/sim-bearer-no-client-cert", "sni": "localhost", "tls": "TLSv1.3", "client_cert_sha256": null, "host": "localhost:18443", "auth_scheme": "Bearer", "auth_sha256_16": "f1b2c1b863c9c988", "header_names": ["Accept", "Authorization", "Host", "User-Agent"]}
+[exit 0]
+
+### 2026-09-28T15:52:11-0400
+$ curl -sS --cacert /private/tmp/bv05-pki/ca.crt --cert /private/tmp/bv05-pki/client.crt --key /private/tmp/bv05-pki/client.key -H 'Authorization: Bearer <fake-bearer-redacted>' https://localhost:18443/sim-bearer-with-client-cert
+curl: (56) OpenSSL SSL_read: OpenSSL/3.6.3: error:0A000413:SSL routines::ssl/tls alert unsupported certificate, errno 0
+[exit 56]
+
+### 2026-09-28T15:52:12-0400
+$ wc -l < /private/tmp/bv05-run/deliveries.jsonl; sha256sum < /private/tmp/bv05-run/deliveries.jsonl
+0
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  -
+[exit 0]
+
+### 2026-09-28T15:52:12-0400
+$ curl -sS --cacert /private/tmp/bv05-pki/ca.crt -X POST --data sim-delivery-1 https://localhost:18443/deliver
+{"delivered": true}
+[exit 0]
+
+### 2026-09-28T15:52:12-0400
+$ wc -l < /private/tmp/bv05-run/deliveries.jsonl; sha256sum < /private/tmp/bv05-run/deliveries.jsonl
+1
+627d1dcb202e0a69683c24f9b8b521bec33708c999dcd37cd5abe55fd28e11e8  -
+[exit 0]
+
+### 2026-09-28T15:52:12-0400
+$ curl -sS --cacert /private/tmp/bv05-pki/ca.crt -w ' time_total=%{time_total}\n' 'https://localhost:18443/wait?hold=5&id=sim-full'
+{"permit": false, "id": "sim-full", "elapsed_s": 5.071}
+ time_total=5.076942
+[exit 0]
+
+### 2026-09-28T15:52:17-0400
+$ curl -sS --cacert /private/tmp/bv05-pki/ca.crt --max-time 2 -w ' time_total=%{time_total}\n' 'https://localhost:18443/wait?hold=10&id=sim-client-timeout'
+curl: (28) Operation timed out after 2004 milliseconds with 0 bytes received
+ time_total=2.004370
+[exit 28]
+
+### 2026-09-28T15:52:20-0400
+$ curl -sS --cacert /private/tmp/bv05-pki/ca.crt -w ' time_total=%{time_total}\n' 'https://localhost:18443/wait?hold=3&id=sim-reconnect'
+{"permit": false, "id": "sim-reconnect", "elapsed_s": 3.038}
+ time_total=3.042419
+[exit 0]
+
+### 2026-09-28T15:52:23-0400
+$ wc -l < /private/tmp/bv05-run/deliveries.jsonl; sha256sum < /private/tmp/bv05-run/deliveries.jsonl
+1
+627d1dcb202e0a69683c24f9b8b521bec33708c999dcd37cd5abe55fd28e11e8  -
+[exit 0]
+
+### 2026-09-28T15:52:35-0400
+$ cd /Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.worktrees/exp-229-sbx-kit-trust-3 && PYTHONSAFEPATH=1 mise exec -- python experiments/03-sbx-kit-trust/fixture.py pki --root /private/tmp/bv05-pki --leaf renewed
+{
+  "at": "2026-09-28T19:52:36.181552+00:00",
+  "ca_issued": {
+    "ca": false,
+    "unrelated-ca": false,
+    "client-ca": false
+  },
+  "leaves": {
+    "renewed": "15:D9:AD:BB:07:C7:E8:0F:7D:DB:E4:A7:89:7E:78:C8:9F:51:4C:C9:01:86:67:62:28:66:33:D8:E5:38:C4:52",
+    "client": "40:2D:F9:DB:38:C6:19:F6:F9:98:DF:54:FD:4D:C3:89:B1:1B:64:77:76:B2:60:BF:08:B0:8E:4A:FC:0A:E1:D3"
+  }
+}
+[exit 0]
+
+### 2026-09-28T15:52:36-0400
+$ curl -sS --cacert /private/tmp/bv05-pki/ca.crt --cert /private/tmp/bv05-pki/client.crt --key /private/tmp/bv05-pki/client.key -H 'Authorization: Bearer <fake-bearer-redacted>' https://localhost:18443/sim-bearer-with-client-cert
+{"method": "GET", "path": "/sim-bearer-with-client-cert", "sni": "localhost", "tls": "TLSv1.3", "client_cert_sha256": "402df9db38c619f6", "host": "localhost:18443", "auth_scheme": "Bearer", "auth_sha256_16": "f1b2c1b863c9c988", "header_names": ["Accept", "Authorization", "Host", "User-Agent"]}
+[exit 0]
+
+### 2026-09-28T15:52:44-0400
+$ sbx ls --json
+{
+  "sandboxes": []
+}
+[exit 0]
+
+### 2026-09-28T15:52:45-0400
+$ sbx settings list --json | sha256sum
+0477633d77404d7c39490df322dc92a5aa0f84181b2eec02debd4b3d2a9af0f4  -
+[exit 0]
+
+### 2026-09-28T15:52:46-0400
+$ sbx settings get --json kit.allowLocalKits
+{
+  "default": true,
+  "description": "Allow installing kits from local directories or ZIP files. Set to false to require a remote source.",
+  "env_var": "DOCKER_SANDBOXES_KIT_ALLOW_LOCAL",
+  "key": "kit.allowLocalKits",
+  "source": "default",
+  "type": "bool",
+  "value": true
+}
+[exit 0]
+
+### 2026-09-28T15:52:46-0400
+$ sbx policy ls
+error: global network policy has not been initialized
+  try: sbx policy init <allow-all|balanced|deny-all>
+[exit 1]
+
+### 2026-09-28T15:52:47-0400
+$ sbx daemon status
+Status: running
+Socket: /Users/tony/Library/Application Support/com.docker.sandboxes/sandboxes/sandboxd/sandboxd.sock
+Logs: /Users/tony/Library/Application Support/com.docker.sandboxes/sandboxes/sandboxd/daemon.log
+[exit 0]
+
+### 2026-09-28T15:53:55-0400 DENIED (auto mode classifier, reason: Interfere With Workloads), not executed
+$ rec.sh 'sbx daemon stop'; sleep 2; rec.sh 'sbx daemon status'; rec.sh 'sbx version'; lsof -nP -iTCP:18443 -sTCP:LISTEN; pgrep -fl 'fixture.py serve'
+
+### 2026-09-28T15:53:55-0400
+$ sbx daemon status
+Status: running
+Socket: /Users/tony/Library/Application Support/com.docker.sandboxes/sandboxes/sandboxd/sandboxd.sock
+Logs: /Users/tony/Library/Application Support/com.docker.sandboxes/sandboxes/sandboxd/daemon.log
+[exit 0]
+
+### 2026-09-28T15:53:56-0400
+$ sbx version
+sbx version: v0.45.1 9d79d90ee4c5d297fb3d36b75384e8cea7a4fbcb
+[exit 0]
+
+### 2026-09-28T15:53:56-0400
+$ lsof -nP -iTCP:18443 -sTCP:LISTEN; pgrep -fl "fixture.py serve"; true
+
+[exit 0]
+
+### 2026-09-28T15:59:26-0400
+$ sbx kit validate /private/tmp/claude-501/-Users-tony-Code-github-com-tbhb-agent-orchestration-poc/349b16d0-2964-4b4f-8e5a-2d911ebe9dc8/scratchpad/rekit/kit
+VALID: /private/tmp/claude-501/-Users-tony-Code-github-com-tbhb-agent-orchestration-poc/349b16d0-2964-4b4f-8e5a-2d911ebe9dc8/scratchpad/rekit/kit (directory)
+[exit 0]
