@@ -410,6 +410,7 @@ def test_responder_loopback_and_fixed_frames(
 
 
 @pytest.mark.socket
+@pytest.mark.skipif(sys.platform != "darwin", reason="macOS LOCAL_PEERTOKEN only")
 def test_listener_records_peer_and_root() -> None:
     with tempfile.TemporaryDirectory(prefix="bv01-", dir="/tmp") as directory:
         path = Path(directory) / "gateway.sock"
@@ -452,3 +453,7 @@ def test_listener_records_peer_and_root() -> None:
                 except subprocess.TimeoutExpired:
                     server.kill()
                     server.wait(timeout=5)
+            if server.stdout is not None:
+                server.stdout.close()
+            if server.stderr is not None:
+                server.stderr.close()
