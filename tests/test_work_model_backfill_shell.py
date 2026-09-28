@@ -313,3 +313,64 @@ def test_created_item_decoder_restores_all_tuple_fields() -> None:
         item_id="30",
     )
     assert _item(json.loads(json.dumps(asdict(original)))) == original
+
+
+def test_cp13_differences_keep_both_values_for_the_failure_envelope() -> None:
+    """The saved failure envelope needs precise before and after values."""
+    from agent_orchestration_poc.core.work_model_backfill import (  # noqa: PLC0415
+        Difference,
+        Item,
+        Page,
+        Snapshot,
+        compare_cp13,
+    )
+
+    expected = Item(
+        "title:Draft",
+        "Reviewed",
+        "draft",
+        project=(("Status", "Backlog"),),
+        body="Reviewed body",
+        item_id="item-1",
+        draft_id="draft-1",
+    )
+    actual = Item(
+        "title:Draft",
+        "Drifted",
+        "draft",
+        project=(("Status", "Ready"),),
+        body="Drifted body",
+        item_id="item-1",
+        draft_id="draft-1",
+    )
+    pages = tuple(
+        Page(name, 1, count, 1, count)
+        for name, count in (
+            ("issues", 0),
+            ("project", 1),
+            ("drafts", 1),
+            ("native", 0),
+            ("parents", 0),
+            ("blockers", 0),
+        )
+    )
+    snapshot = Snapshot(1, (actual,), pages, "new-sha", "final")
+    assert compare_cp13((expected,), snapshot, "old-sha") == (
+        Difference("branch", "sha", "old-sha", "new-sha"),
+        Difference("title:Draft", "title", "Reviewed", "Drifted"),
+        Difference(
+            "title:Draft",
+            "project",
+            (("Status", "Backlog"),),
+            (("Status", "Ready"),),
+        ),
+        Difference("title:Draft", "body", "Reviewed body", "Drifted body"),
+    )
+    missing_pages = tuple(Page(page.collection, 1, 0, 1, 0) for page in pages)
+    missing = Snapshot(1, (), missing_pages, "new-sha", "final")
+    assert compare_cp13((expected,), missing, "new-sha") == (
+        Difference("title:Draft", "presence", True, False),
+    )
+    assert compare_cp13((), snapshot, "new-sha") == (
+        Difference("title:Draft", "presence", False, True),
+    )
