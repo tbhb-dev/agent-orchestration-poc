@@ -1,0 +1,22 @@
+[check:mutation] $ mise run check:mutation:go
+[check:mutation:go] $ rm -f gremlins.json
+[check:mutation:go] $ gremlins unleash ./internal/core --output-statuses lct --…
+Starting...
+Gathering coverage... done in 113.090209ms
+       LIVED CONDITIONALS_BOUNDARY at relay/relay.go:79:19
+       LIVED CONDITIONALS_BOUNDARY at relay/relay.go:79:36
+       LIVED CONDITIONALS_BOUNDARY at relay/relay.go:93:183
+       LIVED CONDITIONALS_BOUNDARY at relay/relay.go:93:201
+Mutation testing completed in 45 seconds 915 milliseconds
+Killed: 145, Lived: 4, Not covered: 0
+Timed out: 0, Not viable: 0, Skipped: 0
+Test efficacy: 97.32%
+Mutator coverage: 100.00%
+[check:mutation:go] $ uv run python scripts/check-gremlins-output.py
+Go core mutation run complete: 149 mutants classified
+[check:mutation] $ mise run check:mutation:python
+[check:mutation:python] $ uv run python scripts/check-mutation-score.py
+    done in 11754ms (13 files mutated, 0 ignored, 0 unmodified)
+Saved CI/CD stats to mutants/mutmut-cicd-stats.json
+Python core mutation score: 90.21% (4248 killed of 4709)
+Attribution module metadata: 23 mutants, 22 killed, 1 timeout, 0 survived.
