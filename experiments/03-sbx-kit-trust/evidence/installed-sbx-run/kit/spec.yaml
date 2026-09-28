@@ -1,0 +1,27 @@
+---
+schemaVersion: "2"
+kind: mixin
+name: bv05-kit
+version: "0.1.0"
+description: BV-05 disposable public-only CA and agentd host route
+credentials:
+  - service: bv05-agentd
+    description: BV-05 fake bearer for a disposable receiver
+    required: true
+    apiKey:
+      name: BV05_TOKEN
+      proxyManaged: true
+      inject:
+        - domain: host.docker.internal
+          scheme: bearer
+permissions:
+  network:
+    allow:
+      - localhost:18443
+      - host.docker.internal:18443
+setup:
+  install:
+    - command: >-
+        install -m 0644 /home/agent/bv05/bv05-ca.crt
+        /usr/local/share/ca-certificates/bv05-ca.crt && update-ca-certificates
+      description: Add the disposable public CA to the existing system trust
