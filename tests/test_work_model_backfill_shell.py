@@ -28,6 +28,31 @@ def send_json(handler: BaseHTTPRequestHandler, status: int, value: object) -> No
     handler.wfile.write(body)
 
 
+def send_project_items(
+    handler: BaseHTTPRequestHandler, items: list[dict[str, Any]]
+) -> None:
+    """Serve the REST field definition and Project item reads for loopback tests."""
+    if handler.path.endswith("/fields?per_page=100"):
+        send_json(handler, 200, [{"id": 1, "name": "Status"}])
+    elif "/items?" in handler.path:
+        send_json(handler, 200, items)
+    else:
+        handler.send_error(404)
+
+
+class ProjectItemsHandler(BaseHTTPRequestHandler):
+    """Serve Project items for write and read-back loopback cases."""
+
+    project_items: list[dict[str, Any]]
+
+    def do_GET(self) -> None:
+        send_project_items(self, self.project_items)
+
+    @override
+    def log_message(self, format: str, *args: object) -> None:
+        pass
+
+
 @contextmanager
 def live_server(handler: type[BaseHTTPRequestHandler]) -> Generator[str]:
     """Run a mutable REST fake on loopback for an executor test."""
@@ -577,14 +602,8 @@ def test_draft_creation_recovers_after_response(tmp_path: Path, status: int) -> 
     drafts: list[dict[str, Any]] = []
     writes: list[dict[str, Any]] = []
 
-    class Handler(BaseHTTPRequestHandler):
-        def do_GET(self) -> None:
-            if self.path.endswith("/fields?per_page=100"):
-                send_json(self, 200, [{"id": 1, "name": "Status"}])
-            elif "/items?" in self.path:
-                send_json(self, 200, drafts)
-            else:
-                self.send_error(404)
+    class Handler(ProjectItemsHandler):
+        project_items = drafts
 
         def do_POST(self) -> None:
             payload = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
@@ -598,10 +617,6 @@ def test_draft_creation_recovers_after_response(tmp_path: Path, status: int) -> 
                 }
             )
             send_json(self, status, drafts[-1] if status == 201 else {})
-
-        @override
-        def log_message(self, format: str, *args: object) -> None:
-            pass
 
     action = Action(
         "6:draft:title:Draft A",
@@ -644,3 +659,116 @@ def test_draft_creation_recovers_after_response(tmp_path: Path, status: int) -> 
         )
         == "draft-a"
     )
+
+
+@pytest.mark.integration
+def test_project_membership_recovers_lost_response(tmp_path: Path) -> None:
+    """A recorded intent and matching REST item prevent a second add."""
+    from agent_orchestration_poc.core.work_model_backfill_executor import (  # noqa: PLC0415
+        Action,
+    )
+    from agent_orchestration_poc.shell.work_model_backfill import (  # noqa: PLC0415
+        Api,
+        _execute,
+        _journal,
+    )
+
+    items: list[dict[str, Any]] = []
+    writes: list[dict[str, Any]] = []
+
+    class Handler(ProjectItemsHandler):
+        project_items = items
+
+        def do_POST(self) -> None:
+            payload = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+            writes.append(payload)
+            items.append(
+                {
+                    "content_type": "Issue",
+                    "content": {"number": 1, "id": payload["id"]},
+                    "id": 13,
+                    "fields": [],
+                }
+            )
+            send_json(self, 503, {})
+
+    action = Action(
+        "6:item:1",
+        "6",
+        "project_item",
+        1,
+        "POST",
+        "orgs/tbhb-dev/projectsV2/1/items",
+        {"type": "Issue", "id": 101},
+        (0, "101"),
+        (1, "101"),
+    )
+    journal = tmp_path / "journal.jsonl"
+    with live_server(Handler) as base:
+        api = Api(base, "")
+        records = list(_journal(journal, "digest", (action,), create=True))
+        with pytest.raises(ValueError, match="HTTP 503"):
+            _execute(api, journal, action, records)
+        records = list(_journal(journal, "digest", (action,), create=False))
+        _execute(api, journal, action, records)
+        _execute(api, journal, action, records)
+    assert writes == [{"type": "Issue", "id": 101}]
+    assert [row.phase for row in records] == ["intent", "verified"]
+    assert records[-1].detail["item_id"] == "13"
+
+
+@pytest.mark.integration
+def test_project_field_graphql_batch_reads_back_rest(tmp_path: Path) -> None:
+    """One GraphQL write records a REST verified field value."""
+    from agent_orchestration_poc.core.work_model_backfill_executor import (  # noqa: PLC0415
+        Action,
+    )
+    from agent_orchestration_poc.shell.work_model_backfill import (  # noqa: PLC0415
+        Api,
+        _execute,
+        _journal,
+    )
+
+    items: list[dict[str, Any]] = [
+        {
+            "id": 13,
+            "node_id": "node-13",
+            "content_type": "Issue",
+            "content": {"id": 101, "number": 1},
+            "fields": [],
+        }
+    ]
+    queries: list[str] = []
+
+    class Handler(ProjectItemsHandler):
+        project_items = items
+
+        def do_POST(self) -> None:
+            payload = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+            assert self.path == "/graphql"
+            assert set(payload) == {"query"}
+            queries.append(payload["query"])
+            items[0]["fields"] = [{"name": "Status", "value": {"name": "Ready"}}]
+            send_json(self, 200, {"data": {"f0": {"projectV2Item": {"id": "node-13"}}}})
+
+    data = json.loads((FIXTURES / "runner/project-field-action.json").read_text())
+    action = Action(
+        data["id"],
+        data["step"],
+        data["kind"],
+        data["number"],
+        data["method"],
+        data["path"],
+        data["payload"],
+        tuple(map(tuple, data["before"])),
+        tuple(map(tuple, data["after"])),
+    )
+    journal = tmp_path / "journal.jsonl"
+    with live_server(Handler) as base:
+        api = Api(base, "")
+        records = list(_journal(journal, "digest", (action,), create=True))
+        _execute(api, journal, action, records)
+        _execute(api, journal, action, records)
+    assert len(queries) == 1
+    assert records[-1].phase == "verified"
+    assert records[-1].detail["observed"] == (("Status", "Ready"),)
