@@ -11,7 +11,7 @@ import subprocess
 import sys
 import time
 import tomllib
-from dataclasses import asdict
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from typing import Any, cast, override
 from urllib.error import HTTPError, URLError
@@ -19,10 +19,13 @@ from urllib.parse import quote, urljoin, urlparse
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from agent_orchestration_poc.core.work_model_backfill import (
+    NATIVE_OPTIONS,
     Item,
     Page,
     RestValues,
     Snapshot,
+    Step,
+    Tables,
     TargetInputs,
     compare_cp13,
     expected_cp13,
@@ -38,17 +41,26 @@ from agent_orchestration_poc.core.work_model_backfill_executor import (
     Action,
     ProjectMetadata,
     Record,
+    WriteContext,
+    candidate_actions,
     closure_actions,
     comment_observation,
+    creation_observation,
     draft_actions,
     draft_observation,
     graphql_field_receipt,
     journal_state,
+    label_observation,
     membership_actions,
     membership_observation,
+    merge_planned_actions,
+    native_field_payload,
     observation_value,
+    ordered_actions,
+    pr_closure_actions,
     project_field_actions,
     project_fields_observation,
+    recorded_actions,
     stage_actions,
     validate_journal,
     validate_progress,
@@ -63,6 +75,20 @@ OLD_PROJECT = "users/tbhb/projectsV2/9"
 API_VERSION = "2026-03-10"
 NEXT = re.compile(r'<([^>]+)>;\s*rel="next"')
 PAGE_SIZE = 100
+
+
+@dataclass(frozen=True)
+class ApplyInputs:
+    """Saved checkpoint and reviewed values for one journaled stage."""
+
+    tables: Tables
+    cp1: Snapshot
+    plan: tuple[Step, ...]
+    run_id: str
+    reviewed_status: dict[str, str] | None
+    reviewed_writes: dict[str, Any]
+    cp13: dict[str, Any] | None
+    actions: tuple[Action, ...]
 
 
 class _NoRedirect(HTTPRedirectHandler):
@@ -307,6 +333,17 @@ def _journal(
 
 
 def _observe(api: Api, action: Action) -> object:
+    if action.kind in {"draft", "draft_body", "project_item", "project_fields"}:
+        return _observe_project(api, action)
+    if action.kind in {"parent", "blocker", "trial_add", "trial_remove"}:
+        return _observe_relation(api, action)
+    return _observe_issue(api, action)
+
+
+def _observe_issue(api: Api, action: Action) -> object:
+    if action.kind == "label_create":
+        labels, _ = api.pages(f"{REPO}/labels?per_page=100", "labels")
+        return label_observation(labels, cast("dict[str, Any]", action.payload)["name"])
     if action.kind == "comment":
         comments, _ = api.pages(
             f"{REPO}/issues/{action.number}/comments?per_page=100",
@@ -314,23 +351,92 @@ def _observe(api: Api, action: Action) -> object:
         )
         payload = cast("dict[str, Any]", action.payload)
         return comment_observation(comments, payload["body"])
+    if action.kind in {"issue_state", "issue_type", "title", "body", "label_delete"}:
+        return _observe_issue_metadata(api, action)
+    if action.kind == "native":
+        values, _ = api.pages(
+            f"{REPO}/issues/{action.number}/issue-field-values?per_page=100",
+            f"native:#{action.number}",
+        )
+        returned = {
+            entry["issue_field_name"]: (entry.get("single_select_option") or {}).get(
+                "name", ""
+            )
+            for entry in values
+        }
+        return tuple(sorted({**dict.fromkeys(NATIVE_OPTIONS, ""), **returned}.items()))
+    if action.kind == "issue_create":
+        issues, _ = api.pages(f"{REPO}/issues?state=all&per_page=100", "issues")
+        return creation_observation(issues, cast("dict[str, Any]", action.payload))
+    if action.kind == "pr_state":
+        pr, _ = api.get(f"{REPO}/pulls/{action.number}")
+        return pr["state"], pr["merged"]
+    raise ValueError(f"unsupported issue action kind: {action.kind}")
+
+
+def _observe_issue_metadata(api: Api, action: Action) -> object:
+    issue, _ = api.get(f"{REPO}/issues/{action.number}")
     if action.kind == "issue_state":
-        issue, _ = api.get(f"{REPO}/issues/{action.number}")
         return issue["state"], issue.get("state_reason") or ""
+    if action.kind == "issue_type":
+        return (issue.get("type") or {}).get("name", "")
+    if action.kind == "title":
+        return issue["title"]
+    if action.kind == "body":
+        return issue.get("body") or ""
+    return tuple(sorted(label["name"] for label in issue["labels"]))
+
+
+def _observe_project(api: Api, action: Action) -> object:
+    items, _ = _project_items(api, PROJECT)
     if action.kind == "draft":
-        items, _ = _project_items(api, PROJECT)
         return draft_observation(items, cast("dict[str, Any]", action.payload)["title"])
+    if action.kind == "draft_body":
+        key = cast("dict[str, Any]", action.payload)["key"]
+        return draft_observation(items, key.removeprefix("title:"))[1]
     if action.kind == "project_item":
-        items, _ = _project_items(api, PROJECT)
         return membership_observation(
             items,
             action.number,
             str(cast("dict[str, Any]", action.payload)["id"]),
         )
     if action.kind == "project_fields":
-        items, _ = _project_items(api, PROJECT)
         return project_fields_observation(items, action)
-    raise ValueError(f"unsupported action kind: {action.kind}")
+    raise ValueError(f"unsupported Project action kind: {action.kind}")
+
+
+def _observe_relation(api: Api, action: Action) -> object:
+    if action.kind == "parent":
+        children, _ = api.pages(
+            f"{REPO}/issues/{action.number}/sub_issues?per_page=100",
+            f"sub_issues:#{action.number}",
+        )
+        child = cast("dict[str, Any]", action.payload)["child"]
+        return (
+            f"#{action.number}"
+            if any(f"#{item['number']}" == child for item in children)
+            else ""
+        )
+    if action.kind in {"blocker", "trial_add", "trial_remove"}:
+        blockers, _ = api.pages(
+            f"{REPO}/issues/{action.number}/dependencies/blocked_by?per_page=100",
+            f"blockers:#{action.number}",
+        )
+        return tuple(sorted(f"#{item['number']}" for item in blockers))
+    raise ValueError(f"unsupported relation action kind: {action.kind}")
+
+
+def _check_draft_body_receipt(action: Action, response: object) -> None:
+    data = response.get("data") if isinstance(response, dict) else None
+    mutation = data.get("updateProjectV2DraftIssue") if isinstance(data, dict) else None
+    draft = mutation.get("draftIssue") if isinstance(mutation, dict) else None
+    if (
+        not isinstance(response, dict)
+        or response.get("errors")
+        or not isinstance(draft, dict)
+        or draft.get("id") != cast("dict[str, Any]", action.payload)["draft_id"]
+    ):
+        raise ValueError("GraphQL draft body mutation failed")
 
 
 def _execute(
@@ -363,23 +469,36 @@ def _execute(
                 )
             )
         intent = Record(
-            action.id, "intent", {"payload": action.payload, "at": time.time()}
+            action.id,
+            "intent",
+            {
+                "payload": action.payload,
+                "action": asdict(action),
+                "at": time.time(),
+            },
         )
         _append(path, asdict(intent))
         records.append(intent)
         request_path = (
             action.path
-            if action.kind in {"draft", "project_item", "project_fields"}
+            if action.kind in {"draft", "project_item", "project_fields", "draft_body"}
             else f"{REPO}/{action.path}"
         )
         payload = (
             {"query": cast("dict[str, Any]", action.payload)["query"]}
-            if action.kind == "project_fields"
+            if action.kind in {"project_fields", "draft_body"}
             else action.payload
         )
+        if action.kind == "native":
+            definitions, _ = api.pages(
+                "orgs/tbhb-dev/issue-fields?per_page=100", "issue_fields"
+            )
+            payload = native_field_payload(action, definitions)
         response, headers, status = api.request(action.method, request_path, payload)
         if action.kind == "project_fields":
             graphql_field_receipt(action, response)
+        if action.kind == "draft_body":
+            _check_draft_body_receipt(action, response)
         identity = (
             response.get("value", response) if isinstance(response, dict) else None
         )
@@ -425,20 +544,41 @@ def run_apply(args: argparse.Namespace) -> int:
         raise ValueError("CP1 was built from different tables")
     cp1 = _snapshot(cp1_data["snapshot"])
     plan = operation_plan(tables, cp1, cp1_data.get("reviewed_status"))
-    closures = closure_actions(tables, cp1, plan, run_id)
+    reviewed_writes: dict[str, Any] = (
+        json.loads(args.reviewed_writes.read_text()) if args.reviewed_writes else {}
+    )
+    if not isinstance(reviewed_writes, dict):
+        raise TypeError("reviewed writes must be a JSON object")
+    cp13_data = _confirmed_cp13(args, digests)
+    if args.stage == "4:labels" and "labels" not in reviewed_writes:
+        raise ValueError("reviewed label definitions are missing")
+    closures = (
+        *closure_actions(tables, cp1, plan, run_id),
+        *pr_closure_actions(run_id, reviewed_writes.get("pr97_comment", "")),
+    )
     memberships = membership_actions(cp1, plan)
     drafts = draft_actions(tables, cp1, plan)
     api = _api(args.api_base)
     project, _ = api.get(PROJECT)
     fields, _ = api.pages(f"{PROJECT}/fields?per_page=100", "project_fields")
     raw_items, _ = _project_items(api, PROJECT)
+    labels, _ = api.pages(f"{REPO}/labels?per_page=100", "labels")
     project_fields = project_field_actions(
         tables,
         cp1,
         ProjectMetadata(project, fields, raw_items),
         cp1_data.get("reviewed_status"),
     )
-    actions = (*closures, *memberships, *drafts, *project_fields)
+    prepared = ApplyInputs(
+        tables,
+        cp1,
+        plan,
+        run_id,
+        cp1_data.get("reviewed_status"),
+        reviewed_writes,
+        cp13_data,
+        (*closures, *memberships, *drafts, *project_fields),
+    )
     lock = args.journal.with_suffix(args.journal.suffix + ".lock")
     descriptor = os.open(lock, os.O_CREAT | os.O_RDWR, 0o600)
     with os.fdopen(descriptor) as stream:
@@ -446,14 +586,127 @@ def run_apply(args: argparse.Namespace) -> int:
             fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             raise ValueError("another backfill runner holds the journal") from None
-        records = list(
-            _journal(args.journal, run_id, actions, create=args.stage == "0")
+        _apply_locked(
+            args, api, prepared, ProjectMetadata(project, fields, raw_items), labels
         )
-        selected = stage_actions(args.stage, actions, tuple(records))
-        validate_progress(cp1, collect(api, "initial"), actions, tuple(records))
-        for action in selected:
-            _execute(api, args.journal, action, records, pace=True)
     return 0
+
+
+def _confirmed_cp13(
+    args: argparse.Namespace, digests: dict[str, str]
+) -> dict[str, Any] | None:
+    if args.stage != "15":
+        return None
+    if not args.cp13 or not args.confirm_cp13:
+        raise ValueError("stage 15 requires confirmed CP13")
+    data = args.cp13.read_bytes()
+    if args.confirm_cp13 != f"CP13:{hashlib.sha256(data).hexdigest()}":
+        raise ValueError("operator CP13 confirmation differs from checkpoint")
+    checkpoint = json.loads(data)
+    if checkpoint.get("differences") != [] or checkpoint.get("digests") != digests:
+        raise ValueError("CP13 is not a clean comparison for these tables")
+    return cast("dict[str, Any]", checkpoint)
+
+
+def _verdict_comments(
+    api: Api, args: argparse.Namespace, tables: Tables
+) -> dict[str, list[dict[str, Any]]]:
+    comments: dict[str, list[dict[str, Any]]] = {}
+    if args.stage == "6T":
+        for row in tables.assignments:
+            if (
+                row["proposed title"]
+                and row["refinement verdict"] == "new verdict required"
+            ):
+                number = row["number"]
+                comments[f"#{number}"], _ = api.pages(
+                    f"{REPO}/issues/{number}/comments?per_page=100",
+                    f"verdict:#{number}",
+                )
+    return comments
+
+
+def _apply_locked(
+    args: argparse.Namespace,
+    api: Api,
+    prepared: ApplyInputs,
+    metadata: ProjectMetadata,
+    labels: list[dict[str, Any]],
+) -> None:
+    actions = prepared.actions
+    run_id = prepared.run_id
+    cp1 = prepared.cp1
+    reviewed_writes = prepared.reviewed_writes
+    tables = prepared.tables
+    cp13_data = prepared.cp13
+    saved_rows: list[dict[str, Any]] = (
+        [json.loads(line) for line in args.journal.read_text().splitlines()]
+        if args.journal.exists()
+        else []
+    )
+    recovered = tuple(
+        action
+        for action in recorded_actions(saved_rows)
+        if action.id not in {base.id for base in actions}
+    )
+    known = ordered_actions((*actions, *recovered))
+    records = list(_journal(args.journal, run_id, known, create=args.stage == "0"))
+    current = collect(api, "initial")
+    validate_progress(cp1, current, known, tuple(records))
+    for action in known:
+        if action.kind != "label_create" or not any(
+            row.action_id == action.id and row.phase == "verified" for row in records
+        ):
+            continue
+        name = cast("dict[str, Any]", action.payload)["name"]
+        observed_label = label_observation(labels, name)
+        if journal_state(action, tuple(records), observed_label) != "skip":
+            raise ValueError(f"verified label definition changed: {name}")
+    if (
+        cp13_data is not None
+        and not any(row.action_id.startswith("15:") for row in records)
+        and replace(_snapshot(cp13_data["snapshot"]), run_state="initial") != current
+    ):
+        raise ValueError("current state differs from confirmed CP13")
+    if args.stage != "0" and _observe(
+        api, pr_closure_actions(run_id, reviewed_writes["pr97_comment"])[1]
+    ) != ("closed", False):
+        raise ValueError("PR 97 is not closed and unmerged")
+    candidate = candidate_actions(
+        args.stage,
+        WriteContext(
+            tables,
+            cp1,
+            current,
+            prepared.plan,
+            metadata,
+            prepared.reviewed_status,
+            reviewed_writes.get("bodies", {}),
+            tuple(reviewed_writes.get("labels", ())),
+            tuple(labels),
+            reviewed_writes.get("verdicts"),
+            _verdict_comments(api, args, tables),
+        ),
+    )
+    selected = stage_actions(
+        args.stage,
+        merge_planned_actions(known, candidate),
+        tuple(records),
+    )
+    for action in selected:
+        if any(
+            row.action_id == action.id and row.phase == "verified" for row in records
+        ):
+            continue
+        _execute(api, args.journal, action, records, pace=True)
+    if not any(
+        row.phase == "complete" and row.detail["stage"] == args.stage for row in records
+    ):
+        marker = Record(
+            f"stage:{args.stage}", "complete", {"stage": args.stage, "at": time.time()}
+        )
+        _append(args.journal, asdict(marker))
+        records.append(marker)
 
 
 def run(args: argparse.Namespace) -> int:
@@ -516,11 +769,41 @@ def main() -> int:
     parser.add_argument("--api-base", default="https://api.github.com")
     parser.add_argument("--output", type=Path)
     parser.add_argument("--cp1", type=Path)
+    parser.add_argument("--cp13", type=Path)
+    parser.add_argument("--confirm-cp13")
     parser.add_argument("--inputs", type=Path)
     parser.add_argument("--reference", type=Path)
     parser.add_argument("--reviewed-status")
     parser.add_argument("--journal", type=Path)
-    parser.add_argument("--stage", choices=("0", "6:items", "6:drafts", "6:fields"))
+    parser.add_argument("--reviewed-writes", type=Path)
+    parser.add_argument(
+        "--stage",
+        choices=(
+            "0",
+            "3:trial",
+            "4:labels",
+            "6:items",
+            "6:drafts",
+            "6:fields",
+            "6:new-fields",
+            "6:body",
+            "6:native",
+            "6T",
+            "9:create",
+            "9:native",
+            "9:items",
+            "9:fields",
+            "9:close",
+            "10",
+            "11:links",
+            "11:bodies",
+            "12:create",
+            "12:native",
+            "12:items",
+            "12:fields",
+            "15",
+        ),
+    )
     parser.add_argument("--apply", action="store_true")
     parser.add_argument("--confirm-checkpoint")
     args = parser.parse_args()

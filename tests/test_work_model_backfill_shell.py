@@ -67,6 +67,16 @@ def live_server(handler: type[BaseHTTPRequestHandler]) -> Generator[str]:
         httpd.server_close()
 
 
+def new_journal(tmp_path: Path, actions: tuple[Any, ...]) -> tuple[Path, list[Any]]:
+    """Start a loopback write test with a durable empty operation journal."""
+    from agent_orchestration_poc.shell.work_model_backfill import (  # noqa: PLC0415
+        _journal,
+    )
+
+    path = tmp_path / "journal.jsonl"
+    return path, list(_journal(path, "digest", actions, create=True))
+
+
 def checkpoint_paths(tmp_path: Path) -> tuple[Path, dict[str, Path]]:
     """Build a digest manifest for the synthetic table files."""
     plan = FIXTURES / "plan"
@@ -556,10 +566,9 @@ def test_journaled_write_resumes_without_duplicate_comment(
         ("closed", "not_planned"),
     )
     actions = (comment, close)
-    journal = tmp_path / "journal.jsonl"
+    journal, records = new_journal(tmp_path, actions)
     with live_server(Handler) as base:
         api = Api(base, "")
-        records = list(_journal(journal, "digest", actions, create=True))
         with pytest.raises(ValueError, match="HTTP 503"):
             _execute(api, journal, comment, records)
         records = list(_journal(journal, "digest", actions, create=False))
@@ -629,10 +638,9 @@ def test_draft_creation_recovers_after_response(tmp_path: Path, status: int) -> 
         (0, ""),
         (1, "- Class: chore"),
     )
-    journal = tmp_path / "journal.jsonl"
+    journal, records = new_journal(tmp_path, (action,))
     with live_server(Handler) as base:
         api = Api(base, "")
-        records = list(_journal(journal, "digest", (action,), create=True))
         if status == 503:
             with pytest.raises(ValueError, match="HTTP 503"):
                 _execute(api, journal, action, records)
@@ -703,10 +711,9 @@ def test_project_membership_recovers_lost_response(tmp_path: Path) -> None:
         (0, "101"),
         (1, "101"),
     )
-    journal = tmp_path / "journal.jsonl"
+    journal, records = new_journal(tmp_path, (action,))
     with live_server(Handler) as base:
         api = Api(base, "")
-        records = list(_journal(journal, "digest", (action,), create=True))
         with pytest.raises(ValueError, match="HTTP 503"):
             _execute(api, journal, action, records)
         records = list(_journal(journal, "digest", (action,), create=False))
@@ -726,7 +733,6 @@ def test_project_field_graphql_batch_reads_back_rest(tmp_path: Path) -> None:
     from agent_orchestration_poc.shell.work_model_backfill import (  # noqa: PLC0415
         Api,
         _execute,
-        _journal,
     )
 
     items: list[dict[str, Any]] = [
@@ -763,12 +769,276 @@ def test_project_field_graphql_batch_reads_back_rest(tmp_path: Path) -> None:
         tuple(map(tuple, data["before"])),
         tuple(map(tuple, data["after"])),
     )
-    journal = tmp_path / "journal.jsonl"
+    journal, records = new_journal(tmp_path, (action,))
     with live_server(Handler) as base:
         api = Api(base, "")
-        records = list(_journal(journal, "digest", (action,), create=True))
         _execute(api, journal, action, records)
         _execute(api, journal, action, records)
     assert len(queries) == 1
     assert records[-1].phase == "verified"
     assert records[-1].detail["observed"] == (("Status", "Ready"),)
+
+
+@pytest.mark.integration
+def test_b4_issue_creation_recovers_lost_response(tmp_path: Path) -> None:
+    """An uncertain POST is recovered by exact issue read-back without replay."""
+    from agent_orchestration_poc.core.work_model_backfill_executor import (  # noqa: PLC0415
+        Action,
+    )
+    from agent_orchestration_poc.shell.work_model_backfill import (  # noqa: PLC0415
+        Api,
+        _execute,
+    )
+
+    issues: list[dict[str, Any]] = []
+    posts: list[dict[str, Any]] = []
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self) -> None:
+            assert (
+                self.path
+                == "/repos/tbhb-dev/agent-orchestration-poc/issues?state=all&per_page=100"
+            )
+            send_json(self, 200, issues)
+
+        def do_POST(self) -> None:
+            payload = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+            assert self.path == "/repos/tbhb-dev/agent-orchestration-poc/issues"
+            posts.append(payload)
+            issues.append(
+                {
+                    "id": 103,
+                    "number": 3,
+                    "title": payload["title"],
+                    "body": payload["body"],
+                    "state": "open",
+                    "type": {"name": payload["type"]},
+                    "labels": [],
+                }
+            )
+            send_json(self, 503, {})
+
+        @override
+        def log_message(self, format: str, *args: object) -> None:
+            pass
+
+    action = Action(
+        "9:create:000:epic: migration",
+        "9:create",
+        "issue_create",
+        0,
+        "POST",
+        "issues",
+        {"title": "epic: migration", "body": "reviewed", "type": "Epic"},
+        0,
+        1,
+    )
+    journal, records = new_journal(tmp_path, (action,))
+    with live_server(Handler) as base:
+        api = Api(base, "")
+        with pytest.raises(ValueError, match="503"):
+            _execute(api, journal, action, records)
+        assert [record.phase for record in records] == ["intent"]
+        _execute(api, journal, action, records)
+    assert len(posts) == 1
+    assert records[-1].phase == "verified"
+    assert records[-1].detail["created_item"]["issue_id"] == "103"
+
+
+@pytest.mark.integration
+def test_b4_native_parent_and_dependency_writes(tmp_path: Path) -> None:  # noqa: C901 - one loopback fake covers three REST writes.
+    """Native values and links use REST, then read back each targeted value."""
+    from agent_orchestration_poc.core.work_model_backfill_executor import (  # noqa: PLC0415
+        Action,
+    )
+    from agent_orchestration_poc.shell.work_model_backfill import (  # noqa: PLC0415
+        Api,
+        _execute,
+    )
+
+    values: list[dict[str, Any]] = []
+    children: list[dict[str, Any]] = []
+    blockers: list[dict[str, Any]] = []
+    writes: list[tuple[str, dict[str, Any]]] = []
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self) -> None:
+            if self.path.startswith("/orgs/tbhb-dev/issue-fields"):
+                send_json(
+                    self,
+                    200,
+                    [
+                        {
+                            "id": field_id,
+                            "name": name,
+                            "data_type": "single_select",
+                            "options": [{"name": option}],
+                        }
+                        for field_id, name, option in (
+                            (11, "Priority", "Standard"),
+                            (12, "Work type", "Planned"),
+                        )
+                    ],
+                )
+            elif "/issue-field-values?" in self.path:
+                send_json(self, 200, values)
+            elif "/sub_issues?" in self.path:
+                send_json(self, 200, children)
+            elif "/blocked_by?" in self.path:
+                send_json(self, 200, blockers)
+            else:
+                self.send_error(404)
+
+        def do_POST(self) -> None:
+            payload = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+            writes.append((self.path, payload))
+            if self.path.endswith("/issue-field-values"):
+                values.extend(
+                    {
+                        "issue_field_name": "Priority"
+                        if entry["field_id"] == 11
+                        else "Work type",
+                        "single_select_option": {"name": entry["value"]},
+                    }
+                    for entry in payload["issue_field_values"]
+                )
+            elif self.path.endswith("/sub_issues"):
+                children.append({"number": 1})
+            elif self.path.endswith("/blocked_by"):
+                blockers.append({"number": 2})
+            else:
+                self.send_error(404)
+                return
+            send_json(self, 201, {})
+
+        @override
+        def log_message(self, format: str, *args: object) -> None:
+            pass
+
+    empty_native = (("Priority", ""), ("Severity", ""), ("Work type", ""))
+    actions = (
+        Action(
+            "6:native:1",
+            "6:native",
+            "native",
+            1,
+            "POST",
+            "issues/1/issue-field-values",
+            {"fields": {"Priority": "Standard", "Work type": "Planned"}},
+            empty_native,
+            (("Priority", "Standard"), ("Severity", ""), ("Work type", "Planned")),
+        ),
+        Action(
+            "10:parent:1",
+            "10",
+            "parent",
+            3,
+            "POST",
+            "issues/3/sub_issues",
+            {"sub_issue_id": 101, "child": "#1"},
+            "",
+            "#3",
+        ),
+        Action(
+            "11:edge:1",
+            "11:links",
+            "blocker",
+            1,
+            "POST",
+            "issues/1/dependencies/blocked_by",
+            {"issue_id": 102},
+            (),
+            ("#2",),
+        ),
+    )
+    journal, records = new_journal(tmp_path, actions)
+    with live_server(Handler) as base:
+        api = Api(base, "")
+        for action in actions:
+            _execute(api, journal, action, records)
+    assert len(writes) == 3
+    assert writes[0][1] == {
+        "issue_field_values": [
+            {"field_id": 11, "value": "Standard"},
+            {"field_id": 12, "value": "Planned"},
+        ]
+    }
+    assert [row.phase for row in records].count("verified") == 3
+
+
+@pytest.mark.integration
+def test_b4_existing_draft_body_graphql_readback(tmp_path: Path) -> None:
+    """The copied draft body uses its content node and REST read-back."""
+    from agent_orchestration_poc.core.work_model_backfill_executor import (  # noqa: PLC0415
+        Action,
+    )
+    from agent_orchestration_poc.shell.work_model_backfill import (  # noqa: PLC0415
+        Api,
+        _execute,
+    )
+
+    item: dict[str, Any] = {
+        "id": "item-b",
+        "node_id": "node-item-b",
+        "content_type": "DraftIssue",
+        "content": {
+            "id": 13,
+            "node_id": "node-draft",
+            "title": "Draft B",
+            "body": "old",
+        },
+        "fields": [],
+    }
+    queries: list[str] = []
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self) -> None:
+            if self.path.endswith("/fields?per_page=100"):
+                send_json(self, 200, [{"id": 1, "name": "Status"}])
+            elif "/items?" in self.path:
+                send_json(self, 200, [item])
+            else:
+                self.send_error(404)
+
+        def do_POST(self) -> None:
+            assert self.path == "/graphql"
+            payload = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+            queries.append(payload["query"])
+            item["content"]["body"] = "reviewed"
+            send_json(
+                self,
+                200,
+                {
+                    "data": {
+                        "updateProjectV2DraftIssue": {
+                            "draftIssue": {"id": "node-draft", "body": "reviewed"},
+                        }
+                    }
+                },
+            )
+
+        @override
+        def log_message(self, format: str, *args: object) -> None:
+            pass
+
+    action = Action(
+        "6:body:title:Draft B",
+        "6:body",
+        "draft_body",
+        0,
+        "POST",
+        "graphql",
+        {
+            "query": 'mutation{updateProjectV2DraftIssue(input:{draftIssueId:"node-draft",body:"reviewed"}){draftIssue{id body}}}',
+            "key": "title:Draft B",
+            "draft_id": "node-draft",
+        },
+        "old",
+        "reviewed",
+    )
+    journal, records = new_journal(tmp_path, (action,))
+    with live_server(Handler) as base:
+        api = Api(base, "")
+        _execute(api, journal, action, records)
+    assert len(queries) == 1
+    assert records[-1].detail["observed"] == "reviewed"
