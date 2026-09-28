@@ -1,0 +1,8 @@
+    60	## Install on macOS
+    61
+    62	Install `sbx` using Homebrew:
+    63
+    64	```console
+    65	$ brew trust docker/tap
+    66	$ brew install docker/tap/sbx
+    67	```

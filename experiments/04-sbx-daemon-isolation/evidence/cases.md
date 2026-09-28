@@ -1,0 +1,15 @@
+# Isolation case table
+
+| Case | Expected result | Actual result | Evidence | Label |
+| --- | --- | --- | --- | --- |
+| Installed CLI and host | Version, help, OS, and architecture captured without daemon mutation | `sbx` v0.45.1, macOS 26.5.1 arm64, all required commands exited 0 | [`exit-codes.txt`](exit-codes.txt), [`sbx-version.txt`](sbx-version.txt), [`sbx-settings--help.txt`](sbx-settings--help.txt), [`sbx-daemon-start--help.txt`](sbx-daemon-start--help.txt), [`sbx-create--help.txt`](sbx-create--help.txt), [`sw_vers.txt`](sw_vers.txt), [`uname-m.txt`](uname-m.txt) | observed |
+| State and configuration selector | A supported selector redirects every local sbx surface | No selector is advertised in the inspected help, exact settings file and macOS environment redirection remain unknown | CLI help files and [source inspection](source-inspection.md) | unsupported |
+| Operator path baseline | Known paths recorded without reading secrets | State root present, candidate socket, audit, binding, and temporary paths absent at inventory time | [`operator-path-inventory.txt`](operator-path-inventory.txt) | observed |
+| Separate-user isolation | New UID owns daemon, setting, socket, sandbox VM, Keychain inputs, and process trust file | Work stopped before account creation and daemon startup | [fixture proposal](operator-fixture.md) | blocked |
+| Daemon start and stop | New daemon and socket appear only under disposable identity, then disappear | Not run | [fixture proposal](operator-fixture.md) | blocked |
+| Setting override and precedence | `kit.allowLocalKits` changes only for disposable identity, environment precedence recorded | Not run, `sbx settings` read may start operator daemon | [settings help](sbx-settings--help.txt), [set help](sbx-settings-set--help.txt), [fixture proposal](operator-fixture.md) | blocked |
+| Sandbox ownership and storage | One mountless `bv05-clean` VM appears under disposable identity and is deleted by `sbx rm` | Not run | [create help](sbx-create--help.txt), [rm help](sbx-rm--help.txt), [fixture proposal](operator-fixture.md) | blocked |
+| Process-scoped trust | Public-only trust input is inherited by disposable daemon without changing operator trust | `SSL_CERT_FILE` behavior in the installed daemon is unverified, no trust input was changed | [fixture proposal](operator-fixture.md) | unsupported |
+| Cleanup | Disposable account, home, VM, daemon, socket, setting, trust file, and temporary artifacts are gone, operator inventories unchanged | Only read-only files in this experiment directory were created, no sbx target existed to clean | [path inventory](operator-path-inventory.txt), [fixture proposal](operator-fixture.md) | blocked |
+
+The issue [review verdict](https://github.com/tbhb-dev/agent-orchestration-poc/issues/237#issuecomment-5873150644) corrected two non-blocking body details. [PR #236](https://github.com/tbhb-dev/agent-orchestration-poc/pull/236) identifies the requester as Codex CLI 0.157.1, `gpt-6-sol`, high effort. #229 already has #237 in its blocked-by list. These corrections are recorded here and in `versions.md` without editing the issue.
