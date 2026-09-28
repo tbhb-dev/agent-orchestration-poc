@@ -36,13 +36,19 @@ from agent_orchestration_poc.core.work_model_backfill import (
 from agent_orchestration_poc.core.work_model_backfill_executor import (
     JOURNAL_VERSION,
     Action,
+    ProjectMetadata,
     Record,
     closure_actions,
     comment_observation,
     draft_actions,
     draft_observation,
+    graphql_field_receipt,
     journal_state,
+    membership_actions,
+    membership_observation,
     observation_value,
+    project_field_actions,
+    project_fields_observation,
     stage_actions,
     validate_journal,
     validate_progress,
@@ -314,6 +320,16 @@ def _observe(api: Api, action: Action) -> object:
     if action.kind == "draft":
         items, _ = _project_items(api, PROJECT)
         return draft_observation(items, cast("dict[str, Any]", action.payload)["title"])
+    if action.kind == "project_item":
+        items, _ = _project_items(api, PROJECT)
+        return membership_observation(
+            items,
+            action.number,
+            str(cast("dict[str, Any]", action.payload)["id"]),
+        )
+    if action.kind == "project_fields":
+        items, _ = _project_items(api, PROJECT)
+        return project_fields_observation(items, action)
     raise ValueError(f"unsupported action kind: {action.kind}")
 
 
@@ -352,17 +368,27 @@ def _execute(
         _append(path, asdict(intent))
         records.append(intent)
         request_path = (
-            action.path if action.kind == "draft" else f"{REPO}/{action.path}"
+            action.path
+            if action.kind in {"draft", "project_item", "project_fields"}
+            else f"{REPO}/{action.path}"
         )
-        response, headers, status = api.request(
-            action.method, request_path, action.payload
+        payload = (
+            {"query": cast("dict[str, Any]", action.payload)["query"]}
+            if action.kind == "project_fields"
+            else action.payload
+        )
+        response, headers, status = api.request(action.method, request_path, payload)
+        if action.kind == "project_fields":
+            graphql_field_receipt(action, response)
+        identity = (
+            response.get("value", response) if isinstance(response, dict) else None
         )
         receipt = Record(
             action.id,
             "response",
             {
                 "status": status,
-                "id": response.get("id") if isinstance(response, dict) else None,
+                "id": identity.get("id") if isinstance(identity, dict) else None,
                 "draft_id": (
                     response.get("content", {}).get("id")
                     if action.kind == "draft" and isinstance(response, dict)
@@ -400,8 +426,19 @@ def run_apply(args: argparse.Namespace) -> int:
     cp1 = _snapshot(cp1_data["snapshot"])
     plan = operation_plan(tables, cp1, cp1_data.get("reviewed_status"))
     closures = closure_actions(tables, cp1, plan, run_id)
+    memberships = membership_actions(cp1, plan)
     drafts = draft_actions(tables, cp1, plan)
-    actions = (*closures, *drafts)
+    api = _api(args.api_base)
+    project, _ = api.get(PROJECT)
+    fields, _ = api.pages(f"{PROJECT}/fields?per_page=100", "project_fields")
+    raw_items, _ = _project_items(api, PROJECT)
+    project_fields = project_field_actions(
+        tables,
+        cp1,
+        ProjectMetadata(project, fields, raw_items),
+        cp1_data.get("reviewed_status"),
+    )
+    actions = (*closures, *memberships, *drafts, *project_fields)
     lock = args.journal.with_suffix(args.journal.suffix + ".lock")
     descriptor = os.open(lock, os.O_CREAT | os.O_RDWR, 0o600)
     with os.fdopen(descriptor) as stream:
@@ -412,8 +449,7 @@ def run_apply(args: argparse.Namespace) -> int:
         records = list(
             _journal(args.journal, run_id, actions, create=args.stage == "0")
         )
-        selected = stage_actions(args.stage, closures, drafts, tuple(records))
-        api = _api(args.api_base)
+        selected = stage_actions(args.stage, actions, tuple(records))
         validate_progress(cp1, collect(api, "initial"), actions, tuple(records))
         for action in selected:
             _execute(api, args.journal, action, records, pace=True)
@@ -484,7 +520,7 @@ def main() -> int:
     parser.add_argument("--reference", type=Path)
     parser.add_argument("--reviewed-status")
     parser.add_argument("--journal", type=Path)
-    parser.add_argument("--stage", choices=("0", "6:drafts"))
+    parser.add_argument("--stage", choices=("0", "6:items", "6:drafts", "6:fields"))
     parser.add_argument("--apply", action="store_true")
     parser.add_argument("--confirm-checkpoint")
     args = parser.parse_args()
