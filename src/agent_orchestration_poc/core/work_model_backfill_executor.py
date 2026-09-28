@@ -98,6 +98,43 @@ class WriteContext:
     verdict_comments: dict[str, list[dict[str, Any]]] | None = None
 
 
+def confirmed_cp13(
+    stage: str,
+    data: bytes | None,
+    confirmation: str | None,
+    digests: dict[str, str],
+) -> dict[str, Any] | None:
+    """Validate the operator's clean CP13 confirmation for retirement."""
+    if stage != "15":
+        return None
+    if data is None or not confirmation:
+        raise ValueError("stage 15 requires confirmed CP13")
+    if confirmation != f"CP13:{hashlib.sha256(data).hexdigest()}":
+        raise ValueError("operator CP13 confirmation differs from checkpoint")
+    checkpoint = json.loads(data)
+    if checkpoint.get("differences") != [] or checkpoint.get("digests") != digests:
+        raise ValueError("CP13 is not a clean comparison for these tables")
+    return cast("dict[str, Any]", checkpoint)
+
+
+def validate_resume_admission(
+    stage: str,
+    cp13: Snapshot | None,
+    current: Snapshot,
+    records: tuple[Record, ...],
+    pr_state: tuple[str, bool] | None,
+) -> None:
+    """Require the confirmed checkpoint and closed PR before later writes."""
+    if (
+        cp13 is not None
+        and not any(row.action_id.startswith("15:") for row in records)
+        and replace(cp13, run_state="initial") != current
+    ):
+        raise ValueError("current state differs from confirmed CP13")
+    if stage != "0" and pr_state != ("closed", False):
+        raise ValueError("PR 97 is not closed and unmerged")
+
+
 def recorded_actions(rows: list[dict[str, Any]]) -> tuple[Action, ...]:
     """Recover stable action values after dynamic identities have been written."""
     actions = []
@@ -767,8 +804,8 @@ def retitle_actions(
             or verdict.get("body_sha256") != body_hash
             or not any(
                 comment["id"] == verdict.get("comment_id")
-                and "Issue review: ready" in comment["body"]
-                and body_hash in comment["body"]
+                and (comment.get("user") or {}).get("login") == "tbhb-agent-reviewer"
+                and _ready_verdict(comment["body"], body_hash)
                 for comment in (comments or {}).get(key, [])
             )
         ):
@@ -787,6 +824,15 @@ def retitle_actions(
         )
         for number in targets
         if items[f"#{number}"].title != rows[number]["proposed title"]
+    )
+
+
+def _ready_verdict(body: str, digest: str) -> bool:
+    lines = body.splitlines()
+    return (
+        len(lines) >= 2
+        and lines[0] == "Issue review: ready"
+        and lines[1] == f"Body-SHA256: {digest}"
     )
 
 
@@ -1018,8 +1064,8 @@ def stage_actions(
         prior_actions = tuple(
             action for action in actions if _matches_stage(action, prior)
         )
-        if any(action.id not in verified for action in prior_actions) or (
-            not prior_actions and prior not in completed
+        if prior not in completed or any(
+            action.id not in verified for action in prior_actions
         ):
             description = {
                 "6:items": "Project membership",

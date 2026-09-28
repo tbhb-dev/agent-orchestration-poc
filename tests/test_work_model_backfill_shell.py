@@ -77,6 +77,85 @@ def new_journal(tmp_path: Path, actions: tuple[Any, ...]) -> tuple[Path, list[An
     return path, list(_journal(path, "digest", actions, create=True))
 
 
+@pytest.mark.integration
+def test_apply_refuses_next_stage_after_trial_add_without_cleanup_intent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Recovery cannot advance after only the first verified trial write."""
+    from agent_orchestration_poc.core.work_model_backfill import (  # noqa: PLC0415
+        Item,
+        Snapshot,
+        Tables,
+    )
+    from agent_orchestration_poc.core.work_model_backfill_executor import (  # noqa: PLC0415
+        Action,
+        ProjectMetadata,
+        Record,
+    )
+    from agent_orchestration_poc.shell import (  # noqa: PLC0415
+        work_model_backfill as shell,
+    )
+
+    add = Action(
+        "3:add:149:96",
+        "3:trial",
+        "trial_add",
+        149,
+        "POST",
+        "issues/149/dependencies/blocked_by",
+        {"issue_id": 96},
+        (),
+        ("#96",),
+    )
+    journal = tmp_path / "journal.jsonl"
+    rows = [
+        {"version": 1, "run_id": "digest"},
+        asdict(Record("stage:0", "complete", {"stage": "0"})),
+        asdict(Record(add.id, "intent", {"action": asdict(add)})),
+        asdict(Record(add.id, "verified", {})),
+    ]
+    journal.write_text("".join(json.dumps(row) + "\n" for row in rows))
+    current = Snapshot(
+        1, (Item("#149", "trial", "open", blockers=("#96",)),), (), "sha"
+    )
+
+    def collect_snapshot(_api: object, _name: str) -> Snapshot:
+        return current
+
+    def accept_progress(*_args: object) -> None:
+        pass
+
+    def closed_pr(*_args: object) -> tuple[str, bool]:
+        return "closed", False
+
+    def no_candidate(*_args: object) -> tuple[Action, ...]:
+        return ()
+
+    monkeypatch.setattr(shell, "collect", collect_snapshot)
+    monkeypatch.setattr(shell, "validate_progress", accept_progress)
+    monkeypatch.setattr(shell, "_observe", closed_pr)
+    monkeypatch.setattr(shell, "candidate_actions", no_candidate)
+    prepared = shell.ApplyInputs(
+        Tables(1, (), (), ()),
+        current,
+        (),
+        "digest",
+        None,
+        {"pr97_comment": "reviewed"},
+        None,
+        (),
+    )
+    with pytest.raises(ValueError, match="stage 3:trial"):
+        shell._apply_locked(
+            argparse.Namespace(stage="4:labels", journal=journal),
+            cast("Any", object()),
+            prepared,
+            ProjectMetadata({}, [], []),
+            [],
+        )
+    assert journal.read_text().splitlines() == [json.dumps(row) for row in rows]
+
+
 def checkpoint_paths(tmp_path: Path) -> tuple[Path, dict[str, Path]]:
     """Build a digest manifest for the synthetic table files."""
     plan = FIXTURES / "plan"

@@ -11,7 +11,7 @@ import subprocess
 import sys
 import time
 import tomllib
-from dataclasses import asdict, dataclass, replace
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, cast, override
 from urllib.error import HTTPError, URLError
@@ -45,6 +45,7 @@ from agent_orchestration_poc.core.work_model_backfill_executor import (
     candidate_actions,
     closure_actions,
     comment_observation,
+    confirmed_cp13,
     creation_observation,
     draft_actions,
     draft_observation,
@@ -64,6 +65,7 @@ from agent_orchestration_poc.core.work_model_backfill_executor import (
     stage_actions,
     validate_journal,
     validate_progress,
+    validate_resume_admission,
     verified_detail,
     write_wait_seconds,
 )
@@ -595,17 +597,8 @@ def run_apply(args: argparse.Namespace) -> int:
 def _confirmed_cp13(
     args: argparse.Namespace, digests: dict[str, str]
 ) -> dict[str, Any] | None:
-    if args.stage != "15":
-        return None
-    if not args.cp13 or not args.confirm_cp13:
-        raise ValueError("stage 15 requires confirmed CP13")
-    data = args.cp13.read_bytes()
-    if args.confirm_cp13 != f"CP13:{hashlib.sha256(data).hexdigest()}":
-        raise ValueError("operator CP13 confirmation differs from checkpoint")
-    checkpoint = json.loads(data)
-    if checkpoint.get("differences") != [] or checkpoint.get("digests") != digests:
-        raise ValueError("CP13 is not a clean comparison for these tables")
-    return cast("dict[str, Any]", checkpoint)
+    data = args.cp13.read_bytes() if args.stage == "15" and args.cp13 else None
+    return confirmed_cp13(args.stage, data, args.confirm_cp13, digests)
 
 
 def _verdict_comments(
@@ -662,16 +655,18 @@ def _apply_locked(
         observed_label = label_observation(labels, name)
         if journal_state(action, tuple(records), observed_label) != "skip":
             raise ValueError(f"verified label definition changed: {name}")
-    if (
-        cp13_data is not None
-        and not any(row.action_id.startswith("15:") for row in records)
-        and replace(_snapshot(cp13_data["snapshot"]), run_state="initial") != current
-    ):
-        raise ValueError("current state differs from confirmed CP13")
-    if args.stage != "0" and _observe(
-        api, pr_closure_actions(run_id, reviewed_writes["pr97_comment"])[1]
-    ) != ("closed", False):
-        raise ValueError("PR 97 is not closed and unmerged")
+    pr_state = (
+        _observe(api, pr_closure_actions(run_id, reviewed_writes["pr97_comment"])[1])
+        if args.stage != "0"
+        else None
+    )
+    validate_resume_admission(
+        args.stage,
+        _snapshot(cp13_data["snapshot"]) if cp13_data is not None else None,
+        current,
+        tuple(records),
+        cast("tuple[str, bool] | None", pr_state),
+    )
     candidate = candidate_actions(
         args.stage,
         WriteContext(

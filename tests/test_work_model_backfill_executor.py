@@ -32,6 +32,7 @@ from agent_orchestration_poc.core.work_model_backfill_executor import (
     candidate_actions,
     closure_actions,
     comment_observation,
+    confirmed_cp13,
     created_membership_actions,
     created_native_actions,
     created_project_field_actions,
@@ -66,6 +67,7 @@ from agent_orchestration_poc.core.work_model_backfill_executor import (
     trial_actions,
     validate_journal,
     validate_progress,
+    validate_resume_admission,
     verified_detail,
     write_wait_seconds,
 )
@@ -590,6 +592,7 @@ def test_stage_actions_require_verified_closures() -> None:
     ready = (
         Record("a", "verified", {}),
         Record("b", "verified", {}),
+        Record("stage:0", "complete", {"stage": "0"}),
         Record("stage:3:trial", "complete", {"stage": "3:trial"}),
         Record("stage:4:labels", "complete", {"stage": "4:labels"}),
     )
@@ -602,14 +605,88 @@ def test_stage_actions_require_verified_closures() -> None:
     with pytest.raises(ValueError, match="membership"):
         stage_actions("6:drafts", all_actions, ready)
     with_membership = (*ready, Record("m", "verified", {}))
-    assert stage_actions("6:drafts", all_actions, with_membership) == drafts
+    with pytest.raises(ValueError, match="membership"):
+        stage_actions("6:drafts", all_actions, with_membership)
+    completed_membership = (
+        *with_membership,
+        Record("stage:6:items", "complete", {"stage": "6:items"}),
+    )
+    assert stage_actions("6:drafts", all_actions, completed_membership) == drafts
     with pytest.raises(ValueError, match="draft creation"):
-        stage_actions("6:fields", all_actions, with_membership)
+        stage_actions("6:fields", all_actions, completed_membership)
     assert stage_actions(
-        "6:fields", all_actions, (*with_membership, Record("c", "verified", {}))
+        "6:fields",
+        all_actions,
+        (
+            *completed_membership,
+            Record("c", "verified", {}),
+            Record("stage:6:drafts", "complete", {"stage": "6:drafts"}),
+        ),
     ) == (field,)
     with pytest.raises(ValueError, match="unsupported"):
         stage_actions("unknown", all_actions, ())
+
+
+def test_stage_actions_refuse_interrupted_trial_before_cleanup_intent() -> None:
+    add = Action(
+        "3:add:149:96", "3:trial", "trial_add", 149, "POST", "", {}, (), ("#96",)
+    )
+    records = (
+        Record("stage:0", "complete", {"stage": "0"}),
+        Record(add.id, "verified", {}),
+    )
+    with pytest.raises(ValueError, match="stage 3:trial"):
+        stage_actions("4:labels", (add,), records)
+
+
+def test_checkpoint_and_resume_admission_use_plain_values() -> None:
+    current = fixture_snapshot("executor-cp1")
+    digests = {"assignments": "abc"}
+    checkpoint: dict[str, Any] = {
+        "snapshot": asdict(current),
+        "differences": [],
+        "digests": digests,
+    }
+    data = json.dumps(checkpoint).encode()
+    token = f"CP13:{hashlib.sha256(data).hexdigest()}"
+    assert confirmed_cp13("0", None, None, digests) is None
+    assert confirmed_cp13("15", data, token, digests) == json.loads(data)
+    for raw, confirmation, expected in (
+        (None, token, "requires confirmed"),
+        (data, "CP13:wrong", "confirmation differs"),
+        (
+            json.dumps({**checkpoint, "differences": ["drift"]}).encode(),
+            token,
+            "confirmation differs",
+        ),
+    ):
+        with pytest.raises(ValueError, match=expected):
+            confirmed_cp13("15", raw, confirmation, digests)
+    bad_data = json.dumps({**checkpoint, "differences": ["drift"]}).encode()
+    with pytest.raises(ValueError, match="clean comparison"):
+        confirmed_cp13(
+            "15", bad_data, f"CP13:{hashlib.sha256(bad_data).hexdigest()}", digests
+        )
+    assert validate_resume_admission("0", None, current, (), None) is None
+    assert (
+        validate_resume_admission("15", current, current, (), ("closed", False)) is None
+    )
+    with pytest.raises(ValueError, match="confirmed CP13"):
+        validate_resume_admission(
+            "15", replace(current, branch_sha="other"), current, (), ("closed", False)
+        )
+    assert (
+        validate_resume_admission(
+            "15",
+            replace(current, branch_sha="other"),
+            current,
+            (Record("15:label", "intent", {}),),
+            ("closed", False),
+        )
+        is None
+    )
+    with pytest.raises(ValueError, match="PR 97"):
+        validate_resume_admission("3:trial", None, current, (), ("open", False))
 
 
 @pytest.mark.parametrize(
@@ -1484,12 +1561,29 @@ def test_b4_copied_draft_body_and_scope_verdict() -> None:
             "comment_id": 42,
         }
     }
-    comments = {
-        "#1": [{"id": 42, "body": f"Issue review: ready\nBody-SHA256: {digest}"}]
+    comment = {
+        "id": 42,
+        "user": {"login": "tbhb-agent-reviewer"},
+        "body": f"Issue review: ready\nBody-SHA256: {digest}",
     }
+    comments = {"#1": [comment]}
     assert retitle_actions(cp1, plan, reviewed, verdict, comments)[0].number == 1
     with pytest.raises(ValueError, match="verdict"):
         retitle_actions(cp1, plan, reviewed, verdict, {"#1": []})
+    for bad in (
+        {**comment, "user": {"login": "tbhb-agent"}},
+        {
+            **comment,
+            "body": f"Do not use this old verdict:\n> Issue review: ready\n> Body-SHA256: {digest}",
+        },
+        {
+            **comment,
+            "body": f"Issue review: changes-requested\nBody-SHA256: {digest}\nIssue review: ready",
+        },
+        {**comment, "body": f"Issue review: ready\nBody-SHA256: {digest} withdrawn"},
+    ):
+        with pytest.raises(ValueError, match="verdict"):
+            retitle_actions(cp1, plan, reviewed, verdict, {"#1": [bad]})
 
 
 def test_b4_resume_refuses_changed_reviewed_input() -> None:
