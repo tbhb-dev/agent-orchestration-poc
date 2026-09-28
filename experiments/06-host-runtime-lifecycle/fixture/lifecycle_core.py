@@ -43,6 +43,15 @@ def process_state(record: Record, current_start: str | None) -> str:
     return "live"
 
 
+def process_start_from_query(returncode: int, stdout: str, stderr: str) -> str | None:
+    """Distinguish a missing PID from an unsuccessful process-table query."""
+    if returncode == 0 and stdout.strip():
+        return stdout.strip()
+    if returncode == 1 and not stdout.strip() and not stderr.strip():
+        return None
+    raise ValueError(f"ps exited {returncode}: {stderr.strip() or stdout.strip()}")
+
+
 def retained_state(before: dict[str, str], after: dict[str, str]) -> str:
     """Compare private-state fingerprints without inspecting their contents."""
     if not before:

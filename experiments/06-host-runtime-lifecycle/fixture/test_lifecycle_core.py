@@ -7,6 +7,7 @@ from hypothesis import strategies as st
 from .lifecycle_core import (  # pyrefly: ignore[missing-import]
     PROFILES,
     Record,
+    process_start_from_query,
     process_state,
     retained_state,
     validate,
@@ -49,6 +50,16 @@ def test_process_state(current: str | None, expected: str) -> None:
     """PID existence alone does not prove process identity."""
     record = Record("codex-headless", "A", "A-1", None, 123, "start")
     assert process_state(record, current) == expected  # noqa: S101 - pytest assertion
+
+
+def test_process_query_result() -> None:
+    """Only an empty missing-PID result establishes absence."""
+    assert process_start_from_query(0, "start\n", "") == "start"  # noqa: S101 - pytest assertion
+    assert process_start_from_query(1, "", "") is None  # noqa: S101 - pytest assertion
+    with pytest.raises(ValueError, match="permission denied"):
+        process_start_from_query(1, "", "permission denied")
+    with pytest.raises(ValueError, match="exited 2"):
+        process_start_from_query(2, "", "")
 
 
 @given(st.text(min_size=1), st.text(min_size=1))

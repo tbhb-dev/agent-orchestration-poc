@@ -56,8 +56,9 @@ case "$cell" in
     *) exit 1 ;;
 esac
 PYTHONSAFEPATH=1 mise exec -- uv run python "$responder" --host 127.0.0.1 --port 0 --profile "$profile" --log "$home/$cell-model.jsonl" > "$home/$cell-model-start.json" 2> "$home/$cell-model.err" &
-model_pid=$!
+model_supervisor_pid=$!
 while test ! -s "$home/$cell-model-start.json"; do sleep 0.05; done
+model_pid=$(mise exec -- python -c 'import json,sys; print(json.load(open(sys.argv[1]))["pid"])' "$home/$cell-model-start.json")
 port=$(mise exec -- python -c 'import json,sys; print(json.load(open(sys.argv[1]))["port"])' "$home/$cell-model-start.json")
 printf '%s\n' "$port" > "$home/model-port"
 if test "${profile#codex-}" != "$profile"; then
@@ -85,7 +86,7 @@ home="/private/tmp/bv01-228-$profile"
 cell=A-initial
 rm -f -- "$home/go" "$home/root.pid"
 case "$profile" in
-    *-headless) PYTHONPATH="$home" PYTHONSAFEPATH=1 mise exec -- uv run python -m fixture.launch "$profile" initial A > "$home/A-initial.out" 2> "$home/A-initial.err" & ;;
+    *-headless) PYTHONPATH="$home" PYTHONSAFEPATH=1 mise exec -- uv run python -m fixture.launch "$profile" initial A > "$home/A-initial.out" 2> "$home/A-initial.err" & launch_job_pid=$! ;;
     *-interactive) tmux -S /private/tmp/bv01-228-probe.tmux new-window -t bv01 -n "lifecycle-$profile" "cd $home && python3 -m fixture.launch $profile initial A" ;;
 esac
 while test ! -s "$home/root.pid"; do sleep 0.05; done
@@ -98,9 +99,18 @@ PYTHONPATH="$home" PYTHONSAFEPATH=1 mise exec -- uv run python -m fixture.observ
 : > "$home/go"
 ```
 
+For A initial headless cells, collect the launched job's status in the same shell before reading its conversation ID:
+
+```sh
+if test "${profile#*-headless}" = ""; then
+    if wait "$launch_job_pid"; then launch_status=0; else launch_status=$?; fi
+    printf 'A initial exit: %s\n' "$launch_status"
+fi
+```
+
 For interactive profiles, attach only through `tmux -S /private/tmp/bv01-228-probe.tmux attach-session -t bv01:lifecycle-$profile`, enter the literal socket-client prompt in the committed tool frame, and detach with `Ctrl-b d`. Confirm `tmux -S /private/tmp/bv01-228-probe.tmux has-session -t bv01:lifecycle-$profile` exits 0. Attach a second time with the same command. Exit the TUI through its own exit command, then check the recorded root process. A tmux reconnect only tests the live terminal, not native conversation resume or controller recovery.
 
-For headless profiles, wait for the recorded harness PID and capture its exit status, then inspect the sanitized JSON output. Codex JSONL should contain a `thread.started` ID. Claude JSON output should contain a `session_id`. For interactive profiles, transcribe the native ID shown by the harness session status or its private session record. Verify that the ID belongs to this home and invocation. The ID is a runtime value and cannot be hardcoded in the reviewed command. Enter only that value at the prompt below. A missing ID classifies native resume as unsupported for that cell.
+For headless profiles, use `if wait "$launch_job_pid"; then launch_status=0; else launch_status=$?; fi` in the same initiating shell after releasing `go`, and record `launch_status` before inspecting the sanitized JSON output. `launch_job_pid` is the shell's child job (`mise exec -- uv run`). `root_pid` is the Python launcher PID later replaced by the harness and is the process identity for the listener and observer. Waiting on `root_pid` from the initiating shell cannot collect its exit status. Codex JSONL should contain a `thread.started` ID. Claude JSON output should contain a `session_id`. For interactive profiles, transcribe the native ID shown by the harness session status or its private session record. Verify that the ID belongs to this home and invocation. The ID is a runtime value and cannot be hardcoded in the reviewed command. Enter only that value at the prompt below. A missing ID classifies native resume as unsupported for that cell.
 
 ```sh
 printf 'Native conversation ID for %s: ' "$profile"
@@ -119,7 +129,7 @@ For B initial, restart the responder and listener using the stage-two commands, 
 cell=B-initial
 rm -f -- "$home/go-B" "$home/root-B.pid"
 case "$profile" in
-    *-headless) PYTHONPATH="$home" PYTHONSAFEPATH=1 mise exec -- uv run python -m fixture.launch "$profile" initial B > "$home/B-initial.out" 2> "$home/B-initial.err" & ;;
+    *-headless) PYTHONPATH="$home" PYTHONSAFEPATH=1 mise exec -- uv run python -m fixture.launch "$profile" initial B > "$home/B-initial.out" 2> "$home/B-initial.err" & launch_job_pid=$! ;;
     *-interactive) tmux -S /private/tmp/bv01-228-probe.tmux new-window -t bv01 -n "lifecycle-B-$profile" "cd $home && python3 -m fixture.launch $profile initial B" ;;
 esac
 while test ! -s "$home/root-B.pid"; do sleep 0.05; done
@@ -128,6 +138,10 @@ PYTHONSAFEPATH=1 mise exec -- uv run python experiments/02-host-socket-attributi
 listener_pid=$!
 while test ! -S "$home/gateway.sock"; do sleep 0.05; done
 : > "$home/go-B"
+if test "${profile#*-headless}" = ""; then
+    if wait "$launch_job_pid"; then launch_status=0; else launch_status=$?; fi
+    printf 'B launch exit: %s\n' "$launch_status"
+fi
 ```
 
 After B exits, record file count and SHA-256 fingerprints for B's harness state with `PYTHONSAFEPATH=1 mise exec -- uv run python -c 'import hashlib,pathlib,sys; root=pathlib.Path(sys.argv[1]); files=[p for p in root.rglob("*") if p.is_file() and not p.is_symlink()]; print(len(files)); print(hashlib.sha256(b"".join(sorted(hashlib.sha256(p.read_bytes()).digest() for p in files))).hexdigest())' "$home/B/codex"` for Codex or replace the final path with `"$home/B/claude"` for Claude. Run the A-environment shell check below and record its exit code as a host same-UID access result.
@@ -156,7 +170,7 @@ For A native resume, stop the initial A process, archive its output and state sn
 cell=A-resume
 rm -f -- "$home/go" "$home/root.pid"
 case "$profile" in
-    *-headless) PYTHONPATH="$home" PYTHONSAFEPATH=1 mise exec -- uv run python -m fixture.launch "$profile" resume A > "$home/A-resume.out" 2> "$home/A-resume.err" & ;;
+    *-headless) PYTHONPATH="$home" PYTHONSAFEPATH=1 mise exec -- uv run python -m fixture.launch "$profile" resume A > "$home/A-resume.out" 2> "$home/A-resume.err" & launch_job_pid=$! ;;
     *-interactive) tmux -S /private/tmp/bv01-228-probe.tmux new-window -t bv01 -n "resume-$profile" "cd $home && python3 -m fixture.launch $profile resume A" ;;
 esac
 while test ! -s "$home/root.pid"; do sleep 0.05; done
@@ -164,6 +178,10 @@ root_pid=$(cat "$home/root.pid")
 PYTHONPATH="$home" PYTHONSAFEPATH=1 mise exec -- uv run python -m fixture.record "$profile" A A-2 "$conversation_id"
 : > "$home/go"
 PYTHONPATH="$home" PYTHONSAFEPATH=1 mise exec -- uv run python -m fixture.observe "$home" --baseline "$home/A-after.json" > "$home/A-resume-observer.json"
+if test "${profile#*-headless}" = ""; then
+    if wait "$launch_job_pid"; then launch_status=0; else launch_status=$?; fi
+    printf 'A resume exit: %s\n' "$launch_status"
+fi
 ```
 
 Compare the A-1 and A-2 records. Require a new `pid` or process start time and the same native conversation ID, while allowing a new tmux window. A native CLI that rejects the fake responder or state is an unsupported or inconclusive cell with its exact error recorded. Do not fall back to a live provider.
@@ -173,12 +191,12 @@ Compare the A-1 and A-2 records. Require a new `pid` or process start time and t
 | State-changing command | Owned state and undo |
 | --- | --- |
 | The `cp`, `mkdir`, and `printf` setup block | Writes below the four approved `/private/tmp/bv01-228-*` homes. Inspect copied files and fingerprints, then remove these paths with guarded home cleanup. |
-| Per-cell responder startup from stage two | One `127.0.0.1` listener per invocation. Signal and wait for its recorded PID before reuse. Keep only redacted request counts. |
-| Per-cell Unix listener startup from stage two | One `gateway.sock` per home. Signal and wait for its recorded PID, then check socket closure. |
-| `python -m fixture.launch` and dedicated-socket `tmux new-window` | Recorded harness root and at most one dedicated tmux window. Wait for exit or cancel only the recorded root/window. Stop the dedicated tmux server after all cells. |
+| Per-cell responder startup from stage two | One `127.0.0.1` listener per invocation. `model_pid` from startup JSON owns the socket. `model_supervisor_pid=$!` is the child job to wait on. Signal the responder, wait for the supervisor, and check socket closure before reuse. Keep only redacted request counts. |
+| Per-cell Unix listener startup from stage two | One `gateway.sock` per home. `listener_pid=$!` is the child job to wait on. Check socket closure after its responder exits. |
+| `python -m fixture.launch` and dedicated-socket `tmux new-window` | `root_pid` identifies the Python launcher and later harness. For headless cells, `launch_job_pid=$!` is the child job that supplies exit status through `wait`. Interactive cells use the dedicated tmux window and its exit observation. Cancel only the recorded root/window and stop the dedicated tmux server after all cells. |
 | `record.py`, `printf > conversation-id`, `: > go`, and redirected observer/output commands | Mapping, barrier, state fingerprints, and raw output stay below `/private/tmp/bv01-228-$profile`. Redact before copying evidence, then guarded home cleanup removes the originals. |
 | `printf > "$home/workspace/lifecycle-shared.txt"` | Writes a harmless shared fixture file in that profile's workspace. Keep it through B and resume checks, then guarded home cleanup removes it. |
 | `rm -f -- "$home/go" "$home/root.pid"` or the B equivalent | Removes only the prior barrier and root PID record in that same home. The next launch writes a new record, and final home teardown removes it. |
 | Repeated cancellation, collision, and interrupted create from the existing deterministic [probe](probe.py) | `probe.py` creates and removes its unique `/private/tmp/bv08-243-*` directory. The live harness sequence must record unsupported behavior if the wrapper lacks that operation. |
 
-**Cleanup.** Confirm every recorded root, listener, and responder PID has exited. Inspect `lsof -nP -U`, each dedicated tmux window, and the four homes. Stop only the dedicated tmux server. Apply the exact guarded teardown in the stage-two runbook after the operator has stopped the root audit and reviewed its raw trace. Shared workspace sentinels remain until that final home teardown. No command deletes unrelated workspace data.
+**Cleanup.** Confirm every recorded root, listener, and responder PID has exited and wait on each child supervisor or launch job from its initiating shell. Inspect `lsof -nP -U`, each dedicated tmux window, and the four homes. Stop only the dedicated tmux server. Apply the exact guarded teardown in the stage-two runbook after the operator has stopped the root audit and reviewed its raw trace. Shared workspace sentinels remain until that final home teardown. No command deletes unrelated workspace data.

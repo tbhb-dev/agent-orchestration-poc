@@ -9,6 +9,7 @@ from pathlib import Path
 from .lifecycle_core import (  # pyrefly: ignore[missing-import]
     PROFILES,
     Record,
+    process_start_from_query,
     process_state,
     retained_state,
     validate,
@@ -27,13 +28,21 @@ def inventory(root: Path) -> dict[str, str]:
 
 def current_start(pid: int) -> str | None:
     """Read the current instance start time from the host process table."""
-    observed = subprocess.run(
-        ["ps", "-p", str(pid), "-o", "lstart="],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    return observed.stdout.strip() if observed.returncode == 0 else None
+    try:
+        observed = subprocess.run(
+            ["ps", "-p", str(pid), "-o", "lstart="],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError as exc:
+        raise RuntimeError(f"ps could not start: {exc}") from exc
+    try:
+        return process_start_from_query(
+            observed.returncode, observed.stdout, observed.stderr
+        )
+    except ValueError as exc:
+        raise RuntimeError(str(exc)) from exc
 
 
 def observe(home: Path, baseline: Path | None) -> dict[str, object]:
