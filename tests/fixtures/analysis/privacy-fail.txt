@@ -1,0 +1,5 @@
+---
+title: Private notebook
+---
+
+The committed output must not contain {"private_prompt":"synthetic raw record"}.
