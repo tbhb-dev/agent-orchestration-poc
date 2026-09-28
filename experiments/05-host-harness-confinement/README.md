@@ -21,7 +21,7 @@ PYTHONPATH=experiments/05-host-harness-confinement mise exec -- uv run pytest -q
 
 **Observed:** the baseline command exited 0. The local table and property tests passed, and the fixture's exact-path cleanup check returned true. A broader `/private/tmp` search was denied while traversing an unrelated daemon directory and was not retried. `evidence/commands.txt` records the exact invocations and exit codes. `fixture_core.py` transforms values without I/O. `fixture.py` owns process, socket, and file operations. Python imports from the hyphenated experiment directory need an explicit `PYTHONPATH` for the standalone test command.
 
-**Verified:** `mise run check` exited 0 with all repository gates green. Python core line and branch coverage were 97.64% and 94.08%, and Go core statement and branch coverage were 96.43% and 94.74%. `mise run check:mutation` exited 0 with a Go mutant kill rate of 97.32% and a Python score of 90.21%. Those repository gates score product core code. The experiment's pure functions have standalone table and property tests. The complete command outputs are compressed in `evidence/check.txt.gz` and `evidence/mutation.txt.gz`.
+**Verified:** `mise run check` exited 0 on the merged head. Python core line and branch coverage were 97.81% and 94.76%, and Go core statement and branch coverage were 96.43% and 94.74%. `mise run check:mutation` exited 0 with a Go mutant kill rate of 97.32% and a Python score of 90.14%. Those repository gates score product core code. The experiment's pure functions have standalone table and property tests. The complete command outputs are compressed in `evidence/check.txt.gz` and `evidence/mutation.txt.gz`.
 
 ## Case matrix
 
