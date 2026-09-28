@@ -510,11 +510,12 @@ def test_added_membership_uses_existing_issue_identity() -> None:
     assert target[0].item_id == "new-item-1"
     assert compare_cp13(target, final_snapshot(target), "after") == ()
     rollback = rollback_values(
+        tables(),
         cp1,
         {},
         tuple(item.item_id for item in cp1.items if item.item_id),
         "open",
-        RollbackExtras(added_items=inputs.added_items),
+        extras=RollbackExtras(added_items=inputs.added_items),
     )
     assert rollback.added_items == (("#1", "new-item-1"),)
 
@@ -592,6 +593,7 @@ def test_partial_created_issue_is_rollback_input() -> None:
     cp1 = snapshot()
     partial = Item("#3", "epic: migration", "open", issue_id="3")
     rollback = rollback_values(
+        tables(),
         cp1,
         {"title:epic: migration": partial},
         tuple(item.item_id for item in cp1.items),
@@ -608,6 +610,7 @@ def test_partial_issue_before_project_addition_keeps_number(
     cp1 = snapshot()
     created = Item("#3", "epic: migration", "open", issue_id="3", native=native)
     result = rollback_values(
+        tables(),
         cp1,
         {"title:epic: migration": created},
         tuple(item.item_id for item in cp1.items),
@@ -615,6 +618,77 @@ def test_partial_issue_before_project_addition_keeps_number(
     )
     assert result.created[0].issue_id == "3"
     assert result.created[0].item_id == ""
+
+
+@pytest.mark.parametrize(
+    ("key", "field", "value"),
+    [
+        ("title:epic: migration", "key", "#1"),
+        ("title:epic: migration", "issue_id", "1"),
+        ("title:epic: migration", "item_id", "item-1"),
+        ("title:Draft A", "draft_id", "draft-b"),
+    ],
+)
+def test_rollback_rejects_created_identity_colliding_with_cp1(
+    key: str, field: str, value: str
+) -> None:
+    """An inverse must never delete or close a resource saved at CP1."""
+    cp1 = snapshot()
+    created = creation_inputs().created
+    changed = {**created, key: replace(created[key], **cast("Any", {field: value}))}
+    with pytest.raises(ValueError, match="created identity collides with CP1"):
+        rollback_values(
+            tables(), cp1, changed, tuple(item.item_id for item in cp1.items), "open"
+        )
+
+
+@pytest.mark.parametrize("field", ["key", "issue_id", "item_id", "draft_id"])
+def test_rollback_rejects_created_identity_colliding_with_creation(field: str) -> None:
+    """Two creation results cannot claim the same returned resource."""
+    approved, cp1 = approved_cp1_and_tables()
+    created = approved_creation_inputs(approved, cp1).created
+    if field == "draft_id":
+        keys = [key for key, item in created.items() if item.draft_id]
+    else:
+        keys = [f"title:{row['proposed title']}" for row in approved.parents]
+    first, second = keys[:2]
+    created[second] = replace(
+        created[second], **cast("Any", {field: getattr(created[first], field)})
+    )
+    with pytest.raises(ValueError, match="created identity"):
+        rollback_values(
+            approved, cp1, created, tuple(item.item_id for item in cp1.items), "open"
+        )
+
+
+@pytest.mark.parametrize("kind", ["draft", "parent", "incident"])
+def test_rollback_rejects_wrong_creation_kind(kind: str) -> None:
+    """Rollback must follow the planned draft or numbered issue operation."""
+    if kind == "incident":
+        planned, cp1 = approved_cp1_and_tables()
+        created = approved_creation_inputs(planned, cp1).created
+        row = next(
+            row for row in planned.assignments if row["backfill mode"] == "issue"
+        )
+        key = f"title:{row['title']}"
+    else:
+        planned, cp1 = tables(), snapshot()
+        created = creation_inputs().created
+        key = "title:Draft A" if kind == "draft" else "title:epic: migration"
+    item = created[key]
+    wrong = (
+        replace(item, key="#9", draft_id="", issue_id="9")
+        if kind == "draft"
+        else replace(item, key="title:wrong", draft_id="wrong", issue_id="")
+    )
+    with pytest.raises(ValueError, match="creation resource kind differs from plan"):
+        rollback_values(
+            planned,
+            cp1,
+            {key: wrong},
+            tuple(item.item_id for item in cp1.items),
+            "open",
+        )
 
 
 def test_ordered_plan_covers_every_stage_and_saved_reversal() -> None:
@@ -845,7 +919,9 @@ def test_rollback_uses_exact_saved_values_and_created_ids() -> None:
     cp1 = replace(cp1, items=(old, *cp1.items[1:]))
     created = creation_inputs().created
     order = tuple(item.item_id for item in cp1.items)
-    rollback = rollback_values(cp1, created, order, "open", RollbackExtras(("2",)))
+    rollback = rollback_values(
+        tables(), cp1, created, order, "open", extras=RollbackExtras(("2",))
+    )
     assert rollback.prior[0] == old
     assert set(rollback.created) == set(created.values())
     assert rollback.order == order
@@ -853,9 +929,10 @@ def test_rollback_uses_exact_saved_values_and_created_ids() -> None:
     assert rollback.branch_sha == "sha"
     assert rollback.exemptions == ("2",)
     with pytest.raises(ValueError, match="incomplete saved Project order"):
-        rollback_values(cp1, created, order[:-1], "open")
+        rollback_values(tables(), cp1, created, order[:-1], "open")
     with pytest.raises(ValueError, match="created identity is incomplete"):
         rollback_values(
+            tables(),
             cp1,
             {"parent": replace(next(iter(created.values())), item_id="", draft_id="")},
             order,
@@ -866,7 +943,9 @@ def test_rollback_uses_exact_saved_values_and_created_ids() -> None:
 @given(st.permutations(["item-1", "item-2", "item-b", "item-held"]))
 def test_rollback_preserves_any_complete_order(order: list[str]) -> None:
     """A reviewed reversal can restore the exact original sequence."""
-    assert rollback_values(snapshot(), {}, tuple(order), "open").order == tuple(order)
+    assert rollback_values(
+        tables(), snapshot(), {}, tuple(order), "open"
+    ).order == tuple(order)
 
 
 def test_parse_preserves_dispositions() -> None:

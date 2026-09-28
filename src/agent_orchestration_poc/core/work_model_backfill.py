@@ -648,11 +648,13 @@ def _native_write(key: str, row: dict[str, str]) -> NativeWrite:
     return NativeWrite(key, issue_type, _pairs(fields))
 
 
-def rollback_values(
+def rollback_values(  # noqa: PLR0913 - plan tables are required for safe rollback identities
+    tables: Tables,
     cp1: Snapshot,
     created: dict[str, Item],
     order: tuple[str, ...],
     pr_state: str,
+    *,
     extras: RollbackExtras | None = None,
 ) -> Rollback:
     """Retain exact old values and creation IDs, never inferred replacement values."""
@@ -666,6 +668,50 @@ def rollback_values(
     if any(not (item.issue_id or item.draft_id) for item in created.values()):
         raise ValueError("created identity is incomplete")
     old = {item.key: item for item in cp1.items}
+    issue_ids = {item.issue_id for item in cp1.items if item.issue_id}
+    draft_ids = {item.draft_id for item in cp1.items if item.draft_id}
+    item_ids = {item.item_id for item in cp1.items if item.item_id}
+    keys = set(old)
+    for item in created.values():
+        if (
+            item.key in keys
+            or (item.issue_id and item.issue_id in issue_ids)
+            or (item.draft_id and item.draft_id in draft_ids)
+            or (item.item_id and item.item_id in item_ids)
+        ):
+            raise ValueError("created identity collides with CP1 or creation")
+        keys.add(item.key)
+        issue_ids.add(item.issue_id)
+        draft_ids.add(item.draft_id)
+        item_ids.add(item.item_id)
+    planned_drafts = {
+        _key(row)
+        for row in tables.assignments
+        if row["backfill mode"] == "draft" and _key(row) not in old
+    }
+    planned_issues = {
+        _key(row)
+        for row in tables.assignments
+        if row["backfill mode"] == "issue" and _key(row) not in old
+    } | {f"title:{row['proposed title']}" for row in tables.parents}
+    if any(
+        (
+            key in planned_drafts
+            and (item.key != key or not item.draft_id or item.issue_id)
+        )
+        or (
+            key in planned_issues
+            and (
+                not item.key.startswith("#")
+                or not item.key[1:].isdecimal()
+                or not item.issue_id
+                or item.draft_id
+            )
+        )
+        or key not in planned_drafts | planned_issues
+        for key, item in created.items()
+    ):
+        raise ValueError("creation resource kind differs from plan")
     added_items = extras.added_items or {}
     if any(
         key not in old or old[key].item_id or not item_id
