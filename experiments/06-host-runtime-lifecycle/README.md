@@ -52,10 +52,12 @@ Claude Code and Codex harness rows remain unqualified. The probe didn't use a re
 
 **Untested.** Harness conversation IDs, native resume, private harness-state retention across a harness stop/start, cross-profile state access, authenticated authority lifetime, controller crash recovery, and real wrapper cancellation remain open for Claude Code and Codex. Their interactive and headless profiles require reviewed disposable homes, fake credentials, and a loopback model responder before execution.
 
+**Blocked.** `pgrep -fl 'bv08-243|tmux -S'` reported that the sysmond service was unavailable, and `ps -eo pid,etime,args` returned `operation not permitted`. The fixture used recorded child exit codes, marker files, and dedicated-socket tmux status instead. It cannot independently prove the tmux pane PID exited after server shutdown.
+
 ## Proposed decision
 
 **Proposed.** Retain direct host launch and dedicated-socket tmux attachment as separate capabilities. Use a durable owner map and explicit outcome states before a production launcher can claim recovery. Leave issue #243 open until the four harness cells and native conversation/storage cases have evidence or reproducible unsupported results.
 
 ## Validation
 
-**Verified.** `mise run fmt`, `mise run check`, `mise run check:mutation`, and `mise run build` exited 0 on this worktree. The [check log](evidence/check.log) records the repository gates. Mutation testing killed 97.32% of Go core mutants and 90.10% of Python core mutants. `mise exec -- gitleaks dir --redact --no-banner experiments/06-host-runtime-lifecycle` exited 0 with no leaks found. The deterministic probe exited 0 and its JSON remained valid after formatting.
+**Verified.** `mise run fmt`, `mise run check`, `mise run check:mutation`, and `mise run build` exited 0 on this worktree. The [check log](evidence/check.log) records the repository gates, and the [mutation summary](evidence/mutation-summary.txt) records both scores. Mutation testing killed 97.32% of Go core mutants and 90.14% of Python core mutants. `mise exec -- gitleaks dir --redact --no-banner experiments/06-host-runtime-lifecycle` exited 0 with no leaks found. The deterministic probe exited 0 and its JSON remained valid after formatting.
