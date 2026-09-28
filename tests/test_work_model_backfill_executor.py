@@ -203,7 +203,7 @@ def test_draft_resume_rejects_replacement_after_identity_is_known() -> None:
     )
     records = (
         Record(action.id, "intent", {}),
-        Record(action.id, "response", {"id": "draft-a"}),
+        Record(action.id, "response", {"id": 13, "draft_id": "draft-a"}),
         Record(action.id, "verified", {"item_id": "13", "draft_id": "draft-a"}),
     )
     with pytest.raises(ValueError, match="identity|differs"):
@@ -228,6 +228,12 @@ def test_draft_resume_rejects_replacement_after_identity_is_known() -> None:
     assert (
         journal_state(
             action, records, (1, action.payload["body"], "999", "unrelated-draft")
+        )
+        == "halt"
+    )
+    assert (
+        journal_state(
+            action, records[:2], (1, action.payload["body"], "999", "draft-a")
         )
         == "halt"
     )

@@ -562,8 +562,9 @@ def test_journaled_write_resumes_without_duplicate_comment(
 
 
 @pytest.mark.integration
-def test_draft_creation_recovers_after_lost_response(tmp_path: Path) -> None:
-    """A durable intent and Project read-back prevent a duplicate draft POST."""
+@pytest.mark.parametrize("status", [201, 503])
+def test_draft_creation_recovers_after_response(tmp_path: Path, status: int) -> None:
+    """Read-back resumes a successful receipt or a lost response without replay."""
     from agent_orchestration_poc.core.work_model_backfill_executor import (  # noqa: PLC0415
         Action,
     )
@@ -596,7 +597,7 @@ def test_draft_creation_recovers_after_lost_response(tmp_path: Path) -> None:
                     "fields": [],
                 }
             )
-            send_json(self, 503, {})
+            send_json(self, status, drafts[-1] if status == 201 else {})
 
         @override
         def log_message(self, format: str, *args: object) -> None:
@@ -617,8 +618,20 @@ def test_draft_creation_recovers_after_lost_response(tmp_path: Path) -> None:
     with live_server(Handler) as base:
         api = Api(base, "")
         records = list(_journal(journal, "digest", (action,), create=True))
-        with pytest.raises(ValueError, match="HTTP 503"):
+        if status == 503:
+            with pytest.raises(ValueError, match="HTTP 503"):
+                _execute(api, journal, action, records)
+        else:
             _execute(api, journal, action, records)
+            assert (
+                next(
+                    record.detail["draft_id"]
+                    for record in records
+                    if record.phase == "response"
+                )
+                == "draft-a"
+            )
+            journal.write_text("\n".join(journal.read_text().splitlines()[:-1]) + "\n")
         records = list(_journal(journal, "digest", (action,), create=False))
         _execute(api, journal, action, records)
         _execute(api, journal, action, records)

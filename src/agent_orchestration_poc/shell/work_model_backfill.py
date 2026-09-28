@@ -363,6 +363,11 @@ def _execute(
             {
                 "status": status,
                 "id": response.get("id") if isinstance(response, dict) else None,
+                "draft_id": (
+                    response.get("content", {}).get("id")
+                    if action.kind == "draft" and isinstance(response, dict)
+                    else None
+                ),
                 "request_id": headers.get("x-github-request-id", ""),
                 "rate_remaining": headers.get("x-ratelimit-remaining", ""),
             },

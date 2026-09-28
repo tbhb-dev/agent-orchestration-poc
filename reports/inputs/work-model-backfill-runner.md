@@ -20,6 +20,12 @@
 
 [Verified] The focused executor and shell suite passed 36 tests. `mise run check:imports` and `mise run check:ruff` exited 0. The first aggregate run found duplicated fixture setup; after consolidation, the final `mise run -j 1 check` exited 0 with 473 integration-coverage Python tests, Python core line coverage 97.60%, core branch coverage 93.99%, and shell line coverage 77.80%. The first mutation rerun scored 89.94% (4,202/4,672); tests separating item ID and draft ID drift after verification raised the final `mise run check:mutation` result to 90.15% (4,212/4,672), with Go core efficacy 97.32% (145/149). No live backfill write was made.
 
+## PR #235 response identity correction
+
+[Verified] The next review found that a successful HTTP 201 draft POST returns the Project item ID at the top level and the draft content ID at `content.id`. Before the correction, a plain-value identity regression and a loopback successful-POST resume regression failed. The response receipt now saves both IDs separately; the pure resume decision compares each saved identity with its corresponding Project read-back identity. A simulated stop after the response receipt resumes and verifies the unchanged draft without another POST, while item or draft identity drift halts. The lost-response recovery case still passes. The focused executor and shell suite passed 37 tests.
+
+[Verified] After merging current `main`, `mise run fmt`, `mise run check`, and `mise run check:mutation` exited 0 on the final code. The aggregate included 474 integration-coverage Python tests, Python core line coverage 97.60%, core branch coverage 94.02%, and shell line coverage 77.80%. Python core mutation scored 90.18% (4,226/4,686); Go core efficacy was 97.32% (145/149). `git diff --check` exited 0. The tests used loopback REST only; no live backfill write was made.
+
 ## Journaled issue closure slice
 
 [Verified] The initial closure-only `apply` slice accepted stage 0 and required `--apply`, a saved CP1, a journal path, and `CP1:<digest>` confirmation for the SHA-256 of that exact CP1 envelope. It rechecked table digests and the pure operation plan, locked the journal, and compared a fresh complete read with CP1 plus journaled changes before writing. No live GitHub backfill write was made.

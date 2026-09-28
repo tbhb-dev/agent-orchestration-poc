@@ -214,7 +214,13 @@ def _draft_identity_matches(
         if (
             record.phase == "response"
             and record.detail.get("id") is not None
-            and draft_id != str(record.detail["id"])
+            and item_id != str(record.detail["id"])
+        ):
+            return False
+        if (
+            record.phase == "response"
+            and record.detail.get("draft_id") is not None
+            and draft_id != str(record.detail["draft_id"])
         ):
             return False
         if record.phase == "verified":
