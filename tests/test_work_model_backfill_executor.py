@@ -132,6 +132,19 @@ def field_contract() -> tuple[Tables, Snapshot, ProjectMetadata]:
     return tables, cp1, ProjectMetadata(data["project"], data["fields"], data["items"])
 
 
+def with_project_fields(cp1: Snapshot, key: str, fields: object) -> Snapshot:
+    """Change one fixture item's Project fields."""
+    return replace(
+        cp1,
+        items=tuple(
+            replace(item, project=cast("tuple[tuple[str, str], ...]", fields))
+            if item.key == key
+            else item
+            for item in cp1.items
+        ),
+    )
+
+
 def test_membership_plan_readback_and_resume() -> None:
     rows = FIXTURES / "plan"
     tables = parse_tables(
@@ -211,13 +224,7 @@ def test_membership_plan_readback_and_resume() -> None:
     validate_progress(cp1, cp1, actions, records[:1])
     with pytest.raises(ValueError, match="journal"):
         validate_progress(cp1, cp1, actions, records)
-    changed_fields = replace(
-        current,
-        items=tuple(
-            replace(item, project=(("Status", "Ready"),)) if item.key == "#1" else item
-            for item in current.items
-        ),
-    )
+    changed_fields = with_project_fields(current, "#1", (("Status", "Ready"),))
     with pytest.raises(ValueError, match="fields"):
         validate_progress(cp1, changed_fields, actions, records)
     with pytest.raises(ValueError, match="journal"):
@@ -288,49 +295,19 @@ def test_project_field_batch_uses_option_ids_and_readback() -> None:
     assert (
         journal_state(first, (Record(first.id, "intent", {}),), first.after) == "verify"
     )
-    changed = replace(
-        cp1,
-        items=tuple(
-            replace(item, project=cast("tuple[tuple[str, str], ...]", first.after))
-            if item.key == "#1"
-            else item
-            for item in cp1.items
-        ),
-    )
-    receipt = (Record(first.id, "intent", {}), Record(first.id, "verified", {}))
-    validate_progress(cp1, changed, (first,), receipt)
-    with pytest.raises(ValueError, match="drifted"):
-        validate_progress(cp1, cp1, (first,), receipt)
-
-
-@pytest.mark.parametrize("phase", ["intent", "verified"])
-def test_existing_draft_field_write_progress(phase: str) -> None:
-    tables, cp1, metadata = field_contract()
-    action = next(
-        action
-        for action in project_field_actions(tables, cp1, metadata)
-        if action.id == "6:fields:title:Draft B"
-    )
-    current = replace(
-        cp1,
-        items=tuple(
-            replace(item, project=cast("tuple[tuple[str, str], ...]", action.after))
-            if item.key == "title:Draft B"
-            else item
-            for item in cp1.items
-        ),
-    )
-    records = (Record(action.id, "intent", {}),)
-    if phase == "verified":
-        records += (Record(action.id, "verified", {}),)
-    validate_progress(cp1, current, (action,), records)
-    if phase == "verified":
+    draft = next(action for action in actions if action.id == "6:fields:title:Draft B")
+    for action in (first, draft):
+        key = cast("dict[str, Any]", action.payload)["key"]
+        changed = with_project_fields(cp1, key, action.after)
+        intent = (Record(action.id, "intent", {}),)
+        receipt = (*intent, Record(action.id, "verified", {}))
+        validate_progress(cp1, changed, (action,), intent)
+        validate_progress(cp1, changed, (action,), receipt)
+        validate_progress(cp1, cp1, (action,), intent)
         with pytest.raises(ValueError, match="drifted"):
-            validate_progress(cp1, cp1, (action,), records)
-    else:
-        validate_progress(cp1, cp1, (action,), records)
-    with pytest.raises(ValueError, match="drifted"):
-        validate_progress(cp1, current, (action,), ())
+            validate_progress(cp1, cp1, (action,), receipt)
+        with pytest.raises(ValueError, match="drifted"):
+            validate_progress(cp1, changed, (action,), ())
 
 
 def test_project_field_metadata_and_draft_identity() -> None:
@@ -353,15 +330,7 @@ def test_project_field_metadata_and_draft_identity() -> None:
     blank_first = project_field_actions(blank_worker, cp1, metadata)[0]
     assert blank_first.payload is not None
     assert blank_first.payload["mutation_count"] == 4
-    revised = replace(
-        cp1,
-        items=tuple(
-            replace(item, project=cast("tuple[tuple[str, str], ...]", first.after))
-            if item.key == "#1"
-            else item
-            for item in cp1.items
-        ),
-    )
+    revised = with_project_fields(cp1, "#1", first.after)
     revised_ids = {
         action.id for action in project_field_actions(tables, revised, metadata)
     }
