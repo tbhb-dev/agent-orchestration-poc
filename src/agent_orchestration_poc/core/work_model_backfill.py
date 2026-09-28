@@ -225,17 +225,7 @@ class _TargetContext:
 
 def project_field_ids(fields: list[dict[str, Any]]) -> tuple[int, ...]:
     """Select the old and new Project fields needed by the snapshot."""
-    names = {
-        "Status",
-        "Size",
-        "Area",
-        "Harness",
-        "Worker",
-        "Phase",
-        "Priority",
-        "Validation",
-        "Validation detail",
-    }
+    names = set(SOURCE_PROJECT_FIELDS) | VALIDATOR_FIELDS
     return tuple(field["id"] for field in fields if field["name"] in names)
 
 

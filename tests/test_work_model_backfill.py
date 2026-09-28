@@ -444,11 +444,11 @@ def test_nested_pages_require_all_receipts(page_count: int) -> None:
     assert not complete(changed)
 
 
-def test_rest_snapshot_filters_pr_and_counts_nested_pages() -> None:
-    """REST values produce the reviewed complete issue and draft snapshot."""
+def rest_fixture() -> tuple[RestValues, dict[str, Any]]:
+    """Load the exact REST conversion fixture as plain values."""
     payload = json.loads((FIXTURES.parent / "runner/rest-snapshot.json").read_text())
     values = payload["raw"]
-    raw = RestValues(
+    return RestValues(
         values["issues"],
         tuple(Page(**page) for page in values["issue_pages"]),
         values["old"],
@@ -458,10 +458,13 @@ def test_rest_snapshot_filters_pr_and_counts_nested_pages() -> None:
         tuple(Page(**page) for page in values["nested_pages"]),
         values["branch_sha"],
         values["run_state"],
-    )
-    assert (
-        json.loads(json.dumps(asdict(snapshot_from_rest(raw)))) == payload["expected"]
-    )
+    ), payload["expected"]
+
+
+def test_rest_snapshot_filters_pr_and_counts_nested_pages() -> None:
+    """REST values produce the reviewed complete issue and draft snapshot."""
+    raw, expected = rest_fixture()
+    assert json.loads(json.dumps(asdict(snapshot_from_rest(raw)))) == expected
     assert complete(snapshot_from_rest(raw))
     assert not complete(
         snapshot_from_rest(replace(raw, nested_pages=raw.nested_pages[:-1]))
@@ -470,54 +473,23 @@ def test_rest_snapshot_filters_pr_and_counts_nested_pages() -> None:
 
 def test_rest_snapshot_rejects_unreviewed_or_incomplete_identity() -> None:
     """A CP1 must not silently drop issue reads or duplicate Project items."""
-    issue: dict[str, Any] = {
-        "number": 1,
-        "id": 101,
-        "title": "Title",
-        "state": "open",
-        "labels": [],
-    }
-    project: dict[str, Any] = {
-        "content_type": "Issue",
-        "content": {"number": 1},
-        "id": 201,
-        "fields": [],
-    }
-    raw = RestValues(
-        [issue],
-        (Page("issues", 1, 1, 1, 1),),
-        [],
-        [project],
-        (Page("project", 1, 1, 1, 1),),
-        {"#1": ([], [], [])},
-        (),
-        "sha",
-        "initial",
-    )
+    raw, _ = rest_fixture()
     with pytest.raises(ValueError, match="page receipts"):
         snapshot_from_rest(replace(raw, issue_pages=(Page("issues", 1, 0, 1, 0),)))
     with pytest.raises(ValueError, match="nested issue reads"):
         snapshot_from_rest(replace(raw, nested={}))
     with pytest.raises(ValueError, match="duplicate Project content"):
-        snapshot_from_rest(replace(raw, project=[project, project]))
+        snapshot_from_rest(replace(raw, project=[*raw.project, raw.project[0]]))
 
 
 def test_project_field_selection_requires_named_fields() -> None:
     """Unknown definitions cannot alter the requested Project field set."""
-    names = (
-        "Status",
-        "Size",
-        "Area",
-        "Harness",
-        "Worker",
-        "Phase",
-        "Priority",
-        "Validation",
-        "Validation detail",
-    )
-    fields = [{"id": index, "name": name} for index, name in enumerate(names, 1)]
-    fields.append({"id": 99, "name": "Secret"})
-    assert project_field_ids(fields) == tuple(range(1, 10))
+    fields = [
+        {"id": 1, "name": "Status"},
+        {"id": 2, "name": "Validation detail"},
+        {"id": 3, "name": "Secret"},
+    ]
+    assert project_field_ids(fields) == (1, 2)
 
 
 def test_validator_owned_fields_do_not_define_cp13_target() -> None:

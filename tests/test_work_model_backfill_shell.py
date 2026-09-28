@@ -6,7 +6,7 @@ import json
 import threading
 from collections.abc import Generator
 from contextlib import contextmanager
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, cast, override
@@ -158,7 +158,6 @@ def test_initial_output_can_be_loaded_by_final_and_saves_differences(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """The saved CP1 survives JSON and a mismatched CP13 retains its evidence."""
-    from agent_orchestration_poc.core.work_model_backfill import Item  # noqa: PLC0415
     from agent_orchestration_poc.shell.work_model_backfill import run  # noqa: PLC0415
 
     fixture = json.loads((FIXTURES / "runner/initial.json").read_text())
@@ -168,35 +167,7 @@ def test_initial_output_can_be_loaded_by_final_and_saves_differences(
     output = tmp_path / "cp13.json"
     output.write_text("stale")
     inputs = tmp_path / "inputs.json"
-    inputs.write_text(
-        json.dumps(
-            {
-                "created": {
-                    "title:Draft A": asdict(
-                        Item(
-                            "title:Draft A",
-                            "Draft A",
-                            "draft",
-                            draft_id="draft-a",
-                            item_id="item-a",
-                        )
-                    ),
-                    "title:epic: migration": asdict(
-                        Item(
-                            "#3",
-                            "epic: migration",
-                            "open",
-                            issue_id="3",
-                            item_id="item-3",
-                        )
-                    ),
-                },
-                "bodies": {"title:Draft B": ""},
-                "closed_at_cp0": ["2"],
-                "revoked": [],
-            }
-        )
-    )
+    inputs.write_bytes((FIXTURES / "runner/final-inputs.json").read_bytes())
     reference = Path(__file__).resolve().parents[1] / "config/workflow-reference.toml"
     with server(responses) as base:
         args = argparse.Namespace(
@@ -334,14 +305,11 @@ def test_cp13_differences_keep_both_values_for_the_failure_envelope() -> None:
         item_id="item-1",
         draft_id="draft-1",
     )
-    actual = Item(
-        "title:Draft",
-        "Drifted",
-        "draft",
+    actual = replace(
+        expected,
+        title="Drifted",
         project=(("Status", "Ready"),),
         body="Drifted body",
-        item_id="item-1",
-        draft_id="draft-1",
     )
     pages = tuple(
         Page(name, 1, count, 1, count)
