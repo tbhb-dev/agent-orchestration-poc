@@ -1,0 +1,7 @@
+event: response.created
+data: {"type":"response.created","response":{"id":"resp-bv01"}}
+
+event: response.completed
+data: {"type":"response.completed","response":{"id":"resp-bv01","usage":{"input_tokens":0,"input_tokens_details":null,"output_tokens":0,"output_tokens_details":null,"total_tokens":0}}}
+
+: end
