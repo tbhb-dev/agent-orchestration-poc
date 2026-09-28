@@ -16,6 +16,7 @@ NATIVE_OPTIONS = {
     "Severity": frozenset({"", "SEV1", "SEV2", "SEV3"}),
     "Work type": frozenset({"Planned", "Unplanned"}),
 }
+VALIDATOR_FIELDS = frozenset({"Validation", "Validation detail"})
 SOURCE_PROJECT_FIELDS = (
     "Status",
     "Size",
@@ -294,8 +295,19 @@ def complete(snapshot: Snapshot) -> bool:
     issues = sum(bool(item.issue_id) for item in snapshot.items)
     drafts = sum(bool(item.draft_id) for item in snapshot.items)
     project = sum(bool(item.item_id) for item in snapshot.items)
+    nested = all(
+        counts.get(f"{kind}:{item.key}") == value
+        for item in snapshot.items
+        if item.issue_id
+        for kind, value in (
+            ("native", sum(bool(value) for _, value in item.native)),
+            ("blockers", len(item.blockers)),
+            ("sub_issues", sum(child.parent == item.key for child in snapshot.items)),
+        )
+    )
     return (
         pages_complete
+        and nested
         and counts["issues"] == issues
         and counts["drafts"] == drafts
         and counts["project"] == project
@@ -309,6 +321,44 @@ def _key(row: dict[str, str]) -> str:
 
 def _pairs(values: dict[str, str]) -> tuple[tuple[str, str], ...]:
     return tuple(sorted(values.items()))
+
+
+def _body_value(body: str, name: str) -> str:
+    prefix = f"- {name}: "
+    return next(
+        (
+            line[len(prefix) :].strip()
+            for line in body.splitlines()
+            if line.startswith(prefix)
+        ),
+        "",
+    )
+
+
+def _draft_body(row: dict[str, str], prior: str) -> str:
+    values = {
+        "Class": row["issue type"].lower(),
+        "Priority": row["priority"],
+        "Work type": row["work type"],
+        "Severity": row["severity"] or "none",
+        "Size": row["size"],
+    }
+    lines = [
+        line
+        for line in prior.splitlines()
+        if not any(line.startswith(f"- {name}: ") for name in values)
+    ]
+    return "\n".join(
+        (*lines, *(f"- {name}: {value}" for name, value in values.items()))
+    )
+
+
+def _parent_body(row: dict[str, str]) -> str:
+    return f"## Goal\n\n{row['goal']}\n\n## Finish line\n\n{row['finish line']}"
+
+
+def _incident_body(row: dict[str, str]) -> str:
+    return f"## Incident\n\n{row['title']}\n\n## Record\n\n{row['note']}"
 
 
 def _accepted(edge: dict[str, str]) -> bool:
@@ -367,6 +417,10 @@ def validate_cp1(
     tables: Tables, snapshot: Snapshot, reviewed_status: dict[str, str] | None = None
 ) -> None:
     """Refuse stale, incomplete, duplicate, or already-parented initial reads."""
+    if any(
+        item.draft_id and item.key != f"title:{item.title}" for item in snapshot.items
+    ):
+        raise ValueError("draft key and title differ")
     if (
         tables.version != VERSION
         or snapshot.run_state != "initial"
@@ -401,6 +455,12 @@ def _validate_drafts(tables: Tables, snapshot: Snapshot) -> None:
         present = row["title"] in draft_titles
         if row["backfill mode"] == "existing draft" and not present:
             raise ValueError("unresolved existing draft")
+        if present and row["backfill mode"] == "existing draft":
+            draft = next(item for item in drafts if item.title == row["title"])
+            if _body_value(draft.body, "Class") != row["issue type"].lower() or (
+                _body_value(draft.body, "Size") != row["size"]
+            ):
+                raise ValueError("changed existing draft class or Size")
         if present and (
             (
                 row["target project item"]
@@ -784,6 +844,7 @@ def expected_cp13(
         item = replace(
             item,
             title=row["proposed title"],
+            body=_parent_body(row),
             state=row["state"],
             state_reason="completed" if row["state"] == "closed" else "",
             issue_type=row["issue type"],
@@ -939,7 +1000,15 @@ def _assignment_target(
         if row["epic"] and not draft
         else "",
         blockers=tuple(sorted(context.links[key])) if not draft else (),
-        body=context.bodies.get(key, item.body),
+        body=(
+            context.bodies[key]
+            if row["backfill mode"] == "existing draft"
+            else _draft_body(row, context.bodies.get(key, item.body))
+            if draft
+            else _incident_body(row)
+            if row["backfill mode"] == "issue"
+            else context.bodies.get(key, item.body)
+        ),
         labels=item.labels,
     )
     fields = {"Status": row["project status"]}
@@ -959,12 +1028,12 @@ def compare_cp13(
     expected: tuple[Item, ...], actual: Snapshot, retained_branch_sha: str
 ) -> tuple[Difference, ...]:
     """Reject incomplete read-back and report every identity or value difference."""
-    if not complete(actual) or actual.run_state != "final":
-        raise ValueError("incomplete or incompatible CP13")
     wanted = {item.key: item for item in expected}
     found = {item.key: item for item in actual.items}
     if len(wanted) != len(expected) or len(found) != len(actual.items):
         raise ValueError("duplicate CP13 identity")
+    if not complete(actual) or actual.run_state != "final":
+        raise ValueError("incomplete or incompatible CP13")
     differences = []
     if actual.branch_sha != retained_branch_sha:
         differences.append(
@@ -991,6 +1060,9 @@ def compare_cp13(
         ):
             left = getattr(wanted[key], field)
             right = getattr(found[key], field)
+            if field == "project":
+                left = tuple(pair for pair in left if pair[0] not in VALIDATOR_FIELDS)
+                right = tuple(pair for pair in right if pair[0] not in VALIDATOR_FIELDS)
             if left != right:
                 differences.append(Difference(key, field, left, right))
     return tuple(differences)
