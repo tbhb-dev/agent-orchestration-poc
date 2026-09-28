@@ -34,6 +34,10 @@ The inventory covers every regular file in both folders, including the files ins
 
 [Verified] `mise run check:mutation` returned exit code 0 after the review. The Go core run classified 149 mutants with 97.32% test efficacy, and the Python core score was 90.10% (3,659 killed of 4,061).
 
+[Verified] A fresh `git fetch origin && git merge origin/main` reported `Already up to date`. The import guard still exited 1 for modifications to `MANIFEST.md` and `MANIFEST.tsv` while accepting the 39 additions. A read-only `validate_type_label` probe returned `title type does not match type/ label` for this PR's required title and `type/chore`, and returned no error for the issue exception. Neither separately scoped prerequisite is on `origin/main`.
+
+[Verified] `mise run check:mutation` again exited 0 with Go test efficacy 97.32% and Python core score 90.10%. The first `mise run check` exited 1 when `gobco -branch` failed during coverage; a direct retry of that coverage command exited 0, and a subsequent `mise run check` exited 0 with 402 passed and 43 skipped in the standard Python suite and 445 passed in the coverage suite. Go core branch coverage was 94.74%.
+
 ## Tools
 
 | Tool | Version | Use |
