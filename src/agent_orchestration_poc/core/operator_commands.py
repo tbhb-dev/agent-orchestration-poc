@@ -52,13 +52,10 @@ def effects(
     labels: frozenset[str],
     reactions: tuple[tuple[str, str], ...],
 ) -> Effects:
-    """Keep the first bot verdict and retry only its missing label."""
+    """Treat a prior bot reaction as a completed acknowledgement."""
     prior = {content for login, content in reactions if login == "github-actions[bot]"}
     if prior:
-        return Effects(
-            None,
-            decision.add_label and "+1" in prior and "operator/replied" not in labels,
-        )
+        return Effects(None, False)
     return Effects(
         decision.reaction,
         decision.add_label and "operator/replied" not in labels,

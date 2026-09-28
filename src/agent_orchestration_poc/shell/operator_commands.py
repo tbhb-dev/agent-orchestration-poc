@@ -125,14 +125,6 @@ def process(event: dict[str, Any], token: str, base: str = API) -> Decision:
             for reaction in reactions
         ),
     )
-    if plan.reaction is not None:
-        request_json(
-            base,
-            token,
-            f"{root}/issues/comments/{comment_id}/reactions",
-            "POST",
-            {"content": plan.reaction},
-        )
     if plan.add_label:
         request_json(
             base,
@@ -140,6 +132,14 @@ def process(event: dict[str, Any], token: str, base: str = API) -> Decision:
             f"{root}/issues/{number}/labels",
             "POST",
             {"labels": ["operator/replied"]},
+        )
+    if plan.reaction is not None:
+        request_json(
+            base,
+            token,
+            f"{root}/issues/comments/{comment_id}/reactions",
+            "POST",
+            {"content": plan.reaction},
         )
     return decision
 

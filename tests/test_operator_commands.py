@@ -215,7 +215,7 @@ def test_decision_is_deterministic(body: str) -> None:
             Decision("+1", True),
             frozenset(),
             (("github-actions[bot]", "+1"),),
-            Effects(None, True),
+            Effects(None, False),
         ),
         (
             Decision("+1", True),
