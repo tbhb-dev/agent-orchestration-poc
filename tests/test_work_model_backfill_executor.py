@@ -22,15 +22,38 @@ from agent_orchestration_poc.core.work_model_backfill_executor import (
     Action,
     Record,
     closure_actions,
+    comment_observation,
     journal_state,
+    observation_value,
+    require_stage_ready,
     require_trial_pr,
     trial_actions,
     validate_journal,
     validate_progress,
+    verified_detail,
     write_wait_seconds,
 )
 
 FIXTURES = Path(__file__).parent / "fixtures/work_model_backfill"
+
+
+def fixture_snapshot(name: str) -> Snapshot:
+    """Restore a complete JSON checkpoint for pure resume tests."""
+    saved = json.loads((FIXTURES / f"runner/{name}.json").read_text())
+    items = []
+    for value in saved["items"]:
+        for field in ("native", "project", "source_project"):
+            value[field] = tuple(tuple(pair) for pair in value[field])
+        for field in ("blockers", "labels"):
+            value[field] = tuple(value[field])
+        items.append(Item(**value))
+    return Snapshot(
+        saved["version"],
+        tuple(items),
+        tuple(Page(**page) for page in saved["pages"]),
+        saved["branch_sha"],
+        saved["run_state"],
+    )
 
 
 def contract() -> tuple[tuple[Action, ...], Snapshot]:
@@ -41,21 +64,7 @@ def contract() -> tuple[tuple[Action, ...], Snapshot]:
         for name in ("assignments", "parents", "edges")
     ]
     tables = parse_tables(*texts)
-    saved = json.loads((FIXTURES / "runner/executor-cp1.json").read_text())
-    items = []
-    for value in saved["items"]:
-        for field in ("native", "project", "source_project"):
-            value[field] = tuple(tuple(pair) for pair in value[field])
-        for field in ("blockers", "labels"):
-            value[field] = tuple(value[field])
-        items.append(Item(**value))
-    cp1 = Snapshot(
-        saved["version"],
-        tuple(items),
-        tuple(Page(**page) for page in saved["pages"]),
-        saved["branch_sha"],
-        saved["run_state"],
-    )
+    cp1 = fixture_snapshot("executor-cp1")
     validate_cp1(tables, cp1)
     plan = operation_plan(tables, cp1)
     return closure_actions(tables, cp1, plan, "digest"), cp1
@@ -162,6 +171,80 @@ def test_trial_cleanup_needs_verified_ownership() -> None:
     )
 
 
+def test_trial_add_is_superseded_only_by_recorded_cleanup() -> None:
+    add = Action("3:add:149:96", "3", "trial_add", 149, "POST", "", {}, (), ("#96",))
+    verified = (Record(add.id, "intent", {}), Record(add.id, "verified", {}))
+    assert journal_state(add, verified, ()) == "halt"
+    for phase in ("intent", "verified"):
+        records = (*verified, Record("3:remove:149:96", "intent", {}))
+        if phase == "verified":
+            records = (*records, Record("3:remove:149:96", "verified", {}))
+        assert journal_state(add, records, ()) == "skip"
+
+
+def test_trial_page_delta_requires_complete_authorized_receipts() -> None:
+    cp1 = fixture_snapshot("trial-cp1")
+    dependent, blocker = cp1.items
+    pages = tuple(
+        replace(page, count=page.count + 1, total_count=page.total_count + 1)
+        if page.collection == "blockers:#149"
+        else page
+        for page in cp1.pages
+    )
+    current = replace(
+        cp1, items=(replace(dependent, blockers=("#96",)), blocker), pages=pages
+    )
+    add = Action("3:add:149:96", "3", "trial_add", 149, "POST", "", {}, (), ("#96",))
+    records = (
+        Record(add.id, "intent", {}),
+        Record(add.id, "response", {}),
+        Record(add.id, "verified", {}),
+    )
+    validate_progress(cp1, current, (add,), records)
+    with pytest.raises(ValueError, match="collection"):
+        validate_progress(cp1, replace(current, pages=cp1.pages), (add,), records)
+
+
+def test_trial_readiness_requires_every_closure_verified() -> None:
+    actions, _ = contract()
+    with pytest.raises(ValueError, match="every closure"):
+        require_stage_ready("3", actions, ())
+    partial = (Record(actions[0].id, "verified", {}),)
+    with pytest.raises(ValueError, match="every closure"):
+        require_stage_ready("3", actions, partial)
+    complete = tuple(Record(action.id, "verified", {}) for action in actions)
+    require_stage_ready("3", actions, complete)
+
+
+def test_comment_recovery_preserves_only_unique_numeric_identity() -> None:
+    action = Action(
+        "a", "0", "comment", 2, "POST", "issues/2/comments", {"body": "marked"}, 0, 1
+    )
+    assert comment_observation([], "marked") == (0, None)
+    assert comment_observation([{"id": 10, "body": "other"}], "marked") == (0, None)
+    comments = [{"id": 10, "body": "marked"}, {"id": 11, "body": "other"}]
+    observed = comment_observation(comments, "marked")
+    assert observed == (1, 10)
+    assert observation_value(action, observed) == 1
+    assert verified_detail(action, observed, {"status": 200}) == {
+        "observed": 1,
+        "read": {"status": 200},
+        "comment_id": 10,
+    }
+    assert comment_observation([*comments, {"id": 12, "body": "marked"}], "marked") == (
+        2,
+        None,
+    )
+    state = Action(
+        "b", "0", "issue_state", 2, "PATCH", "issues/2", {}, "open", "closed"
+    )
+    assert observation_value(state, "closed") == "closed"
+    assert verified_detail(state, "closed", {"status": 200}) == {
+        "observed": "closed",
+        "read": {"status": 200},
+    }
+
+
 @given(st.lists(st.sampled_from(["intent", "response", "verified"]), max_size=5))
 def test_verified_action_never_replays(phases: list[str]) -> None:
     action = Action("a", "0", "issue_state", 1, "PATCH", "", {}, "before", "after")
@@ -258,32 +341,6 @@ def test_progress_rejects_changed_receipts_and_verified_reversal() -> None:
     ):
         with pytest.raises(ValueError, match="changed|drifted"):
             validate_progress(cp1, current, actions, ())
-
-
-def test_progress_tracks_only_trial_link_effects() -> None:
-    cp1 = Snapshot(1, (Item("#149", "dependent", "open", blockers=("#1",)),), (), "sha")
-    add = Action(
-        "3:add:149:96", "3", "trial_add", 149, "POST", "", {}, ("#1",), ("#1", "#96")
-    )
-    remove = Action(
-        "3:remove:149:96",
-        "3",
-        "trial_remove",
-        149,
-        "DELETE",
-        "",
-        None,
-        ("#1", "#96"),
-        ("#1",),
-    )
-    linked = replace(cp1, items=(replace(cp1.items[0], blockers=("#1", "#96")),))
-    added = (Record(add.id, "verified", {}),)
-    validate_progress(cp1, linked, (add, remove), added)
-    validate_progress(
-        cp1, cp1, (add, remove), (*added, Record(remove.id, "verified", {}))
-    )
-    with pytest.raises(ValueError, match="drifted"):
-        validate_progress(cp1, linked, (add, remove), ())
 
 
 @pytest.mark.parametrize(

@@ -8,6 +8,7 @@ from agent_orchestration_poc.core.work_model_backfill import (
     Snapshot,
     Step,
     Tables,
+    complete,
 )
 
 JOURNAL_VERSION = 1
@@ -124,6 +125,58 @@ def require_trial_pr(pr: dict[str, Any]) -> None:
         raise ValueError("trial requires PR #97 closed and unmerged")
 
 
+def require_stage_ready(
+    stage: str, actions: tuple[Action, ...], records: tuple[Record, ...]
+) -> None:
+    """Require durable closure read-back before starting the trial."""
+    verified = {record.action_id for record in records if record.phase == "verified"}
+    if stage == "3" and any(
+        action.id not in verified for action in actions if action.step == "0"
+    ):
+        raise ValueError("trial requires every closure read-back")
+
+
+def comment_observation(
+    comments: list[dict[str, Any]], body: str
+) -> tuple[int, int | None]:
+    """Retain the identity only when the marked comment is unique."""
+    matches = [comment for comment in comments if comment["body"] == body]
+    return len(matches), matches[0]["id"] if len(matches) == 1 else None
+
+
+def observation_value(action: Action, observed: object) -> object:
+    """Compare comment cardinality while retaining its numeric identity."""
+    return (
+        observed[0]
+        if action.kind == "comment" and isinstance(observed, tuple)
+        else observed
+    )
+
+
+def verified_detail(
+    action: Action, observed: object, read: dict[str, Any]
+) -> dict[str, Any]:
+    """Persist a uniquely recovered comment ID with the read-back receipt."""
+    detail = {"observed": observation_value(action, observed), "read": read}
+    if action.kind == "comment":
+        detail["comment_id"] = cast("tuple[int, int | None]", observed)[1]
+    return detail
+
+
+def _trial_add_superseded(
+    action: Action, phases: list[str], records: tuple[Record, ...], observed: object
+) -> bool:
+    return (
+        action.kind == "trial_add"
+        and observed == action.before
+        and "verified" in phases
+        and any(
+            record.action_id == "3:remove:149:96" and record.phase == "intent"
+            for record in records
+        )
+    )
+
+
 def journal_state(action: Action, records: tuple[Record, ...], observed: object) -> str:
     """Classify a fresh read without replaying an uncertain write."""
     phases = [record.phase for record in records if record.action_id == action.id]
@@ -133,7 +186,10 @@ def journal_state(action: Action, records: tuple[Record, ...], observed: object)
         raise ValueError("journal response lacks intent")
     if "verified" in phases and phases[-1] != "verified":
         raise ValueError("journal action changed after verification")
-    if observed == action.after:
+    observed = observation_value(action, observed)
+    if observed == action.after or _trial_add_superseded(
+        action, phases, records, observed
+    ):
         if "verified" in phases:
             return "skip"
         if "intent" in phases and (action.kind != "trial_add" or "response" in phases):
@@ -182,10 +238,37 @@ def validate_progress(
     records: tuple[Record, ...],
 ) -> None:
     """Refuse drift outside effects of recorded or interrupted operations."""
-    if (cp1.version, cp1.pages, cp1.branch_sha) != (
-        current.version,
-        current.pages,
-        current.branch_sha,
+    if (
+        cp1.version != current.version
+        or cp1.branch_sha != current.branch_sha
+        or not complete(current)
+    ):
+        raise ValueError("checkpoint collection or retained branch changed")
+    trial_page = "blockers:#149"
+    original_pages = tuple(page for page in cp1.pages if page.collection != trial_page)
+    current_pages = tuple(
+        page for page in current.pages if page.collection != trial_page
+    )
+    if original_pages != current_pages:
+        raise ValueError("checkpoint collection or retained branch changed")
+    original_blockers = next(
+        (item.blockers for item in cp1.items if item.key == "#149"), ()
+    )
+    current_blockers = next(
+        (item.blockers for item in current.items if item.key == "#149"), ()
+    )
+    if current_blockers == original_blockers:
+        if tuple(page for page in cp1.pages if page.collection == trial_page) != tuple(
+            page for page in current.pages if page.collection == trial_page
+        ):
+            raise ValueError("checkpoint collection or retained branch changed")
+    elif not any(
+        action.kind == "trial_add"
+        and any(
+            record.action_id == action.id and record.phase == "intent"
+            for record in records
+        )
+        for action in actions
     ):
         raise ValueError("checkpoint collection or retained branch changed")
     observed = {item.key: item for item in current.items}

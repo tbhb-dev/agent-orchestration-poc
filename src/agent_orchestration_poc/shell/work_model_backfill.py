@@ -38,11 +38,15 @@ from agent_orchestration_poc.core.work_model_backfill_executor import (
     Action,
     Record,
     closure_actions,
+    comment_observation,
     journal_state,
+    observation_value,
+    require_stage_ready,
     require_trial_pr,
     trial_actions,
     validate_journal,
     validate_progress,
+    verified_detail,
     write_wait_seconds,
 )
 
@@ -303,7 +307,7 @@ def _observe(api: Api, action: Action) -> object:
             f"comments:#{action.number}",
         )
         payload = cast("dict[str, Any]", action.payload)
-        return sum(comment["body"] == payload["body"] for comment in comments)
+        return comment_observation(comments, payload["body"])
     if action.kind == "issue_state":
         issue, _ = api.get(f"{REPO}/issues/{action.number}")
         return issue["state"], issue.get("state_reason") or ""
@@ -364,10 +368,10 @@ def _execute(
         _append(path, asdict(receipt))
         records.append(receipt)
     readback = _observe(api, action)
-    if readback != action.after:
+    if observation_value(action, readback) != action.after:
         raise ValueError(f"operation {action.id} failed read-back")
     verified = Record(
-        action.id, "verified", {"observed": readback, "read": api.ledger[-1]}
+        action.id, "verified", verified_detail(action, readback, api.ledger[-1])
     )
     _append(path, asdict(verified))
     records.append(verified)
@@ -399,15 +403,7 @@ def run_apply(args: argparse.Namespace) -> int:
         records = list(
             _journal(args.journal, run_id, actions, create=args.stage == "0")
         )
-        if args.stage == "3" and any(
-            not any(
-                record.action_id == action.id and record.phase == "verified"
-                for record in records
-            )
-            for action in actions
-            if action.step == "0"
-        ):
-            raise ValueError("trial requires every closure read-back")
+        require_stage_ready(args.stage, actions, tuple(records))
         api = _api(args.api_base)
         validate_progress(cp1, collect(api, "initial"), actions, tuple(records))
         if args.stage == "3":

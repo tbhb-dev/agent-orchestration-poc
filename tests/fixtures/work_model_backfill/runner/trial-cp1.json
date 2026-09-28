@@ -1,0 +1,127 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "key": "#149",
+      "title": "dependent",
+      "state": "open",
+      "state_reason": "",
+      "issue_type": "",
+      "native": [],
+      "project": [],
+      "source_project": [],
+      "parent": "",
+      "blockers": [],
+      "body": "",
+      "labels": [],
+      "issue_id": "149",
+      "item_id": "",
+      "draft_id": ""
+    },
+    {
+      "key": "#96",
+      "title": "blocker",
+      "state": "closed",
+      "state_reason": "",
+      "issue_type": "",
+      "native": [],
+      "project": [],
+      "source_project": [],
+      "parent": "",
+      "blockers": [],
+      "body": "",
+      "labels": [],
+      "issue_id": "96",
+      "item_id": "",
+      "draft_id": ""
+    }
+  ],
+  "pages": [
+    {
+      "collection": "issues",
+      "index": 1,
+      "count": 2,
+      "total_pages": 1,
+      "total_count": 2
+    },
+    {
+      "collection": "project",
+      "index": 1,
+      "count": 0,
+      "total_pages": 1,
+      "total_count": 0
+    },
+    {
+      "collection": "drafts",
+      "index": 1,
+      "count": 0,
+      "total_pages": 1,
+      "total_count": 0
+    },
+    {
+      "collection": "native",
+      "index": 1,
+      "count": 2,
+      "total_pages": 1,
+      "total_count": 2
+    },
+    {
+      "collection": "parents",
+      "index": 1,
+      "count": 2,
+      "total_pages": 1,
+      "total_count": 2
+    },
+    {
+      "collection": "blockers",
+      "index": 1,
+      "count": 2,
+      "total_pages": 1,
+      "total_count": 2
+    },
+    {
+      "collection": "native:#149",
+      "index": 1,
+      "count": 0,
+      "total_pages": 1,
+      "total_count": 0
+    },
+    {
+      "collection": "blockers:#149",
+      "index": 1,
+      "count": 0,
+      "total_pages": 1,
+      "total_count": 0
+    },
+    {
+      "collection": "sub_issues:#149",
+      "index": 1,
+      "count": 0,
+      "total_pages": 1,
+      "total_count": 0
+    },
+    {
+      "collection": "native:#96",
+      "index": 1,
+      "count": 0,
+      "total_pages": 1,
+      "total_count": 0
+    },
+    {
+      "collection": "blockers:#96",
+      "index": 1,
+      "count": 0,
+      "total_pages": 1,
+      "total_count": 0
+    },
+    {
+      "collection": "sub_issues:#96",
+      "index": 1,
+      "count": 0,
+      "total_pages": 1,
+      "total_count": 0
+    }
+  ],
+  "branch_sha": "sha",
+  "run_state": "initial"
+}
