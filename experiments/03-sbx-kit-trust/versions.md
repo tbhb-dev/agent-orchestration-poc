@@ -9,4 +9,6 @@
 | Docker kit schema | Version 2 is documented for sbx 0.36 and later | Pinned kit reference, lines 34 to 42 |
 | Harness | No harness run | Fixture remains unexecuted |
 
+The 2026-09-28 continuation rechecked `sbx version`, `sw_vers`, and `uname -m` and observed the same CLI and host versions. It read the pinned kit reference again through `gh query` at the Docker documentation revision above. The checkout began at `6b5188bda7402b45a6d6792d2b049a8e62909988`. [The operator-state ledger](evidence/operator-state-attempt.md) records the failed daemon and authentication prerequisites.
+
 The sbx source was unavailable from the public release repository. The CLI revision above identifies the installed binary, not a reviewed source checkout. No dependency source was cloned. Pinned documentation was read through GitHub REST, and the local checkout was `c7b0fa9c17cbf255986b20863ac93d9bf2de717e` before this work.
