@@ -61,6 +61,7 @@ cat > /private/tmp/bv01-228-codex-headless/codex/config.toml <<EOF
 model_provider = "bv01"
 default_permissions = "bv01"
 [model_providers.bv01]
+name = "bv01"
 base_url = "http://127.0.0.1:$port/v1"
 wire_api = "responses"
 env_key = "BV01_FAKE_OPENAI_KEY"
@@ -78,6 +79,7 @@ cat > /private/tmp/bv01-228-codex-interactive/codex/config.toml <<EOF
 model_provider = "bv01"
 default_permissions = "bv01"
 [model_providers.bv01]
+name = "bv01"
 base_url = "http://127.0.0.1:$port/v1"
 wire_api = "responses"
 env_key = "BV01_FAKE_OPENAI_KEY"
