@@ -1,5 +1,21 @@
 # BV-05 versions and source pins
 
+## Fourth sbx run, 2026-09-28
+
+| Item | Recorded version or revision | Evidence and limit |
+| --- | --- | --- |
+| Host | macOS 26.5.1, build `25F80`, arm64 | Observed with `sw_vers; uname -m` in the [fourth-run ledger](evidence/sbx-run-4/ledger.txt). |
+| Docker Sandboxes CLI | v0.45.1, `9d79d90ee4c5d297fb3d36b75384e8cea7a4fbcb` | Observed by `sbx version` before and after in the [ledger](evidence/sbx-run-4/ledger.txt); the revision identifies the binary, not reviewed source. |
+| Executor and checkout | Claude Code with `claude-opus-5-5`, from `main` at `14e63e4` on `exp/229-sbx-kit-trust-4` | Recorded in the [fourth-run notes](evidence/sbx-run-4/notes.md); this run did not record a Claude Code CLI version or effort, and no harness ran inside sbx. |
+| Sandbox template | `docker/sandbox-templates:shell-docker` | The first create pulled this tag and the second reused it in the [ledger](evidence/sbx-run-4/ledger.txt). The run did not record an immutable image digest. |
+| Kit | `schemaVersion: "2"`, `kind: mixin`, kit version `0.1.0` | The [fourth-run notes](evidence/sbx-run-4/notes.md) report an exit-0 byte comparison with the committed [kit spec](evidence/installed-sbx-run/kit/spec.yaml). The run did not record a new documentation or source revision check. |
+| Receiver and guest client | Python 3.14.6 receiver, `curl/8.18.0` guest | Observed in the HTTP server header and verbose guest request in the [ledger](evidence/sbx-run-4/ledger.txt). This run did not record the host curl or OpenSSL versions. |
+| Transport | TLSv1.3 for receiver requests | Observed in the [receiver log](evidence/sbx-run-4/receiver.jsonl). This is the negotiated protocol. |
+| Disposable PKI | BV-05 CA fingerprint `0F:36:FD:3C:48:DD:10:BA:8C:F9:4E:0D:33:3A:70:82:73:B3:1E:B1:13:03:C4:C7:98:B1:4D:B0:32:69:47:27`; second invocation reported all `ca_issued` values false | Observed in the [manifest](evidence/sbx-run-4/pki-manifest.json) and [ledger](evidence/sbx-run-4/ledger.txt). The manifest lists leaf fingerprints and issuance times. |
+| Prior source pins | Imported design `8384ca71d1ecc8ff590878fc4351954dbadd06d4`; Docker documentation `dvdksn/docs@75d1ee312280c2028be294e043edeaf35f2fe1bb` | The table below records these earlier documentation pins, and the [fourth-run notes](evidence/sbx-run-4/notes.md) and [ledger](evidence/sbx-run-4/ledger.txt) do not record another source check. |
+
+## Earlier attempts and source pins
+
 | Item | Recorded version or revision | Evidence |
 | --- | --- | --- |
 | Host | macOS 26.5.1 (25F80), arm64 | `sw_vers` and `uname -m`, exit 0 |
