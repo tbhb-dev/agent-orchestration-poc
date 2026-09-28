@@ -47,6 +47,48 @@ class Effects:
     add_label: bool
 
 
+@dataclass(frozen=True)
+class FetchPlan:
+    """Authorized REST target and source facts for one fixture event."""
+
+    number: int
+    comment_id: int
+    facts: dict[str, Any]
+
+
+def preflight(
+    event: dict[str, Any], fixture_issue: int, fixture_pr: int
+) -> FetchPlan | None:
+    """Allow only created owner comments on the two reviewed fixture items."""
+    if event.get("action") != "created" or event.get("actor") != "tbhb":
+        return None
+    issue = event.get("issue")
+    comment = event.get("comment")
+    if not isinstance(issue, dict) or not isinstance(comment, dict):
+        return None
+    number = issue.get("number")
+    comment_id = comment.get("id")
+    is_pr = bool(issue.get("pull_request"))
+    allowed = fixture_pr if is_pr else fixture_issue
+    if (
+        type(number) is not int
+        or number <= 0
+        or number != allowed
+        or type(comment_id) is not int
+        or comment_id <= 0
+    ):
+        return None
+    facts = {
+        "action": event["action"],
+        "actor": event["actor"],
+        "number": number,
+        "is_pr": is_pr,
+        "comment_id": comment_id,
+        "issue_url": f"https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/issues/{number}",
+    }
+    return FetchPlan(number, comment_id, facts)
+
+
 def effects(
     decision: Decision,
     labels: frozenset[str],
@@ -90,21 +132,21 @@ def parse_command(body: str) -> tuple[str, str] | None:
 
 def numbered_ask(body: str) -> tuple[tuple[int, ...], tuple[int, ...]] | None:
     """Extract one ask heading and its numbered approval lines and options."""
-    headings = HEADING.findall(body)
+    headings = list(HEADING.finditer(body))
     if len(headings) != 1:
         return None
     lines: list[int] = []
     options: list[int] = []
     section = ""
-    for raw in body.splitlines():
-        if raw.strip().lower().startswith("approval lines:"):
+    for raw in body[headings[0].end() :].splitlines():
+        if raw.startswith("#"):
+            break
+        if raw.strip() == "Approval lines:":
             section = "lines"
-        elif raw.strip().lower().startswith("options:"):
+        elif raw.strip() == "Options:":
             section = "options"
-        elif raw.startswith("#") and not HEADING.fullmatch(raw):
-            section = ""
         line = NUMBER.match(raw)
-        if line:
+        if line and section in {"lines", "options"}:
             (lines if section == "lines" else options).append(int(line.group(1)))
         elif section == "options":
             option = OPTION.match(raw)
@@ -116,18 +158,16 @@ def numbered_ask(body: str) -> tuple[tuple[int, ...], tuple[int, ...]] | None:
 
 
 def latest_ask(comments: tuple[dict[str, Any], ...]) -> dict[str, Any] | None:
-    """Find the newest ask before the answer, refusing ambiguous revisions."""
+    """Require exactly one active ask; a resolved heading retires the old ask."""
     asks = [
         comment for comment in comments if HEADING.search(comment.get("body") or "")
     ]
-    if not asks:
+    if len(asks) != 1:
         return None
-    latest = max(asks, key=lambda comment: (comment["created_at"], comment["id"]))
-    if numbered_ask(latest.get("body") or "") is None:
+    ask = asks[0]
+    if numbered_ask(ask.get("body") or "") is None:
         return None
-    if sum(comment["created_at"] == latest["created_at"] for comment in asks) != 1:
-        return None
-    return latest
+    return ask
 
 
 def valid_source(

@@ -9,7 +9,12 @@ from typing import Any
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
-from agent_orchestration_poc.core.operator_commands import Decision, decide, effects
+from agent_orchestration_poc.core.operator_commands import (
+    Decision,
+    decide,
+    effects,
+    preflight,
+)
 
 LOGGER = logging.getLogger(__name__)
 REPOSITORY = "tbhb-dev/agent-orchestration-poc"
@@ -88,34 +93,22 @@ def all_comments(base: str, token: str, number: int) -> tuple[dict[str, Any], ..
 
 def process(event: dict[str, Any], token: str, base: str = API) -> Decision:
     """Fetch source data, apply a pure decision, and acknowledge once."""
-    if event.get("action") != "created" or event.get("actor") != "tbhb":
-        return Decision(None)
-    number = event.get("issue", {}).get("number")
-    is_pr = bool(event.get("issue", {}).get("pull_request"))
-    if not isinstance(number, int) or number != (
-        FIXTURE_PR if is_pr else FIXTURE_ISSUE
-    ):
-        return Decision(None)
-    comment_id = event.get("comment", {}).get("id")
-    if not isinstance(comment_id, int) or comment_id <= 0:
+    target = preflight(event, FIXTURE_ISSUE, FIXTURE_PR)
+    if target is None:
         return Decision(None)
     root = f"/repos/{REPOSITORY}"
-    comment, _ = request_json(base, token, f"{root}/issues/comments/{comment_id}")
-    item, _ = request_json(base, token, f"{root}/issues/{number}")
-    comments = all_comments(base, token, number)
-    facts = {
-        "action": event["action"],
-        "actor": event["actor"],
-        "number": number,
-        "is_pr": is_pr,
-        "comment_id": comment_id,
-        "issue_url": f"{API}{root}/issues/{number}",
-    }
-    decision = decide(facts, comment, item, comments)
+    comment, _ = request_json(
+        base, token, f"{root}/issues/comments/{target.comment_id}"
+    )
+    item, _ = request_json(base, token, f"{root}/issues/{target.number}")
+    comments = all_comments(base, token, target.number)
+    decision = decide(target.facts, comment, item, comments)
     if decision.reaction is None:
         return decision
     reactions = all_pages(
-        base, token, f"{root}/issues/comments/{comment_id}/reactions?per_page=100"
+        base,
+        token,
+        f"{root}/issues/comments/{target.comment_id}/reactions?per_page=100",
     )
     plan = effects(
         decision,
@@ -129,7 +122,7 @@ def process(event: dict[str, Any], token: str, base: str = API) -> Decision:
         request_json(
             base,
             token,
-            f"{root}/issues/{number}/labels",
+            f"{root}/issues/{target.number}/labels",
             "POST",
             {"labels": ["operator/replied"]},
         )
@@ -137,7 +130,7 @@ def process(event: dict[str, Any], token: str, base: str = API) -> Decision:
         request_json(
             base,
             token,
-            f"{root}/issues/comments/{comment_id}/reactions",
+            f"{root}/issues/comments/{target.comment_id}/reactions",
             "POST",
             {"content": plan.reaction},
         )

@@ -8,13 +8,17 @@
 
 ## Local fixtures
 
-**Verified.** `tests/fixtures/operator-commands/issue.json` and `pr.json` exercise all eight forms with the same numbered ask. The pure tests cover invalid grammar, source identity, edited delivery, open state, labels, missing and ambiguous asks, latest ask order, hostile literal text, and line selection. The loopback REST tests exercise comment pagination, additive label requests, both reaction types, fixture gates, and repeated delivery. No fixture text is passed to a shell command.
+**Verified.** `tests/fixtures/operator-commands/issue.json` and `pr.json` exercise all eight forms with the same numbered ask. The pure tests cover invalid grammar, source identity, edited delivery, open state, labels, missing and ambiguous asks, explicit retirement of an older ask, hostile literal text, and line selection. The review follow-up adds negative probes for numbered prose outside the ask sections, two simultaneous active asks, and pure preflight authorization by event action, actor, item type and number, and comment ID. The loopback REST tests exercise comment pagination, additive label requests, both reaction types, fixture gates, and repeated delivery. No fixture text is passed to a shell command.
 
 **Verified.** `mise exec -- uv run pytest tests/test_operator_commands.py tests/test_operator_command_shell.py --run-integration -q` passed 52 tests after the reaction replay fix. `mise run check:imports` passed both core and shell contracts. `mise run check:ruff`, `mise run check:pyrefly`, `mise run check:workflow-forms`, `mise run check:vale`, and `mise run docs:build` passed after local corrections. The final Python integration coverage run passed 600 tests with core lines 96.95 percent, core branches 93.03 percent, and shell lines 76.44 percent. An earlier full coverage gate passed with Go core statements 96.43 percent and branches 94.74 percent. The final `mise run check:mutation:python` passed at 90.25 percent, with 7,350 of 8,144 mutants killed. The Go core mutation gate passed at 97.32 percent before the replay fix, which changed no Go code.
 
 **Observed.** The final `mise run check` completed every earlier subcheck, but its Go branch coverage subprocess produced no output for more than eight minutes after starting `scripts/check-coverage.py`. A serial `mise run -j 1 check` reached the same point and was interrupted after six minutes without output. The separate `mise run check:coverage` completed successfully before these attempts. The sandbox denied `ps -eo pid,etime,args` with `operation not permitted`, so the stalled child process could not be inspected here. CI must supply the final aggregate readback.
 
 **Observed.** `mise run build` passed. `mise run docs:check-links` failed when Playwright Chromium could not register its macOS rendezvous port under the sandbox. The validator then listed seven links in existing pages, including `/workflow/` and `/design/github-event-monitor/`. It did not list a link in the new guide. `mise run docs:build` had passed earlier without link validation.
+
+**Verified.** On the review follow-up, `mise exec -- uv run pytest tests/test_operator_commands.py tests/test_operator_command_shell.py --run-integration -q` passed 55 tests. `mise run fmt` and standalone `mise run check:go` passed. The serial `mise run -j 1 check` passed the regular and integration Python suites (603 tests in the latter); the coverage script printed Python core lines 97.02 percent, core branches 93.17 percent, shell lines 76.48 percent, Go core statements 96.43 percent, and Go shell statements 74.58 percent. **Observed.** The aggregate again stopped producing output in its `gobco` Go branch coverage child. It was interrupted after about five minutes in that subprocess, so the full local aggregate has no completion result. An earlier parallel aggregate attempt failed when the Go formatter briefly could not open a path in the generated Mermaid checker dependency tree; standalone `check:go` passed immediately afterward. Hosted CI remains the aggregate readback.
+
+**Verified.** The review follow-up `mise run check:mutation` passed: Go core scored 97.32 percent (145 of 149 killed), and Python core scored 90.10 percent (7,396 of 8,209 killed).
 
 ## Fixture-only gate and pending live evidence
 
@@ -24,7 +28,7 @@
 
 ## Safety boundary
 
-**Verified.** The workflow handles only `issue_comment` `created`, uses `GITHUB_TOKEN` with `contents: read` and `issues: write`, and checks out the workflow's own repository revision rather than pull request code. The shell validates the fixture item marker and number before any REST call. It changes only `operator/replied` and the source comment reaction. It never removes an attention label or executes an operator decision.
+**Verified.** The workflow handles only `issue_comment` `created`, uses `GITHUB_TOKEN` with `contents: read` and `issues: write`, and checks out the workflow's own repository revision rather than pull request code. The pure core validates event eligibility and the fixture marker and number before the shell makes any REST call. It changes only `operator/replied` and the source comment reaction. It never removes an attention label or executes an operator decision.
 
 ## Change size
 

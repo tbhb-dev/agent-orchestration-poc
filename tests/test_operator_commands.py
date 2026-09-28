@@ -16,6 +16,7 @@ from agent_orchestration_poc.core.operator_commands import (
     latest_ask,
     numbered_ask,
     parse_command,
+    preflight,
     valid_selection,
     valid_source,
 )
@@ -150,13 +151,53 @@ def test_missing_ambiguous_and_paginated_ask() -> None:
         == "confused"
     )
     older = data["ask"] | {"id": 98, "created_at": "2026-09-27T12:00:00Z"}
-    assert latest_ask((older, data["ask"])) == data["ask"]
+    assert latest_ask((older, data["ask"])) is None
     assert (
         decide(
             data["event"], data["comment"], data["item"], (older, data["ask"])
         ).reaction
+        == "confused"
+    )
+    retired = older | {
+        "body": older["body"].replace("Operator ask:", "Resolved operator ask:")
+    }
+    assert latest_ask((retired, data["ask"])) == data["ask"]
+    assert (
+        decide(
+            data["event"], data["comment"], data["item"], (retired, data["ask"])
+        ).reaction
         == "+1"
     )
+
+
+def test_numbered_prose_outside_ask_sections_is_not_selectable() -> None:
+    data = fixture("issue")
+    data["ask"]["body"] = (
+        "1. Preface\n### Operator ask: approval only\n"
+        "1. Intro\nApproval lines:\n1. Allow action\n"
+        "## Background\n2. Unrelated fact\nOptions:\nOption 3: unrelated"
+    )
+    assert numbered_ask(data["ask"]["body"]) == ((1,), ())
+    data["comment"]["body"] = "/choose option=2"
+    assert (
+        decide(data["event"], data["comment"], data["item"], (data["ask"],)).reaction
+        == "confused"
+    )
+
+
+@pytest.mark.parametrize("item_type", ["issue", "pr"])
+def test_preflight_fixture_gate(item_type: str) -> None:
+    data = fixture(item_type)
+    event = data["event"] | {"issue": data["item"], "comment": {"id": 100}}
+    assert preflight(event, 11, 12) is not None
+    assert preflight(event, 999, 998) is None
+    assert preflight(event | {"actor": "other"}, 11, 12) is None
+    assert preflight(event | {"action": "edited"}, 11, 12) is None
+    assert preflight(event | {"comment": {"id": 0}}, 11, 12) is None
+    wrong_type = event | {
+        "issue": data["item"] | {"number": 12 if item_type == "issue" else 11}
+    }
+    assert preflight(wrong_type, 11, 12) is None
 
 
 def test_numbered_ask_requires_unique_numbers() -> None:
@@ -175,7 +216,11 @@ def test_numbered_ask_property(number: int) -> None:
 @given(st.integers(min_value=1, max_value=100))
 def test_latest_ask_ignores_page_order(number: int) -> None:
     data = fixture("issue")
-    older = data["ask"] | {"id": number, "created_at": "2026-09-27T12:00:00Z"}
+    older = data["ask"] | {
+        "id": number,
+        "created_at": "2026-09-27T12:00:00Z",
+        "body": data["ask"]["body"].replace("Operator ask:", "Resolved operator ask:"),
+    }
     assert latest_ask((older, data["ask"])) == latest_ask((data["ask"], older))
 
 
