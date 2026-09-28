@@ -41,9 +41,6 @@ from agent_orchestration_poc.core.work_model_backfill_executor import (
     comment_observation,
     journal_state,
     observation_value,
-    require_stage_ready,
-    require_trial_pr,
-    trial_actions,
     validate_journal,
     validate_progress,
     verified_detail,
@@ -311,11 +308,7 @@ def _observe(api: Api, action: Action) -> object:
     if action.kind == "issue_state":
         issue, _ = api.get(f"{REPO}/issues/{action.number}")
         return issue["state"], issue.get("state_reason") or ""
-    blockers, _ = api.pages(
-        f"{REPO}/issues/{action.number}/dependencies/blocked_by?per_page=100",
-        f"blockers:#{action.number}",
-    )
-    return tuple(sorted(f"#{blocker['number']}" for blocker in blockers))
+    raise ValueError(f"unsupported action kind: {action.kind}")
 
 
 def _execute(
@@ -379,12 +372,12 @@ def _execute(
 
 def run_apply(args: argparse.Namespace) -> int:
     """Execute one confirmed stage with durable per-write read-back."""
-    if not args.apply or not args.cp1 or not args.journal:
-        raise ValueError("apply requires --apply, --cp1, and --journal")
+    if not args.apply or not args.cp1 or not args.journal or args.stage != "0":
+        raise ValueError("apply requires stage 0, --apply, --cp1, and --journal")
     tables, digests = _tables(args)
     cp1_bytes = args.cp1.read_bytes()
     run_id = hashlib.sha256(cp1_bytes).hexdigest()
-    expected_confirmation = f"CP{1 if args.stage == '0' else 2}:{run_id}"
+    expected_confirmation = f"CP1:{run_id}"
     if args.confirm_checkpoint != expected_confirmation:
         raise ValueError("operator checkpoint confirmation differs from CP1")
     cp1_data = json.loads(cp1_bytes)
@@ -392,7 +385,7 @@ def run_apply(args: argparse.Namespace) -> int:
         raise ValueError("CP1 was built from different tables")
     cp1 = _snapshot(cp1_data["snapshot"])
     plan = operation_plan(tables, cp1)
-    actions = (*closure_actions(tables, cp1, plan, run_id), *trial_actions(cp1, plan))
+    actions = closure_actions(tables, cp1, plan, run_id)
     lock = args.journal.with_suffix(args.journal.suffix + ".lock")
     descriptor = os.open(lock, os.O_CREAT | os.O_RDWR, 0o600)
     with os.fdopen(descriptor) as stream:
@@ -400,18 +393,11 @@ def run_apply(args: argparse.Namespace) -> int:
             fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             raise ValueError("another backfill runner holds the journal") from None
-        records = list(
-            _journal(args.journal, run_id, actions, create=args.stage == "0")
-        )
-        require_stage_ready(args.stage, actions, tuple(records))
+        records = list(_journal(args.journal, run_id, actions, create=True))
         api = _api(args.api_base)
         validate_progress(cp1, collect(api, "initial"), actions, tuple(records))
-        if args.stage == "3":
-            pr, _ = api.get(f"{REPO}/pulls/97")
-            require_trial_pr(pr)
         for action in actions:
-            if action.step == args.stage:
-                _execute(api, args.journal, action, records, pace=True)
+            _execute(api, args.journal, action, records, pace=True)
     return 0
 
 
@@ -470,7 +456,7 @@ def main() -> int:
     parser.add_argument("--inputs", type=Path)
     parser.add_argument("--reference", type=Path)
     parser.add_argument("--journal", type=Path)
-    parser.add_argument("--stage", choices=("0", "3"))
+    parser.add_argument("--stage", choices=("0",))
     parser.add_argument("--apply", action="store_true")
     parser.add_argument("--confirm-checkpoint")
     args = parser.parse_args()

@@ -82,60 +82,6 @@ def closure_actions(
     return tuple(actions)
 
 
-def trial_actions(cp1: Snapshot, plan: tuple[Step, ...]) -> tuple[Action, ...]:
-    """Add and remove only the absent blocker selected by the plan."""
-    trial = next(step for step in plan if step.number == "3")
-    if trial.targets != ("149 <- 96",):
-        raise ValueError("unreviewed closed-blocker trial")
-    items = {item.key: item for item in cp1.items}
-    dependent, blocker = items["#149"], items["#96"]
-    if "#96" in dependent.blockers or not blocker.issue_id:
-        raise ValueError("trial blocker already exists or has no ID")
-    before = tuple(sorted(dependent.blockers))
-    after = tuple(sorted((*before, "#96")))
-    return (
-        Action(
-            "3:add:149:96",
-            "3",
-            "trial_add",
-            149,
-            "POST",
-            "issues/149/dependencies/blocked_by",
-            {"issue_id": int(blocker.issue_id)},
-            before,
-            after,
-        ),
-        Action(
-            "3:remove:149:96",
-            "3",
-            "trial_remove",
-            149,
-            "DELETE",
-            f"issues/149/dependencies/blocked_by/{blocker.issue_id}",
-            None,
-            after,
-            before,
-        ),
-    )
-
-
-def require_trial_pr(pr: dict[str, Any]) -> None:
-    """Require step 0's reviewed PR closure before the closed-blocker trial."""
-    if pr.get("state") != "closed" or pr.get("merged") is not False:
-        raise ValueError("trial requires PR #97 closed and unmerged")
-
-
-def require_stage_ready(
-    stage: str, actions: tuple[Action, ...], records: tuple[Record, ...]
-) -> None:
-    """Require durable closure read-back before starting the trial."""
-    verified = {record.action_id for record in records if record.phase == "verified"}
-    if stage == "3" and any(
-        action.id not in verified for action in actions if action.step == "0"
-    ):
-        raise ValueError("trial requires every closure read-back")
-
-
 def comment_observation(
     comments: list[dict[str, Any]], body: str
 ) -> tuple[int, int | None]:
@@ -163,20 +109,6 @@ def verified_detail(
     return detail
 
 
-def _trial_add_superseded(
-    action: Action, phases: list[str], records: tuple[Record, ...], observed: object
-) -> bool:
-    return (
-        action.kind == "trial_add"
-        and observed == action.before
-        and "verified" in phases
-        and any(
-            record.action_id == "3:remove:149:96" and record.phase == "intent"
-            for record in records
-        )
-    )
-
-
 def journal_state(action: Action, records: tuple[Record, ...], observed: object) -> str:
     """Classify a fresh read without replaying an uncertain write."""
     phases = [record.phase for record in records if record.action_id == action.id]
@@ -187,20 +119,13 @@ def journal_state(action: Action, records: tuple[Record, ...], observed: object)
     if "verified" in phases and phases[-1] != "verified":
         raise ValueError("journal action changed after verification")
     observed = observation_value(action, observed)
-    if observed == action.after or _trial_add_superseded(
-        action, phases, records, observed
-    ):
+    if observed == action.after:
         if "verified" in phases:
             return "skip"
-        if "intent" in phases and (action.kind != "trial_add" or "response" in phases):
+        if "intent" in phases:
             return "verify"
         return "halt"
     if observed != action.before or "verified" in phases:
-        return "halt"
-    if action.kind == "trial_remove" and not any(
-        record.action_id == "3:add:149:96" and record.phase == "verified"
-        for record in records
-    ):
         return "halt"
     return "send"
 
@@ -244,32 +169,7 @@ def validate_progress(
         or not complete(current)
     ):
         raise ValueError("checkpoint collection or retained branch changed")
-    trial_page = "blockers:#149"
-    original_pages = tuple(page for page in cp1.pages if page.collection != trial_page)
-    current_pages = tuple(
-        page for page in current.pages if page.collection != trial_page
-    )
-    if original_pages != current_pages:
-        raise ValueError("checkpoint collection or retained branch changed")
-    original_blockers = next(
-        (item.blockers for item in cp1.items if item.key == "#149"), ()
-    )
-    current_blockers = next(
-        (item.blockers for item in current.items if item.key == "#149"), ()
-    )
-    if current_blockers == original_blockers:
-        if tuple(page for page in cp1.pages if page.collection == trial_page) != tuple(
-            page for page in current.pages if page.collection == trial_page
-        ):
-            raise ValueError("checkpoint collection or retained branch changed")
-    elif not any(
-        action.kind == "trial_add"
-        and any(
-            record.action_id == action.id and record.phase == "intent"
-            for record in records
-        )
-        for action in actions
-    ):
+    if cp1.pages != current.pages:
         raise ValueError("checkpoint collection or retained branch changed")
     observed = {item.key: item for item in current.items}
     if len(observed) != len(cp1.items):
@@ -289,10 +189,7 @@ def validate_progress(
 def _progress_item(
     action: Action, original: Item, current: object, phases: list[str]
 ) -> Item:
-    if action.kind == "issue_state":
-        changed = replace(original, state="closed", state_reason="not_planned")
-        return changed if "verified" in phases or current == changed else original
-    if action.kind in {"trial_add", "trial_remove"}:
-        changed = replace(original, blockers=cast("tuple[str, ...]", action.after))
-        return changed if current == changed else original
-    return original
+    if action.kind != "issue_state":
+        return original
+    changed = replace(original, state="closed", state_reason="not_planned")
+    return changed if "verified" in phases or current == changed else original

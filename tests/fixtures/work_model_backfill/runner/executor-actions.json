@@ -27,31 +27,5 @@
       "before": ["open", "not_planned"],
       "after": ["closed", "not_planned"]
     }
-  ],
-  "trial": [
-    {
-      "id": "3:add:149:96",
-      "step": "3",
-      "kind": "trial_add",
-      "number": 149,
-      "method": "POST",
-      "path": "issues/149/dependencies/blocked_by",
-      "payload": {
-        "issue_id": 960
-      },
-      "before": ["#1"],
-      "after": ["#1", "#96"]
-    },
-    {
-      "id": "3:remove:149:96",
-      "step": "3",
-      "kind": "trial_remove",
-      "number": 149,
-      "method": "DELETE",
-      "path": "issues/149/dependencies/blocked_by/960",
-      "payload": null,
-      "before": ["#1", "#96"],
-      "after": ["#1"]
-    }
   ]
 }

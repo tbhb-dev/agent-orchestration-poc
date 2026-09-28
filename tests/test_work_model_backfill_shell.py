@@ -345,10 +345,10 @@ def test_cp13_differences_keep_both_values_for_the_failure_envelope() -> None:
 
 
 @pytest.mark.integration
-def test_journaled_write_resumes_without_duplicate_comment_or_trial_link(
+def test_journaled_write_resumes_without_duplicate_comment(
     tmp_path: Path,
 ) -> None:
-    """A lost response is recovered by read-back, while trial cleanup is owned."""
+    """A lost comment response is recovered by read-back without replay."""
     from agent_orchestration_poc.core.work_model_backfill_executor import (  # noqa: PLC0415
         Action,
     )
@@ -359,7 +359,6 @@ def test_journaled_write_resumes_without_duplicate_comment_or_trial_link(
     )
 
     comments: list[dict[str, Any]] = []
-    blockers: list[dict[str, Any]] = []
     state = {"state": "open", "state_reason": "not_planned"}
     writes: list[str] = []
 
@@ -378,7 +377,7 @@ def test_journaled_write_resumes_without_duplicate_comment_or_trial_link(
             elif self.path.endswith("/issues/2"):
                 self.respond(200, state)
             else:
-                self.respond(200, blockers)
+                self.send_error(404)
 
         def do_POST(self) -> None:
             payload = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
@@ -386,9 +385,6 @@ def test_journaled_write_resumes_without_duplicate_comment_or_trial_link(
             if self.path.endswith("/comments"):
                 comments.append({"id": 10, "body": payload["body"]})
                 self.respond(503, {})
-            else:
-                blockers.append({"number": 96, "id": payload["issue_id"]})
-                self.respond(201, {"id": 96})
 
         def do_PATCH(self) -> None:
             writes.append(self.path)
@@ -397,11 +393,6 @@ def test_journaled_write_resumes_without_duplicate_comment_or_trial_link(
             )
             self.respond(200, state)
 
-        def do_DELETE(self) -> None:
-            writes.append(self.path)
-            blockers.clear()
-            self.respond(204, {})
-
         @override
         def log_message(self, format: str, *args: object) -> None:
             pass
@@ -409,7 +400,7 @@ def test_journaled_write_resumes_without_duplicate_comment_or_trial_link(
     assert all(
         map(
             callable,
-            (Handler.do_GET, Handler.do_POST, Handler.do_PATCH, Handler.do_DELETE),
+            (Handler.do_GET, Handler.do_POST, Handler.do_PATCH),
         )
     )
     comment = Action(
@@ -434,29 +425,7 @@ def test_journaled_write_resumes_without_duplicate_comment_or_trial_link(
         ("open", "not_planned"),
         ("closed", "not_planned"),
     )
-    add = Action(
-        "3:add:149:96",
-        "3",
-        "trial_add",
-        149,
-        "POST",
-        "issues/149/dependencies/blocked_by",
-        {"issue_id": 96},
-        (),
-        ("#96",),
-    )
-    remove = Action(
-        "3:remove:149:96",
-        "3",
-        "trial_remove",
-        149,
-        "DELETE",
-        "issues/149/dependencies/blocked_by/96",
-        None,
-        ("#96",),
-        (),
-    )
-    actions = (comment, close, add, remove)
+    actions = (comment, close)
     journal = tmp_path / "journal.jsonl"
     httpd = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
     thread = threading.Thread(target=httpd.serve_forever)
@@ -469,16 +438,13 @@ def test_journaled_write_resumes_without_duplicate_comment_or_trial_link(
         records = list(_journal(journal, "digest", actions, create=False))
         _execute(api, journal, comment, records)
         _execute(api, journal, close, records)
-        _execute(api, journal, add, records)
-        _execute(api, journal, remove, records)
         _execute(api, journal, comment, records)
     finally:
         httpd.shutdown()
         thread.join(timeout=5)
         httpd.server_close()
     assert len(comments) == 1
-    assert not blockers
-    assert len(writes) == 4
+    assert len(writes) == 2
     assert [record.phase for record in records if record.action_id == comment.id] == [
         "intent",
         "verified",
@@ -495,137 +461,3 @@ def test_journaled_write_resumes_without_duplicate_comment_or_trial_link(
     assert {record.action_id for record in records if record.phase == "verified"} == {
         action.id for action in actions
     }
-
-
-@pytest.mark.integration
-@pytest.mark.parametrize("phase", ["add", "remove_response", "remove_verified"])
-def test_run_apply_resumes_trial_at_each_cleanup_boundary(  # noqa: C901 - three restart states share a journal fixture
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, phase: str
-) -> None:
-    """Stage 3 restarts against complete receipts after its own add and delete."""
-    import agent_orchestration_poc.shell.work_model_backfill as runner  # noqa: PLC0415
-    from agent_orchestration_poc.core.work_model_backfill import (  # noqa: PLC0415
-        Snapshot,
-        Step,
-    )
-    from agent_orchestration_poc.core.work_model_backfill_executor import (  # noqa: PLC0415
-        Action,
-        Record,
-        trial_actions,
-    )
-
-    cp1 = runner._snapshot(json.loads((FIXTURES / "runner/trial-cp1.json").read_text()))
-    dependent, blocker = cp1.items
-    pages = cp1.pages
-    add, remove = trial_actions(cp1, (Step("3", ("149 <- 96",), (), (), "", ()),))
-    cp1_path = tmp_path / "cp1.json"
-    cp1_path.write_text(json.dumps({"digests": {}, "snapshot": asdict(cp1)}))
-    run_id = hashlib.sha256(cp1_path.read_bytes()).hexdigest()
-    rows: list[dict[str, Any]] = [{"version": 1, "run_id": run_id}]
-    rows.extend(
-        asdict(Record(add.id, item, {"at": 0} if item == "intent" else {}))
-        for item in ("intent", "response", "verified")
-    )
-    if phase != "add":
-        rows.extend(
-            asdict(Record(remove.id, item, {"at": 0} if item == "intent" else {}))
-            for item in (
-                ("intent", "response")
-                if phase == "remove_response"
-                else ("intent", "response", "verified")
-            )
-        )
-    journal = tmp_path / "journal.jsonl"
-    journal.write_text("".join(json.dumps(row) + "\n" for row in rows))
-
-    class FakeApi:
-        base = "http://127.0.0.1/"
-
-        def __init__(self) -> None:
-            self.blockers: tuple[str, ...] = ("#96",) if phase == "add" else ()
-            self.ledger: list[dict[str, Any]] = [{"status": 200}]
-
-        def get(self, path: str) -> tuple[dict[str, Any], dict[str, str]]:
-            assert path.endswith("pulls/97")
-            return {"state": "closed", "merged": False}, {}
-
-        def request(
-            self, method: str, path: str, payload: object
-        ) -> tuple[dict[str, Any], dict[str, str], int]:
-            assert method == "DELETE"
-            assert path.endswith("blocked_by/96")
-            assert payload is None
-            self.blockers = ()
-            return {}, {}, 204
-
-    api = FakeApi()
-
-    def collected(_api: FakeApi, _state: str) -> Snapshot:
-        current_pages = tuple(
-            replace(page, count=len(api.blockers), total_count=len(api.blockers))
-            if page.collection == "blockers:#149"
-            else page
-            for page in pages
-        )
-        return replace(
-            cp1,
-            items=(replace(dependent, blockers=api.blockers), blocker),
-            pages=current_pages,
-        )
-
-    closures: tuple[Action, ...] = ()
-
-    def table_stub(_args: argparse.Namespace) -> tuple[None, dict[str, str]]:
-        return None, {}
-
-    def plan_stub(_tables: object, _cp1: Snapshot) -> tuple[()]:
-        return ()
-
-    def closure_stub(*_args: object) -> tuple[Action, ...]:
-        return closures
-
-    def trial_stub(*_args: object) -> tuple[Action, Action]:
-        return add, remove
-
-    def api_stub(_base: str) -> FakeApi:
-        return api
-
-    def observe_stub(_api: FakeApi, _action: Action) -> tuple[str, ...]:
-        return api.blockers
-
-    monkeypatch.setattr(runner, "_tables", table_stub)
-    monkeypatch.setattr(runner, "operation_plan", plan_stub)
-    monkeypatch.setattr(runner, "closure_actions", closure_stub)
-    monkeypatch.setattr(runner, "trial_actions", trial_stub)
-    monkeypatch.setattr(runner, "_api", api_stub)
-    monkeypatch.setattr(runner, "collect", collected)
-    monkeypatch.setattr(runner, "_observe", observe_stub)
-    args = argparse.Namespace(
-        apply=True,
-        cp1=cp1_path,
-        journal=journal,
-        stage="3",
-        confirm_checkpoint=f"CP2:{run_id}",
-        api_base=api.base,
-    )
-    closure = Action(
-        "0:close:2",
-        "0",
-        "issue_state",
-        2,
-        "PATCH",
-        "issues/2",
-        {},
-        ("open", ""),
-        ("closed", "not_planned"),
-    )
-    closures = (closure,)
-    with pytest.raises(ValueError, match="every closure"):
-        runner.run_apply(args)
-    closures = ()
-    assert runner.run_apply(args) == 0
-    assert api.blockers == ()
-    assert any(
-        row["action_id"] == remove.id and row["phase"] == "verified"
-        for row in (json.loads(line) for line in journal.read_text().splitlines()[1:])
-    )

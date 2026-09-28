@@ -13,7 +13,6 @@ from agent_orchestration_poc.core.work_model_backfill import (
     Item,
     Page,
     Snapshot,
-    Step,
     operation_plan,
     parse_tables,
     validate_cp1,
@@ -25,9 +24,6 @@ from agent_orchestration_poc.core.work_model_backfill_executor import (
     comment_observation,
     journal_state,
     observation_value,
-    require_stage_ready,
-    require_trial_pr,
-    trial_actions,
     validate_journal,
     validate_progress,
     verified_detail,
@@ -70,73 +66,13 @@ def contract() -> tuple[tuple[Action, ...], Snapshot]:
     return closure_actions(tables, cp1, plan, "digest"), cp1
 
 
-def test_closure_and_trial_follow_plan() -> None:
+def test_closure_actions_follow_plan() -> None:
     actions, _ = contract()
     expected = json.loads((FIXTURES / "runner/executor-actions.json").read_text())
     assert (
         json.loads(json.dumps([asdict(action) for action in actions]))
         == expected["closure"]
     )
-
-
-def test_trial_uses_saved_numeric_id_and_refuses_existing_link() -> None:
-    cp1 = Snapshot(
-        1,
-        (
-            Item("#96", "closed", "closed", issue_id="960"),
-            Item("#149", "dependent", "open", blockers=("#1",), issue_id="1490"),
-        ),
-        (),
-        "sha",
-    )
-    plan = (Step("3", ("149 <- 96",), (), (), "", ()),)
-    actions = trial_actions(cp1, plan)
-    expected = json.loads((FIXTURES / "runner/executor-actions.json").read_text())
-    assert (
-        json.loads(json.dumps([asdict(action) for action in actions]))
-        == expected["trial"]
-    )
-    with pytest.raises(ValueError, match="already exists"):
-        trial_actions(
-            replace(
-                cp1, items=(cp1.items[0], replace(cp1.items[1], blockers=("#1", "#96")))
-            ),
-            plan,
-        )
-
-
-def test_trial_refuses_changed_plan_or_missing_blocker_id() -> None:
-    cp1 = Snapshot(
-        1,
-        (
-            Item("#96", "closed", "closed", issue_id="96"),
-            Item("#149", "open", "open", issue_id="149"),
-        ),
-        (),
-        "sha",
-    )
-    stage = Step("3", ("149 <- 96",), (), (), "", ())
-    with pytest.raises(ValueError, match="unreviewed"):
-        trial_actions(cp1, (replace(stage, targets=("149 <- 97",)),))
-    with pytest.raises(ValueError, match="no ID"):
-        trial_actions(
-            replace(cp1, items=(replace(cp1.items[0], issue_id=""), cp1.items[1])),
-            (stage,),
-        )
-
-
-@pytest.mark.parametrize(
-    "pr",
-    [
-        {"state": "open", "merged": False},
-        {"state": "closed", "merged": True},
-        {"state": "closed"},
-    ],
-)
-def test_trial_requires_closed_unmerged_pr(pr: dict[str, Any]) -> None:
-    with pytest.raises(ValueError, match="closed and unmerged"):
-        require_trial_pr(pr)
-    require_trial_pr({"state": "closed", "merged": False})
 
 
 @pytest.mark.parametrize(
@@ -146,8 +82,6 @@ def test_trial_requires_closed_unmerged_pr(pr: dict[str, Any]) -> None:
         ("issue_state", ("intent",), "after", "verify"),
         ("issue_state", ("intent", "response", "verified"), "after", "skip"),
         ("issue_state", ("intent", "response", "verified"), "before", "halt"),
-        ("trial_add", ("intent",), "after", "halt"),
-        ("trial_add", ("intent", "response"), "after", "verify"),
         ("comment", ("intent",), "after", "verify"),
         ("comment", (), "after", "halt"),
     ],
@@ -158,62 +92,6 @@ def test_journal_resume_table(
     action = Action("a", "0", kind, 1, "PATCH", "issues/1", {}, "before", "after")
     records = tuple(Record("a", phase, {}) for phase in phases)
     assert journal_state(action, records, observed) == decision
-
-
-def test_trial_cleanup_needs_verified_ownership() -> None:
-    action = Action(
-        "3:remove:149:96", "3", "trial_remove", 149, "DELETE", "", None, ("#96",), ()
-    )
-    assert journal_state(action, (), ("#96",)) == "halt"
-    assert (
-        journal_state(action, (Record("3:add:149:96", "verified", {}),), ("#96",))
-        == "send"
-    )
-
-
-def test_trial_add_is_superseded_only_by_recorded_cleanup() -> None:
-    add = Action("3:add:149:96", "3", "trial_add", 149, "POST", "", {}, (), ("#96",))
-    verified = (Record(add.id, "intent", {}), Record(add.id, "verified", {}))
-    assert journal_state(add, verified, ()) == "halt"
-    for phase in ("intent", "verified"):
-        records = (*verified, Record("3:remove:149:96", "intent", {}))
-        if phase == "verified":
-            records = (*records, Record("3:remove:149:96", "verified", {}))
-        assert journal_state(add, records, ()) == "skip"
-
-
-def test_trial_page_delta_requires_complete_authorized_receipts() -> None:
-    cp1 = fixture_snapshot("trial-cp1")
-    dependent, blocker = cp1.items
-    pages = tuple(
-        replace(page, count=page.count + 1, total_count=page.total_count + 1)
-        if page.collection == "blockers:#149"
-        else page
-        for page in cp1.pages
-    )
-    current = replace(
-        cp1, items=(replace(dependent, blockers=("#96",)), blocker), pages=pages
-    )
-    add = Action("3:add:149:96", "3", "trial_add", 149, "POST", "", {}, (), ("#96",))
-    records = (
-        Record(add.id, "intent", {}),
-        Record(add.id, "response", {}),
-        Record(add.id, "verified", {}),
-    )
-    validate_progress(cp1, current, (add,), records)
-    with pytest.raises(ValueError, match="collection"):
-        validate_progress(cp1, replace(current, pages=cp1.pages), (add,), records)
-
-
-def test_trial_readiness_requires_every_closure_verified() -> None:
-    actions, _ = contract()
-    with pytest.raises(ValueError, match="every closure"):
-        require_stage_ready("3", actions, ())
-    partial = (Record(actions[0].id, "verified", {}),)
-    with pytest.raises(ValueError, match="every closure"):
-        require_stage_ready("3", actions, partial)
-    complete = tuple(Record(action.id, "verified", {}) for action in actions)
-    require_stage_ready("3", actions, complete)
 
 
 def test_comment_recovery_preserves_only_unique_numeric_identity() -> None:
