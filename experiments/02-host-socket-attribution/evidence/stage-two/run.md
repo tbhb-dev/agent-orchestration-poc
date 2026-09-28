@@ -638,6 +638,10 @@ This run completes no required case for an integrated cell. The recorded blocker
 
 ## Evidence files
 
+**Verified:** `mise run check` exited 0 at `6de17bb7b7d59e9eba00e3cf065b61ba1d549da3`, after merging `origin/main`. Its complete terminal output is retained without edits in [check-6de17bb.raw.gz](check-6de17bb.raw.gz) (gzip compressed, SHA-256 of uncompressed output `f44ac8585adca924171662cd761692cb933537db750e0e2183609a99aa63801c`). The run reported Go core branch coverage of 94.74 percent. This check verifies the merged revision before this evidence-only addition. The earlier claimed pass at `cdd7e8f` has no retained output.
+
+**Verified:** `mise run check:mutation` exited 0 at the same revision. Its complete terminal output is retained without edits in [mutation-6de17bb.raw.gz](mutation-6de17bb.raw.gz) (gzip compressed, SHA-256 of uncompressed output `3a17988bc51ccdca11f06dd25a802bc4935c345c82cacfca5a98b69672f98a2c`). The Go core killed 145 of 149 classified mutants (97.32 percent). The Python core mutation score was 90.11 percent.
+
 Raw per-cell outputs are copied under [claude-headless](claude-headless/), [claude-interactive](claude-interactive/), [codex-headless](codex-headless/), and [codex-interactive](codex-interactive/). Each JSON and TOML output file carries a `.raw` suffix, which keeps the repository formatter from rewriting the recorded bytes. The two `settings.json.raw` files match the files in the homes byte for byte. Empty `listener.jsonl` and `listener.err` files record that no listener received a connection or wrote an error. The capture file, Codex databases, Claude `.claude.json`, and plugin clones are not copied. A `gitleaks dir --redact` scan of this directory found nothing, and the fake key literal appears only inside the recorded `sed` command. The repository end-of-file hook removed one trailing blank line from `codex-headless/attempt-1/harness.err`.
 
 ## Audit loss from the capture replacement
