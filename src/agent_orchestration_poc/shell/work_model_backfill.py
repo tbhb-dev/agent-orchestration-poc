@@ -13,7 +13,7 @@ import time
 import tomllib
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, cast, override
+from typing import Any, TextIO, cast, override
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urljoin, urlparse
 from urllib.request import HTTPRedirectHandler, Request, build_opener
@@ -68,6 +68,10 @@ from agent_orchestration_poc.core.work_model_backfill_executor import (
     validate_resume_admission,
     verified_detail,
     write_wait_seconds,
+)
+from agent_orchestration_poc.core.work_model_backfill_rollback import (
+    rollback_plan,
+    validate_rollback_journal,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -316,6 +320,18 @@ def _append(path: Path, record: dict[str, Any]) -> None:
         os.fsync(stream.fileno())
 
 
+def _lock_journal(path: Path) -> TextIO:
+    """Hold the forward journal lock across forward or rollback writes."""
+    lock = path.with_suffix(path.suffix + ".lock")
+    stream = os.fdopen(os.open(lock, os.O_CREAT | os.O_RDWR, 0o600))
+    try:
+        fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        stream.close()
+        raise ValueError("another backfill runner holds the journal") from None
+    return stream
+
+
 def _journal(
     path: Path, run_id: str, actions: tuple[Action, ...], *, create: bool
 ) -> tuple[Record, ...]:
@@ -489,6 +505,8 @@ def _execute(
         payload = (
             {"query": cast("dict[str, Any]", action.payload)["query"]}
             if action.kind in {"project_fields", "draft_body"}
+            else None
+            if action.method == "DELETE"
             else action.payload
         )
         if action.kind == "native":
@@ -525,7 +543,11 @@ def _execute(
     if observation_value(action, readback) != action.after:
         raise ValueError(f"operation {action.id} failed read-back")
     verified = Record(
-        action.id, "verified", verified_detail(action, readback, api.ledger[-1])
+        action.id,
+        "verified",
+        {"observed": observation_value(action, readback), "read": api.ledger[-1]}
+        if action.step == "rollback"
+        else verified_detail(action, readback, api.ledger[-1]),
     )
     _append(path, asdict(verified))
     records.append(verified)
@@ -581,16 +603,70 @@ def run_apply(args: argparse.Namespace) -> int:
         cp13_data,
         (*closures, *memberships, *drafts, *project_fields),
     )
-    lock = args.journal.with_suffix(args.journal.suffix + ".lock")
-    descriptor = os.open(lock, os.O_CREAT | os.O_RDWR, 0o600)
-    with os.fdopen(descriptor) as stream:
-        try:
-            fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            raise ValueError("another backfill runner holds the journal") from None
+    with _lock_journal(args.journal):
         _apply_locked(
             args, api, prepared, ProjectMetadata(project, fields, raw_items), labels
         )
+    return 0
+
+
+def run_rollback(args: argparse.Namespace) -> int:
+    """Reverse verified forward writes through a separately locked journal."""
+    if not args.apply or not args.cp1 or not args.journal or not args.rollback_journal:
+        raise ValueError(
+            "rollback requires --apply, --cp1, --journal, and --rollback-journal"
+        )
+    tables, digests = _tables(args)
+    cp1_bytes = args.cp1.read_bytes()
+    run_id = hashlib.sha256(cp1_bytes).hexdigest()
+    if args.confirm_checkpoint != f"CP1:{run_id}":
+        raise ValueError("operator checkpoint confirmation differs from CP1")
+    cp1_data = json.loads(cp1_bytes)
+    if cp1_data["digests"] != digests:
+        raise ValueError("CP1 was built from different tables")
+    cp1 = _snapshot(cp1_data["snapshot"])
+    validate_cp1(tables, cp1, cp1_data.get("reviewed_status"))
+    api = _api(args.api_base)
+    project, _ = api.get(PROJECT)
+    fields, _ = api.pages(f"{PROJECT}/fields?per_page=100", "project_fields")
+    items, _ = _project_items(api, PROJECT)
+    metadata = ProjectMetadata(project, fields, items)
+    with _lock_journal(args.journal):
+        forward = [json.loads(line) for line in args.journal.read_text().splitlines()]
+        actions = recorded_actions(forward)
+        records = validate_journal(forward, run_id, actions)
+        if any(
+            row.action_id == "stage:15" and row.phase == "complete" for row in records
+        ):
+            confirmed_cp13(
+                "15",
+                args.cp13.read_bytes() if args.cp13 else None,
+                args.confirm_cp13,
+                digests,
+            )
+        current = collect(api, "initial")
+        inverse = rollback_plan(cp1, current, actions, records, metadata)
+        if not args.rollback_journal.exists():
+            validate_progress(cp1, current, actions, records)
+            descriptor = os.open(
+                args.rollback_journal, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600
+            )
+            os.close(descriptor)
+            _append(args.rollback_journal, {"version": 1, "run_id": run_id})
+            directory = os.open(args.rollback_journal.parent, os.O_RDONLY)
+            try:
+                os.fsync(directory)
+            finally:
+                os.close(directory)
+        rows = [
+            json.loads(line) for line in args.rollback_journal.read_text().splitlines()
+        ]
+        undone = list(validate_rollback_journal(rows, run_id, inverse))
+        verified = {row.action_id for row in undone if row.phase == "verified"}
+        for action in inverse:
+            if action.id in verified:
+                continue
+            _execute(api, args.rollback_journal, action, undone, pace=True)
     return 0
 
 
@@ -758,7 +834,7 @@ def run(args: argparse.Namespace) -> int:
 def main() -> int:
     """Parse checkpoint inputs without exposing response bodies on failure."""
     parser = argparse.ArgumentParser()
-    parser.add_argument("checkpoint", choices=("initial", "final", "apply"))
+    parser.add_argument("checkpoint", choices=("initial", "final", "apply", "rollback"))
     for name in ("assignments", "parents", "edges", "manifest"):
         parser.add_argument(f"--{name}", type=Path, required=True)
     parser.add_argument("--api-base", default="https://api.github.com")
@@ -770,6 +846,7 @@ def main() -> int:
     parser.add_argument("--reference", type=Path)
     parser.add_argument("--reviewed-status")
     parser.add_argument("--journal", type=Path)
+    parser.add_argument("--rollback-journal", type=Path)
     parser.add_argument("--reviewed-writes", type=Path)
     parser.add_argument(
         "--stage",
@@ -812,6 +889,8 @@ def main() -> int:
             if not args.stage:
                 raise ValueError("apply requires --stage")
             return run_apply(args)
+        if args.checkpoint == "rollback":
+            return run_rollback(args)
         return run(args)
     except (OSError, ValueError, KeyError, TypeError) as exc:
         LOGGER.warning("backfill checkpoint refused: %s", exc)

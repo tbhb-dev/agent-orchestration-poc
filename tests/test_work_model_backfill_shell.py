@@ -675,6 +675,65 @@ def test_journaled_write_resumes_without_duplicate_comment(
 
 
 @pytest.mark.integration
+def test_rollback_comment_delete_recovers_lost_response(tmp_path: Path) -> None:
+    """A completed deletion is read back without sending a second DELETE."""
+    from agent_orchestration_poc.core.work_model_backfill_executor import (  # noqa: PLC0415
+        Action,
+        ProjectMetadata,
+    )
+    from agent_orchestration_poc.core.work_model_backfill_rollback import (  # noqa: PLC0415
+        inverse_action,
+        validate_rollback_journal,
+    )
+    from agent_orchestration_poc.shell.work_model_backfill import (  # noqa: PLC0415
+        Api,
+        _execute,
+    )
+
+    comments = [{"id": 10, "body": "saved"}]
+    deletes: list[str] = []
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self) -> None:
+            send_json(self, 200, comments)
+
+        def do_DELETE(self) -> None:
+            deletes.append(self.path)
+            comments.clear()
+            send_json(self, 503, {})
+
+        @override
+        def log_message(self, format: str, *args: object) -> None:
+            pass
+
+    assert callable(Handler.do_DELETE)
+    forward = Action(
+        "0:comment:2",
+        "0",
+        "comment",
+        2,
+        "POST",
+        "issues/2/comments",
+        {"body": "saved"},
+        0,
+        1,
+    )
+    inverse = inverse_action(forward, {"comment_id": 10}, ProjectMetadata({}, [], []))
+    path = tmp_path / "rollback.jsonl"
+    path.write_text(json.dumps({"version": 1, "run_id": "cp1"}) + "\n")
+    records: list[Any] = []
+    with live_server(Handler) as base:
+        api = Api(base, "")
+        with pytest.raises(ValueError, match="HTTP 503"):
+            _execute(api, path, inverse, records)
+        rows = [json.loads(line) for line in path.read_text().splitlines()]
+        records = list(validate_rollback_journal(rows, "cp1", (inverse,)))
+        _execute(api, path, inverse, records)
+    assert len(deletes) == 1
+    assert [row.phase for row in records] == ["intent", "verified"]
+
+
+@pytest.mark.integration
 @pytest.mark.parametrize("status", [201, 503])
 def test_draft_creation_recovers_after_response(tmp_path: Path, status: int) -> None:
     """Read-back resumes a successful receipt or a lost response without replay."""
