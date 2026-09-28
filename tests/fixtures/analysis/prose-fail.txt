@@ -1,0 +1,8 @@
+---
+title: Failing notebook
+---
+
+## results
+
+The twelve synthetic events have a total duration
+of 48 minutes.
