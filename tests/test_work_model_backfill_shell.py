@@ -342,3 +342,147 @@ def test_cp13_differences_keep_both_values_for_the_failure_envelope() -> None:
     assert compare_cp13((), snapshot, "new-sha") == (
         Difference("title:Draft", "presence", False, True),
     )
+
+
+@pytest.mark.integration
+def test_journaled_write_resumes_without_duplicate_comment_or_trial_link(
+    tmp_path: Path,
+) -> None:
+    """A lost response is recovered by read-back, while trial cleanup is owned."""
+    from agent_orchestration_poc.core.work_model_backfill_executor import (  # noqa: PLC0415
+        Action,
+    )
+    from agent_orchestration_poc.shell.work_model_backfill import (  # noqa: PLC0415
+        Api,
+        _execute,
+        _journal,
+    )
+
+    comments: list[dict[str, Any]] = []
+    blockers: list[dict[str, Any]] = []
+    state = {"state": "open", "state_reason": "not_planned"}
+    writes: list[str] = []
+
+    class Handler(BaseHTTPRequestHandler):
+        def respond(self, status: int, value: object) -> None:
+            body = json.dumps(value).encode()
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def do_GET(self) -> None:
+            if self.path.endswith("/comments?per_page=100"):
+                self.respond(200, comments)
+            elif self.path.endswith("/issues/2"):
+                self.respond(200, state)
+            else:
+                self.respond(200, blockers)
+
+        def do_POST(self) -> None:
+            payload = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+            writes.append(self.path)
+            if self.path.endswith("/comments"):
+                comments.append({"id": 10, "body": payload["body"]})
+                self.respond(503, {})
+            else:
+                blockers.append({"number": 96, "id": payload["issue_id"]})
+                self.respond(201, {"id": 96})
+
+        def do_PATCH(self) -> None:
+            writes.append(self.path)
+            state.update(
+                json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+            )
+            self.respond(200, state)
+
+        def do_DELETE(self) -> None:
+            writes.append(self.path)
+            blockers.clear()
+            self.respond(204, {})
+
+        @override
+        def log_message(self, format: str, *args: object) -> None:
+            pass
+
+    assert all(
+        map(
+            callable,
+            (Handler.do_GET, Handler.do_POST, Handler.do_PATCH, Handler.do_DELETE),
+        )
+    )
+    comment = Action(
+        "0:comment:2",
+        "0",
+        "comment",
+        2,
+        "POST",
+        "issues/2/comments",
+        {"body": "Folded into 1.\n\n<!-- marker -->"},
+        0,
+        1,
+    )
+    close = Action(
+        "0:close:2",
+        "0",
+        "issue_state",
+        2,
+        "PATCH",
+        "issues/2",
+        {"state": "closed", "state_reason": "not_planned"},
+        ("open", "not_planned"),
+        ("closed", "not_planned"),
+    )
+    add = Action(
+        "3:add:149:96",
+        "3",
+        "trial_add",
+        149,
+        "POST",
+        "issues/149/dependencies/blocked_by",
+        {"issue_id": 96},
+        (),
+        ("#96",),
+    )
+    remove = Action(
+        "3:remove:149:96",
+        "3",
+        "trial_remove",
+        149,
+        "DELETE",
+        "issues/149/dependencies/blocked_by/96",
+        None,
+        ("#96",),
+        (),
+    )
+    actions = (comment, close, add, remove)
+    journal = tmp_path / "journal.jsonl"
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    thread = threading.Thread(target=httpd.serve_forever)
+    thread.start()
+    try:
+        api = Api(f"http://127.0.0.1:{httpd.server_port}/", "")
+        records = list(_journal(journal, "digest", actions, create=True))
+        with pytest.raises(ValueError, match="HTTP 503"):
+            _execute(api, journal, comment, records)
+        records = list(_journal(journal, "digest", actions, create=False))
+        _execute(api, journal, comment, records)
+        _execute(api, journal, close, records)
+        _execute(api, journal, add, records)
+        _execute(api, journal, remove, records)
+        _execute(api, journal, comment, records)
+    finally:
+        httpd.shutdown()
+        thread.join(timeout=5)
+        httpd.server_close()
+    assert len(comments) == 1
+    assert not blockers
+    assert len(writes) == 4
+    assert [record.phase for record in records if record.action_id == comment.id] == [
+        "intent",
+        "verified",
+    ]
+    assert {record.action_id for record in records if record.phase == "verified"} == {
+        action.id for action in actions
+    }
