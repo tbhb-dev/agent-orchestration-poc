@@ -4,6 +4,7 @@ import argparse
 import json
 import logging
 import subprocess
+import sys
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any, cast
@@ -221,7 +222,9 @@ def apply(
                 "blocker": blocker,
             }
         )
-        print(json.dumps(operations[-1], sort_keys=True), flush=True)  # noqa: T201 - durable operation receipt
+        print(  # noqa: T201 - operation receipt remains available on stderr
+            json.dumps(operations[-1], sort_keys=True), file=sys.stderr, flush=True
+        )
     return operations
 
 

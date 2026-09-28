@@ -3,6 +3,7 @@
 import json
 import os
 import subprocess
+import sys
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -196,3 +197,91 @@ def test_reversed_link_replacement_and_second_reconciliation(
     )
     second = compare(tables, desired, current, (), frozenset(desired))
     assert operation_plan(second, True, True) == ()
+
+
+def test_main_apply_output_round_trips_as_managed_ledger(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    tables = get_tables()
+    parents, issues = read_snapshot(FIXTURES / "approved.json", tables)
+    state = {parent.number: set(parent.blockers) for parent in parents}
+    by_title = {parent.title: parent for parent in parents}
+    changed = tuple(
+        replace(issue, blockers=(*issue.blockers, "12"))
+        if issue.number == "3"
+        else issue
+        for issue in issues
+    )
+    desired_edge = next(
+        iter(ongoing_edges(tables, changed) - ongoing_edges(tables, issues))
+    )
+    dependent, blocker = (by_title[title] for title in desired_edge)
+    current_issues = changed
+
+    def fake_collect(
+        _tables: object, *, ongoing: bool
+    ) -> tuple[tuple[sync.Parent, ...], tuple[sync.Issue, ...]]:
+        assert ongoing
+        return (
+            tuple(
+                replace(parent, blockers=tuple(sorted(state[parent.number])))
+                for parent in parents
+            ),
+            current_issues,
+        )
+
+    def fake_request(
+        path: str, *, method: str = "GET", issue_id: int = 0, missing_ok: bool = False
+    ) -> dict[str, int] | None:
+        del missing_ok
+        number = int(path.split("/")[1])
+        if method == "POST":
+            state[number].add(issue_id)
+            return {"id": issue_id}
+        assert method == "DELETE"
+        state[number].remove(int(path.split("/")[-1]))
+        return None
+
+    monkeypatch.setattr(sync, "collect", fake_collect)
+    monkeypatch.setattr(sync, "request", fake_request)
+
+    def fake_blocked_by(number: int) -> tuple[int, ...]:
+        return tuple(state[number])
+
+    monkeypatch.setattr(sync, "blocked_by", fake_blocked_by)
+    monkeypatch.setattr(sync, "coordinator_identity", lambda: True)
+
+    first = tmp_path / "first.json"
+    monkeypatch.setattr(sys, "argv", ["sync-parent-links", "--ongoing", "--apply"])
+    assert sync.main() == 0
+    first_output = capsys.readouterr()
+    first.write_text(first_output.out)
+    first_report = json.loads(first.read_text())
+    assert len(first_report["operations"]) == 1
+    assert json.loads(first_output.err) == first_report["operations"][0]
+    assert blocker.issue_id in state[dependent.number]
+
+    second = tmp_path / "second.json"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["sync-parent-links", "--ongoing", "--apply", "--managed", str(first)],
+    )
+    assert sync.main() == 0
+    second.write_text(capsys.readouterr().out)
+    second_report = json.loads(second.read_text())
+    assert second_report["operations"] == []
+    assert list(desired_edge) in second_report["managed"]
+
+    current_issues = issues
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["sync-parent-links", "--ongoing", "--apply", "--managed", str(second)],
+    )
+    assert sync.main() == 0
+    third_report = json.loads(capsys.readouterr().out)
+    assert [operation["method"] for operation in third_report["operations"]] == [
+        "DELETE"
+    ]
+    assert blocker.issue_id not in state[dependent.number]
