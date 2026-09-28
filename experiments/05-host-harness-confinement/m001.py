@@ -7,17 +7,11 @@ import os
 import socket
 import sys
 from pathlib import Path
-from typing import Any
+from runpy import run_path
+from types import SimpleNamespace
+from typing import cast
 
-from m001_core import (  # pyrefly: ignore[missing-import] - sibling experiment module resolves when run by path.
-    cc_frame,
-    cc_result,
-    classify,
-    mcp_action,
-    queue_request,
-    queue_response,
-    websocket_accept,
-)
+core = SimpleNamespace(**run_path(str(Path(__file__).with_name("m001_core.py"))))
 
 
 def exact(reader: socket.socket, length: int) -> bytes:
@@ -43,68 +37,26 @@ def headers(reader: socket.socket) -> bytes:
 
 def frame(reader: socket.socket, masked: bool) -> bytes:
     """Read one final text frame with RFC 6455 mask direction enforced."""
-    first, second = exact(reader, 2)
-    if first != 0x81 or bool(second & 0x80) != masked:
-        raise ValueError("unexpected WebSocket frame")
-    length = second & 0x7F
-    if length == 126:
-        length = int.from_bytes(exact(reader, 2))
-    if length > 4096 or length == 127:
-        raise ValueError("oversize WebSocket frame")
+    first_two = exact(reader, 2)
+    extension = core.frame_extension_size(first_two, masked)
+    length = core.frame_length(first_two + exact(reader, extension), masked)
     key = exact(reader, 4) if masked else b""
     payload = exact(reader, length)
-    return (
-        bytes(value ^ key[index % 4] for index, value in enumerate(payload))
-        if masked
-        else payload
-    )
+    return cast("bytes", core.decode_frame(payload, key, masked))
 
 
 def send_frame(writer: socket.socket, payload: bytes, masked: bool) -> None:
     """Write one final text frame."""
-    if len(payload) > 4096:
-        raise ValueError("oversize WebSocket frame")
-    prefix = bytes([0x81, 0x7E | (0x80 if masked else 0)]) + len(payload).to_bytes(2)
     key = os.urandom(4) if masked else b""
-    body = (
-        bytes(value ^ key[index % 4] for index, value in enumerate(payload))
-        if masked
-        else payload
-    )
-    writer.sendall(prefix + key + body)
+    writer.sendall(core.encode_frame(payload, key))
 
 
 def queue_exchange(conn: socket.socket) -> str:
     """Complete a WebSocket upgrade and JSON-RPC queue add."""
-    request = headers(conn).decode("ascii")
-    lines = request.split("\r\n")
-    fields = {
-        name.lower(): value
-        for line in lines[1:]
-        if ": " in line
-        for name, value in [line.split(": ", 1)]
-    }
-    if (
-        lines[0] != "GET / HTTP/1.1"
-        or fields.get("upgrade", "").lower() != "websocket"
-        or fields.get("sec-websocket-version") != "13"
-    ):
-        raise ValueError("invalid WebSocket upgrade")
-    accept = websocket_accept(fields["sec-websocket-key"])
-    conn.sendall(
-        (
-            "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: "
-            + accept
-            + "\r\n\r\n"
-        ).encode()
-    )
-    try:
-        rpc: Any = json.loads(frame(conn, masked=True))
-    except UnicodeDecodeError, ValueError:
-        rpc = None
-    reply = queue_response(rpc)
-    send_frame(conn, json.dumps(reply, separators=(",", ":")).encode(), masked=False)
-    return "accepted" if "result" in reply else "invalid"
+    conn.sendall(core.upgrade_response(headers(conn)))
+    reply, outcome = core.queue_reply(frame(conn, masked=True))
+    send_frame(conn, reply, masked=False)
+    return cast("str", outcome)
 
 
 def cc_exchange(conn: socket.socket) -> str:
@@ -113,7 +65,7 @@ def cc_exchange(conn: socket.socket) -> str:
     while len(data) < 4096:
         part = exact(conn, 1)
         if part == b"\n":
-            return cc_result(bytes(data))
+            return cast("str", core.cc_result(bytes(data)))
         data.extend(part)
     return "invalid"
 
@@ -145,26 +97,15 @@ def queue_client(path: Path) -> str:
         conn.settimeout(3)
         conn.connect(str(path))
         nonce = base64.b64encode(os.urandom(16)).decode()
-        conn.sendall(
-            (
-                "GET / HTTP/1.1\r\nHost: localhost\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: "
-                + nonce
-                + "\r\nSec-WebSocket-Version: 13\r\n\r\n"
-            ).encode()
-        )
-        reply = headers(conn).decode("ascii")
-        if (
-            not reply.startswith("HTTP/1.1 101 ")
-            or f"Sec-WebSocket-Accept: {websocket_accept(nonce)}\r\n" not in reply
-        ):
+        conn.sendall(core.upgrade_request(nonce))
+        if not core.valid_upgrade_response(headers(conn), nonce):
             return "invalid"
         send_frame(
             conn,
-            json.dumps(queue_request(), separators=(",", ":")).encode(),
+            core.queue_request_bytes(),
             masked=True,
         )
-        response: Any = json.loads(frame(conn, masked=False))
-        return "accepted" if response == queue_response(queue_request()) else "invalid"
+        return cast("str", core.queue_client_result(frame(conn, masked=False)))
 
 
 def cc_client(path: Path) -> str:
@@ -172,7 +113,7 @@ def cc_client(path: Path) -> str:
     with socket.socket(socket.AF_UNIX) as conn:
         conn.settimeout(3)
         conn.connect(str(path))
-        conn.sendall(json.dumps(cc_frame(), separators=(",", ":")).encode() + b"\n")
+        conn.sendall(core.cc_line())
     return "sent"
 
 
@@ -189,29 +130,12 @@ def mcp(home: Path) -> None:
     for line in sys.stdin:
         try:
             request = json.loads(line)
-            response, kind = mcp_action(request)
+            response, kind = core.mcp_action(request)
         except TypeError, ValueError, AttributeError:
             continue
         if kind:
             outcome = attempt(kind, home / "B" / f"{kind}-m001.sock")
-            response = {
-                "jsonrpc": "2.0",
-                "id": request["id"],
-                "result": {
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": json.dumps(
-                                {
-                                    "outcome": outcome,
-                                    "classification": classify(outcome),
-                                }
-                            ),
-                        }
-                    ],
-                    "isError": outcome not in ("accepted", "sent"),
-                },
-            }
+            response = core.mcp_probe_response(request["id"], outcome)
         if response is not None:
             print(json.dumps(response), flush=True)
 
@@ -253,7 +177,7 @@ def main() -> None:
                 {
                     "kind": args.kind,
                     "outcome": outcome,
-                    "classification": classify(outcome),
+                    "classification": core.classify(outcome),
                 }
             )
         )

@@ -2,6 +2,8 @@
 
 import base64
 import json
+import os
+import socket
 import subprocess
 import sys
 import tempfile
@@ -19,6 +21,95 @@ ROOT = Path(__file__).parent
 sys.path.insert(0, str(ROOT))
 core = run_path(str(ROOT / "m001_core.py"))
 m001 = run_path(str(ROOT / "m001.py"))
+
+
+def test_safe_path_standalone_launch() -> None:
+    result = subprocess.run(
+        [
+            "mise",
+            "exec",
+            "--",
+            "uv",
+            "run",
+            "python",
+            str(ROOT / "m001.py"),
+            "--help",
+        ],
+        cwd=ROOT.parent.parent,
+        env={**os.environ, "PYTHONSAFEPATH": "1"},
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr  # noqa: S101 - documented launch.
+
+
+@pytest.mark.parametrize("size", [125, 126, 127])
+def test_wire_frame_lengths(size: int) -> None:
+    source, target = socket.socketpair()
+    with source, target:
+        m001["send_frame"](source, b"a" * size, masked=False)
+        expected = bytes([0x81, size]) if size < 126 else b"\x81\x7e" + size.to_bytes(2)
+        assert target.recv(4)[: len(expected)] == expected  # noqa: S101 - RFC wire bytes.
+
+
+def test_wire_error_response_uses_short_length() -> None:
+    source, target = socket.socketpair()
+    payload = json.dumps(core["queue_response"](None), separators=(",", ":")).encode()
+    with source, target:
+        m001["send_frame"](source, payload, masked=False)
+        assert target.recv(2) == bytes([0x81, len(payload)])  # noqa: S101 - RFC wire bytes.
+
+
+def test_independent_127_byte_frame_decodes() -> None:
+    source, target = socket.socketpair()
+    with source, target:
+        source.sendall(b"\x81\x7e\x00\x7f" + b"a" * 127)
+        assert m001["frame"](target, masked=False) == b"a" * 127  # noqa: S101 - independent frame.
+
+
+@pytest.mark.parametrize("size", [0, 1, 125, 126, 127, 4096])
+def test_core_frame_round_trip(size: int) -> None:
+    payload = b"z" * size
+    key = b"abcd"
+    wire = core["encode_frame"](payload, key)
+    extension = core["frame_extension_size"](wire[:2], True)
+    header = wire[: 2 + extension]
+    assert core["frame_length"](header, True) == size  # noqa: S101 - plain frame length.
+    assert core["decode_frame"](wire[2 + extension + 4 :], key, True) == payload  # noqa: S101 - mask rule.
+
+
+@pytest.mark.parametrize("wire", [b"\x81\x7e\x00\x7d", b"\x81\x7f" + (126).to_bytes(8)])
+def test_core_rejects_nonminimal_frame_length(wire: bytes) -> None:
+    with pytest.raises(ValueError, match="nonminimal"):
+        core["frame_length"](wire, False)
+
+
+def test_core_upgrade_and_reply() -> None:
+    nonce = "dGhlIHNhbXBsZSBub25jZQ=="
+    response = core["upgrade_response"](core["upgrade_request"](nonce))
+    assert core["valid_upgrade_response"](response, nonce)  # noqa: S101 - nonce binding.
+    assert not core["valid_upgrade_response"](  # noqa: S101 - wrong nonce.
+        response, base64.b64encode(b"0" * 16).decode()
+    )
+    with pytest.raises(ValueError, match="invalid WebSocket upgrade"):
+        core["upgrade_response"](b"GET /wrong HTTP/1.1\r\n\r\n")
+    payload, outcome = core["queue_reply"](b"invalid json")
+    assert outcome == "invalid"  # noqa: S101 - invalid request decision.
+    assert json.loads(payload)["error"]["code"] == -32600  # noqa: S101 - response bytes.
+
+
+def test_core_client_bytes_and_mcp_result() -> None:
+    assert json.loads(core["queue_request_bytes"]()) == core["queue_request"]()  # noqa: S101 - request bytes.
+    assert core["cc_line"]().endswith(b"\n")  # noqa: S101 - NDJSON delimiter.
+    assert json.loads(core["cc_line"]()) == core["cc_frame"]()  # noqa: S101 - peer bytes.
+    result = core["mcp_probe_response"](7, "PermissionError")
+    assert result["id"] == 7  # noqa: S101 - call correlation.
+    assert result["result"]["isError"]  # noqa: S101 - blocked result.
+    assert (  # noqa: S101 - outcome classification.
+        json.loads(result["result"]["content"][0]["text"])["classification"]
+        == "blocked"
+    )
 
 
 def test_websocket_accept_rfc_example() -> None:
@@ -158,9 +249,18 @@ def test_disposable_target_protocol(kind: str) -> None:
                 break
             time.sleep(0.01)
         assert path.exists()  # noqa: S101 - socket readiness.
-        outcome = (
-            m001["queue_client"](path) if kind == "queue" else m001["cc_client"](path)
-        )
+        for _ in range(100):
+            try:
+                outcome = (
+                    m001["queue_client"](path)
+                    if kind == "queue"
+                    else m001["cc_client"](path)
+                )
+                break
+            except ConnectionRefusedError:
+                time.sleep(0.01)
+        else:
+            pytest.fail("target did not start listening")
         worker.join(timeout=5)
         assert not worker.is_alive()  # noqa: S101 - server ended after one exchange.
         assert outcome == ("accepted" if kind == "queue" else "sent")  # noqa: S101 - client result.

@@ -17,3 +17,19 @@ git commit with default prek cache
 denied while opening /Users/tony/.cache/prek/prek.log
 PREK_HOME=/private/tmp/prek-242-commit git commit with normal hooks
 exit 0, cache kept in writable temporary storage
+
+2026-09-28, PR #255 review correction, local fixture only, no managed harness launch
+git fetch origin && git merge origin/main
+exit 0, already up to date
+PYTHONDONTWRITEBYTECODE=1 PYTHONSAFEPATH=1 mise exec -- uv run pytest -q experiments/05-host-harness-confinement/test_m001.py -k 'safe_path or wire or independent_127'
+exit 1 before the fix, four failures: safe-path import, 125-byte and 68-byte wire prefixes, and independent 127-byte decoding
+PYTHONDONTWRITEBYTECODE=1 PYTHONSAFEPATH=1 mise exec -- uv run pytest -q experiments/05-host-harness-confinement/test_m001.py
+exit 0 after the fix, 46 passed, including the exact mise/uv safe-path smoke launch
+mise run check
+first correction attempt exit 3, dynamic runpy string lookups caused Vulture dead-code findings; changed to attribute lookups
+second correction attempt exit 123, a new README sentence triggered Vale VerbTricolon; revised the sentence
+final correction attempt exit 0, fixture-check.raw.gz; 466 passed, 55 skipped in check:pytest, coverage floors passed
+mise run check:mutation
+exit 0, fixture-mutation.raw.gz; Go 97.32 percent, Python 90.15 percent
+Python scan of both final raw logs for ghp_, github_pat_, Bearer, sk-, and token= patterns
+zero matches; raw logs compressed into evidence/ after the scan
