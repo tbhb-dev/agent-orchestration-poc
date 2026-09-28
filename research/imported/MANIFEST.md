@@ -26,6 +26,8 @@ The inventory covers every regular file in both folders, including the files ins
 
 [Verified] `mise run check:mutation` returned exit code 0. The Go core run classified 149 mutants with 97.32% test efficacy, and the Python core score was 90.10% (3,659 killed of 4,061).
 
+[Observed] Pull request #232's [imported-research CI job](https://github.com/tbhb-dev/agent-orchestration-poc/actions/runs/36386056944/job/108811561649) concluded failure. The local reproduction, `scripts/check-imported-research.sh origin/main 'research(import): add the frozen design wiki snapshot'`, returned exit code 1 because the guard rejects modifications to the existing `MANIFEST.md` and `MANIFEST.tsv` files. It accepted the 39 added snapshot files. The required manifest updates cannot pass this gate under the issue's allowed paths until the guard permits this case.
+
 ## Tools
 
 | Tool | Version | Use |
