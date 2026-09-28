@@ -1,0 +1,24 @@
+2026-09-27T18:12:22Z observed with `mise exec -- tmux capture-pane -pt exp214-claude -S -30`:
+Accessing workspace: /private/tmp/exp214-claude
+Quick safety check: Is this a project you created or one you trust?
+No, exit / Yes, I trust this folder
+No choice was made. `mise exec -- tmux kill-session -t exp214-claude` exited 0.
+
+2026-09-27T18:14:24Z observed with `mise exec -- tmux capture-pane -pt exp214-agy -S -30`:
+Accessing workspace: /private/tmp/exp214-agy
+Do you trust the contents of this project?
+Yes, I trust this folder / No, exit
+No choice was made. `mise exec -- tmux kill-session -t exp214-agy` exited 0.
+
+Later second agy attempt, same capture command on `exp214-agy2`, started in this worktree:
+Do you trust the contents of this project?
+Yes, I trust this folder / No, exit
+No choice was made. `mise exec -- tmux kill-session -t exp214-agy2` exited 0.
+
+Codex owned-runtime attempt at 2026-09-27T18:13:29Z:
+`PYTHONSAFEPATH=1 PYTHONUNBUFFERED=1 NO_COLOR=1 mise exec -- python experiments/01-interactive-turn-state/codex-probe.py`
+Exited 1 in about 0.02 seconds. The direct diagnostic from `mise exec -- codex app-server --stdio` was:
+`Error: failed to initialize sqlite state runtime under /Users/tony/.codex: failed to initialize state runtime at /Users/tony/.codex`
+The sandbox denied writing the existing user state directory. No alternate home or credential copy was used.
+
+`ps -p 91071 -o pid=,lstart=,comm= && pgrep -P 91071` exited 127 with `zsh:1: operation not permitted: ps` while the owned Claude pane existed. Pane PID 91071 could not be correlated to a process start time here.

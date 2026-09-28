@@ -1,0 +1,16 @@
+ ▐▛███▛█   Claude Code v2.1.283
+▝▜██████▀  Haiku 4.5 · Claude Max
+ ▝▝   ▝▝   /private/tmp/worker176-claude-probe
+
+
+❯ This is a disposable launcher test. Reply exactly CLAUDE-176-READY. Do not run tools or edit files.
+
+⏺ CLAUDE-176-READY
+
+✻ Brewed for 4s · done 1:35 AM
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── claudeprobe176 ─
+❯ 
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+   Total: 83.5k  Ctx: 41.6k  (+0,-0)  no upstream 
+  ⏸ manual mode on · ← for agents

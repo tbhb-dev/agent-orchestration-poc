@@ -1,0 +1,89 @@
+# Single source for issue, pull request, label, branch, and size conventions.
+[titles]
+types = ["feat", "fix", "docs", "exp", "research", "tooling", "process", "decision", "chore", "refactor", "test", "inc"]
+scopes = ["bus", "containers", "daemon", "desktop", "docs", "experiment", "remote", "research", "security", "terminal", "tooling", "ui", "workflow", "go", "python", "shell", "github", "git", "ci", "testing", "coverage", "mutation", "gates", "review", "preflight", "handoff", "project", "workers", "checkpoint", "retro", "sync", "import", "subject", "skeleton", "boundaries", "design", "process"]
+verbs = ["add", "allow", "audit", "build", "check", "clarify", "define", "detect", "document", "enforce", "fix", "gate", "keep", "make", "measure", "move", "pin", "record", "refine", "reject", "remove", "repair", "report", "require", "resolve", "restore", "retire", "run", "split", "sync", "test", "track", "update", "validate", "verify"]
+max_length = 72
+branch_pattern = "<type>/<issue>[-<issue>...]-<slug>"
+issue_only = ["inc"]
+optional_scope = ["inc"]
+parent_labels = ["type/initiative", "type/epic"]
+
+[types]
+feat = "type/feature"
+fix = "type/defect"
+docs = "type/chore"
+exp = "type/experiment"
+research = "type/spike"
+tooling = "type/chore"
+process = "type/chore"
+decision = "type/spike"
+chore = "type/chore"
+refactor = "type/chore"
+test = "type/chore"
+inc = "type/incident"
+
+[title_label_exceptions]
+"research(import): import the peering and session research folders with a manifest" = "type/chore"
+"research(import): add the frozen design wiki snapshot" = "type/chore"
+"docs(design): design a webhook-fed monitor for pull request state" = "type/spike"
+"research(data): activate the analysis notebook gates" = "type/chore"
+"research(observability): run the native stack lifecycle" = "type/chore"
+"research(observability): verify stack utilization and privacy" = "type/experiment"
+
+[forms]
+issue_fields = ["Goal", "Context and links", "Dependencies and paths", "Acceptance criteria", "Evidence required", "Docs impact", "Out of scope"]
+incident_fields = ["Incident-ID", "Started-UTC", "Detected-UTC", "Ended-UTC", "Severity", "Status", "Reporter", "Lead", "Category", "Impact", "Evidence", "Response", "Cause", "Actions", "Review-URL"]
+pr_sections = ["What", "Why", "Evidence", "Docs", "Checklist", "Size justification", "Gate justifications"]
+allowed_paths_field = "Allowed paths"
+allowed_path_syntax = "repo-relative literals or anchored globs. `*` matches one segment and `**` matches zero or more segments. Absolute paths, `..`, and negation are invalid"
+evidence_requires = "named repository paths and exact commands"
+
+[labels]
+areas = ["bus", "containers", "daemon", "desktop", "docs", "experiment", "remote", "research", "security", "terminal", "tooling", "ui", "workflow"]
+phases = ["0", "1", "2", "3", "4", "5", "6"]
+harnesses = ["agy", "any", "claude", "codex"]
+area_color = "1d76db"
+phase_color = "5319e7"
+harness_color = "fbca04"
+type_color = "0e8a16"
+blocked_color = "b60205"
+operator_color = "d93f0b"
+area_description = "Area: {value}"
+phase_description = "Phase {value}"
+harness_description = "Intended harness: {value}"
+type_description = "Type: {value}"
+blocked_description = "Blocked on another item or a finding"
+operator_description = "Needs the operator's decision or approval"
+invalid = ["acceptance-criteria", "allowed-paths", "area", "context-and-links", "dependencies-and-paths", "docs-impact", "evidence-required", "goal", "harness", "out-of-scope", "parent", "phase", "priority", "review", "severity", "status", "stub-record", "title", "type", "work-type"]
+review = ["pending-review", "approved", "changes-requested", "rejected"]
+invalid_color = "b60205"
+review_color = "c5def5"
+invalid_description = "Invalid {value}"
+review_description = "Review: {value}"
+
+[size]
+tool = "github.com/boyter/scc/v4"
+version = "4.1.0"
+target = 400
+limit = 800
+small = 200
+medium = 400
+large = 800
+code_unit = "scc-classified changed code lines, added plus deleted, excluding blanks and comment-only lines"
+prose_unit = "each added or deleted nonblank line, including Markdown comments"
+base = "merge base of PR target, including upstream target for a stacked PR"
+excluded = ["go.sum", "uv.lock", "pnpm-lock.yaml", "**/pnpm-lock.yaml", "**/*-checksum*", "**/vendor/**", "tests/fixtures/**", "reports/inputs/**", "experiments/**/evidence/**", "research/imported/**", "**/*.svg", "**/*.excalidraw"]
+detected_exclusions = ["generated", "minified"]
+
+[migration]
+# Filled with the number of this validator's PR after it opens. Its merged_at is the cutoff.
+validator_pr = 137
+
+[migration.labels]
+"type/bug" = "type/defect"
+"type/tooling" = "type/chore"
+"type/process" = "type/chore"
+"type/docs" = "type/chore"
+"type/research" = "type/spike"
+"type/decision" = "type/spike"

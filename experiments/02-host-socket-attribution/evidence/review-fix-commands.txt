@@ -1,0 +1,15 @@
+Review follow-up, 2026-09-28, macOS arm64
+git fetch origin && git merge origin/main -> 0, already up to date
+gh api user --jq .login -> 0, tbhb-agent
+mise exec -- codex --version -> 0, codex-cli 0.157.1
+mise exec -- uv run python --version -> 0, Python 3.14.6
+git -C /Users/tony/Code/github.com/openai/codex rev-parse HEAD -> 0, a6bd19261c30ce0a0225fe90e646822d29916f11
+Source: codex-rs/exec/src/lib.rs:975-982 exits 1 outside Git without --skip-git-repo-check.
+mise exec -- codex exec --help -> 0, advertises --skip-git-repo-check for running outside a Git repository
+Before the import-path fix, mise exec -- uv run pytest tests/test_host_socket_attribution.py -k disposable_connector --run-integration -q -> 1, four failures before reaching the Unix socket
+After the import-path fix, mise exec -- uv run pytest tests/test_host_socket_attribution.py -k disposable_connector --run-integration -q -> 0, four passed
+mise run fmt -> 0
+mise run check -> 0, exact output review-fix-check.raw.gz; Python core lines 97.84%, branches 94.83%
+mise run check:mutation -> 0, exact output review-fix-mutation.raw.gz; Go core 145/149 killed, Python core 4890/5422 killed
+mise exec -- uv run pytest tests/test_host_socket_attribution.py --run-integration -q -> 0, 42 passed
+No harness, disposable profile home, or privileged file-open audit was launched.

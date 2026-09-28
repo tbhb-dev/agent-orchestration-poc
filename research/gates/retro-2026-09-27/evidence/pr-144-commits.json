@@ -1,0 +1,37 @@
+[
+  {
+    "short_sha": "6beb013d1db5",
+    "parent_count": 1,
+    "subject": "decision(workflow): define Assisted-by provenance convention"
+  },
+  {
+    "short_sha": "83c247e1b80a",
+    "parent_count": 1,
+    "subject": "docs(workflow): record provenance sources and verifier cases"
+  },
+  {
+    "short_sha": "9772f5e80773",
+    "parent_count": 1,
+    "subject": "docs(workflow): record passing checks and configuration changes"
+  },
+  {
+    "short_sha": "c06fa9ac3cb7",
+    "parent_count": 1,
+    "subject": "docs(workflow): record successful mutation verification"
+  },
+  {
+    "short_sha": "01993eee9ad9",
+    "parent_count": 2,
+    "subject": "chore(sync): merge main into decision 131"
+  },
+  {
+    "short_sha": "dcece1fe5b13",
+    "parent_count": 1,
+    "subject": "docs(workflow): clarify provenance admission and references"
+  },
+  {
+    "short_sha": "1a1b08afaf6a",
+    "parent_count": 1,
+    "subject": "docs(workflow): record checks for the provenance revision"
+  }
+]

@@ -1,0 +1,7 @@
+/Users/tony/Library/Application Support/com.docker.sandboxes | present | directory | mode=700 uid=501 gid=20 size=96 mtime=1790556474
+/Users/tony/Library/Application Support/com.docker.sandboxes/sandboxes/sandboxd/sandboxd.sock | absent
+/Users/tony/Library/Logs/com.docker.sandboxes/sandboxes/auditkit | absent
+/Users/tony/.config/sbx/credentials.yaml | absent
+/Users/tony/.sbx/run | absent
+/tmp/sboxd-501-sandboxes | absent
+/tmp/containerd-s-501 | absent

@@ -1,0 +1,42 @@
+[
+  {
+    "short_sha": "8f7de20b85ed",
+    "parent_count": 1,
+    "subject": "process(review): require checked reviewer identity"
+  },
+  {
+    "short_sha": "402f2ce6b565",
+    "parent_count": 1,
+    "subject": "process(review): document current approval and branch policy"
+  },
+  {
+    "short_sha": "75635745a767",
+    "parent_count": 2,
+    "subject": "chore(process): merge main into review branch"
+  },
+  {
+    "short_sha": "27075aa82d02",
+    "parent_count": 1,
+    "subject": "fix(review): require affirmative arbitration command"
+  },
+  {
+    "short_sha": "dd421ea30f52",
+    "parent_count": 2,
+    "subject": "chore: merge main into review process branch"
+  },
+  {
+    "short_sha": "43f63ea8d16e",
+    "parent_count": 1,
+    "subject": "fix(review): run reviewer tests in CI"
+  },
+  {
+    "short_sha": "7d46e89674d7",
+    "parent_count": 2,
+    "subject": "Merge branch 'main' into process/83-review-process"
+  },
+  {
+    "short_sha": "742d39f6912d",
+    "parent_count": 2,
+    "subject": "Merge branch 'main' into process/83-review-process"
+  }
+]

@@ -47,7 +47,9 @@ def main(arguments: Sequence[str] | None = None) -> int:
         if identity.returncode != 0 or not reviewer_identity_matches(
             identity.stdout.strip()
         ):
-            sys.stderr.write("reviewer-gh: effective account is not tbhbbot\n")
+            sys.stderr.write(
+                "reviewer-gh: effective account is not tbhb-agent-reviewer\n"
+            )
             return 91
         return subprocess.run(["gh", *argv], env=review_env, check=False).returncode
     except OSError:

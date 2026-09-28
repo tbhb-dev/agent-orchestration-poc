@@ -5,6 +5,7 @@ Read the assigned issue and [project plan](docs/src/content/docs/project/plan.md
 ## Workflow
 
 - Use one issue per work item in [Project 9](https://github.com/users/tbhb/projects/9). Issues need a goal, context and links, acceptance criteria, evidence required, docs impact, and out of scope.
+- Use [the workflow reference](docs/src/content/docs/guides/workflow-reference.md) for closed title types and scopes, labels, required issue fields, PR sections, allowed paths, and size units. Add a new scope to the reference in the same PR that first uses it.
 - Work on `<type>/<issue>-<slug>` in your own `.worktrees/<type>-<issue>-<slug>/` checkout. Use the coordinator's assigned branch. Never work on `main` or share a checkout with another worker.
 - Commit with `type(scope): imperative subject`, an explanatory body, and a `Refs: #<n>` trailer. Use Conventional Commits. Do not add attribution or co-author trailers to commits or PR bodies.
 - The commit-msg hook rejects attribution and missing `Refs:` trailers except for subject `wip`, the ignore check guards tracked paths, and the handoff check verifies open PR claims.

@@ -1,0 +1,47 @@
+[
+  {
+    "short_sha": "131fa3078756",
+    "parent_count": 1,
+    "subject": "feat(bus): relay authenticated agent operations"
+  },
+  {
+    "short_sha": "e6ccb02719fb",
+    "parent_count": 1,
+    "subject": "docs(bus): record the authenticated relay contract"
+  },
+  {
+    "short_sha": "4cda83ad8743",
+    "parent_count": 1,
+    "subject": "docs(bus): record results from relay tests"
+  },
+  {
+    "short_sha": "fcfba2b06a06",
+    "parent_count": 2,
+    "subject": "Merge origin/main into feat/96-bus-relay"
+  },
+  {
+    "short_sha": "d64827bbc4cd",
+    "parent_count": 1,
+    "subject": "fix(bus): preserve newest relay delivery token"
+  },
+  {
+    "short_sha": "77547cb9289c",
+    "parent_count": 1,
+    "subject": "docs(bus): document review fixes"
+  },
+  {
+    "short_sha": "ef65b7077e28",
+    "parent_count": 2,
+    "subject": "Merge origin/main into feat/96-bus-relay"
+  },
+  {
+    "short_sha": "16948a43b361",
+    "parent_count": 1,
+    "subject": "test(bus): check Bob's inbox with his credentials"
+  },
+  {
+    "short_sha": "f346d2e0229f",
+    "parent_count": 2,
+    "subject": "Merge branch 'main' into feat/96-bus-relay"
+  }
+]

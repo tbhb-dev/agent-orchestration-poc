@@ -1,0 +1,294 @@
+{
+  "raw": {
+    "issues": [
+      {
+        "number": 1,
+        "id": 101,
+        "title": "tooling(project): build a model",
+        "state": "closed",
+        "state_reason": "completed",
+        "body": "Reviewed body",
+        "labels": [
+          {
+            "name": "area/project"
+          },
+          {
+            "name": "type/chore"
+          }
+        ],
+        "type": {
+          "name": "Chore"
+        }
+      },
+      {
+        "pull_request": {},
+        "number": 9
+      }
+    ],
+    "issue_pages": [
+      {
+        "collection": "issues",
+        "index": 1,
+        "count": 2,
+        "total_pages": 1,
+        "total_count": 2
+      }
+    ],
+    "old": [
+      {
+        "content_type": "Issue",
+        "content": {
+          "number": 1
+        },
+        "fields": [
+          {
+            "name": "Status",
+            "value": {
+              "name": "Backlog"
+            }
+          }
+        ]
+      }
+    ],
+    "project": [
+      {
+        "content_type": "Issue",
+        "content": {
+          "number": 1
+        },
+        "id": 201,
+        "fields": [
+          {
+            "name": "Status",
+            "value": {
+              "name": {
+                "raw": "Ready"
+              }
+            }
+          },
+          {
+            "name": "Size",
+            "value": 3
+          },
+          {
+            "name": "Area",
+            "value": {
+              "raw": "Tooling"
+            }
+          },
+          {
+            "name": "Validation",
+            "value": null
+          },
+          {
+            "name": "Validation detail",
+            "value": {
+              "name": {
+                "label": "ignored"
+              }
+            }
+          },
+          {
+            "name": "Ignored",
+            "value": "extra"
+          }
+        ]
+      },
+      {
+        "content_type": "DraftIssue",
+        "content": {
+          "id": 301,
+          "title": "Draft",
+          "body": "Draft body"
+        },
+        "id": 202,
+        "fields": []
+      }
+    ],
+    "project_pages": [
+      {
+        "collection": "project",
+        "index": 1,
+        "count": 2,
+        "total_pages": 1,
+        "total_count": 2
+      }
+    ],
+    "nested": {
+      "#1": [
+        [
+          {
+            "issue_field_name": "Work type",
+            "single_select_option": {
+              "name": "Planned"
+            }
+          }
+        ],
+        [],
+        [
+          {
+            "number": 2
+          },
+          {
+            "number": 3
+          }
+        ]
+      ]
+    },
+    "nested_pages": [
+      {
+        "collection": "native:#1",
+        "index": 1,
+        "count": 1,
+        "total_pages": 1,
+        "total_count": 1
+      },
+      {
+        "collection": "sub_issues:#1",
+        "index": 1,
+        "count": 0,
+        "total_pages": 1,
+        "total_count": 0
+      },
+      {
+        "collection": "blockers:#1",
+        "index": 1,
+        "count": 1,
+        "total_pages": 2,
+        "total_count": 2
+      },
+      {
+        "collection": "blockers:#1",
+        "index": 2,
+        "count": 1,
+        "total_pages": 2,
+        "total_count": 2
+      }
+    ],
+    "branch_sha": "branch",
+    "run_state": "initial"
+  },
+  "expected": {
+    "version": 1,
+    "items": [
+      {
+        "key": "#1",
+        "title": "tooling(project): build a model",
+        "state": "closed",
+        "state_reason": "completed",
+        "issue_type": "Chore",
+        "native": [
+          ["Priority", ""],
+          ["Severity", ""],
+          ["Work type", "Planned"]
+        ],
+        "project": [
+          ["Area", "Tooling"],
+          ["Size", "3"],
+          ["Status", "Ready"],
+          ["Validation", ""],
+          ["Validation detail", ""]
+        ],
+        "source_project": [["Status", "Backlog"]],
+        "parent": "",
+        "blockers": ["#2", "#3"],
+        "body": "Reviewed body",
+        "labels": ["area/project", "type/chore"],
+        "issue_id": "101",
+        "item_id": "201",
+        "draft_id": ""
+      },
+      {
+        "key": "title:Draft",
+        "title": "Draft",
+        "state": "draft",
+        "state_reason": "",
+        "issue_type": "",
+        "native": [],
+        "project": [],
+        "source_project": [],
+        "parent": "",
+        "blockers": [],
+        "body": "Draft body",
+        "labels": [],
+        "issue_id": "",
+        "item_id": "202",
+        "draft_id": "301"
+      }
+    ],
+    "pages": [
+      {
+        "collection": "issues",
+        "index": 1,
+        "count": 1,
+        "total_pages": 1,
+        "total_count": 1
+      },
+      {
+        "collection": "project",
+        "index": 1,
+        "count": 2,
+        "total_pages": 1,
+        "total_count": 2
+      },
+      {
+        "collection": "drafts",
+        "index": 1,
+        "count": 1,
+        "total_pages": 1,
+        "total_count": 1
+      },
+      {
+        "collection": "native",
+        "index": 1,
+        "count": 1,
+        "total_pages": 1,
+        "total_count": 1
+      },
+      {
+        "collection": "parents",
+        "index": 1,
+        "count": 1,
+        "total_pages": 1,
+        "total_count": 1
+      },
+      {
+        "collection": "blockers",
+        "index": 1,
+        "count": 1,
+        "total_pages": 1,
+        "total_count": 1
+      },
+      {
+        "collection": "native:#1",
+        "index": 1,
+        "count": 1,
+        "total_pages": 1,
+        "total_count": 1
+      },
+      {
+        "collection": "sub_issues:#1",
+        "index": 1,
+        "count": 0,
+        "total_pages": 1,
+        "total_count": 0
+      },
+      {
+        "collection": "blockers:#1",
+        "index": 1,
+        "count": 1,
+        "total_pages": 2,
+        "total_count": 2
+      },
+      {
+        "collection": "blockers:#1",
+        "index": 2,
+        "count": 1,
+        "total_pages": 2,
+        "total_count": 2
+      }
+    ],
+    "branch_sha": "branch",
+    "run_state": "initial"
+  }
+}

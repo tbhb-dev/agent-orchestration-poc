@@ -76,7 +76,14 @@ def test_token_presence(token: str, expected: bool) -> None:
 
 
 @pytest.mark.parametrize(
-    ("login", "expected"), [("tbhbbot", True), ("tbhb", False), ("", False)]
+    ("login", "expected"),
+    [
+        ("tbhb-agent-reviewer", True),
+        ("tbhbbot", False),
+        ("tbhb-agent", False),
+        ("tbhb", False),
+        ("", False),
+    ],
 )
 def test_reviewer_identity(login: str, expected: bool) -> None:
     assert reviewer_identity_matches(login) is expected
@@ -87,7 +94,7 @@ def test_auth_command_never_allowed(tail: list[str]) -> None:
     assert not reviewer_command_allowed(["auth", *tail])
 
 
-@given(st.text().filter(lambda value: value != "tbhbbot"))
+@given(st.text().filter(lambda value: value != "tbhb-agent-reviewer"))
 def test_other_identity_never_matches(login: str) -> None:
     assert not reviewer_identity_matches(login)
 
@@ -97,9 +104,9 @@ def test_token_presence_matches_nonblank(token: str) -> None:
     assert reviewer_token_present(token) is bool(token.strip())
 
 
-@given(st.text().filter(lambda value: value != "tbhbbot"))
+@given(st.text().filter(lambda value: value != "tbhb-agent-reviewer"))
 def test_other_reviewer_cannot_approve(reviewer: str) -> None:
-    assert not approval_current(reviewer, "APPROVED", True, "tbhb")
+    assert not approval_current(reviewer, "APPROVED", True, "tbhb-agent")
 
 
 @given(st.integers(min_value=0, max_value=2))

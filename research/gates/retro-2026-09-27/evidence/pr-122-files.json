@@ -1,0 +1,58 @@
+[
+  {
+    "filename": "docs/src/content/docs/decisions/0008-analysis-notebooks.md",
+    "status": "added",
+    "additions": 34,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/decisions/0009-analysis-visualization.md",
+    "status": "added",
+    "additions": 34,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/decisions/index.md",
+    "status": "modified",
+    "additions": 2,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/guides/data-analysis-conventions.md",
+    "status": "added",
+    "additions": 30,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/guides/index.md",
+    "status": "modified",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/data-analysis/notes.md",
+    "status": "added",
+    "additions": 41,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/data-analysis/verification-protocol.md",
+    "status": "added",
+    "additions": 66,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/data-analysis/versions.md",
+    "status": "added",
+    "additions": 17,
+    "deletions": 0,
+    "patch_available": true
+  }
+]

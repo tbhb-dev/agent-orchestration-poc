@@ -1,0 +1,388 @@
+dependent	blocker	level	evidence	source	action	note	execution	claim status	v2 action
+27	26	issue	stated	dependency table, explicit-closed	exists		native	inference: retained version 2 evidence	exists
+27	160	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+29	27	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#29 line 11 dispatches after #149 and #160 only, and an integration owner serializes shared files with #27.	audit only	inference: retained version 2 evidence	no link: judged not real
+29	28	issue	ambiguous	dependency table, ambiguous	no link: pending evidence review	#29 line 11 omits #28 from its dispatch list, but criterion line 20 must prove grants for credentials that #28 registers.	audit only	inference: retained version 2 evidence	open: left for the coordinator
+29	149	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+29	160	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+31	27	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+31	30	issue	stated	dependency table, explicit-closed	exists		native	inference: retained version 2 evidence	exists
+32	26	issue	stated	dependency table, explicit-closed	exists		native	inference: retained version 2 evidence	exists
+33	27	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+34	9	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+34	10	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+36	35	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+37	35	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+38	37	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+39	35	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+40	26	issue	stated	dependency table, explicit-closed	exists		native	inference: retained version 2 evidence	exists
+41	35	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+41	40	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+42	40	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+43	32	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+43	40	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+44	35	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+44	40	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+45	35	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+46	35	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+47	35	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+48	38	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+51	35	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+84	83	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+84	88	issue	ambiguous	dependency table, ambiguous	skip: ambiguous, dependent closed first		audit only	inference: retained version 2 evidence	skip: ambiguous, dependent closed first
+84	89	issue	ambiguous	dependency table, ambiguous	skip: ambiguous, dependent closed first		audit only	inference: retained version 2 evidence	skip: ambiguous, dependent closed first
+84	90	issue	ambiguous	dependency table, ambiguous	skip: ambiguous, dependent closed first		audit only	inference: retained version 2 evidence	skip: ambiguous, dependent closed first
+84	91	issue	ambiguous	dependency table, ambiguous	skip: ambiguous, dependent closed first		audit only	inference: retained version 2 evidence	skip: ambiguous, dependent closed first
+84	92	issue	ambiguous	dependency table, ambiguous	skip: ambiguous, dependent closed first		audit only	inference: retained version 2 evidence	skip: ambiguous, dependent closed first
+84	93	issue	ambiguous	dependency table, ambiguous	skip: ambiguous, dependent closed first		audit only	inference: retained version 2 evidence	skip: ambiguous, dependent closed first
+84	94	issue	ambiguous	dependency table, ambiguous	skip: ambiguous, dependent closed first		audit only	inference: retained version 2 evidence	skip: ambiguous, dependent closed first
+88	59	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+88	60	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+88	84	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+88	87	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+88	89	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#88 line 11 says it runs alongside #89 and #90 on distinct modules.	audit only	inference: retained version 2 evidence	no link: judged not real
+88	90	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#88 line 11 says it runs alongside #89 and #90 on distinct modules.	audit only	inference: retained version 2 evidence	no link: judged not real
+88	94	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#88 line 11 says this item and #94 run side by side, and line 31 puts #94 out of scope.	audit only	inference: retained version 2 evidence	no link: judged not real
+89	83	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+89	84	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+89	88	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#89 line 11 says it runs alongside #90, #88, and #94 on distinct modules.	audit only	inference: retained version 2 evidence	no link: judged not real
+89	90	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#89 line 11 says it runs alongside #90, and line 33 puts issue review out of scope.	audit only	inference: retained version 2 evidence	no link: judged not real
+89	94	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#89 line 11 says it runs alongside #90, #88, and #94 on distinct modules.	audit only	inference: retained version 2 evidence	no link: judged not real
+90	83	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+90	84	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+90	88	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#90 line 11 says it runs alongside #89, #88, and #94 on distinct modules.	audit only	inference: retained version 2 evidence	no link: judged not real
+90	89	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#90 line 11 says it runs alongside #89, and line 35 puts merge eligibility out of scope.	audit only	inference: retained version 2 evidence	no link: judged not real
+90	94	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#90 line 11 says it runs alongside #89, #88, and #94 on distinct modules.	audit only	inference: retained version 2 evidence	no link: judged not real
+91	83	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+91	84	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+91	89	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+91	92	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+91	93	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+92	83	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+92	84	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+92	88	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+92	89	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+92	90	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+92	94	issue	ambiguous	dependency table, ambiguous	write: judged real	"#92 line 11 follows ""the two #88 items"", and #94 line 7 says it was split from #88."	native	inference: retained version 2 evidence	write: judged real
+93	84	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+93	88	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+93	89	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+93	90	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+93	94	issue	ambiguous	dependency table, ambiguous	write: judged real	"#93 line 11 follows ""both #88 items"", and #94 line 7 says it was split from #88."	native	inference: retained version 2 evidence	write: judged real
+93	142	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+94	27	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+94	29	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+94	84	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+94	87	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+94	96	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+100	84	issue	ambiguous	dependency table, ambiguous	no link: pending evidence review		audit only	inference: retained version 2 evidence	judgment: closed blocker
+100	93	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#100 line 20 names #93 only as the owner of another rule.	audit only	inference: retained version 2 evidence	no link: judged not real
+100	104	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+100	107	issue	stated	dependency table, coordinator	exists		native	inference: retained version 2 evidence	exists
+101	84	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+101	88	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+101	100	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+101	107	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+103	90	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#103 line 11 starts after #104, #107, and #108, and shares only the retros index with #90.	audit only	inference: retained version 2 evidence	no link: judged not real
+103	104	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+103	107	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+103	108	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+106	83	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+106	84	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+107	104	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+108	104	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+108	107	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+109	104	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+109	107	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+109	110	issue	ambiguous	dependency table, ambiguous-closed	no link: pending evidence review		audit only	inference: retained version 2 evidence	judgment: closed blocker
+109	111	issue	ambiguous	dependency table, ambiguous	no link: reversed, the reverse link exists	#109 line 11 dispatches #111 after #109, and the native link from #111 to #109 exists.	audit only	inference: retained version 2 evidence	no link: reversed, the reverse link exists
+111	104	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+111	107	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+111	109	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+111	110	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+111	116	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+116	109	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#116 line 11 says #109 may proceed independently.	audit only	inference: retained version 2 evidence	no link: judged not real
+116	110	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+117	104	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+117	107	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+117	108	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+118	89	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#118 line 11 names #117 and the monitor items, and the dependency table quotes that delivery has no #89 dependency.	audit only	inference: retained version 2 evidence	no link: judged not real
+118	117	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+120	89	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+120	118	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+120	124	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#120 line 11 says issue closure is not assigned here, so the decision in #124 gates nothing in its scope.	audit only	inference: retained version 2 evidence	no link: judged not real
+123	89	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#123 line 11 consumes the collector of #89 through #180, and the links from #123 to #180 and from #180 to #89 exist.	audit only	inference: retained version 2 evidence	no link: judged not real
+123	114	issue	ambiguous	dependency table, ambiguous-closed	no link: pending evidence review		audit only	inference: retained version 2 evidence	judgment: closed blocker
+123	118	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#123 line 11 says #118 need not block the manual procedure.	audit only	inference: retained version 2 evidence	no link: judged not real
+123	180	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+124	84	issue	ambiguous	dependency table, ambiguous	no link: pending evidence review		audit only	inference: retained version 2 evidence	judgment: closed blocker
+124	120	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#124 line 11 says implementation follows the decision in #120, and #120 line 11 assigns no closure work.	audit only	inference: retained version 2 evidence	no link: judged not real
+126	104	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+126	107	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+126	110	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+126	116	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+127	104	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+127	107	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+127	130	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+128	104	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+128	107	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+128	108	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+128	117	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+128	126	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#128 line 11 says catalog and source review can begin before live #126 telemetry.	audit only	inference: retained version 2 evidence	no link: judged not real
+128	127	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+128	129	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+128	136	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+129	128	issue	ambiguous	dependency table, ambiguous	no link: reversed, the reverse link exists	#129 line 3 delivers evidence for #128, and the native link from #128 to #129 exists.	audit only	inference: retained version 2 evidence	no link: reversed, the reverse link exists
+130	108	issue	ambiguous	dependency table, ambiguous	write: judged real	#130 criterion line 18 reuses the transcript inventory and source IDs that #108 produces.	native	inference: retained version 2 evidence	write: judged real
+132	131	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+133	84	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+133	89	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#133 line 11 dispatches after #131, #132, and #84, and only agrees interfaces with #89.	audit only	inference: retained version 2 evidence	no link: judged not real
+133	90	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#133 line 11 dispatches after #131, #132, and #84, and only agrees interfaces with #90.	audit only	inference: retained version 2 evidence	no link: judged not real
+133	92	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#133 line 16 edits the commit-msg hook that exists from #15, and line 11 asks only to reserve the file with #92.	audit only	inference: retained version 2 evidence	no link: judged not real
+133	131	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+133	132	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+134	84	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+134	89	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+134	90	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+134	120	issue	stated	dependency table, explicit	cut: not native, remove from the body	Operator decision of 2026-09-27. No native link exists, so the cut is a body edit.	audit only	inference: retained version 2 evidence	cut: not native, remove from the body
+134	131	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+134	132	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+134	133	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+134	135	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+134	139	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+134	140	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+135	132	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+136	129	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+139	84	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+139	89	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+139	90	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+139	131	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+139	132	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+139	133	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+140	84	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+140	89	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+140	90	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+140	120	issue	stated	dependency table, explicit	cut: not native, remove from the body	Operator decision of 2026-09-27. No native link exists, so the cut is a body edit.	audit only	inference: retained version 2 evidence	cut: not native, remove from the body
+140	132	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+141	84	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+141	93	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#141 line 29 names #93 only in its out of scope list.	audit only	inference: retained version 2 evidence	no link: judged not real
+142	84	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+143	104	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+143	110	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+145	104	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+145	107	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+145	143	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+145	150	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+146	109	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+147	104	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+147	107	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+147	109	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+147	146	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+149	96	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+150	104	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+150	143	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+153	28	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#153 line 11 calls #28 an optional example, not a dependency.	audit only	inference: retained version 2 evidence	no link: judged not real
+153	166	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#166 line 28 says the recovery procedure of #153 does not wait for the study.	audit only	inference: retained version 2 evidence	no link: judged not real
+155	100	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#155 line 7 says the cleanup is independent of #100 and #101.	audit only	inference: retained version 2 evidence	no link: judged not real
+155	101	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#155 line 7 says the cleanup is independent of #100 and #101.	audit only	inference: retained version 2 evidence	no link: judged not real
+155	154	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+155	157	issue	ambiguous	dependency table, ambiguous	no link: reversed, the reverse link exists	#157 line 22 waits for the wording of #155, and the native link from #157 to #155 exists.	audit only	inference: retained version 2 evidence	no link: reversed, the reverse link exists
+155	163	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+157	90	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+157	125	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+157	154	issue	ambiguous	dependency table, ambiguous-closed	no link: pending evidence review		audit only	inference: retained version 2 evidence	judgment: closed blocker
+157	155	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+157	158	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+158	84	issue	stated	dependency table, coordinator	exists		native	inference: retained version 2 evidence	exists
+158	90	issue	stated	dependency table, coordinator	exists		native	inference: retained version 2 evidence	exists
+158	125	issue	stated	dependency table, coordinator-closed	write		native	inference: retained version 2 evidence	write
+158	157	issue	ambiguous	dependency table, ambiguous	no link: reversed, the reverse link exists	#158 line 11 says it does not require #157 to finish, and the native link from #157 to #158 exists.	audit only	inference: retained version 2 evidence	no link: reversed, the reverse link exists
+159	157	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+159	158	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+160	27	issue	ambiguous	dependency table, ambiguous	no link: reversed, the reverse link exists	#160 line 13 starts before #27 completes and #27 consumes its contract, and the native link from #27 to #160 exists.	audit only	inference: retained version 2 evidence	no link: reversed, the reverse link exists
+160	96	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+160	149	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+161	84	issue	ambiguous	dependency table, ambiguous	skip: ambiguous, one side closed as not planned		audit only	inference: retained version 2 evidence	skip: ambiguous, one side closed as not planned
+161	90	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+161	163	issue	ambiguous	dependency table, ambiguous	skip: ambiguous, dependent closed first		audit only	inference: retained version 2 evidence	skip: ambiguous, dependent closed first
+161	164	issue	ambiguous	dependency table, ambiguous	skip: ambiguous, dependent closed first		audit only	inference: retained version 2 evidence	skip: ambiguous, dependent closed first
+161	183	issue	stated	dependency table, explicit	no link: dependent closed as not planned	#161 closed as not planned on 2026-09-27.	audit only	inference: retained version 2 evidence	no link: dependent closed as not planned
+163	161	issue	ambiguous	dependency table, ambiguous	skip: ambiguous, one side closed as not planned		audit only	inference: retained version 2 evidence	skip: ambiguous, one side closed as not planned
+164	153	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+164	161	issue	ambiguous	dependency table, ambiguous	skip: ambiguous, one side closed as not planned		audit only	inference: retained version 2 evidence	skip: ambiguous, one side closed as not planned
+165	107	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+166	104	issue	stated	dependency table, explicit-closed	write		native	inference: retained version 2 evidence	write
+166	107	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+166	108	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+167	179	issue	ambiguous	dependency table, ambiguous	skip: ambiguous, dependent closed first		audit only	inference: retained version 2 evidence	skip: ambiguous, dependent closed first
+167	189	issue	ambiguous	dependency table, ambiguous	skip: ambiguous, dependent closed first		audit only	inference: retained version 2 evidence	skip: ambiguous, dependent closed first
+167	190	issue	ambiguous	dependency table, ambiguous	skip: ambiguous, dependent closed first		audit only	inference: retained version 2 evidence	skip: ambiguous, dependent closed first
+168	157	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#168 line 11 says it has no dependency on the implementation of #157 or #159.	audit only	inference: retained version 2 evidence	no link: judged not real
+168	158	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#168 line 11 makes the acceptance of #157 and #159 wait for #158, not its own.	audit only	inference: retained version 2 evidence	no link: judged not real
+168	159	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#168 line 11 says it has no dependency on the implementation of #157 or #159.	audit only	inference: retained version 2 evidence	no link: judged not real
+168	167	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+168	172	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#168 line 11 lists #167 and #179 as its dependencies, and #172 line 17 hands it a contract that may say unknown.	audit only	inference: retained version 2 evidence	no link: judged not real
+168	179	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+168	182	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#168 line 11 lists #167 and #179 as its dependencies. The reverse row from #182 to #168 is left open.	audit only	inference: retained version 2 evidence	no link: judged not real
+169	167	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+169	168	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+169	179	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+170	164	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+170	167	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+170	179	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+170	182	issue	ambiguous	dependency table, ambiguous	no link: reversed, the reverse link exists	#170 line 38 puts the work of #182 out of scope, and the native link from #182 to #170 exists.	audit only	inference: retained version 2 evidence	no link: reversed, the reverse link exists
+171	170	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+172	167	issue	ambiguous	dependency table, ambiguous	no link: pending evidence review		audit only	inference: retained version 2 evidence	judgment: closed blocker
+172	182	issue	ambiguous	dependency table, ambiguous	no link: reversed, the reverse link exists	#172 line 3 says it precedes #182, and the native link from #182 to #172 exists.	audit only	inference: retained version 2 evidence	no link: reversed, the reverse link exists
+173	89	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+173	120	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#173 line 3 is deleted when #120 lands, so #120 replaces it and does not precede it.	audit only	inference: retained version 2 evidence	no link: judged not real
+173	168	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+173	170	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+173	184	issue	ambiguous	dependency table, ambiguous	no link: reversed, the reverse link exists	#184 line 3 follows #173, and the native link from #184 to #173 exists.	audit only	inference: retained version 2 evidence	no link: reversed, the reverse link exists
+176	27	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#176 line 7 says its scaffold is separate from the relay of #27 and does not modify its paths.	audit only	inference: retained version 2 evidence	no link: judged not real
+176	28	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#176 line 13 names #28 as the replacement of its scaffolding.	audit only	inference: retained version 2 evidence	no link: judged not real
+176	134	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#176 line 15 maps the stage one contract of #134, and stage one was done on 2026-09-27 at 00:34.	audit only	inference: retained version 2 evidence	no link: judged not real
+176	153	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#176 line 15 maps run-record fields that the body of #153 already lists.	audit only	inference: retained version 2 evidence	no link: judged not real
+177	176	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+177	178	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#177 line 13 freezes a message subset with #178, and the native link from #178 to #177 exists.	audit only	inference: retained version 2 evidence	no link: judged not real
+177	187	issue	ambiguous	dependency table, ambiguous	no link: reversed, the reverse link exists	#177 line 19 refuses Claude sends until #187 lands, and the native link from #187 to #177 exists.	audit only	inference: retained version 2 evidence	no link: reversed, the reverse link exists
+178	176	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+178	177	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+178	185	issue	ambiguous	dependency table, ambiguous	no link: reversed, the reverse link exists	#178 line 11 says #185 follows it, and the native link from #185 to #178 exists.	audit only	inference: retained version 2 evidence	no link: reversed, the reverse link exists
+178	187	issue	ambiguous	dependency table, ambiguous	no link: reversed, the reverse link exists	#187 line 11 starts after the subset is frozen with #178, and the native link from #187 to #178 exists.	audit only	inference: retained version 2 evidence	no link: reversed, the reverse link exists
+179	167	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+179	170	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#179 line 15 says neither completed issue depends on the other, and the native link from #170 to #179 exists.	audit only	inference: retained version 2 evidence	no link: judged not real
+180	89	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+181	123	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+181	180	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+182	134	issue	stated	dependency table, explicit	no link	#182 closes, so neither the DELETE nor the body edit is needed.	audit only	inference: retained version 2 evidence	cut: remove the native link and name stage one in the body
+182	164	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+182	167	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+182	168	issue	ambiguous	dependency table, ambiguous	no link	#182 closes.	audit only	inference: retained version 2 evidence	open: left for the coordinator
+182	170	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+182	172	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+183	90	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+183	161	issue	stated	dependency table, explicit	no link: blocker closed as not planned	Verified on 2026-09-27 at 03:15 EDT: the only native blocker of #183 is #90. The body edit of step 0 replaces #161 with the intake issue.	audit only	inference: retained version 2 evidence	no link: blocker closed as not planned
+184	89	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+184	120	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#184 line 15 says it works independently of #120.	audit only	inference: retained version 2 evidence	no link: judged not real
+184	168	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+184	169	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+184	170	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+184	171	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#184 line 13 consumes #171 only for a helper it actually provides.	audit only	inference: retained version 2 evidence	no link: judged not real
+184	173	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+184	188	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+185	176	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+185	177	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+185	178	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+185	187	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+186	168	issue	ambiguous	dependency table, ambiguous	no link	#168 closes, and #186 no longer integrates with throwaway reads.	audit only	inference: retained version 2 evidence	write: judged real
+186	172	issue	ambiguous	dependency table, ambiguous	no link	#186 is rewritten for organization Project events, so the user-account feasibility matrix is history, not a blocker.	audit only	inference: retained version 2 evidence	write: judged real
+186	182	issue	ambiguous	dependency table, ambiguous	no link	#182 closes.	audit only	inference: retained version 2 evidence	write: judged real
+187	176	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+187	177	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+187	178	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+188	89	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+189	28	issue	stated	dependency table, explicit	remove (DELETE native link)	The cache database is a separate SQLite file (operator 11:20), so the open #28 would gate #189 wrongly.	delete	inference: retained version 2 evidence	exists
+189	167	issue	ambiguous	dependency table, ambiguous	no link	The throwaway store is not a base for the cache database.	audit only	inference: retained version 2 evidence	judgment: closed blocker
+189	179	issue	ambiguous	dependency table, ambiguous	no link: judged not real	#189 line 30 names #179 only in its out of scope list.	audit only	inference: retained version 2 evidence	no link: judged not real
+190	167	issue	ambiguous	dependency table, ambiguous	no link	The throwaway receiver is not a base for the ingress.	audit only	inference: retained version 2 evidence	judgment: closed blocker
+190	189	issue	stated	dependency table, explicit	exists		native	inference: retained version 2 evidence	exists
+28	27	issue	observed	native link absent from the dependency table	exists		native	inference: retained version 2 evidence	exists
+29	26	issue	observed	native link absent from the dependency table	exists		native	inference: retained version 2 evidence	exists
+52	40	issue	observed	native link absent from the dependency table	exists		native	inference: retained version 2 evidence	exists
+52	41	issue	observed	native link absent from the dependency table	exists		native	inference: retained version 2 evidence	exists
+54	49	issue	observed	native link absent from the dependency table	exists		native	inference: retained version 2 evidence	exists
+6	3	issue	stated	body of #6	write		native	inference: retained version 2 evidence	write
+6	4	issue	stated	body of #6	write		native	inference: retained version 2 evidence	write
+6	5	issue	stated	body of #6	write		native	inference: retained version 2 evidence	write
+7	3	issue	stated	body of #7	write		native	inference: retained version 2 evidence	write
+9	3	issue	stated	body of #9	write		native	inference: retained version 2 evidence	write
+9	8	issue	stated	body of #9	write		native	inference: retained version 2 evidence	write
+11	3	issue	stated	body of #11	write		native	inference: retained version 2 evidence	write
+11	6	issue	stated	body of #11	write		native	inference: retained version 2 evidence	write
+11	9	issue	stated	body of #11	write		native	inference: retained version 2 evidence	write
+14	4	issue	stated	body of #14	write		native	inference: retained version 2 evidence	write
+110	104	issue	stated	body of #110	write		native	inference: retained version 2 evidence	write
+26	58	issue	documented	plan, phase 2 item 0	write		native	inference: retained version 2 evidence	write
+27	58	issue	documented	plan, phase 2 item 0	write		native	inference: retained version 2 evidence	write
+26	59	issue	inference	plan, phase 2 item 0 names first core logic, not #26	no link: pending evidence review		audit only	inference: retained version 2 evidence	judgment: inferred
+26	60	issue	inference	plan, phase 2 item 0 names first core logic, not #26	no link: pending evidence review		audit only	inference: retained version 2 evidence	judgment: inferred
+69	11	issue	inference	checkpoint needs the docs pages	no link: pending evidence review		audit only	inference: retained version 2 evidence	judgment: inferred
+69	12	issue	inference	checkpoint needs the Project to reflect the plan	no link: pending evidence review		audit only	inference: retained version 2 evidence	judgment: inferred
+77	61	issue	inference	extends the typing gate from #61	no link: pending evidence review		audit only	inference: retained version 2 evidence	judgment: inferred
+78	69	issue	inference	handoff refresh follows the phase 1 checkpoint	no link: pending evidence review		audit only	inference: retained version 2 evidence	judgment: inferred
+87	59	issue	inference	body of #87 cites the floors from #59	no link: pending evidence review		audit only	inference: retained version 2 evidence	judgment: inferred
+87	60	issue	inference	body of #87 cites the floors from #60	no link: pending evidence review		audit only	inference: retained version 2 evidence	judgment: inferred
+96	26	issue	inference	relay changes the server that #26 embedded	no link: pending evidence review		audit only	inference: retained version 2 evidence	judgment: inferred
+33	117	issue	inference	note on #33 in the version 1 table, finding 15	no link: pending evidence review	Neither body names the other. #33 line 3 fixes a background receive, and #117 line 3 chooses the coordinator wake mechanism.	audit only	inference: retained version 2 evidence	judgment: inferred
+198	197	issue	proposed	section 10, work model implementation	write: after creation		native	inference: retained version 2 evidence	write: after creation
+199	197	issue	proposed	section 10, work model implementation	write: after creation		native	inference: retained version 2 evidence	write: after creation
+200	197	issue	proposed	section 10, work model implementation	write: after creation		native	inference: retained version 2 evidence	write: after creation
+200	198	issue	proposed	section 10, work model implementation	write: after creation		native	inference: retained version 2 evidence	write: after creation
+200	199	issue	proposed	section 10, work model implementation	write: after creation		native	inference: retained version 2 evidence	write: after creation
+200	201	issue	proposed	section 10, work model implementation	write: after creation		native	inference: retained version 2 evidence	write: after creation
+202	199	issue	proposed	section 10, work model implementation	write: after creation		native	inference: retained version 2 evidence	write: after creation
+203	197	issue	proposed	section 10, work model implementation	write: after creation		native	inference: retained version 2 evidence	write: after creation
+203	198	issue	proposed	section 10, work model implementation	write: after creation		native	inference: retained version 2 evidence	write: after creation
+203	200	issue	proposed	section 10, work model implementation	do not write	Removed by round 2 ruling: enforcement develops beside stage one, without a backfill dispatch gate.	audit only	operator decision	write: after creation
+203	183	issue	proposed	section 10, work model implementation	write: after creation		native	inference: retained version 2 evidence	write: after creation
+203	205	issue	proposed	section 10, work model implementation	write: after creation		native	inference: retained version 2 evidence	write: after creation
+204	197	issue	proposed	section 10, work model implementation	write: after creation		native	inference: retained version 2 evidence	write: after creation
+204	198	issue	proposed	section 10, work model implementation	write: after creation		native	inference: retained version 2 evidence	write: after creation
+205	197	issue	proposed	section 10, work model implementation	write: after creation		native	inference: retained version 2 evidence	write: after creation
+205	90	issue	proposed	section 10, work model implementation	write: after creation		native	inference: retained version 2 evidence	write: after creation
+206	197	issue	proposed	section 10, work model implementation	write: after creation		native	inference: retained version 2 evidence	write: after creation
+206	198	issue	proposed	section 10, work model implementation	write: after creation		native	inference: retained version 2 evidence	write: after creation
+183	198	issue	proposed	section 10, work model implementation	write: after creation	Replaces the body dependency on #161.	native	inference: retained version 2 evidence	write: after creation
+epic: GitHub monitoring service	epic: provisioned interactive workers	epic	derived	issue links #189<-#28	remove	Derived from #189 on #28, which is removed.	audit only	inference: retained version 2 evidence	write
+epic: GitHub monitoring service	epic: throwaway GitHub monitor	epic	derived	issue links #186<-#168 #186<-#172 #186<-#182	remove: dropped parent	Blocker epic dropped.	audit only	inference: retained version 2 evidence	write
+epic: bus in the virtual machine and daemon decisions	epic: bus relay and shared context	epic	derived	issue links #40<-#26	write		native	inference: retained version 2 evidence	write
+epic: bus in the virtual machine and daemon decisions	epic: harnesses in Apple Containers virtual machines	epic	derived	issue links #41<-#35 #44<-#35	write		native	inference: retained version 2 evidence	write
+epic: bus in the virtual machine and daemon decisions	epic: provisioned interactive workers	epic	derived	issue links #43<-#32	write		native	inference: retained version 2 evidence	write
+epic: bus relay and shared context	epic: quality gates before core logic	epic	derived	issue links #26<-#58 #27<-#58	write		native	inference: retained version 2 evidence	write
+epic: docs site and worker instructions	epic: toolchain, skeleton, and continuous integration	epic	derived	issue links #9<-#3 #11<-#3 #11<-#6	write		native	inference: retained version 2 evidence	write
+epic: provisioned interactive workers	epic: bus relay and shared context	epic	derived	issue links #28<-#27 #31<-#27 #32<-#26 #33<-#27	write		native	inference: retained version 2 evidence	write
+epic: terminal, interface, and remote access path	epic: harnesses in Apple Containers virtual machines	epic	derived	issue links #37<-#35	write		native	inference: retained version 2 evidence	write
+initiative: bootstrap orchestration	initiative: repository foundation	initiative	derived	issue links #26<-#58 #27<-#58	write		native	inference: retained version 2 evidence	write
+initiative: design evidence and decisions	initiative: bootstrap orchestration	initiative	derived	issue links #40<-#26 #43<-#32	write		native	inference: retained version 2 evidence	write
+initiative: proof of concept build	initiative: bootstrap orchestration	initiative	derived	issue links #189<-#28	remove: dropped parent	The initiative is dropped from this backfill. Contingent on open question 10.	audit only	inference: retained version 2 evidence	write
+initiative: proof of concept build	initiative: organization move and agent identity	initiative	derived	issue links #186<-#168 #186<-#172 #186<-#182	remove: dropped parent	The initiative is dropped from this backfill. Contingent on open question 10.	audit only	inference: retained version 2 evidence	write
+epic: foundation checkpoints and Project board	epic: docs site and worker instructions	epic	inference	issue link #69<-#11	no link: pending evidence review		audit only	inference: retained version 2 evidence	judgment: inferred
+initiative: bootstrap orchestration	epic: throwaway GitHub monitor	initiative	stated	operator feature work gate, recorded in the memory note throwaway-github-monitor on 2026-09-27 at 00:45	remove: dropped parent	The monitor is the product now, not a gate.	audit only	inference: retained version 2 evidence	write
+initiative: bootstrap orchestration	epic: throwaway worker messaging	initiative	stated	operator feature work gate, recorded in the memory note throwaway-github-monitor on 2026-09-27 at 00:45	remove: dropped parent	Messaging is the product now, not a gate.	audit only	inference: retained version 2 evidence	write
+initiative: bootstrap orchestration	epic: work model backfill	initiative	stated	operator feature work gate, given on 2026-09-27 at 09:09	remove	Replaced by the link to #200. Contingent on open question 2.	audit only	inference: retained version 2 evidence	write
+initiative: proof of concept build	initiative: design evidence and decisions	initiative	documented	plan, phases 3 to 5 order and decisions #52 and #53	remove: dropped parent	The initiative is dropped from this backfill. Contingent on open question 10.	audit only	inference: retained version 2 evidence	write
+initiative: bootstrap orchestration	200	initiative	stated	Hierarchy Q2	gate: operator confirmation at step 13	Operator Q2: not native blocked-by #200. #200 closes after step 15, so issue closure is not the gate.	audit only	operator decision	""
+epic: agent identity and provenance cutover	epic: tbhb-dev organization cutover	epic	stated	Hierarchy Q4/Q9/Q11	write	Derived from #134 on the move issue.	native	operator decision	""
+epic: work model backfill	epic: tbhb-dev organization cutover	epic	stated	Hierarchy Q4/Q9/Q11	write	Derived from #200 on the move issue.	native	operator decision	""
+tooling(workers): report worker completion without process exit	214	issue	stated	Hierarchy Q11	write: after creation	Spike first. Stub creation is authorized by hierarchy Q11. [Observed] Blocker resolved to #214. Dependent remains a draft, so native link still waits for its conversion.	deferred until conversion	operator decision	""
+tooling(workers): report worker completion without process exit	176	issue	stated	Hierarchy Q11	write: after creation	Reports come from the launcher's registry. Contingent on open question 11.	deferred until conversion	operator decision	""
+process(workers): run every worker as an interactive tmux session	176	issue	stated	Hierarchy Q11	write: after creation	The launcher must reach ready. Contingent on open question 11.	deferred until conversion	operator decision	""
+process(workers): run every worker as an interactive tmux session	tooling(workers): report worker completion without process exit	issue	stated	Hierarchy Q11	write: after creation	The coordinator must see completion before workers stop exiting. Contingent on open question 11.	deferred until conversion	operator decision	""
+feat(daemon): add the session database with peer identity and role	research(security): refine peer identity for wrapped sessions	issue	stated	Operator accepted hierarchy	write: after conversion	Hierarchy new-work table: Spike precedes features.	deferred until conversion	operator decision	""
+feat(daemon): build the orchestration service with peer identity	research(security): refine peer identity for wrapped sessions	issue	stated	Operator accepted hierarchy	write: after conversion	Hierarchy new-work table: Spike precedes features.	deferred until conversion	operator decision	""
+feat(workers): add a launch wrapper that binds session identity	research(security): refine peer identity for wrapped sessions	issue	stated	Operator accepted hierarchy	write: after conversion	Hierarchy new-work table: Spike precedes features.	deferred until conversion	operator decision	""
+feat(github): define monitor state and predicate fixtures	exp(github): test a programmatic Cloudflare Tunnel for webhooks	issue	stated	Operator accepted hierarchy	write: after conversion	Hierarchy new-work table: Spike precedes features.	deferred until conversion	operator decision	""
+feat(github): repair cached state over REST with the monitor App	exp(github): test a programmatic Cloudflare Tunnel for webhooks	issue	stated	Operator accepted hierarchy	write: after conversion	Hierarchy new-work table: Spike precedes features.	deferred until conversion	operator decision	""
+feat(github): add Cloudflare Tunnel ingress for gh.tbhb.dev/webhook	exp(github): test a programmatic Cloudflare Tunnel for webhooks	issue	stated	Operator accepted hierarchy	write: after conversion	Hierarchy new-work table: Spike precedes features.	deferred until conversion	operator decision	""
+feat(github): add waits on cached pull request conditions	exp(github): test a programmatic Cloudflare Tunnel for webhooks	issue	stated	Operator accepted hierarchy	write: after conversion	Hierarchy new-work table: Spike precedes features.	deferred until conversion	operator decision	""
+feat(github): build the gateway with App-token reads and caller writes	exp(github): test TLS termination for gh through a local gateway	issue	stated	Operator accepted hierarchy	write: after conversion	Hierarchy new-work table: Spike precedes features.	deferred until conversion	operator decision	""
+feat(github): build the gateway with App-token reads and caller writes	exp(github): test Envoy against a Go proxy for the gateway on macOS	issue	stated	Operator accepted hierarchy	write: after conversion	Hierarchy new-work table: Spike precedes features.	deferred until conversion	operator decision	""
+feat(github): resolve placeholder tokens to role PATs in the gateway	exp(github): test TLS termination for gh through a local gateway	issue	stated	Operator accepted hierarchy	write: after conversion	Hierarchy new-work table: Spike precedes features.	deferred until conversion	operator decision	""
+feat(github): resolve placeholder tokens to role PATs in the gateway	exp(github): test Envoy against a Go proxy for the gateway on macOS	issue	stated	Operator accepted hierarchy	write: after conversion	Hierarchy new-work table: Spike precedes features.	deferred until conversion	operator decision	""
+feat(github): record Assisted-by and a signature in gateway writes	exp(github): test TLS termination for gh through a local gateway	issue	stated	Operator accepted hierarchy	write: after conversion	Hierarchy new-work table: Spike precedes features.	deferred until conversion	operator decision	""
+feat(github): record Assisted-by and a signature in gateway writes	exp(github): test Envoy against a Go proxy for the gateway on macOS	issue	stated	Operator accepted hierarchy	write: after conversion	Hierarchy new-work table: Spike precedes features.	deferred until conversion	operator decision	""
+feat(github): check cache freshness before gateway reads	exp(github): test TLS termination for gh through a local gateway	issue	stated	Operator accepted hierarchy	write: after conversion	Hierarchy new-work table: Spike precedes features.	deferred until conversion	operator decision	""
+feat(github): check cache freshness before gateway reads	exp(github): test Envoy against a Go proxy for the gateway on macOS	issue	stated	Operator accepted hierarchy	write: after conversion	Hierarchy new-work table: Spike precedes features.	deferred until conversion	operator decision	""
+feat(github): allow only listed mutations through the gateway	exp(github): test TLS termination for gh through a local gateway	issue	stated	Operator accepted hierarchy	write: after conversion	Hierarchy new-work table: Spike precedes features.	deferred until conversion	operator decision	""
+feat(github): allow only listed mutations through the gateway	exp(github): test Envoy against a Go proxy for the gateway on macOS	issue	stated	Operator accepted hierarchy	write: after conversion	Hierarchy new-work table: Spike precedes features.	deferred until conversion	operator decision	""
+feat(github): add Cloudflare Tunnel ingress for gh.tbhb.dev/webhook	190	issue	stated	Operator accepted hierarchy	write: after conversion	Hierarchy: tunnel after receiver	deferred until conversion	operator decision	""
+feat(github): add Cloudflare Tunnel ingress for gh.tbhb.dev/webhook	epic: tbhb-dev organization cutover	issue	stated	Operator accepted hierarchy	write: after conversion	Hierarchy: tunnel after move	deferred until conversion	operator decision	""
+epic: work model Actions workflows	epic: work model backfill	epic	stated	Operator accepted hierarchy	do not write	Removed by round 2 ruling: enforcement develops beside stage one, without a backfill dispatch gate.	audit only	operator decision	""
+epic: provisioned interactive workers	epic: orchestration service and CLI identity	epic	stated	Operator accepted hierarchy	write	Operator accepted hierarchy parent stage order.	native	operator decision	""
+epic: provisioned interactive workers	epic: messaging through the orchestration service	epic	stated	Operator accepted hierarchy	write	Operator accepted hierarchy parent stage order.	native	operator decision	""
+epic: GitHub monitoring service	epic: tbhb-dev organization cutover	epic	stated	Operator accepted hierarchy	write	Operator accepted hierarchy parent stage order.	native	operator decision	""
+epic: messaging through the orchestration service	epic: orchestration service and CLI identity	epic	stated	Operator accepted hierarchy	write	Operator accepted hierarchy parent stage order.	native	operator decision	""
+epic: GitHub gateway service	epic: orchestration service and CLI identity	epic	stated	Operator accepted hierarchy	write	Operator accepted hierarchy parent stage order.	native	operator decision	""
+epic: GitHub gateway service	epic: GitHub monitoring service	epic	stated	Operator accepted hierarchy	write	Operator accepted hierarchy parent stage order.	native	operator decision	""
+epic: GitHub gateway service	epic: tbhb-dev organization cutover	epic	stated	Operator accepted hierarchy	write	Operator accepted hierarchy parent stage order.	native	operator decision	""

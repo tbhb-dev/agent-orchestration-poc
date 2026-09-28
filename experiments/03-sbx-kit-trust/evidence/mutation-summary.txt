@@ -1,0 +1,10 @@
+[check:mutation] $ mise run check:mutation:go
+[check:mutation:go] $ rm -f gremlins.json
+[check:mutation:go] $ gremlins unleash ./internal/core --output-statuses lct --…
+Mutator coverage: 100.00%
+[check:mutation:go] $ uv run python scripts/check-gremlins-output.py
+Go core mutation run complete: 149 mutants classified
+[check:mutation] $ mise run check:mutation:python
+[check:mutation:python] $ uv run python scripts/check-mutation-score.py
+Saved CI/CD stats to mutants/mutmut-cicd-stats.json
+Python core mutation score: 90.09% (3936 killed of 4369)

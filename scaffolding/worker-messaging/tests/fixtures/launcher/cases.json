@@ -1,0 +1,15 @@
+{
+  "observations": [
+    ["trust_prompt", true, "blocked"],
+    ["pane_generation", "reused", "unknown"],
+    ["tmux_pane", "reused", "unknown"],
+    ["pid", 101, "unknown"],
+    ["process_start", "reused", "unknown"],
+    ["native_id", "wrong", "unknown"],
+    ["loaded", false, "unknown"],
+    ["brief_uptake", false, "unknown"],
+    ["roots_confirmed", false, "unknown"],
+    ["busy", true, "busy"]
+  ],
+  "restart": { "pane_generation": "new", "pid": 200 }
+}

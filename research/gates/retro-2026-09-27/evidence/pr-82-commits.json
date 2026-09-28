@@ -1,0 +1,52 @@
+[
+  {
+    "short_sha": "efdc76bde0fe",
+    "parent_count": 1,
+    "subject": "feat(bus): define pure subject layout and permissions"
+  },
+  {
+    "short_sha": "09208d1d0db8",
+    "parent_count": 1,
+    "subject": "feat(bus): host per-group JetStream and nkey users in agentd"
+  },
+  {
+    "short_sha": "d0770b9c5160",
+    "parent_count": 1,
+    "subject": "docs(bus): record the bus design and permission evidence"
+  },
+  {
+    "short_sha": "eaea23be0c68",
+    "parent_count": 1,
+    "subject": "docs(bus): align evidence labels with executed checks"
+  },
+  {
+    "short_sha": "3fcd82e11ac5",
+    "parent_count": 1,
+    "subject": "test(bus): verify stream and credential persistence across restart"
+  },
+  {
+    "short_sha": "a3c069f33c8a",
+    "parent_count": 1,
+    "subject": "test(bus): record scores from the first mutation run"
+  },
+  {
+    "short_sha": "ed20a7771ff0",
+    "parent_count": 1,
+    "subject": "fix(bus): prevent JetStream replies from impersonating agents"
+  },
+  {
+    "short_sha": "6711b42b9f35",
+    "parent_count": 2,
+    "subject": "chore(bus): merge current main"
+  },
+  {
+    "short_sha": "345dbd7bfc60",
+    "parent_count": 1,
+    "subject": "fix(bus): document relay boundary and clear credential seeds"
+  },
+  {
+    "short_sha": "c0728fde45d2",
+    "parent_count": 2,
+    "subject": "Merge branch 'main' into feat/26-embedded-nats"
+  }
+]

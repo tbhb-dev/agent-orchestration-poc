@@ -1,0 +1,28 @@
+{
+  "record": {
+    "harness": "codex",
+    "tmux_session": "worker-messaging",
+    "tmux_window": "@7",
+    "tmux_pane": "%13",
+    "pane_generation": "%13:100:Sun Sep 27 01:00:00 2026",
+    "pid": 100,
+    "process_start": "Sun Sep 27 01:00:00 2026",
+    "native_id": "thread-1",
+    "endpoint": "/tmp/codex.sock"
+  },
+  "seen": {
+    "tmux_session": "worker-messaging",
+    "tmux_window": "@7",
+    "tmux_pane": "%13",
+    "pane_generation": "%13:100:Sun Sep 27 01:00:00 2026",
+    "pid": 100,
+    "process_start": "Sun Sep 27 01:00:00 2026",
+    "native_id": "thread-1",
+    "endpoint": "/tmp/codex.sock",
+    "loaded": true,
+    "brief_uptake": true,
+    "roots_confirmed": true,
+    "trust_prompt": false,
+    "busy": false
+  }
+}

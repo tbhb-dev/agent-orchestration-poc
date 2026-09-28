@@ -1,0 +1,261 @@
+[
+  {
+    "filename": "docs/src/content/docs/decisions/0007-github-event-monitor.md",
+    "status": "added",
+    "additions": 36,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/decisions/index.md",
+    "status": "modified",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/design/github-event-monitor.md",
+    "status": "added",
+    "additions": 289,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/design/index.md",
+    "status": "modified",
+    "additions": 2,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/github-events/evidence/etag-first-headers.txt",
+    "status": "added",
+    "additions": 10,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/github-events/evidence/etag-repeat-headers.txt",
+    "status": "added",
+    "additions": 10,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/github-events/evidence/issue-28-comments.txt",
+    "status": "added",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/github-events/evidence/issue-28.txt",
+    "status": "added",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/github-events/evidence/issue-33-comments.txt",
+    "status": "added",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/github-events/evidence/issue-33.txt",
+    "status": "added",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/github-events/evidence/issue-49-comments.txt",
+    "status": "added",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/github-events/evidence/issue-49.txt",
+    "status": "added",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/github-events/evidence/issue-54-comments.txt",
+    "status": "added",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/github-events/evidence/issue-54.txt",
+    "status": "added",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/github-events/evidence/issue-72-comments.txt",
+    "status": "added",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/github-events/evidence/issue-72.txt",
+    "status": "added",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/github-events/evidence/issue-83-comments.txt",
+    "status": "added",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/github-events/evidence/issue-83.txt",
+    "status": "added",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/github-events/evidence/issue-89-comments.txt",
+    "status": "added",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/github-events/evidence/issue-89.txt",
+    "status": "added",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/github-events/evidence/issue-90-comments.txt",
+    "status": "added",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/github-events/evidence/issue-90.txt",
+    "status": "added",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/github-events/evidence/issue-96-comments.txt",
+    "status": "added",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/github-events/evidence/issue-96.txt",
+    "status": "added",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/github-events/evidence/issue-98-comments-update.txt",
+    "status": "added",
+    "additions": 2,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/github-events/evidence/issue-98-comments.txt",
+    "status": "added",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/github-events/evidence/issue-98.txt",
+    "status": "added",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/github-events/evidence/pr-82-comments.txt",
+    "status": "added",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/github-events/evidence/pr-82-discussion.txt",
+    "status": "added",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/github-events/evidence/pr-82-metadata.txt",
+    "status": "added",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/github-events/evidence/pr-82-reviews.txt",
+    "status": "added",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/github-events/evidence/rate-limit.txt",
+    "status": "added",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/github-events/evidence/repository-hooks.txt",
+    "status": "added",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/github-events/evidence/review-reproduction.txt",
+    "status": "added",
+    "additions": 28,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/github-events/evidence/validation.txt",
+    "status": "added",
+    "additions": 58,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/github-events/notes.md",
+    "status": "added",
+    "additions": 93,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "research/gates/github-events/versions.md",
+    "status": "added",
+    "additions": 48,
+    "deletions": 0,
+    "patch_available": true
+  }
+]

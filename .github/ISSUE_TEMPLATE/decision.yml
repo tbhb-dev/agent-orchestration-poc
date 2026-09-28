@@ -1,0 +1,52 @@
+---
+# do not edit: generated from config/workflow-reference.toml
+name: "decision work item"
+description: "Open a decision work item"
+title: "decision(scope): "
+labels: ["type/spike"]
+body:
+  - type: textarea
+    attributes:
+      label: "Goal"
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: "Context and links"
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: "Dependencies and paths"
+      description: >-
+        Name dependent issues and pull requests.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: "Allowed paths"
+      description: >-
+        List repo-relative literals or anchored globs, one per line.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: "Acceptance criteria"
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: "Evidence required"
+      description: "Name evidence paths and exact commands."
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: "Docs impact"
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: "Out of scope"
+    validations:
+      required: true

@@ -1,0 +1,17 @@
+[
+  {
+    "short_sha": "b44a3abe640d",
+    "parent_count": 1,
+    "subject": "tooling(workflow): add coordinator review and closure preflights"
+  },
+  {
+    "short_sha": "295a12825529",
+    "parent_count": 1,
+    "subject": "fix(preflight): bound check waits and centralize audit decisions"
+  },
+  {
+    "short_sha": "73d29d4c3367",
+    "parent_count": 2,
+    "subject": "chore(preflight): merge current main into coordinator checks"
+  }
+]

@@ -6,7 +6,7 @@ Document the coordinator preflight tasks for issues #70 through #73 on the workf
 
 ## Branch and review
 
-Merge `main` into a pushed branch and rebase only unpublished history. Never force push a pushed branch. Open the PR and exit after checks conclude. A review round is one verdict by `tbhbbot`. After the third changes-requested verdict, stop until a newer coordinator `tbhb` comment has the exact body `Arbitration: authorize another round`. Reply to inline threads and push fixes before re-review.
+Merge `main` into a pushed branch and rebase only unpublished history. Never force push a pushed branch. Open the PR and exit after checks conclude. A review round is one verdict by `tbhb-agent-reviewer`. After the third changes-requested verdict, stop until a newer coordinator `tbhb` comment has the exact body `Arbitration: authorize another round`. Reply to inline threads and push fixes before re-review.
 
 ## Writing rules
 

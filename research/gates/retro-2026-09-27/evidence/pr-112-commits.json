@@ -1,0 +1,12 @@
+[
+  {
+    "short_sha": "701a1501845f",
+    "parent_count": 1,
+    "subject": "fix(tooling): pin patched lodash-es in Mermaid lockfile"
+  },
+  {
+    "short_sha": "f34e8263c900",
+    "parent_count": 1,
+    "subject": "docs(tooling): document the lodash-es repair"
+  }
+]

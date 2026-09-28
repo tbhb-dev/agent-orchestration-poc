@@ -1,0 +1,2 @@
+{"case": "descriptor inherited after connector exit", "connector_exit": 0, "connector": {"pid": 37166, "pidversion": 860521103, "accepted_us": 1790607409579731}, "successor_pid": 37172, "received": "held", "peer_after_exit": {"pid": 37172, "pidversion": 860521112, "accepted_us": 1790607409855783}, "connector_live": false}
+{"case": "path replacement", "old_endpoint_exists": true, "new_path_is_old_endpoint": false, "new_listener_accepted": true}

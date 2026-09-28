@@ -1,0 +1,51 @@
+[
+  {
+    "filename": ".rumdl.toml",
+    "status": "modified",
+    "additions": 3,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": ".vale.ini",
+    "status": "modified",
+    "additions": 5,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/project/handoff-2026-09-26-prompt.md",
+    "status": "added",
+    "additions": 189,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/project/handoff-2026-09-26-state.md",
+    "status": "added",
+    "additions": 130,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/project/handoff.md",
+    "status": "modified",
+    "additions": 2,
+    "deletions": 66,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/workflow/tooling.md",
+    "status": "modified",
+    "additions": 2,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "reports/inputs/handoff-114-archive-evidence.md",
+    "status": "added",
+    "additions": 16,
+    "deletions": 0,
+    "patch_available": true
+  }
+]

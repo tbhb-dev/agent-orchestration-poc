@@ -1,0 +1,42 @@
+[
+  {
+    "short_sha": "a8e72bbdfda8",
+    "parent_count": 1,
+    "subject": "docs(design): design a webhook-fed monitor for pull request state"
+  },
+  {
+    "short_sha": "0b5c3755f03f",
+    "parent_count": 2,
+    "subject": "Merge branch 'main' into docs/98-github-event-monitor-design"
+  },
+  {
+    "short_sha": "9ca2d88d421f",
+    "parent_count": 2,
+    "subject": "chore(sync): merge main for review fixes"
+  },
+  {
+    "short_sha": "695f4d99fb41",
+    "parent_count": 1,
+    "subject": "docs(github): correct monitor bootstrap and burst recovery"
+  },
+  {
+    "short_sha": "25b4e4169174",
+    "parent_count": 2,
+    "subject": "chore(sync): preserve reviewed branch history"
+  },
+  {
+    "short_sha": "acfcaa57cf1e",
+    "parent_count": 2,
+    "subject": "docs(github): merge main and renumber monitor decision"
+  },
+  {
+    "short_sha": "6a54c3373c3e",
+    "parent_count": 2,
+    "subject": "Merge branch 'main' into docs/98-github-event-monitor-design"
+  },
+  {
+    "short_sha": "2f7f73f5eda4",
+    "parent_count": 2,
+    "subject": "Merge branch 'main' into docs/98-github-event-monitor-design"
+  }
+]

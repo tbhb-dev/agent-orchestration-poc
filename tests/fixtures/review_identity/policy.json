@@ -2,10 +2,10 @@
   "approvals": [
     {
       "case": "current approval",
-      "reviewer": "tbhbbot",
+      "reviewer": "tbhb-agent-reviewer",
       "state": "APPROVED",
       "active": true,
-      "last_pusher": "tbhb",
+      "last_pusher": "tbhb-agent",
       "expected": true
     },
     {
@@ -13,39 +13,39 @@
       "reviewer": "tbhb",
       "state": "APPROVED",
       "active": true,
-      "last_pusher": "tbhb",
+      "last_pusher": "tbhb-agent",
       "expected": false
     },
     {
       "case": "dismissed approval",
-      "reviewer": "tbhbbot",
+      "reviewer": "tbhb-agent-reviewer",
       "state": "APPROVED",
       "active": false,
-      "last_pusher": "tbhb",
+      "last_pusher": "tbhb-agent",
       "expected": false
     },
     {
       "case": "clean update retains approval",
-      "reviewer": "tbhbbot",
+      "reviewer": "tbhb-agent-reviewer",
       "state": "APPROVED",
       "active": true,
-      "last_pusher": "tbhb",
+      "last_pusher": "tbhb-agent",
       "expected": true
     },
     {
       "case": "hand-resolved merge dismisses approval",
-      "reviewer": "tbhbbot",
+      "reviewer": "tbhb-agent-reviewer",
       "state": "DISMISSED",
       "active": false,
-      "last_pusher": "tbhb",
+      "last_pusher": "tbhb-agent",
       "expected": false
     },
     {
       "case": "last pusher mismatch",
-      "reviewer": "tbhbbot",
+      "reviewer": "tbhb-agent-reviewer",
       "state": "APPROVED",
       "active": true,
-      "last_pusher": "tbhbbot",
+      "last_pusher": "tbhb-agent-reviewer",
       "expected": false
     }
   ],
@@ -117,7 +117,7 @@
       "case": "wrong arbitration author",
       "changes_requested": 3,
       "third_verdict_at": "2026-09-27T00:00:00Z",
-      "arbitration_author": "tbhbbot",
+      "arbitration_author": "tbhb-agent-reviewer",
       "arbitration_body": "Arbitration: authorize another round",
       "arbitration_at": "2026-09-27T00:01:00Z",
       "expected": false

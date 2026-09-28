@@ -12,6 +12,18 @@ Import date: 2026-09-26. Imported for issue #10 from two plain folders (not git 
 
 The inventory covers every regular file in both folders, including the files inside excluded directories, so every source path has a row in the table at the end and in `MANIFEST.tsv`. Symbolic links are not regular files and have no rows; the only ones in either folder are the four interpreter links in the excluded virtual environment, listed under exclusions.
 
+## Frozen design wiki snapshot
+
+[Documented] The source is `/Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.holding/research/2026-09-28-design-wiki-messaging/`, frozen from design wiki commit `8384ca71d1ecc8ff590878fc4351954dbadd06d4` at `2026-09-28 00:23 EDT` according to `SNAPSHOT-TIME`. The destination is `research/imported/design-wiki-8384ca7/`. All 37 wiki source files and both snapshot metadata files were copied verbatim, for 39 files and 762,504 bytes. The 39 appended rows in `MANIFEST.tsv` give each relative path, individual SHA-256 digest, size, and destination.
+
+[Verified] `sha256sum SHA256SUMS` produced `85f34c8147d35b1ef32fe9d912a5bfa0a3e88e68075a120fb44cc8ded4a1627f` for the frozen source checksum file. `sha256sum -c SHA256SUMS` returned exit code 0 in the source and imported directories, with all 37 listed wiki files reporting `OK`. The manifest rows also verify the SHA-256 digest and byte count of `SHA256SUMS` and `SNAPSHOT-TIME` themselves.
+
+[Verified] `SOURCE_ROOT=/nonexistent research/imported/verify.sh` returned exit code 0 and reported `source root /nonexistent not found; checking copies only`, `rows=1152 sources_ok=0 copies_ok=156`, and `OK`. The issue's `mise exec -- python -c` completeness command compared the imported directory's regular files with the `design-wiki-8384ca7` manifest paths, returned exit code 0, and reported `39 files match manifest`. This separate completeness check covers the new folder, which the existing `verify.sh` unlisted-copy loop does not enumerate.
+
+[Verified] `mise exec -- gitleaks dir research/imported/design-wiki-8384ca7 --redact --no-banner` with gitleaks 8.30.1 returned exit code 0, scanned about 762,504 bytes, and reported no leaks.
+
+[Verified] After merging `origin/main` at `b83666c3cd80d588e9d39a28747a4146c35d0b97`, `mise exec -- sh scripts/check-imported-research.sh origin/main 'research(import): add the frozen design wiki snapshot'` exited 0 and allowed both append-only manifest edits and all 39 added files; `mise exec -- sh scripts/test-imported-research.sh`, `mise run check`, and `mise run check:mutation` also exited 0. The local check passed 466 Python coverage tests and all core and shell floors; Go mutation efficacy was 97.32% and Python core mutation score was 90.09% (3,936 of 4,369 killed). [Observed] Pull request #232's CI at merge commit `20ca823` completed [check](https://github.com/tbhb-dev/agent-orchestration-poc/actions/runs/36433742317/job/108966217881), [docs](https://github.com/tbhb-dev/agent-orchestration-poc/actions/runs/36433742202/job/108966218880), [pr-body](https://github.com/tbhb-dev/agent-orchestration-poc/actions/runs/36433742150/job/108966221734), [imported-research](https://github.com/tbhb-dev/agent-orchestration-poc/actions/runs/36433742155/job/108966216082), and [mutation](https://github.com/tbhb-dev/agent-orchestration-poc/actions/runs/36433742555/job/108966219038) with success.
+
 ## Tools
 
 | Tool | Version | Use |

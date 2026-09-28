@@ -1,0 +1,47 @@
+[
+  {
+    "case": "single",
+    "title": "tooling(workflow): add forms",
+    "body": "## What\nForms.\n## Why\nNeeded.\n## Evidence\n[Checks](reports/inputs/workflow-forms-evidence.md).\n## Docs\nUpdated.\n## Size justification\nWithin limit.\n## Gate justifications\nNone.\n## Checklist\n- [x] CI green.\n\nRefs: #84",
+    "labels": ["area/workflow", "type/chore", "phase/1", "harness/codex"],
+    "open": [84],
+    "expected": []
+  },
+  {
+    "case": "multiple",
+    "title": "feat(bus): add relay",
+    "body": "## What\nRelay.\n## Why\nNeeded.\n## Evidence\n[Checks](reports/inputs/relay.md).\n## Docs\nUpdated.\n## Size justification\nWithin limit.\n## Gate justifications\nNone.\n## Checklist\n- [x] CI green.\n\nRefs: #27\nRefs: #29",
+    "labels": ["area/bus", "type/feature", "phase/2", "harness/codex"],
+    "open": [27, 29],
+    "expected": []
+  },
+  {
+    "case": "closed",
+    "title": "feat(bus): add relay",
+    "body": "## What\nRelay.\n## Why\nNeeded.\n## Evidence\nNo link.\n## Docs\nUpdated.\n## Checklist\n- [x] CI green.\n\nRefs: #27",
+    "labels": ["area/bus", "type/feature", "phase/2", "harness/codex"],
+    "open": [],
+    "expected": [
+      "missing section: Size justification",
+      "missing section: Gate justifications",
+      "feat and exp need an Evidence link",
+      "issue #27 is not open"
+    ]
+  },
+  {
+    "case": "trailer-not-final",
+    "title": "tooling(workflow): add forms",
+    "body": "## What\nForms.\nRefs: #84\nAfter trailer.",
+    "labels": ["area/workflow", "type/chore", "phase/1", "harness/codex"],
+    "open": [84],
+    "expected": [
+      "missing section: Why",
+      "missing section: Evidence",
+      "missing section: Docs",
+      "missing section: Checklist",
+      "missing section: Size justification",
+      "missing section: Gate justifications",
+      "body must end with Refs: #<n> trailers"
+    ]
+  }
+]

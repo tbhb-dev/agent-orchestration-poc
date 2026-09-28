@@ -59,6 +59,7 @@ depends = [
   "check:secrets",
   "check:actions",
   "notebooks:lint",
+  "check:workflow-forms",
 ]
 
 [tasks.fmt]
@@ -127,6 +128,22 @@ run = ["uv run ruff check --fix .", "uv run ruff format ."]
 description = "Run the Python tests"
 run = "uv run pytest"
 
+[tasks."monitor:project-probe"]
+description = "Read-only Project 9 source and event feasibility probe"
+run = "uv run python scaffolding/github-monitor/project_probe.py"
+
+[tasks."monitor:test-project-probe"]
+description = "Test the disposable Project 9 probe"
+run = "uv run pytest tests/test_project_probe.py"
+
+[tasks."monitor:repair"]
+description = "Repair explicitly tracked temporary monitor objects through REST"
+run = "uv run python scaffolding/github-monitor/rest_client.py"
+
+[tasks."monitor:test-repair"]
+description = "Test fixture-backed temporary REST repair"
+run = "PYTHONPATH=scaffolding/github-monitor uv run pytest scaffolding/github-monitor/tests/test_repair.py"
+
 [tasks."check:review-identity"]
 description = "Run reviewer policy and wrapper process fixtures"
 run = "uv run pytest tests/fixtures/review_identity/test_policy.py tests/fixtures/review_identity/test_wrapper.py --run-integration"
@@ -142,7 +159,8 @@ run = [
 
 [tasks."check:pyrefly"]
 description = "Type check Python with pyrefly in strict mode"
-run = "uv run pyrefly check"
+env = { PYTHONPATH = "scaffolding/worker-messaging" }
+run = "uv run pyrefly check --search-path scaffolding/github-monitor"
 
 [tasks."check:mutation"]
 description = "Run the Go and Python core mutation score gates"
@@ -258,6 +276,19 @@ run = "uv run --group analysis python -m agent_orchestration_poc.shell.analysis.
 description = "Render every notebook with committed or synthetic inputs"
 run = "uv run --group analysis python -m agent_orchestration_poc.shell.analysis.notebooks ci"
 
+# Temporary local GitHub monitor for issue #167.
+[tasks."monitor:start"]
+run = "uv run python scaffolding/github-monitor/cli.py start"
+
+[tasks."monitor:status"]
+run = "uv run python scaffolding/github-monitor/cli.py status"
+
+[tasks."monitor:track"]
+run = "uv run python scaffolding/github-monitor/cli.py track"
+
+[tasks."monitor:test-receiver"]
+run = "PYTHONPATH=scaffolding/github-monitor uv run pytest scaffolding/github-monitor/tests"
+
 # Coordinator preflight. These read live GitHub or git state and run separately from `check`.
 [tasks."review:preflight"]
 description = "Check that a PR branch includes current main workflows: mise run review:preflight -- <pr>"
@@ -276,6 +307,31 @@ run = "uv run python -m agent_orchestration_poc.shell.coordinator_preflight clos
 [tasks."check:pr-body"]
 description = "Check a PR body on stdin against the commit convention: mise run check:pr-body -- '<title>' < body.md"
 run = "scripts/check-pr-body.sh"
+
+[tasks."check:workflow-forms"]
+description = "Test workflow form decisions and compare generated forms"
+run = ["uv run pytest tests/test_workflow_forms.py", "uv run python -m agent_orchestration_poc.shell.workflow_forms forms"]
+
+[tasks."forms:write"]
+description = "Regenerate issue forms from the workflow reference"
+run = "uv run python -m agent_orchestration_poc.shell.workflow_forms write-forms"
+
+[tasks."workflow:issue"]
+description = "Read and validate one issue"
+run = "uv run python -m agent_orchestration_poc.shell.workflow_forms issue"
+
+[tasks."workflow:issues"]
+description = "Read and validate every open issue"
+run = "uv run python -m agent_orchestration_poc.shell.workflow_forms issues"
+
+[tasks."workflow:pr"]
+description = "Read and validate one pull request"
+run = "uv run python -m agent_orchestration_poc.shell.workflow_forms pr"
+
+[tasks."scc:version"]
+description = "Report the pinned scc version for the PR size contract"
+tools."go:github.com/boyter/scc/v4" = "4.1.0"
+run = "scc --version"
 
 [tasks."check:imported-research"]
 description = "Check that research/imported/ is unchanged against a base ref: mise run check:imported-research -- <base> '<title>'"
@@ -310,3 +366,24 @@ dir = "docs"
 depends = ["docs:install"]
 env = { CHECK_LINKS = "1" }
 run = "pnpm exec astro build"
+
+[tasks."worker:launch"]
+description = "Launch a temporary interactive worker for issue 176"
+run = "uv run python scaffolding/worker-messaging/cli.py launch"
+
+[tasks."worker:status"]
+description = "Recheck a temporary worker run"
+run = "uv run python scaffolding/worker-messaging/cli.py status"
+
+[tasks."worker:readiness"]
+description = "Recheck temporary worker readiness"
+run = "uv run python scaffolding/worker-messaging/cli.py readiness"
+
+[tasks."worker:cleanup"]
+description = "Remove a temporary worker run's exact Codex folder trust"
+run = "uv run python scaffolding/worker-messaging/cli.py cleanup"
+
+[tasks."worker:test-launcher"]
+description = "Test temporary worker launch decisions"
+env = { PYTHONPATH = "scaffolding/worker-messaging" }
+run = "uv run pytest scaffolding/worker-messaging/tests"

@@ -1,0 +1,205 @@
+[
+  {
+    "filename": "docs/src/content/docs/devlog/2026-09-26-phase-1-foundation.md",
+    "status": "added",
+    "additions": 30,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/project/handoff.md",
+    "status": "modified",
+    "additions": 45,
+    "deletions": 21,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/project/history.md",
+    "status": "modified",
+    "additions": 14,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/project/phase-1-checkpoint.md",
+    "status": "added",
+    "additions": 46,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/project/plan.md",
+    "status": "modified",
+    "additions": 25,
+    "deletions": 20,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/retros/2026-09-26-phase-1.md",
+    "status": "added",
+    "additions": 54,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "docs/src/content/docs/retros/index.md",
+    "status": "modified",
+    "additions": 2,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "reports/inputs/phase-1-coordinator-notes.md",
+    "status": "added",
+    "additions": 12,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "reports/inputs/phase-1-history/README.md",
+    "status": "added",
+    "additions": 41,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "reports/inputs/phase-1-history/ci-failure.txt",
+    "status": "added",
+    "additions": 42,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "reports/inputs/phase-1-history/filed-issues.json.txt",
+    "status": "added",
+    "additions": 27,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "reports/inputs/phase-1-history/git-log.txt",
+    "status": "added",
+    "additions": 17,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "reports/inputs/phase-1-history/input-secret-scan.txt",
+    "status": "added",
+    "additions": 2,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "reports/inputs/phase-1-history/issue-6-events.json.txt",
+    "status": "added",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "reports/inputs/phase-1-history/issues.json.txt",
+    "status": "added",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "reports/inputs/phase-1-history/local-build.txt",
+    "status": "added",
+    "additions": 2,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "reports/inputs/phase-1-history/local-check.txt",
+    "status": "added",
+    "additions": 74,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "reports/inputs/phase-1-history/main-ruleset.json.txt",
+    "status": "added",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "reports/inputs/phase-1-history/merged-prs-refresh.json.txt",
+    "status": "added",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "reports/inputs/phase-1-history/merged-prs.json.txt",
+    "status": "added",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "reports/inputs/phase-1-history/open-prs-final.txt",
+    "status": "added",
+    "additions": 0,
+    "deletions": 0,
+    "patch_available": false
+  },
+  {
+    "filename": "reports/inputs/phase-1-history/open-prs-refresh.txt",
+    "status": "added",
+    "additions": 0,
+    "deletions": 0,
+    "patch_available": false
+  },
+  {
+    "filename": "reports/inputs/phase-1-history/open-prs.txt",
+    "status": "added",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "reports/inputs/phase-1-history/pr-68.json.txt",
+    "status": "added",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "reports/inputs/phase-1-history/reviews.json.txt",
+    "status": "added",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "reports/inputs/phase-1-history/runs-expanded.json.txt",
+    "status": "added",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "reports/inputs/phase-1-history/runs.json.txt",
+    "status": "added",
+    "additions": 1,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "reports/inputs/phase-1-history/worktrees-final.txt",
+    "status": "added",
+    "additions": 3,
+    "deletions": 0,
+    "patch_available": true
+  },
+  {
+    "filename": "reports/inputs/phase-1-history/worktrees.txt",
+    "status": "added",
+    "additions": 4,
+    "deletions": 0,
+    "patch_available": true
+  }
+]

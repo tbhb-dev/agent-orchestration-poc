@@ -1,0 +1,4 @@
+{"at": "2026-09-27T18:24:52.779915+00:00", "case": "stale", "expected": "gen-2", "report": {"schema": 1, "run_id": "run-1", "generation": "gen-1", "state": "finished", "observed_at": "2020-01-01T00:00:00Z"}}
+{"at": "2026-09-27T18:24:52.780291+00:00", "case": "before-rename", "final": {"schema": 1, "run_id": "run-1", "generation": "gen-1", "state": "finished", "observed_at": "2020-01-01T00:00:00Z"}, "temporary_complete": false}
+{"at": "2026-09-27T18:24:52.780880+00:00", "case": "after-rename", "final": {"schema": 1, "run_id": "run-2", "generation": "gen-2", "state": "finished", "observed_at": "2026-09-27T18:24:52.779520+00:00"}, "temporary_exists": false}
+{"at": "2026-09-27T18:24:52.823558+00:00", "case": "writer-killed", "writer_returncode": -9, "final": {"schema": 1, "run_id": "run-2", "generation": "gen-2", "state": "finished", "observed_at": "2026-09-27T18:24:52.779520+00:00"}, "temporary_complete": false, "temporary_exists": true}

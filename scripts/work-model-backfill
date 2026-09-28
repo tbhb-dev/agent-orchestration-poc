@@ -1,0 +1,3 @@
+#!/usr/bin/env sh
+set -eu
+exec mise exec -- uv run python -m agent_orchestration_poc.shell.work_model_backfill "$@"
