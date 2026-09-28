@@ -22,8 +22,11 @@ from agent_orchestration_poc.core.work_model_backfill_executor import (
     Record,
     closure_actions,
     comment_observation,
+    draft_actions,
+    draft_observation,
     journal_state,
     observation_value,
+    stage_actions,
     validate_journal,
     validate_progress,
     verified_detail,
@@ -66,6 +69,30 @@ def contract() -> tuple[tuple[Action, ...], Snapshot]:
     return closure_actions(tables, cp1, plan, "digest"), cp1
 
 
+def draft_action(cp1: Snapshot) -> Action:
+    """Build the planned synthetic draft action."""
+    rows = FIXTURES / "plan"
+    tables = parse_tables(
+        *(
+            (rows / f"{name}.tsv").read_text()
+            for name in ("assignments", "parents", "edges")
+        )
+    )
+    return draft_actions(tables, cp1, operation_plan(tables, cp1))[0]
+
+
+def with_added_draft(cp1: Snapshot, item: Item, *, prepend: bool = False) -> Snapshot:
+    """Represent one complete additional Project draft page entry."""
+    pages = tuple(
+        replace(page, count=page.count + 1, total_count=page.total_count + 1)
+        if page.collection in {"project", "drafts"}
+        else page
+        for page in cp1.pages
+    )
+    items = (item, *cp1.items) if prepend else (*cp1.items, item)
+    return replace(cp1, items=items, pages=pages)
+
+
 def test_closure_actions_follow_plan() -> None:
     actions, _ = contract()
     expected = json.loads((FIXTURES / "runner/executor-actions.json").read_text())
@@ -73,6 +100,192 @@ def test_closure_actions_follow_plan() -> None:
         json.loads(json.dumps([asdict(action) for action in actions]))
         == expected["closure"]
     )
+
+
+def test_draft_actions_follow_plan_and_recover_identity() -> None:
+    rows = FIXTURES / "plan"
+    tables = parse_tables(
+        *(
+            (rows / f"{name}.tsv").read_text()
+            for name in ("assignments", "parents", "edges")
+        )
+    )
+    cp1 = fixture_snapshot("executor-cp1")
+    actions = draft_actions(tables, cp1, operation_plan(tables, cp1))
+    body = "- Class: chore\n- Priority: Standard\n- Work type: Unplanned\n- Severity: none\n- Size: "
+    assert actions == (
+        Action(
+            "6:draft:title:Draft A",
+            "6",
+            "draft",
+            0,
+            "POST",
+            "orgs/tbhb-dev/projectsV2/1/drafts",
+            {"title": "Draft A", "body": body},
+            (0, ""),
+            (1, body),
+        ),
+    )
+    action = actions[0]
+    assert action.payload is not None
+    assert draft_observation([], "Draft A") == (0, "", None, None)
+    item = {
+        "content_type": "DraftIssue",
+        "id": 13,
+        "content": {
+            "id": "draft-a",
+            "title": "Draft A",
+            "body": action.payload["body"],
+        },
+    }
+    observed = draft_observation([item], "Draft A")
+    assert observed == (1, body, "13", "draft-a")
+    assert observation_value(action, observed) == action.after
+    assert verified_detail(action, observed, {"status": 200}) == {
+        "observed": (1, body),
+        "read": {"status": 200},
+        "item_id": "13",
+        "draft_id": "draft-a",
+    }
+    assert draft_observation([item, item], "Draft A") == (2, "", None, None)
+    assert (
+        journal_state(action, (Record(action.id, "intent", {}),), observed) == "verify"
+    )
+    assert journal_state(action, (), observed) == "halt"
+
+
+def test_draft_progress_requires_recorded_creation() -> None:
+    cp1 = fixture_snapshot("executor-cp1")
+    action = draft_action(cp1)
+    assert action.payload is not None
+    created = Item(
+        "title:Draft A",
+        "Draft A",
+        "draft",
+        body=action.payload["body"],
+        item_id="13",
+        draft_id="draft-a",
+    )
+    current = with_added_draft(cp1, created)
+    record = (Record(action.id, "intent", {}),)
+    validate_progress(cp1, current, (action,), record)
+    for changed in (
+        replace(created, title="Other"),
+        replace(created, body="changed"),
+        replace(created, state="open"),
+        replace(created, item_id=""),
+        replace(created, draft_id=""),
+        replace(created, issue_id="unexpected"),
+    ):
+        with pytest.raises(ValueError, match="differs|changed"):
+            validate_progress(
+                cp1, replace(current, items=(*cp1.items, changed)), (action,), record
+            )
+    with pytest.raises(ValueError, match="unrecorded"):
+        validate_progress(cp1, current, (action,), ())
+    with pytest.raises(ValueError, match="disappeared"):
+        validate_progress(
+            cp1, cp1, (action,), (*record, Record(action.id, "verified", {}))
+        )
+
+
+def test_draft_resume_rejects_replacement_after_identity_is_known() -> None:
+    cp1 = fixture_snapshot("executor-cp1")
+    action = draft_action(cp1)
+    assert action.payload is not None
+    created = Item(
+        "title:Draft A",
+        "Draft A",
+        "draft",
+        body=action.payload["body"],
+        item_id="999",
+        draft_id="unrelated-draft",
+    )
+    records = (
+        Record(action.id, "intent", {}),
+        Record(action.id, "response", {"id": 13, "draft_id": "draft-a"}),
+        Record(action.id, "verified", {"item_id": "13", "draft_id": "draft-a"}),
+    )
+    with pytest.raises(ValueError, match="identity|differs"):
+        validate_progress(
+            cp1,
+            with_added_draft(cp1, created),
+            (action,),
+            records,
+        )
+    original = replace(created, item_id="13", draft_id="draft-a")
+    validate_progress(cp1, with_added_draft(cp1, original), (action,), records)
+    assert (
+        journal_state(action, records, (1, action.payload["body"], "13", "draft-a"))
+        == "skip"
+    )
+    assert (
+        journal_state(
+            action, records[:1], (1, action.payload["body"], "999", "unrelated-draft")
+        )
+        == "verify"
+    )
+    assert (
+        journal_state(
+            action, records, (1, action.payload["body"], "999", "unrelated-draft")
+        )
+        == "halt"
+    )
+    assert (
+        journal_state(
+            action, records[:2], (1, action.payload["body"], "999", "draft-a")
+        )
+        == "halt"
+    )
+    assert (
+        journal_state(
+            action, records[:2], (1, action.payload["body"], "13", "unrelated-draft")
+        )
+        == "halt"
+    )
+    verified_without_response = (records[0], records[2])
+    for changed in (
+        replace(original, item_id="replacement-item"),
+        replace(original, draft_id="replacement-draft"),
+    ):
+        with pytest.raises(ValueError, match="differs"):
+            validate_progress(
+                cp1,
+                with_added_draft(cp1, changed),
+                (action,),
+                verified_without_response,
+            )
+        assert (
+            journal_state(
+                action,
+                verified_without_response,
+                (1, action.payload["body"], changed.item_id, changed.draft_id),
+            )
+            == "halt"
+        )
+
+
+def test_progress_rejects_duplicate_existing_draft_key() -> None:
+    actions, cp1 = contract()
+    original = next(item for item in cp1.items if item.key == "title:Draft B")
+    duplicate = replace(original, item_id="extra-item", draft_id="extra-draft")
+    current = with_added_draft(cp1, duplicate, prepend=True)
+    with pytest.raises(ValueError, match="duplicate|drifted"):
+        validate_progress(cp1, current, actions, ())
+
+
+def test_stage_actions_require_verified_closures() -> None:
+    closures = (
+        Action("a", "0", "comment", 1, "POST", "", {}, 0, 1),
+        Action("b", "0", "issue_state", 1, "PATCH", "", {}, 0, 1),
+    )
+    drafts = (Action("c", "6", "draft", 0, "POST", "", {}, 0, 1),)
+    assert stage_actions("0", closures, drafts, ()) == closures
+    for records in ((), (Record("a", "intent", {}),), (Record("a", "verified", {}),)):
+        with pytest.raises(ValueError, match="stage 0"):
+            stage_actions("6:drafts", closures, drafts, records)
+    complete = (Record("a", "verified", {}), Record("b", "verified", {}))
+    assert stage_actions("6:drafts", closures, drafts, complete) == drafts
 
 
 @pytest.mark.parametrize(
