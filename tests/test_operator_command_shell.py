@@ -115,6 +115,8 @@ def test_valid_repeated_delivery(
     }
     assert shell.process(event, "fixture-token", base).reaction == "+1"
     assert shell.process(event, "fixture-token", base).reaction == "+1"
+    handler.payload["ask"]["updated_at"] = "2026-09-28T12:02:00Z"
+    assert shell.process(event, "fixture-token", base).reaction == "confused"
     assert handler.posts == [
         (
             f"/repos/{REPOSITORY}/issues/comments/100/reactions",

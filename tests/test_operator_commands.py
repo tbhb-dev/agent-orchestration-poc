@@ -9,7 +9,10 @@ from hypothesis import given
 from hypothesis import strategies as st
 
 from agent_orchestration_poc.core.operator_commands import (
+    Decision,
+    Effects,
     decide,
+    effects,
     latest_ask,
     numbered_ask,
     parse_command,
@@ -196,6 +199,52 @@ def test_decision_is_deterministic(body: str) -> None:
     data["comment"]["body"] = body
     values = (data["event"], data["comment"], data["item"], (data["ask"],))
     assert decide(*values) == decide(*values)
+
+
+@pytest.mark.parametrize(
+    ("decision", "labels", "reactions", "expected"),
+    [
+        (Decision("+1", True), frozenset(), (), Effects("+1", True)),
+        (
+            Decision("+1", True),
+            frozenset({"operator/replied"}),
+            (),
+            Effects("+1", False),
+        ),
+        (
+            Decision("+1", True),
+            frozenset(),
+            (("github-actions[bot]", "+1"),),
+            Effects(None, True),
+        ),
+        (
+            Decision("+1", True),
+            frozenset(),
+            (("github-actions[bot]", "confused"),),
+            Effects(None, False),
+        ),
+        (
+            Decision("confused"),
+            frozenset(),
+            (("github-actions[bot]", "+1"),),
+            Effects(None, False),
+        ),
+    ],
+)
+def test_effects_preserve_first_acknowledgement(
+    decision: Decision,
+    labels: frozenset[str],
+    reactions: tuple[tuple[str, str], ...],
+    expected: Effects,
+) -> None:
+    assert effects(decision, labels, reactions) == expected
+
+
+@given(st.text())
+def test_effects_ignore_other_reaction_authors(login: str) -> None:
+    if login != "github-actions[bot]":
+        result = effects(Decision("+1", True), frozenset(), ((login, "confused"),))
+        assert result == Effects("+1", True)
 
 
 @given(st.text())

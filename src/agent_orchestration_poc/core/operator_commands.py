@@ -39,6 +39,32 @@ class Decision:
     command: Command | None = None
 
 
+@dataclass(frozen=True)
+class Effects:
+    """Idempotent acknowledgement operations for one fetched state."""
+
+    reaction: str | None
+    add_label: bool
+
+
+def effects(
+    decision: Decision,
+    labels: frozenset[str],
+    reactions: tuple[tuple[str, str], ...],
+) -> Effects:
+    """Keep the first bot verdict and retry only its missing label."""
+    prior = {content for login, content in reactions if login == "github-actions[bot]"}
+    if prior:
+        return Effects(
+            None,
+            decision.add_label and "+1" in prior and "operator/replied" not in labels,
+        )
+    return Effects(
+        decision.reaction,
+        decision.add_label and "operator/replied" not in labels,
+    )
+
+
 def parse_command(body: str) -> tuple[str, str] | None:
     """Parse exact one-line grammar, or reject malformed slash text."""
     text = body.strip()

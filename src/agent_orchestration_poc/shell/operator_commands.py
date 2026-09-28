@@ -9,7 +9,7 @@ from typing import Any
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
-from agent_orchestration_poc.core.operator_commands import Decision, decide
+from agent_orchestration_poc.core.operator_commands import Decision, decide, effects
 
 LOGGER = logging.getLogger(__name__)
 REPOSITORY = "tbhb-dev/agent-orchestration-poc"
@@ -117,21 +117,23 @@ def process(event: dict[str, Any], token: str, base: str = API) -> Decision:
     reactions = all_pages(
         base, token, f"{root}/issues/comments/{comment_id}/reactions?per_page=100"
     )
-    if not any(
-        reaction.get("content") == decision.reaction
-        and reaction.get("user", {}).get("login") == "github-actions[bot]"
-        for reaction in reactions
-    ):
+    plan = effects(
+        decision,
+        frozenset(label["name"] for label in item["labels"]),
+        tuple(
+            (reaction.get("user", {}).get("login", ""), reaction.get("content", ""))
+            for reaction in reactions
+        ),
+    )
+    if plan.reaction is not None:
         request_json(
             base,
             token,
             f"{root}/issues/comments/{comment_id}/reactions",
             "POST",
-            {"content": decision.reaction},
+            {"content": plan.reaction},
         )
-    if decision.add_label and not any(
-        label.get("name") == "operator/replied" for label in item["labels"]
-    ):
+    if plan.add_label:
         request_json(
             base,
             token,
