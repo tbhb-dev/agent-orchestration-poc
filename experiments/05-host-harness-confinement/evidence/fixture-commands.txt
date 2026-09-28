@@ -1,0 +1,19 @@
+2026-09-28, issue #242 fixture delivery, no harness launch
+PYTHONSAFEPATH=1 mise exec -- uv run pytest -q experiments/05-host-harness-confinement/test_m001.py
+exit 0, 30 passed
+mise run check
+first attempt exit 123, existing tests/test_workflow_forms.py::test_core_properties_across_reference exceeded its 200 ms Hypothesis deadline at 358.44 ms
+mise run check:workflow-forms
+retry exit 0, 110 passed, workflow-forms-retry.raw.gz
+mise run check
+second attempt exit 0, fixture-check.raw.gz
+mise run check:mutation
+exit 0, fixture-mutation.raw.gz, Go 97.32 percent, Python 90.19 percent
+rg -l credential-patterns evidence/fixture-check.raw evidence/fixture-mutation.raw evidence/workflow-forms-retry.raw
+exit 1, no matching file names before compression
+ps -eo pid,etime,args
+denied by the worker sandbox, no alternate process inspection attempted
+git commit with default prek cache
+denied while opening /Users/tony/.cache/prek/prek.log
+PREK_HOME=/private/tmp/prek-242-commit git commit with normal hooks
+exit 0, cache kept in writable temporary storage

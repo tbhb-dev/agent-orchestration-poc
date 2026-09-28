@@ -1,5 +1,13 @@
 # Host harness confinement baseline
 
+## M-001 fixture delivery
+
+**Verified, local fixture only:** [the protocol tests](test_m001.py) exercise a masked WebSocket-over-Unix JSON-RPC `thread/queue/add` and a Claude peer write ending in a newline. They also start a stdio MCP child and a command hook process, and parse the profile-specific fixed responder frames. The disposable B targets log whether they parsed the complete protocol. The test result and repository gates are recorded under `evidence/` for this delivery. These tests use only temporary local sockets and fake IDs. They do not test a managed harness policy.
+
+**Untested:** [the stage-three runbook](stage-three-runbook.md) prepares commands, paths, frame contents, protocol bytes, and cleanup for the four BV-20 homes. It has not been executed. Its fixed model frames exercise the shell path. Harness-loaded MCP, hook, and preexisting project server paths still need reviewed model frames and effective-setting checks before launch. Operator BV-20 line 3 makes that review a prelaunch gate. No profile is qualified, and issue #242 remains open for the integrated run evidence. The older [operator proposal](operator-proposal.md) records the previous separate-home plan and is superseded by BV-20's four shared homes.
+
+**Verified:** `mise run check` and `mise run check:mutation` exited 0 after a workflow-forms Hypothesis deadline on the first aggregate attempt passed on retry. The mutation scores were 97.32 percent for Go core and 90.19 percent for Python core. [The command record](evidence/fixture-commands.txt) gives each exit status, and the compressed raw outputs are in `evidence/fixture-check.raw.gz`, `evidence/fixture-mutation.raw.gz`, and `evidence/workflow-forms-retry.raw.gz`. Mutation testing covers the product core. Local table and property tests cover the new experiment core.
+
 ## Scope and result
 
 **Observed:** a disposable same-UID shell baseline connected to A's peer socket and B's peer, enrollment, management, queue, `cc-socks`, and oversight socket stubs. It read and used B's canary bytes and replaced B's wrapper configuration. The [raw trace](evidence/baseline.jsonl) records these operations. The stubs identify each contacted endpoint. They handle no real protocol or authorization.
