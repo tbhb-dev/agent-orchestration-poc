@@ -1,0 +1,63 @@
+[
+  {
+    "case": "prepare",
+    "actual": "shared and private paths created",
+    "A_mode": "0o700",
+    "B_mode": "0o700"
+  },
+  {
+    "case": "direct-headless",
+    "exit": 0,
+    "ready": true,
+    "outcome": "0",
+    "stdout": ["A: ready", "A: complete"]
+  },
+  {
+    "case": "direct-cancel-twice",
+    "ready": true,
+    "exit": -15,
+    "first_cancel": "signaled",
+    "second_cancel": "already exited",
+    "stdout": ["B: ready"],
+    "outcome_marker": false
+  },
+  {
+    "case": "tmux-interactive-reconnect",
+    "create_exit": 0,
+    "ready": true,
+    "pane_pid": "96100",
+    "first_attach_exit": 1,
+    "after_first_has_session": 0,
+    "second_attach_exit": 1,
+    "after_second_has_session": 0,
+    "pane_output": "B: ready"
+  },
+  {
+    "case": "tmux-server-stop",
+    "exit": 0,
+    "socket_retained": true,
+    "outcome_marker": false
+  },
+  {
+    "case": "collision-and-interrupted-create",
+    "collision": "rejected",
+    "concurrent_create_exits": [0, 1],
+    "partial_marker_before_interrupt": true,
+    "provisioner_exit": -15,
+    "owned_path_after_rollback": false,
+    "second_cleanup": "already absent",
+    "unrelated_retained": true
+  },
+  {
+    "case": "storage",
+    "shared_A": "written by A",
+    "shared_B": "written by B",
+    "A_private": "A",
+    "A_worker_read_exit": 0,
+    "A_worker_reads_B_private": "B"
+  },
+  {
+    "case": "cleanup",
+    "fixture_retained": false
+  }
+]

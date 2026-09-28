@@ -1,0 +1,5 @@
+Command: mise run check:mutation
+Exit: 0
+Go core: 149 mutants classified, 97.32% test efficacy
+Python core: 4801 killed of 5326, 90.14% mutation score
+Run on 2026-09-28 after the review fixes and origin/main merge; no product core changed.
