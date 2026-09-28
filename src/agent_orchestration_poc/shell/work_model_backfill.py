@@ -1,12 +1,15 @@
-"""Read-only CP1 and CP13 collection for the work model backfill."""
+"""CP1 and CP13 collection and staged journaled REST writes."""
 
 import argparse
+import fcntl
 import hashlib
 import json
 import logging
+import os
 import re
 import subprocess
 import sys
+import time
 import tomllib
 from dataclasses import asdict
 from pathlib import Path
@@ -30,6 +33,19 @@ from agent_orchestration_poc.core.work_model_backfill import (
     validate_cp1,
     verify_table_digests,
 )
+from agent_orchestration_poc.core.work_model_backfill_executor import (
+    JOURNAL_VERSION,
+    Action,
+    Record,
+    closure_actions,
+    comment_observation,
+    journal_state,
+    observation_value,
+    validate_journal,
+    validate_progress,
+    verified_detail,
+    write_wait_seconds,
+)
 
 LOGGER = logging.getLogger(__name__)
 REPO = "repos/tbhb-dev/agent-orchestration-poc"
@@ -47,7 +63,7 @@ class _NoRedirect(HTTPRedirectHandler):
 
 
 class Api:
-    """Small authenticated REST GET client with complete page receipts."""
+    """Authenticated REST client with complete page receipts and safe ledger."""
 
     def __init__(self, base: str, token: str) -> None:
         self.base = base.rstrip("/") + "/"
@@ -56,6 +72,13 @@ class Api:
 
     def get(self, path: str) -> tuple[Any, dict[str, str]]:
         """Read one JSON response and retain status and safe rate headers."""
+        data, headers, _ = self.request("GET", path)
+        return data, headers
+
+    def request(
+        self, method: str, path: str, payload: dict[str, Any] | None = None
+    ) -> tuple[Any, dict[str, str], int]:
+        """Call a same-origin endpoint without following redirects."""
         url = urljoin(self.base, path)
         if (
             urlparse(url).scheme not in {"http", "https"}
@@ -67,27 +90,36 @@ class Api:
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": API_VERSION,
         }
+        if payload is not None:
+            headers["Content-Type"] = "application/json"
         if self.token:
             headers["Authorization"] = f"Bearer {self.token}"
         try:
             with build_opener(_NoRedirect()).open(
-                Request(url, headers=headers),  # noqa: S310 checked scheme and origin above
+                Request(  # noqa: S310 scheme and origin checked above
+                    url,
+                    data=json.dumps(payload).encode() if payload is not None else None,
+                    headers=headers,
+                    method=method,
+                ),
                 timeout=30,
             ) as response:
                 status = response.status
                 returned = {
                     key.lower(): value for key, value in response.headers.items()
                 }
-                data = json.load(response)
+                body = response.read()
+                data = json.loads(body) if body else None
         except HTTPError as exc:
-            raise ValueError(f"REST GET failed with HTTP {exc.code}") from None
+            exc.close()
+            raise ValueError(f"REST {method} failed with HTTP {exc.code}") from None
         except URLError as exc:
-            raise ValueError("REST GET failed before a response") from exc
-        if status != 200:
-            raise ValueError(f"REST GET returned HTTP {status}")
+            raise ValueError(f"REST {method} failed before a response") from exc
+        if status not in ({200} if method == "GET" else {200, 201, 204}):
+            raise ValueError(f"REST {method} returned HTTP {status}")
         self.ledger.append(
             {
-                "method": "GET",
+                "method": method,
                 "path": urlparse(url).path
                 + (f"?{urlparse(url).query}" if urlparse(url).query else ""),
                 "status": status,
@@ -104,7 +136,7 @@ class Api:
                 },
             }
         )
-        return data, returned
+        return data, returned, status
 
     def pages(self, path: str, collection: str) -> tuple[list[Any], tuple[Page, ...]]:
         """Follow every Link page and reject a full page with no next link."""
@@ -225,10 +257,7 @@ def _item(data: dict[str, Any]) -> Item:
     return Item(**values)
 
 
-def run(args: argparse.Namespace) -> int:
-    """Collect a dry-run checkpoint and compare it with a reviewed contract."""
-    tables, digests = _tables(args)
-    base = args.api_base
+def _api(base: str) -> Api:
     token = ""
     parsed = urlparse(base)
     if parsed.hostname not in {"127.0.0.1", "localhost", "::1"}:
@@ -240,7 +269,142 @@ def run(args: argparse.Namespace) -> int:
         if result.returncode or not result.stdout.strip():
             raise ValueError("GitHub authentication is unavailable")
         token = result.stdout.strip()
-    api = Api(base, token)
+    return Api(base, token)
+
+
+def _append(path: Path, record: dict[str, Any]) -> None:
+    with path.open("a") as stream:
+        stream.write(json.dumps(record, sort_keys=True) + "\n")
+        stream.flush()
+        os.fsync(stream.fileno())
+
+
+def _journal(
+    path: Path, run_id: str, actions: tuple[Action, ...], *, create: bool
+) -> tuple[Record, ...]:
+    if not path.exists():
+        if not create:
+            raise ValueError("trial requires a completed closure journal")
+        descriptor = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        os.close(descriptor)
+        _append(path, {"version": JOURNAL_VERSION, "run_id": run_id})
+        directory = os.open(path.parent, os.O_RDONLY)
+        try:
+            os.fsync(directory)
+        finally:
+            os.close(directory)
+    rows = [json.loads(line) for line in path.read_text().splitlines()]
+    return validate_journal(rows, run_id, actions)
+
+
+def _observe(api: Api, action: Action) -> object:
+    if action.kind == "comment":
+        comments, _ = api.pages(
+            f"{REPO}/issues/{action.number}/comments?per_page=100",
+            f"comments:#{action.number}",
+        )
+        payload = cast("dict[str, Any]", action.payload)
+        return comment_observation(comments, payload["body"])
+    if action.kind == "issue_state":
+        issue, _ = api.get(f"{REPO}/issues/{action.number}")
+        return issue["state"], issue.get("state_reason") or ""
+    raise ValueError(f"unsupported action kind: {action.kind}")
+
+
+def _execute(
+    api: Api, path: Path, action: Action, records: list[Record], *, pace: bool = False
+) -> None:
+    observed = _observe(api, action)
+    decision = journal_state(action, tuple(records), observed)
+    if decision == "halt":
+        raise ValueError(f"operation {action.id} differs from journal or precondition")
+    if decision == "skip":
+        return
+    if decision == "send":
+        if pace:
+            remaining = api.ledger[-1].get("x-ratelimit-remaining")
+            if remaining is None and api.base == "https://api.github.com/":
+                raise ValueError("REST rate header is missing")
+            prior = next(
+                (
+                    record.detail["at"]
+                    for record in reversed(records)
+                    if record.phase == "intent"
+                ),
+                None,
+            )
+            time.sleep(
+                write_wait_seconds(
+                    time.time(),
+                    prior,
+                    int(remaining) if remaining is not None else None,
+                )
+            )
+        intent = Record(
+            action.id, "intent", {"payload": action.payload, "at": time.time()}
+        )
+        _append(path, asdict(intent))
+        records.append(intent)
+        response, headers, status = api.request(
+            action.method, f"{REPO}/{action.path}", action.payload
+        )
+        receipt = Record(
+            action.id,
+            "response",
+            {
+                "status": status,
+                "id": response.get("id") if isinstance(response, dict) else None,
+                "request_id": headers.get("x-github-request-id", ""),
+                "rate_remaining": headers.get("x-ratelimit-remaining", ""),
+            },
+        )
+        _append(path, asdict(receipt))
+        records.append(receipt)
+    readback = _observe(api, action)
+    if observation_value(action, readback) != action.after:
+        raise ValueError(f"operation {action.id} failed read-back")
+    verified = Record(
+        action.id, "verified", verified_detail(action, readback, api.ledger[-1])
+    )
+    _append(path, asdict(verified))
+    records.append(verified)
+
+
+def run_apply(args: argparse.Namespace) -> int:
+    """Execute one confirmed stage with durable per-write read-back."""
+    if not args.apply or not args.cp1 or not args.journal or args.stage != "0":
+        raise ValueError("apply requires stage 0, --apply, --cp1, and --journal")
+    tables, digests = _tables(args)
+    cp1_bytes = args.cp1.read_bytes()
+    run_id = hashlib.sha256(cp1_bytes).hexdigest()
+    expected_confirmation = f"CP1:{run_id}"
+    if args.confirm_checkpoint != expected_confirmation:
+        raise ValueError("operator checkpoint confirmation differs from CP1")
+    cp1_data = json.loads(cp1_bytes)
+    if cp1_data["digests"] != digests:
+        raise ValueError("CP1 was built from different tables")
+    cp1 = _snapshot(cp1_data["snapshot"])
+    plan = operation_plan(tables, cp1)
+    actions = closure_actions(tables, cp1, plan, run_id)
+    lock = args.journal.with_suffix(args.journal.suffix + ".lock")
+    descriptor = os.open(lock, os.O_CREAT | os.O_RDWR, 0o600)
+    with os.fdopen(descriptor) as stream:
+        try:
+            fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            raise ValueError("another backfill runner holds the journal") from None
+        records = list(_journal(args.journal, run_id, actions, create=True))
+        api = _api(args.api_base)
+        validate_progress(cp1, collect(api, "initial"), actions, tuple(records))
+        for action in actions:
+            _execute(api, args.journal, action, records, pace=True)
+    return 0
+
+
+def run(args: argparse.Namespace) -> int:
+    """Collect a dry-run checkpoint and compare it with a reviewed contract."""
+    tables, digests = _tables(args)
+    api = _api(args.api_base)
     snapshot = collect(api, args.checkpoint)
     envelope: dict[str, Any] = {
         "snapshot": asdict(snapshot),
@@ -283,7 +447,7 @@ def run(args: argparse.Namespace) -> int:
 def main() -> int:
     """Parse checkpoint inputs without exposing response bodies on failure."""
     parser = argparse.ArgumentParser()
-    parser.add_argument("checkpoint", choices=("initial", "final"))
+    parser.add_argument("checkpoint", choices=("initial", "final", "apply"))
     for name in ("assignments", "parents", "edges", "manifest"):
         parser.add_argument(f"--{name}", type=Path, required=True)
     parser.add_argument("--api-base", default="https://api.github.com")
@@ -291,6 +455,10 @@ def main() -> int:
     parser.add_argument("--cp1", type=Path)
     parser.add_argument("--inputs", type=Path)
     parser.add_argument("--reference", type=Path)
+    parser.add_argument("--journal", type=Path)
+    parser.add_argument("--stage", choices=("0",))
+    parser.add_argument("--apply", action="store_true")
+    parser.add_argument("--confirm-checkpoint")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     try:
@@ -298,6 +466,10 @@ def main() -> int:
             (args.cp1, args.inputs, args.reference)
         ):
             raise ValueError("final checkpoint needs CP1, inputs, and reference")
+        if args.checkpoint == "apply":
+            if not args.stage:
+                raise ValueError("apply requires --stage")
+            return run_apply(args)
         return run(args)
     except (OSError, ValueError, KeyError, TypeError) as exc:
         LOGGER.warning("backfill checkpoint refused: %s", exc)

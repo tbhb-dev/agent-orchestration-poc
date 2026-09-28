@@ -1,5 +1,21 @@
 # Work model backfill runner evidence
 
+## Journaled issue closure slice
+
+[Verified] The `apply` command accepts stage 0 only and requires `--apply`, a saved CP1, a journal path, and `CP1:<digest>` confirmation for the SHA-256 of that exact CP1 envelope. It rechecks table digests and the pure operation plan, locks the journal, and compares a fresh complete read with CP1 plus journaled changes before writing. No live GitHub backfill write was made.
+
+[Verified] The pure executor derives closure comments and state changes from the reviewed plan and `fold into` cells. Its append-only JSONL journal saves intent before each REST write, the response receipt after it, and a fresh observed value and GET receipt after read-back. An interrupted comment POST is matched by its unique marker, so a recovered comment is not posted twice. Recovery persists the uniquely matched numeric `comment_id` in the verified record for later rollback.
+
+[Observed] The loopback REST test applied a comment while returning HTTP 503, resumed from the saved intent, read back the comment, and closed the issue. It verified one comment POST and one closure PATCH, with the recovered ID still present after reloading the journal. The fake server bound `127.0.0.1` and made no GitHub writes.
+
+[Documented] The [GitHub issue comment endpoint](https://docs.github.com/en/rest/issues/comments?apiVersion=2026-03-10) returns a numeric comment ID after POST, and the [issue update endpoint](https://docs.github.com/en/rest/issues/issues?apiVersion=2026-03-10) accepts `state` and `state_reason`. The earlier rate-limit source in this report gives 500 content-creating requests per hour. The executor spaces local writes by at least eight seconds from the last saved intent and stops when the primary remaining header is below 50. This does not establish a shared account-wide content budget.
+
+[Untested] This partial executor omits the PR #97 size-decision comment and closure, the closed-blocker trial and cleanup, label creation, Project membership and draft writes, title migration, parent and incident creation, hierarchy and accepted dependency links, body revisions, native type and field values, label retirement, CP13 final comparison of writes, and rollback. Issue #207 stays open. Live execution and checkpoint evidence belong to #200.
+
+[Verified] Pinned scc 4.1.0 `--trace`, intersected with added and deleted lines in the diff from merge base `8285627`, counted 658 changed Python code units for this narrowed delivery: executor core 157, shell 183 (170 added plus 13 deleted), executor tests 209, and shell tests 109. The JSON files under `tests/fixtures/` and this `reports/inputs/` evidence are excluded by the workflow size rule. The closure action values remain fixed in `tests/fixtures/work_model_backfill/runner/executor-actions.json`.
+
+[Verified] `mise exec -- uv run pytest -q tests/test_work_model_backfill_executor.py tests/test_work_model_backfill_shell.py --run-integration` passed 29 tests. `mise run fmt`, `mise run check`, and `mise run check:mutation` exited 0. The aggregate included 466 passing integration-coverage Python tests, Python core line and branch coverage of 97.56% and 93.91%, and shell line coverage of 78.01%. Python core mutation killed 3,936 of 4,369 mutants (90.09%); Go core mutation killed 145 of 149 (97.32%). `git diff --check` exited 0.
+
 ## Core gap disposition
 
 [Verified] The four pure contract corrections in `work_model_backfill.py` derive parent goal and finish line bodies, incident records, and new draft classification bodies from approved table rows. Existing draft bodies retain the exact reviewed body from `TargetInputs.bodies`, including trailing newlines and sections after classification; D2 uses its separately reviewed replacement. The regression first failed with a CP13 body difference and passed after the correction (`mise exec -- uv run pytest tests/test_work_model_backfill.py -q`: 94 passed). CP1 rejects a mismatched draft key and title and checks an existing draft's class and Size. Snapshot completeness requires a separate complete receipt for each issue's native field values, blockers, and sub-issues, including all pages.
