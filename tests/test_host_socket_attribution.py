@@ -3,6 +3,7 @@
 import http.client
 import json
 import os
+import runpy
 import select
 import shutil
 import socket
@@ -22,10 +23,10 @@ from agent_orchestration_poc.core.host_socket_attribution import (
     Peer,
     Process,
     ResponderRequest,
-    logged_path,
     membership,
     peer_stable,
     request_record,
+    responder_log,
     responder_reply,
 )
 
@@ -192,6 +193,33 @@ def test_request_record_preserves_values(pid: int, tag: str, version: int) -> No
         ),
         (
             ResponderRequest(
+                "POST",
+                "/v1/messages?beta=true",
+                "127.0.0.1:1234",
+                1234,
+                "claude-headless",
+                0,
+            ),
+            (200, "claude-headless-tool.sse"),
+        ),
+        (
+            ResponderRequest(
+                "HEAD", "/v1/messages", "127.0.0.1:1234", 1234, "claude-headless", 0
+            ),
+            (200, None),
+        ),
+        (
+            ResponderRequest("HEAD", "/", "127.0.0.1:1234", 1234, "claude-headless", 0),
+            (403, None),
+        ),
+        (
+            ResponderRequest(
+                "HEAD", "/v1/messages", "elsewhere:1234", 1234, "claude-headless", 0
+            ),
+            (403, None),
+        ),
+        (
+            ResponderRequest(
                 "GET", "/v1/responses", "127.0.0.1:1234", 1234, "codex-headless", 0
             ),
             (403, None),
@@ -268,22 +296,15 @@ def test_responder_reply_exhausted(port: int, completed: int) -> None:
     ) == (409, None)
 
 
-@pytest.mark.parametrize(
-    ("path", "expected"),
-    [
-        ("/v1/responses", "/v1/responses"),
-        ("/v1/messages", "/v1/messages"),
-        ("/v1/responses?secret", "<unexpected-path>"),
-        ("/other", "<unexpected-path>"),
-    ],
-)
-def test_logged_path(path: str, expected: str) -> None:
-    assert logged_path(path) == expected
-
-
-@given(st.text().filter(lambda value: value not in ("/v1/responses", "/v1/messages")))
-def test_logged_path_redacts_unknown(path: str) -> None:
-    assert logged_path(path) == "<unexpected-path>"
+@given(st.text(), st.text(), st.integers(min_value=100, max_value=599))
+def test_responder_log_preserves_request_line(
+    method: str, path: str, status: int
+) -> None:
+    assert responder_log(method, path, status) == {
+        "method": method,
+        "path": path,
+        "status": status,
+    }
 
 
 @pytest.mark.parametrize(
@@ -395,7 +416,9 @@ def test_disposable_connector_imports_copied_package(profile: str) -> None:
 
 
 @pytest.fixture
-def responder_process() -> Iterator[tuple[subprocess.Popen[str], Path, int]]:
+def responder_process(
+    request: pytest.FixtureRequest,
+) -> Iterator[tuple[subprocess.Popen[str], Path, int]]:
     with tempfile.TemporaryDirectory(prefix="bv01-", dir="/tmp") as directory:
         log = Path(directory) / "model.jsonl"
         process = subprocess.Popen(
@@ -407,7 +430,7 @@ def responder_process() -> Iterator[tuple[subprocess.Popen[str], Path, int]]:
                 "--port",
                 "0",
                 "--profile",
-                "codex-headless",
+                getattr(request, "param", "codex-headless"),
                 "--log",
                 str(log),
             ],
@@ -469,17 +492,60 @@ def test_responder_loopback_and_fixed_frames(
             assert response.read() == expected_body
         rows = [json.loads(line) for line in log.read_text().splitlines()]
         assert [row["status"] for row in rows] == [403, 403, 200, 200, 409]
-        assert rows[0]["path"] == "<unexpected-path>"
-        assert all(set(row) == {"path", "status"} for row in rows)
+        assert rows[0]["path"] == "/v1/responses?query-marker"
+        assert all(set(row) == {"method", "path", "status"} for row in rows)
+        assert all(row["method"] == "POST" for row in rows)
         assert "body-marker" not in log.read_text()
         connection.request("PUT", "/v1/responses", body=b"body-marker")
         rejected = connection.getresponse()
         assert rejected.status == 501
         rejected.read()
         assert json.loads(log.read_text().splitlines()[-1]) == {
+            "method": "PUT",
             "path": "/v1/responses",
             "status": 501,
         }
+    finally:
+        connection.close()
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("responder_process", ["claude-headless"], indirect=True)
+def test_responder_claude_startup_requests(
+    responder_process: tuple[subprocess.Popen[str], Path, int],
+) -> None:
+    handler = runpy.run_path(
+        str(REPOSITORY / "experiments/02-host-socket-attribution/model_responder.py")
+    )["RequestHandler"]
+    assert callable(handler.do_HEAD)
+    _process, log, port = responder_process
+    connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+    try:
+        for method, path, host, expected_status in (
+            ("HEAD", "/v1/messages", None, 200),
+            ("HEAD", "/", None, 403),
+            ("HEAD", "/v1/messages", "outside.example", 403),
+            ("POST", "/v1/messages?beta=true", None, 200),
+        ):
+            headers = {"Host": host} if host else {}
+            connection.request(method, path, body=b"body-marker", headers=headers)
+            response = connection.getresponse()
+            assert response.status == expected_status
+            body = response.read()
+            assert body == (
+                (RESPONDER_FIXTURES / "claude-headless-tool.sse").read_bytes()
+                if method == "POST"
+                else b""
+            )
+        rows = [json.loads(line) for line in log.read_text().splitlines()]
+        assert [(row["method"], row["path"], row["status"]) for row in rows] == [
+            ("HEAD", "/v1/messages", 200),
+            ("HEAD", "/", 403),
+            ("HEAD", "/v1/messages", 403),
+            ("POST", "/v1/messages?beta=true", 200),
+        ]
+        assert "body-marker" not in log.read_text()
+        assert "outside.example" not in log.read_text()
     finally:
         connection.close()
 

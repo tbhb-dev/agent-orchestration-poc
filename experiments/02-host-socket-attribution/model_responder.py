@@ -9,7 +9,7 @@ from typing import cast, override
 
 from agent_orchestration_poc.core.host_socket_attribution import (
     ResponderRequest,
-    logged_path,
+    responder_log,
     responder_reply,
 )
 
@@ -42,7 +42,9 @@ class RequestHandler(BaseHTTPRequestHandler):
         with server.log_path.open("a", encoding="utf-8") as log:
             log.write(
                 json.dumps(
-                    {"path": logged_path(getattr(self, "path", "")), "status": code}
+                    responder_log(
+                        getattr(self, "command", ""), getattr(self, "path", ""), code
+                    )
                 )
                 + "\n"
             )
@@ -73,9 +75,7 @@ class RequestHandler(BaseHTTPRequestHandler):
                     break
                 remaining -= len(received)
         with server.log_path.open("a", encoding="utf-8") as log:
-            log.write(
-                json.dumps({"path": logged_path(self.path), "status": status}) + "\n"
-            )
+            log.write(json.dumps(responder_log(self.command, self.path, status)) + "\n")
         body = (FIXTURES / fixture).read_bytes() if fixture else b""
         self.send_response(status)
         self.send_header(
@@ -90,6 +90,10 @@ class RequestHandler(BaseHTTPRequestHandler):
 
     do_POST = handle_request  # noqa: N815 - HTTP handler dispatch requires this name.
     do_GET = handle_request  # noqa: N815 - HTTP handler dispatch requires this name.
+
+    def do_HEAD(self) -> None:
+        """Answer only the approved Messages probe."""
+        self.handle_request()
 
 
 def main() -> None:
