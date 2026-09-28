@@ -520,7 +520,11 @@ def validate_progress(
             )
             created_memberships += bool(expected[key].item_id)
             continue
-        key = f"#{action.number}"
+        key = (
+            cast("dict[str, Any]", action.payload)["key"]
+            if action.kind == "project_fields"
+            else f"#{action.number}"
+        )
         if phases and key in expected:
             expected[key] = _progress_item(
                 action, expected[key], observed.get(key), phases

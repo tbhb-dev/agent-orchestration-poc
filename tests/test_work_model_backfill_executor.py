@@ -303,6 +303,36 @@ def test_project_field_batch_uses_option_ids_and_readback() -> None:
         validate_progress(cp1, cp1, (first,), receipt)
 
 
+@pytest.mark.parametrize("phase", ["intent", "verified"])
+def test_existing_draft_field_write_progress(phase: str) -> None:
+    tables, cp1, metadata = field_contract()
+    action = next(
+        action
+        for action in project_field_actions(tables, cp1, metadata)
+        if action.id == "6:fields:title:Draft B"
+    )
+    current = replace(
+        cp1,
+        items=tuple(
+            replace(item, project=cast("tuple[tuple[str, str], ...]", action.after))
+            if item.key == "title:Draft B"
+            else item
+            for item in cp1.items
+        ),
+    )
+    records = (Record(action.id, "intent", {}),)
+    if phase == "verified":
+        records += (Record(action.id, "verified", {}),)
+    validate_progress(cp1, current, (action,), records)
+    if phase == "verified":
+        with pytest.raises(ValueError, match="drifted"):
+            validate_progress(cp1, cp1, (action,), records)
+    else:
+        validate_progress(cp1, cp1, (action,), records)
+    with pytest.raises(ValueError, match="drifted"):
+        validate_progress(cp1, current, (action,), ())
+
+
 def test_project_field_metadata_and_draft_identity() -> None:
     tables, cp1, metadata = field_contract()
     definitions = metadata.fields

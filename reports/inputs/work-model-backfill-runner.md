@@ -12,6 +12,10 @@
 
 [Untested] No live Project or issue mutation was made. This partial delivery writes Project fields for items present in CP1. Newly added issue items and newly created drafts still need Project field writes. The copied draft body, native issue types and field values, retitles, parent and incident creation, native parent and blocked-by links, and rollback also remain for #207. The operator's live backfill belongs to #200.
 
+## PR #240 existing-draft progress correction
+
+[Verified] The reviewed existing-draft regression failed before the correction for both intent-only and verified field-write records: progress validation looked up `#0` instead of the planned `title:Draft B` key and raised `checkpoint state drifted outside journal`. The pure progress validator now uses the field action's payload key. The regression accepts the changed draft after a saved intent or verification, accepts the original draft only before verification, and rejects an unjournaled change. The focused executor and shell suite passed 44 tests. `mise run fmt` and `mise run -j 1 check` exited 0; the aggregate passed 481 integration-coverage Python tests with core lines 97.77%, core branches 94.69%, and shell lines 77.61%. `mise run check:mutation` exited 0 with Python core mutation score 90.12% (4,780 of 5,304 killed) and Go core efficacy 97.32% (145 of 149 killed). No live backfill write was made.
+
 ## Reviewed Status and draft creation slice
 
 [Verified] The `initial` command accepts `--reviewed-status '{"#215": "Refinement"}'`, supplies that map to both CP1 validation and the pure operation plan, and saves it in the CP1 envelope. The `final` command supplies the reviewed Status map from its target inputs to its first CP1 validation. The `apply` command reuses the saved CP1 map when building its plan. A loopback integration case keeps the old Project Status at Backlog, sets the copied Project Status to Refinement, observes CP1 refusal without the override, then passes initial and final CP1 validation with the override. The synthetic case uses #1 as its fixture identity; the reviewed live disposition names #215.
