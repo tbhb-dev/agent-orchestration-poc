@@ -1,5 +1,21 @@
 # Host socket attribution fixture
 
+## Stage-one continuation
+
+**Verified:** this continuation added a loopback-only [scripted model responder](model_responder.py) with eight committed [exact response frames](fixtures/responder/). Per-request listener records include connection ID, case tag, `LOCAL_PEERTOKEN` PID and PID version before and after the read, `proc_pidinfo` ancestry and start times, and the trusted launch-root PID and start time. The responder accepts only a profile's exact `POST` endpoint and loopback `Host`. It serves one tool frame and one final frame before rejecting another request. Its log contains only a path label and status. The socket and HTTP tests use short temporary sockets and `127.0.0.1`.
+
+Each response fixture ends its final SSE event with a blank line and an ignored comment. This preserves the event separator through the repository's end-of-file hook.
+
+**Untested:** no Codex or Claude harness was launched in this stage. The static model frames have not been accepted by either installed harness, so none of the four integrated host-mode cells has a new case result. The prior fixture-only case table and inherited-descriptor gap below remain the bounded evidence. [Stage-two commands](stage-two-runbook.md) and [file-open audit limits](file-open-audit.md) need operator review before any harness execution. This is a partial delivery and issue #228 remains open.
+
+**Verified:** `mise exec -- uv run pytest tests/test_host_socket_attribution.py --run-integration -q` exited 0 with 38 tests. `mise run check` exited 0 with Python core line coverage 97.68 percent and branch coverage 94.17 percent. Its [exact compressed output](evidence/stage-one-check.raw.gz) records the aggregate result. `mise run check:mutation` exited 0 with Python core mutation score 90.26 percent. Go core mutation testing killed 145 of 149 mutants, or 97.32 percent. The [exact compressed mutation output](evidence/stage-one-mutation.raw.gz) retains the run, including terminal progress bytes. `mise exec -- gitleaks dir --redact --no-banner --log-level error experiments/02-host-socket-attribution/evidence` exited 0 before the mutation output was compressed.
+
+## Review follow-up
+
+**Verified:** a clean-environment test reproduced the copied-package import failure in all four disposable profiles before the runbook fix. The corrected wrappers set `PYTHONPATH` to their own workspace. The test now runs the copied probe and three copied package files with Python site packages disabled and confirms a real Unix-socket exchange for each profile. The focused suite passed 42 tests. The aggregate check passed with Python core line and branch coverage of 97.84 and 94.83 percent. The mutation gate passed with 4890 of 5422 Python core mutants killed and 145 of 149 Go core mutants killed. [Review-fix commands](evidence/review-fix-commands.txt), [check output](evidence/review-fix-check.raw.gz), and [mutation output](evidence/review-fix-mutation.raw.gz) record the exact gates.
+
+**Source-confirmed:** the Codex CLI 0.157.1 source exits before starting `exec` outside a Git repository unless `--skip-git-repo-check` is set. The headless launch now sets it. **Untested:** the four integrated harness cells still await operator review and launch.
+
 ## Question and boundary
 
 This BV-01 fixture tests whether a host gateway can bind each Unix-socket request to a wrapper-launched workload by reading macOS kernel peer identity and live process ancestry. The imported [BV-01 definition](../../research/imported/design-wiki-8384ca7/backend-validation-spikes.md#bv-01-host-socket-access-and-caller-attribution) and [local caller authentication design](../../research/imported/design-wiki-8384ca7/spiffe-mtls-authentication.md#local-caller-authentication) are proposals, while this report records a bounded result on the versions in [versions.md](versions.md).
