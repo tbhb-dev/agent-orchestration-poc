@@ -1,0 +1,6 @@
+mise run vale:sync: exit 0
+mise run fmt: exit 0
+mise run check: exit 0
+mise run check:mutation: exit 0
+Read-only credential-pattern scan: no matches
+check.txt.gz preserves exact mise run check stdout and stderr.
