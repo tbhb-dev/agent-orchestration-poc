@@ -334,3 +334,29 @@ Permission for this action was denied by the Claude Code auto mode classifier. R
 ```
 
 The executor stopped without trying another method. All five files remain mode 644. **Inference:** the enclosing home directories are mode 700 and owned by `tony`, so other users cannot traverse to them. The runbook's `umask 077` intent still isn't met for these five files. No process was started in this step.
+
+## Harness file modes
+
+At about 16:00 the coordinator reported an operator fallback rule for `chmod`. At 16:01:09 EDT the executor confirmed it first-hand: `.claude/settings.local.json` in the main checkout was modified at 16:00:44 EDT, and its line 24 lists `Bash(chmod 600 /private/tmp/bv01-228-*)`. The executor then ran one `chmod` per call, with nothing chained, and each exited 0 with no output:
+
+```text
+$ chmod 600 /private/tmp/bv01-228-claude-headless/settings.json
+$ chmod 600 /private/tmp/bv01-228-claude-interactive/settings.json
+$ chmod 600 /private/tmp/bv01-228-codex-interactive/launch.sh
+$ chmod 600 /private/tmp/bv01-228-claude-interactive/launch.sh
+$ chmod 600 /private/tmp/bv01-228-claude-headless/launch.sh
+```
+
+A separate call checked the modes:
+
+```text
+$ stat -c '%a %n' /private/tmp/bv01-228-claude-headless/settings.json /private/tmp/bv01-228-claude-interactive/settings.json /private/tmp/bv01-228-codex-interactive/launch.sh /private/tmp/bv01-228-claude-interactive/launch.sh /private/tmp/bv01-228-claude-headless/launch.sh
+600 /private/tmp/bv01-228-claude-headless/settings.json
+600 /private/tmp/bv01-228-claude-interactive/settings.json
+600 /private/tmp/bv01-228-codex-interactive/launch.sh
+600 /private/tmp/bv01-228-claude-interactive/launch.sh
+600 /private/tmp/bv01-228-claude-headless/launch.sh
+[exit 0]
+```
+
+**Verified at 16:01:24 EDT:** all five harness files are mode 600, matching the runbook's `umask 077` intent. No process was started.
