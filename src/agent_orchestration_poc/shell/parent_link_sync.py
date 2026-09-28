@@ -11,11 +11,14 @@ from uuid import uuid7
 
 from agent_orchestration_poc.core.parent_link_sync import (
     Issue,
+    Operation,
     Parent,
     compare,
-    explicit_edges,
     initial_edges,
     ongoing_edges,
+    operation_plan,
+    owned_after,
+    owned_before,
     parent_titles,
 )
 from agent_orchestration_poc.core.work_model_backfill import Tables, parse_tables
@@ -165,13 +168,16 @@ def read_snapshot(
 
 def read_managed(path: Path | None, tables: Tables) -> frozenset[tuple[str, str]]:
     """Read owned derived links from the last successful coordinator run."""
-    base = initial_edges(tables) - explicit_edges(tables)
     if path is None:
-        return base
+        return owned_before(tables, None, applied=False)
     raw = json.loads(path.read_text())
     if raw.get("complete") is not True:
         raise ValueError("incomplete managed ledger")
-    return base | frozenset(tuple(edge) for edge in raw["managed"])
+    return owned_before(
+        tables,
+        tuple(tuple(edge) for edge in raw["managed"]),
+        applied=raw.get("applied") is True,
+    )
 
 
 def coordinator_identity() -> bool:
@@ -186,18 +192,15 @@ def coordinator_identity() -> bool:
 
 
 def apply(
-    missing: tuple[tuple[str, str], ...],
-    removable: tuple[tuple[str, str], ...],
+    plan: tuple[Operation, ...],
     parents: tuple[Parent, ...],
 ) -> list[dict[str, str]]:
     """Write owned deltas one at a time and read back each operation."""
     by_title = {parent.title: parent for parent in parents}
     operations = []
-    for dependent, blocker in (
-        *((a, b) for a, b in missing),
-        *((a, b) for a, b in removable),
-    ):
-        add = (dependent, blocker) in missing
+    for operation in plan:
+        dependent, blocker = operation.edge
+        add = operation.method == "POST"
         target = by_title[dependent]
         blocker_id = by_title[blocker].issue_id
         path = f"issues/{target.number}/dependencies/blocked_by"
@@ -213,7 +216,7 @@ def apply(
         operations.append(
             {
                 "operation_id": str(uuid7()),
-                "method": "POST" if add else "DELETE",
+                "method": operation.method,
                 "dependent": dependent,
                 "blocker": blocker,
             }
@@ -250,25 +253,21 @@ def main() -> int:
         )
         managed = read_managed(args.managed, tables)
         result = compare(tables, desired, parents, issues, managed)
-        if result.kahn_cycle or result.dfs_cycle:
-            raise ValueError(f"cycle: Kahn={result.kahn_cycle}, DFS={result.dfs_cycle}")
-        if args.apply and (
-            len(parents) != len(parent_titles(tables)) or not coordinator_identity()
-        ):
-            raise ValueError("apply requires all parents and coordinator identity")
-        if args.apply and set(result.extra) != set(result.removable):
-            raise ValueError("unowned extra parent link requires review")
-        operations = (
-            apply(result.missing, result.removable, parents) if args.apply else []
+        plan = operation_plan(
+            result,
+            args.apply,
+            len(parents) == len(parent_titles(tables))
+            and (not args.apply or coordinator_identity()),
         )
+        operations = apply(plan, parents) if args.apply else []
         output: dict[str, object] = {**asdict(result), "operations": operations}
         output["desired"] = sorted(result.desired)
         output["actual"] = sorted(result.actual)
         output["managed"] = sorted(
-            ((managed | set(result.missing)) - set(result.removable))
-            - explicit_edges(tables)
+            owned_after(tables, managed, plan if args.apply else ())
         )
         output["complete"] = True
+        output["applied"] = args.apply
         print(json.dumps(output, sort_keys=True))  # noqa: T201 - command output is its contract
         return 0
     except RuntimeError, ValueError, KeyError, TypeError:

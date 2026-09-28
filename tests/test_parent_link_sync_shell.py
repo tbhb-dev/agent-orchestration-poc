@@ -3,14 +3,23 @@
 import json
 import os
 import subprocess
+from dataclasses import replace
 from pathlib import Path
+from typing import Any
 
 import pytest
 
-from agent_orchestration_poc.core.parent_link_sync import initial_edges
+from agent_orchestration_poc.core.parent_link_sync import (
+    Operation,
+    compare,
+    initial_edges,
+    ongoing_edges,
+    operation_plan,
+)
 
 pytest.importorskip("agent_orchestration_poc.shell")
 
+from agent_orchestration_poc.shell import parent_link_sync as sync
 from agent_orchestration_poc.shell.parent_link_sync import (
     apply,
     get_tables,
@@ -33,6 +42,28 @@ def test_saved_reads_and_ownership(tmp_path: Path) -> None:
     path.write_text(json.dumps(bad))
     with pytest.raises(ValueError, match="incomplete saved"):
         read_snapshot(path, tables)
+    path.write_text(
+        json.dumps(
+            {"complete": True, "applied": False, "managed": [["epic: b", "epic: a"]]}
+        )
+    )
+    with pytest.raises(ValueError, match="successful apply"):
+        read_managed(path, tables)
+
+
+def test_approved_excluded_issue_link_stays_excluded() -> None:
+    tables = get_tables()
+    _, issues = read_snapshot(FIXTURES / "approved.json", tables)
+    changed = tuple(
+        replace(issue, blockers=(*issue.blockers, "28"))
+        if issue.number == "29"
+        else issue
+        for issue in issues
+    )
+    assert (
+        "epic: bus relay and shared context",
+        "epic: provisioned interactive workers",
+    ) not in ongoing_edges(tables, changed)
 
 
 @pytest.mark.integration
@@ -110,8 +141,58 @@ else:
     monkeypatch.setenv("FAKE_GH_STATE", str(state))
     parents, _ = read_snapshot(FIXTURES / "approved.json", get_tables())
     edge = next(iter(initial_edges(get_tables())))
-    assert len(apply((edge,), (), parents)) == 1
+    assert len(apply((Operation("POST", edge),), parents)) == 1
     assert len(json.loads(state.read_text())) == 1
-    assert apply((), (), parents) == []
-    assert len(apply((), (edge,), parents)) == 1
+    assert apply((), parents) == []
+    assert len(apply((Operation("DELETE", edge),), parents)) == 1
     assert json.loads(state.read_text()) == []
+
+
+def test_reversed_link_replacement_and_second_reconciliation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    tables = get_tables()
+    parents, _ = read_snapshot(FIXTURES / "approved.json", tables)
+    left, right = parents[:2]
+    state = {left.number: {right.issue_id}, right.number: set()}
+    by_id = {parent.issue_id: parent.number for parent in (left, right)}
+    calls: list[str] = []
+
+    def fake_request(
+        path: str, *, method: str = "GET", issue_id: int = 0, missing_ok: bool = False
+    ) -> dict[str, Any] | None:
+        del missing_ok
+        number = int(path.split("/")[1])
+        if method == "DELETE":
+            state[number].remove(int(path.split("/")[-1]))
+        else:
+            assert method == "POST"
+            if number in state[by_id[issue_id]]:
+                raise ValueError("intermediate cycle")
+            state[number].add(issue_id)
+        calls.append(method)
+        return {"id": issue_id}
+
+    monkeypatch.setattr(sync, "request", fake_request)
+
+    def fake_blocked_by(number: int) -> tuple[int, ...]:
+        return tuple(state[number])
+
+    monkeypatch.setattr(sync, "blocked_by", fake_blocked_by)
+    desired = frozenset({(right.title, left.title)})
+    current = tuple(
+        replace(parent, blockers=tuple(state.get(parent.number, ())))
+        for parent in parents
+    )
+    result = compare(
+        tables, desired, current, (), frozenset({(left.title, right.title)})
+    )
+    plan = operation_plan(result, True, True)
+    assert len(apply(plan, current)) == 2
+    assert calls == ["DELETE", "POST"]
+    current = tuple(
+        replace(parent, blockers=tuple(state.get(parent.number, ())))
+        for parent in parents
+    )
+    second = compare(tables, desired, current, (), frozenset(desired))
+    assert operation_plan(second, True, True) == ()

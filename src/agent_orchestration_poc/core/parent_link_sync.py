@@ -37,6 +37,14 @@ class Comparison:
     dfs_cycle: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class Operation:
+    """One ordered native parent dependency mutation."""
+
+    method: str
+    edge: tuple[str, str]
+
+
 def accepted(row: dict[str, str]) -> bool:
     """Recognize only immediately accepted native table edges."""
     return row["execution"] == "native" and row["action"].startswith(
@@ -90,6 +98,8 @@ def ongoing_edges(
             blocker = by_number.get(blocker_number)
             if blocker is None:
                 raise ValueError("incomplete blocker read")
+            if (dependent.number, blocker_number) in denied:
+                continue
             if not dependent.epic or not blocker.epic or dependent.epic == blocker.epic:
                 continue
             if dependent.epic not in parents or blocker.epic not in parents:
@@ -204,3 +214,51 @@ def compare(
         kahn_cycle(graph),
         dfs_cycle(graph),
     )
+
+
+def operation_plan(
+    result: Comparison, apply_requested: bool, eligible: bool
+) -> tuple[Operation, ...]:
+    """Refuse unsafe apply and remove obsolete edges before additions."""
+    if result.kahn_cycle or result.dfs_cycle:
+        raise ValueError(f"cycle: Kahn={result.kahn_cycle}, DFS={result.dfs_cycle}")
+    if not apply_requested:
+        return ()
+    if not eligible:
+        raise ValueError("apply requires all parents and coordinator identity")
+    if set(result.extra) != set(result.removable):
+        raise ValueError("unowned extra parent link requires review")
+    return (
+        *(Operation("DELETE", edge) for edge in result.removable),
+        *(Operation("POST", edge) for edge in result.missing),
+    )
+
+
+def owned_before(
+    tables: Tables,
+    recorded: tuple[tuple[str, str], ...] | None,
+    *,
+    applied: bool,
+) -> frozenset[tuple[str, str]]:
+    """Bootstrap from approved derived edges or accept a successful receipt."""
+    base = initial_edges(tables) - explicit_edges(tables)
+    if recorded is None:
+        return base
+    if not applied:
+        raise ValueError("managed ledger requires successful apply receipt")
+    return base | frozenset(recorded)
+
+
+def owned_after(
+    tables: Tables,
+    managed: frozenset[tuple[str, str]],
+    completed: tuple[Operation, ...],
+) -> frozenset[tuple[str, str]]:
+    """Advance ownership only for mutations with read-back receipts."""
+    additions = {
+        operation.edge for operation in completed if operation.method == "POST"
+    }
+    removals = {
+        operation.edge for operation in completed if operation.method == "DELETE"
+    }
+    return frozenset((managed | additions) - removals - explicit_edges(tables))

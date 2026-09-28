@@ -20,6 +20,16 @@
 
 [Verified] `git diff --cached --numstat` measured 793 added code and test lines across the two Python modules, their two test files, and the command wrapper. This excludes the approved fixture copies and this report under the issue's size rule.
 
+## Review corrections
+
+[Verified] The review regression tests exclude the audit-only #3 to #1 issue pair before cross-epic projection, order a reversed parent-link replacement as DELETE then POST, and reconcile a second time with no operations. The replacement shell test uses a local simulated REST endpoint that rejects an intermediate two-node cycle; it performs no live GitHub writes. The dry-run ownership test rejects a planning report as a managed ledger.
+
+[Verified] After these corrections, `mise exec -- uv run pytest -q tests/test_parent_link_sync.py tests/test_parent_link_sync_shell.py --run-integration` exited 0 with 19 passing tests. `mise run check` exited 0 with Python core line coverage 98.03%, branch coverage 94.62%, and shell line coverage 81.03%. The first aggregate attempt found an untyped test helper; the helper was typed and the complete aggregate then passed.
+
+[Verified] The synchronization policy now lives in pure core functions: operation planning checks cycles, apply eligibility, and unowned extras; it removes obsolete owned edges before additions. Ownership changes are computed from read-back-completed operations. A dry-run report keeps its observed managed set and records `applied: false`; `read_managed` accepts only a report with `applied: true` as a later ownership receipt. The REST shell collects values and executes the planned operations.
+
+[Verified] `mise run check:mutation` exited 0 after the review regression tests: Go core killed 145 of 149 mutants, and Python core killed 3,182 of 3,530 mutants (90.14%). The first mutation run scored 89.75%; the added plain-value tests for apply eligibility, cycles, and ownership transitions raised it above the 90% floor. `git diff origin/main --numstat` now counts 999 code and test lines across the five issue paths, above the issue's 800-unit limit because the review fixes added explicit policy and regression coverage; the PR body records this size exception for review.
+
 [Verified] `mise exec -- gitleaks dir --redact --no-banner --log-level error reports/inputs/parent-link-sync.md tests/fixtures/parent_link_sync` exited 0. The commit hook also scanned the staged code and fixtures without a finding. A sandboxed `ps -eo pid,etime,args` read was denied with `operation not permitted`, so process-list inspection was unavailable. The mutation task's own session and log supplied completion evidence.
 
 ## Contract and pending live acceptance

@@ -8,6 +8,7 @@ from hypothesis import strategies as st
 
 from agent_orchestration_poc.core.parent_link_sync import (
     Issue,
+    Operation,
     Parent,
     accepted,
     actual_edges,
@@ -17,6 +18,9 @@ from agent_orchestration_poc.core.parent_link_sync import (
     initial_edges,
     kahn_cycle,
     ongoing_edges,
+    operation_plan,
+    owned_after,
+    owned_before,
     parent_titles,
 )
 from agent_orchestration_poc.core.work_model_backfill import Tables
@@ -124,6 +128,70 @@ def test_new_accepted_edge_changes_parent_without_dispatch_decision() -> None:
     assert ("epic: a", "epic: b") in desired
     assert ("epic: a", "epic: b") not in initial_edges(tables)
     assert ("1", "2") == (issues[0].number, issues[0].blockers[0])
+
+
+def test_excluded_issue_pair_cannot_project_across_epics() -> None:
+    tables = model()
+    issues = (Issue("1", "epic: a", ()), Issue("3", "epic: b", ("1",)))
+    assert ("epic: b", "epic: a") not in ongoing_edges(tables, issues)
+
+
+def test_plan_orders_replacement_and_rejects_unowned_extras() -> None:
+    tables = replace(model(), edges=model().edges[:-1])
+    parents = (
+        Parent("initiative: one", 10, 110, ()),
+        Parent("epic: a", 11, 111, (112,)),
+        Parent("epic: b", 12, 112, ()),
+    )
+    desired = frozenset({("epic: b", "epic: a")})
+    result = compare(tables, desired, parents, (), frozenset({("epic: a", "epic: b")}))
+    assert [(op.method, op.edge) for op in operation_plan(result, True, True)] == [
+        ("DELETE", ("epic: a", "epic: b")),
+        ("POST", ("epic: b", "epic: a")),
+    ]
+    with pytest.raises(ValueError, match="unowned extra"):
+        operation_plan(compare(tables, desired, parents, (), frozenset()), True, True)
+
+
+def test_dry_run_does_not_acquire_ownership() -> None:
+    tables = model()
+    edge = ("epic: b", "epic: a")
+    assert owned_before(tables, None, applied=False) == frozenset({edge})
+    assert owned_before(tables, (("epic: a", "epic: b"),), applied=True) == frozenset(
+        {edge, ("epic: a", "epic: b")}
+    )
+    assert owned_after(tables, frozenset(), ()) == frozenset()
+    assert owned_after(
+        tables,
+        frozenset({edge}),
+        (Operation("DELETE", edge), Operation("POST", ("epic: a", "epic: b"))),
+    ) == frozenset({("epic: a", "epic: b")})
+    assert (
+        owned_after(
+            tables,
+            frozenset(),
+            (Operation("POST", ("epic: a", "initiative: one")),),
+        )
+        == frozenset()
+    )
+    with pytest.raises(ValueError, match="successful apply"):
+        owned_before(tables, (edge,), applied=False)
+
+
+def test_operation_plan_guards_apply_and_cycles() -> None:
+    tables = model()
+    result = compare(
+        tables, initial_edges(tables), parent_values(linked=False), (), frozenset()
+    )
+    assert operation_plan(result, False, False) == ()
+    with pytest.raises(ValueError, match="coordinator identity"):
+        operation_plan(result, True, False)
+    cyclic = replace(result, kahn_cycle=True)
+    with pytest.raises(ValueError, match="cycle"):
+        operation_plan(cyclic, False, False)
+    cyclic = replace(result, dfs_cycle=("a", "b", "a"))
+    with pytest.raises(ValueError, match="cycle"):
+        operation_plan(cyclic, True, True)
 
 
 def test_missing_and_unowned_link() -> None:
