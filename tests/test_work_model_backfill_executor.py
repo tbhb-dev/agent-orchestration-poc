@@ -22,6 +22,8 @@ from agent_orchestration_poc.core.work_model_backfill_executor import (
     Record,
     closure_actions,
     comment_observation,
+    draft_actions,
+    draft_observation,
     journal_state,
     observation_value,
     validate_journal,
@@ -73,6 +75,106 @@ def test_closure_actions_follow_plan() -> None:
         json.loads(json.dumps([asdict(action) for action in actions]))
         == expected["closure"]
     )
+
+
+def test_draft_actions_follow_plan_and_recover_identity() -> None:
+    rows = FIXTURES / "plan"
+    tables = parse_tables(
+        *(
+            (rows / f"{name}.tsv").read_text()
+            for name in ("assignments", "parents", "edges")
+        )
+    )
+    cp1 = fixture_snapshot("executor-cp1")
+    actions = draft_actions(tables, cp1, operation_plan(tables, cp1))
+    body = "- Class: chore\n- Priority: Standard\n- Work type: Unplanned\n- Severity: none\n- Size: "
+    assert actions == (
+        Action(
+            "6:draft:title:Draft A",
+            "6",
+            "draft",
+            0,
+            "POST",
+            "orgs/tbhb-dev/projectsV2/1/drafts",
+            {"title": "Draft A", "body": body},
+            (0, ""),
+            (1, body),
+        ),
+    )
+    action = actions[0]
+    assert action.payload is not None
+    assert draft_observation([], "Draft A") == (0, "", None, None)
+    item = {
+        "content_type": "DraftIssue",
+        "id": 13,
+        "content": {
+            "id": "draft-a",
+            "title": "Draft A",
+            "body": action.payload["body"],
+        },
+    }
+    observed = draft_observation([item], "Draft A")
+    assert observed == (1, body, "13", "draft-a")
+    assert observation_value(action, observed) == action.after
+    assert verified_detail(action, observed, {"status": 200}) == {
+        "observed": (1, body),
+        "read": {"status": 200},
+        "item_id": "13",
+        "draft_id": "draft-a",
+    }
+    assert draft_observation([item, item], "Draft A") == (2, "", None, None)
+    assert (
+        journal_state(action, (Record(action.id, "intent", {}),), observed) == "verify"
+    )
+    assert journal_state(action, (), observed) == "halt"
+
+
+def test_draft_progress_requires_recorded_creation() -> None:
+    rows = FIXTURES / "plan"
+    tables = parse_tables(
+        *(
+            (rows / f"{name}.tsv").read_text()
+            for name in ("assignments", "parents", "edges")
+        )
+    )
+    cp1 = fixture_snapshot("executor-cp1")
+    action = draft_actions(tables, cp1, operation_plan(tables, cp1))[0]
+    assert action.payload is not None
+    created = Item(
+        "title:Draft A",
+        "Draft A",
+        "draft",
+        body=action.payload["body"],
+        item_id="13",
+        draft_id="draft-a",
+    )
+    pages = tuple(
+        replace(page, count=page.count + 1, total_count=page.total_count + 1)
+        if page.collection in {"project", "drafts"}
+        else page
+        for page in cp1.pages
+    )
+    current = replace(cp1, items=(*cp1.items, created), pages=pages)
+    record = (Record(action.id, "intent", {}),)
+    validate_progress(cp1, current, (action,), record)
+    for changed in (
+        replace(created, title="Other"),
+        replace(created, body="changed"),
+        replace(created, state="open"),
+        replace(created, item_id=""),
+        replace(created, draft_id=""),
+        replace(created, issue_id="unexpected"),
+    ):
+        with pytest.raises(ValueError, match="differs|changed"):
+            validate_progress(
+                cp1, replace(current, items=(*cp1.items, changed)), (action,), record
+            )
+    with pytest.raises(ValueError, match="unrecorded"):
+        validate_progress(cp1, current, (action,), ())
+    with pytest.raises(ValueError, match="disappeared"):
+        validate_progress(
+            cp1, cp1, (action,), (*record, Record(action.id, "verified", {}))
+        )
 
 
 @pytest.mark.parametrize(

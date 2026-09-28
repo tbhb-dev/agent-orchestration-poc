@@ -39,6 +39,8 @@ from agent_orchestration_poc.core.work_model_backfill_executor import (
     Record,
     closure_actions,
     comment_observation,
+    draft_actions,
+    draft_observation,
     journal_state,
     observation_value,
     validate_journal,
@@ -308,6 +310,9 @@ def _observe(api: Api, action: Action) -> object:
     if action.kind == "issue_state":
         issue, _ = api.get(f"{REPO}/issues/{action.number}")
         return issue["state"], issue.get("state_reason") or ""
+    if action.kind == "draft":
+        items, _ = _project_items(api, PROJECT)
+        return draft_observation(items, cast("dict[str, Any]", action.payload)["title"])
     raise ValueError(f"unsupported action kind: {action.kind}")
 
 
@@ -345,8 +350,11 @@ def _execute(
         )
         _append(path, asdict(intent))
         records.append(intent)
+        request_path = (
+            action.path if action.kind == "draft" else f"{REPO}/{action.path}"
+        )
         response, headers, status = api.request(
-            action.method, f"{REPO}/{action.path}", action.payload
+            action.method, request_path, action.payload
         )
         receipt = Record(
             action.id,
@@ -372,8 +380,8 @@ def _execute(
 
 def run_apply(args: argparse.Namespace) -> int:
     """Execute one confirmed stage with durable per-write read-back."""
-    if not args.apply or not args.cp1 or not args.journal or args.stage != "0":
-        raise ValueError("apply requires stage 0, --apply, --cp1, and --journal")
+    if not args.apply or not args.cp1 or not args.journal:
+        raise ValueError("apply requires --apply, --cp1, and --journal")
     tables, digests = _tables(args)
     cp1_bytes = args.cp1.read_bytes()
     run_id = hashlib.sha256(cp1_bytes).hexdigest()
@@ -384,8 +392,10 @@ def run_apply(args: argparse.Namespace) -> int:
     if cp1_data["digests"] != digests:
         raise ValueError("CP1 was built from different tables")
     cp1 = _snapshot(cp1_data["snapshot"])
-    plan = operation_plan(tables, cp1)
-    actions = closure_actions(tables, cp1, plan, run_id)
+    plan = operation_plan(tables, cp1, cp1_data.get("reviewed_status"))
+    closures = closure_actions(tables, cp1, plan, run_id)
+    drafts = draft_actions(tables, cp1, plan)
+    actions = (*closures, *drafts)
     lock = args.journal.with_suffix(args.journal.suffix + ".lock")
     descriptor = os.open(lock, os.O_CREAT | os.O_RDWR, 0o600)
     with os.fdopen(descriptor) as stream:
@@ -393,10 +403,21 @@ def run_apply(args: argparse.Namespace) -> int:
             fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             raise ValueError("another backfill runner holds the journal") from None
-        records = list(_journal(args.journal, run_id, actions, create=True))
+        records = list(
+            _journal(args.journal, run_id, actions, create=args.stage == "0")
+        )
+        if args.stage == "6:drafts" and any(
+            not any(
+                record.action_id == action.id and record.phase == "verified"
+                for record in records
+            )
+            for action in closures
+        ):
+            raise ValueError("stage 0 must be verified before draft creation")
         api = _api(args.api_base)
         validate_progress(cp1, collect(api, "initial"), actions, tuple(records))
-        for action in actions:
+        selected = closures if args.stage == "0" else drafts
+        for action in selected:
             _execute(api, args.journal, action, records, pace=True)
     return 0
 
@@ -413,16 +434,24 @@ def run(args: argparse.Namespace) -> int:
     }
     difference_count = 0
     if args.checkpoint == "initial":
-        validate_cp1(tables, snapshot)
-        envelope["plan"] = [asdict(step) for step in operation_plan(tables, snapshot)]
+        reviewed_status = (
+            json.loads(args.reviewed_status)
+            if getattr(args, "reviewed_status", None)
+            else None
+        )
+        validate_cp1(tables, snapshot, reviewed_status)
+        envelope["reviewed_status"] = reviewed_status
+        envelope["plan"] = [
+            asdict(step) for step in operation_plan(tables, snapshot, reviewed_status)
+        ]
         sys.stdout.write(json.dumps(envelope["plan"], indent=2) + "\n")
     else:
         cp1_data = json.loads(args.cp1.read_text())
         if cp1_data["digests"] != digests:
             raise ValueError("CP1 was built from different tables")
         cp1 = _snapshot(cp1_data["snapshot"])
-        validate_cp1(tables, cp1)
         inputs_data = json.loads(args.inputs.read_text())
+        validate_cp1(tables, cp1, inputs_data.get("reviewed_status"))
         inputs = TargetInputs(
             {key: _item(item) for key, item in inputs_data["created"].items()},
             inputs_data["bodies"],
@@ -455,8 +484,9 @@ def main() -> int:
     parser.add_argument("--cp1", type=Path)
     parser.add_argument("--inputs", type=Path)
     parser.add_argument("--reference", type=Path)
+    parser.add_argument("--reviewed-status")
     parser.add_argument("--journal", type=Path)
-    parser.add_argument("--stage", choices=("0",))
+    parser.add_argument("--stage", choices=("0", "6:drafts"))
     parser.add_argument("--apply", action="store_true")
     parser.add_argument("--confirm-checkpoint")
     args = parser.parse_args()

@@ -8,6 +8,7 @@ from agent_orchestration_poc.core.work_model_backfill import (
     Snapshot,
     Step,
     Tables,
+    _draft_body,
     complete,
 )
 
@@ -82,6 +83,32 @@ def closure_actions(
     return tuple(actions)
 
 
+def draft_actions(
+    tables: Tables, cp1: Snapshot, plan: tuple[Step, ...]
+) -> tuple[Action, ...]:
+    """Create only unmatched planned drafts, in the stage-six plan order."""
+    stage = next(step for step in plan if step.number == "6")
+    existing = {item.key for item in cp1.items}
+    rows = {
+        f"title:{row['title']}": row for row in tables.assignments if not row["number"]
+    }
+    return tuple(
+        Action(
+            f"6:draft:{key}",
+            "6",
+            "draft",
+            0,
+            "POST",
+            "orgs/tbhb-dev/projectsV2/1/drafts",
+            {"title": rows[key]["title"], "body": _draft_body(rows[key], "")},
+            (0, ""),
+            (1, _draft_body(rows[key], "")),
+        )
+        for key in stage.targets
+        if key.startswith("title:") and key not in existing
+    )
+
+
 def comment_observation(
     comments: list[dict[str, Any]], body: str
 ) -> tuple[int, int | None]:
@@ -90,13 +117,33 @@ def comment_observation(
     return len(matches), matches[0]["id"] if len(matches) == 1 else None
 
 
+def draft_observation(
+    items: list[dict[str, Any]], title: str
+) -> tuple[int, str, str | None, str | None]:
+    """Count matching drafts and retain both returned identities."""
+    matches = [
+        item
+        for item in items
+        if item["content_type"] == "DraftIssue" and item["content"]["title"] == title
+    ]
+    if len(matches) != 1:
+        return len(matches), "", None, None
+    item = matches[0]
+    return (
+        1,
+        item["content"].get("body") or "",
+        str(item["id"]),
+        str(item["content"]["id"]),
+    )
+
+
 def observation_value(action: Action, observed: object) -> object:
     """Compare comment cardinality while retaining its numeric identity."""
-    return (
-        observed[0]
-        if action.kind == "comment" and isinstance(observed, tuple)
-        else observed
-    )
+    if isinstance(observed, tuple) and action.kind == "comment":
+        return observed[0]
+    if isinstance(observed, tuple) and action.kind == "draft":
+        return observed[:2]
+    return observed
 
 
 def verified_detail(
@@ -106,6 +153,9 @@ def verified_detail(
     detail = {"observed": observation_value(action, observed), "read": read}
     if action.kind == "comment":
         detail["comment_id"] = cast("tuple[int, int | None]", observed)[1]
+    if action.kind == "draft":
+        identity = cast("tuple[int, str, str | None, str | None]", observed)
+        detail["item_id"], detail["draft_id"] = identity[2:]
     return detail
 
 
@@ -169,14 +219,37 @@ def validate_progress(
         or not complete(current)
     ):
         raise ValueError("checkpoint collection or retained branch changed")
-    if cp1.pages != current.pages:
+    if tuple(
+        page for page in cp1.pages if page.collection not in {"project", "drafts"}
+    ) != tuple(
+        page for page in current.pages if page.collection not in {"project", "drafts"}
+    ):
         raise ValueError("checkpoint collection or retained branch changed")
     observed = {item.key: item for item in current.items}
-    if len(observed) != len(cp1.items):
-        raise ValueError("checkpoint identity count changed")
     expected = {item.key: item for item in cp1.items}
     for action in actions:
         phases = [record.phase for record in records if record.action_id == action.id]
+        if action.kind == "draft":
+            key = f"title:{cast('dict[str, Any]', action.payload)['title']}"
+            created = observed.pop(key, None)
+            if (
+                phases
+                and created is not None
+                and (
+                    created.state != "draft"
+                    or created.title != cast("dict[str, Any]", action.payload)["title"]
+                    or created.body != cast("dict[str, Any]", action.payload)["body"]
+                    or not created.item_id
+                    or not created.draft_id
+                    or created.issue_id
+                )
+            ):
+                raise ValueError("created draft differs from journal")
+            if created is not None and not phases:
+                raise ValueError("unrecorded draft appeared")
+            if created is None and "verified" in phases:
+                raise ValueError("verified draft disappeared")
+            continue
         key = f"#{action.number}"
         if phases and key in expected:
             expected[key] = _progress_item(

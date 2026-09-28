@@ -1,6 +1,7 @@
 """Loopback REST collection tests for the backfill checkpoint shell."""
 
 import argparse
+import csv
 import hashlib
 import json
 import threading
@@ -15,6 +16,30 @@ from urllib.request import Request
 import pytest
 
 FIXTURES = Path(__file__).parent / "fixtures/work_model_backfill"
+
+
+def send_json(handler: BaseHTTPRequestHandler, status: int, value: object) -> None:
+    """Respond with one JSON value from a loopback fake."""
+    body = json.dumps(value).encode()
+    handler.send_response(status)
+    handler.send_header("Content-Type", "application/json")
+    handler.send_header("Content-Length", str(len(body)))
+    handler.end_headers()
+    handler.wfile.write(body)
+
+
+@contextmanager
+def live_server(handler: type[BaseHTTPRequestHandler]) -> Generator[str]:
+    """Run a mutable REST fake on loopback for an executor test."""
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+    thread = threading.Thread(target=httpd.serve_forever)
+    thread.start()
+    try:
+        yield f"http://127.0.0.1:{httpd.server_port}/"
+    finally:
+        httpd.shutdown()
+        thread.join(timeout=5)
+        httpd.server_close()
 
 
 def checkpoint_paths(tmp_path: Path) -> tuple[Path, dict[str, Path]]:
@@ -196,6 +221,94 @@ def test_initial_output_can_be_loaded_by_final_and_saves_differences(
 
 
 @pytest.mark.integration
+def test_reviewed_copied_status_reaches_initial_and_final_cp1(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A reviewed copied Status differs from the unchanged source value."""
+    from agent_orchestration_poc.shell.work_model_backfill import run  # noqa: PLC0415
+
+    fixture = json.loads((FIXTURES / "runner/initial.json").read_text())
+    old = {
+        "Status": "Backlog",
+        "Size": "",
+        "Area": "",
+        "Harness": "",
+        "Worker": "",
+        "Phase": "",
+        "Priority": "",
+    }
+    old_item = {
+        "content_type": "Issue",
+        "content": {"number": 1},
+        "id": 9,
+        "fields": [{"name": key, "value": value} for key, value in old.items()],
+    }
+    fixture["/users/tbhb/projectsV2/9/items"] = [old_item]
+    project = fixture["/orgs/tbhb-dev/projectsV2/1/items"][0]
+    project["fields"] = [
+        {"name": key, "value": "Refinement" if key == "Status" else value}
+        for key, value in old.items()
+        if key in {"Status", "Size", "Area", "Harness", "Worker"}
+    ]
+    manifest, paths = checkpoint_paths(tmp_path)
+    with paths["assignments"].open(newline="") as stream:
+        reader = csv.DictReader(stream, delimiter="\t")
+        rows = list(reader)
+        fields = reader.fieldnames
+    assert fields is not None
+    rows[0]["old project fields"] = json.dumps(old)
+    assignment = tmp_path / "assignments.tsv"
+    with assignment.open("w", newline="") as stream:
+        writer = csv.DictWriter(
+            stream, fieldnames=fields, delimiter="\t", lineterminator="\n"
+        )
+        writer.writeheader()
+        writer.writerows(rows)
+    paths["assignments"] = assignment
+    manifest.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                **{
+                    f"{name}_sha256": hashlib.sha256(path.read_bytes()).hexdigest()
+                    for name, path in paths.items()
+                },
+            }
+        )
+    )
+    cp1 = tmp_path / "cp1.json"
+    inputs = tmp_path / "inputs.json"
+    inputs_data = json.loads((FIXTURES / "runner/final-inputs.json").read_text())
+    inputs_data["reviewed_status"] = {"#1": "Refinement"}
+    inputs.write_text(json.dumps(inputs_data))
+    with server({path: (value, False) for path, value in fixture.items()}) as base:
+        args = argparse.Namespace(
+            checkpoint="initial",
+            manifest=manifest,
+            api_base=base,
+            output=cp1,
+            cp1=None,
+            inputs=None,
+            reference=None,
+            reviewed_status=None,
+            **paths,
+        )
+        with pytest.raises(ValueError, match="copied Project"):
+            run(args)
+        args.reviewed_status = '{"#1": "Refinement"}'
+        assert run(args) == 0
+        capsys.readouterr()
+        assert json.loads(cp1.read_text())["reviewed_status"] == {"#1": "Refinement"}
+        args.checkpoint = "final"
+        args.cp1 = cp1
+        args.inputs = inputs
+        args.reference = (
+            Path(__file__).resolve().parents[1] / "config/workflow-reference.toml"
+        )
+        assert run(args) == 2
+
+
+@pytest.mark.integration
 def test_redirect_cannot_forward_authorization_to_another_origin() -> None:
     """A redirect to another port cannot receive the bearer token."""
     from agent_orchestration_poc.shell.work_model_backfill import Api  # noqa: PLC0415
@@ -363,19 +476,11 @@ def test_journaled_write_resumes_without_duplicate_comment(
     writes: list[str] = []
 
     class Handler(BaseHTTPRequestHandler):
-        def respond(self, status: int, value: object) -> None:
-            body = json.dumps(value).encode()
-            self.send_response(status)
-            self.send_header("Content-Type", "application/json")
-            self.send_header("Content-Length", str(len(body)))
-            self.end_headers()
-            self.wfile.write(body)
-
         def do_GET(self) -> None:
             if self.path.endswith("/comments?per_page=100"):
-                self.respond(200, comments)
+                send_json(self, 200, comments)
             elif self.path.endswith("/issues/2"):
-                self.respond(200, state)
+                send_json(self, 200, state)
             else:
                 self.send_error(404)
 
@@ -384,14 +489,14 @@ def test_journaled_write_resumes_without_duplicate_comment(
             writes.append(self.path)
             if self.path.endswith("/comments"):
                 comments.append({"id": 10, "body": payload["body"]})
-                self.respond(503, {})
+                send_json(self, 503, {})
 
         def do_PATCH(self) -> None:
             writes.append(self.path)
             state.update(
                 json.loads(self.rfile.read(int(self.headers["Content-Length"])))
             )
-            self.respond(200, state)
+            send_json(self, 200, state)
 
         @override
         def log_message(self, format: str, *args: object) -> None:
@@ -427,11 +532,8 @@ def test_journaled_write_resumes_without_duplicate_comment(
     )
     actions = (comment, close)
     journal = tmp_path / "journal.jsonl"
-    httpd = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
-    thread = threading.Thread(target=httpd.serve_forever)
-    thread.start()
-    try:
-        api = Api(f"http://127.0.0.1:{httpd.server_port}/", "")
+    with live_server(Handler) as base:
+        api = Api(base, "")
         records = list(_journal(journal, "digest", actions, create=True))
         with pytest.raises(ValueError, match="HTTP 503"):
             _execute(api, journal, comment, records)
@@ -439,10 +541,6 @@ def test_journaled_write_resumes_without_duplicate_comment(
         _execute(api, journal, comment, records)
         _execute(api, journal, close, records)
         _execute(api, journal, comment, records)
-    finally:
-        httpd.shutdown()
-        thread.join(timeout=5)
-        httpd.server_close()
     assert len(comments) == 1
     assert len(writes) == 2
     assert [record.phase for record in records if record.action_id == comment.id] == [
@@ -461,3 +559,75 @@ def test_journaled_write_resumes_without_duplicate_comment(
     assert {record.action_id for record in records if record.phase == "verified"} == {
         action.id for action in actions
     }
+
+
+@pytest.mark.integration
+def test_draft_creation_recovers_after_lost_response(tmp_path: Path) -> None:
+    """A durable intent and Project read-back prevent a duplicate draft POST."""
+    from agent_orchestration_poc.core.work_model_backfill_executor import (  # noqa: PLC0415
+        Action,
+    )
+    from agent_orchestration_poc.shell.work_model_backfill import (  # noqa: PLC0415
+        Api,
+        _execute,
+        _journal,
+    )
+
+    drafts: list[dict[str, Any]] = []
+    writes: list[dict[str, Any]] = []
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self) -> None:
+            if self.path.endswith("/fields?per_page=100"):
+                send_json(self, 200, [{"id": 1, "name": "Status"}])
+            elif "/items?" in self.path:
+                send_json(self, 200, drafts)
+            else:
+                self.send_error(404)
+
+        def do_POST(self) -> None:
+            payload = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+            writes.append(payload)
+            drafts.append(
+                {
+                    "content_type": "DraftIssue",
+                    "id": 13,
+                    "content": {"id": "draft-a", **payload},
+                    "fields": [],
+                }
+            )
+            send_json(self, 503, {})
+
+        @override
+        def log_message(self, format: str, *args: object) -> None:
+            pass
+
+    action = Action(
+        "6:draft:title:Draft A",
+        "6",
+        "draft",
+        0,
+        "POST",
+        "orgs/tbhb-dev/projectsV2/1/drafts",
+        {"title": "Draft A", "body": "- Class: chore"},
+        (0, ""),
+        (1, "- Class: chore"),
+    )
+    journal = tmp_path / "journal.jsonl"
+    with live_server(Handler) as base:
+        api = Api(base, "")
+        records = list(_journal(journal, "digest", (action,), create=True))
+        with pytest.raises(ValueError, match="HTTP 503"):
+            _execute(api, journal, action, records)
+        records = list(_journal(journal, "digest", (action,), create=False))
+        _execute(api, journal, action, records)
+        _execute(api, journal, action, records)
+    assert len(writes) == 1
+    assert (
+        next(
+            record.detail["draft_id"]
+            for record in records
+            if record.phase == "verified"
+        )
+        == "draft-a"
+    )
