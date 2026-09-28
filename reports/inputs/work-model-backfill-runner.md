@@ -1,5 +1,15 @@
 # Work model backfill runner evidence
 
+## Forward retry review correction
+
+[Verified] The new forward-journal regression failed on the reviewed head: an `intent, intent, response, verified` sequence passed forward journal validation, but rollback planning raised `duplicate forward action`. Pure reconstruction now collapses identical repeated intents into one action and rejects a changed action value or payload on retry. The regression takes the saved sequence through `recorded_actions`, `validate_journal`, and `rollback_plan`, then checks the changed retry rejection.
+
+[Verified] `mise exec -- uv run pytest -q tests/test_work_model_backfill_rollback.py tests/test_work_model_backfill_shell.py --run-integration` exited 0 with 51 tests. `mise run check` exited 0 with Python core coverage 97.08% lines and 93.28% branches, shell coverage 72.49% lines, Go core coverage 96.43% statements and 94.74% branches, and Go shell coverage 74.58% statements. The first aggregate attempt caught a pyrefly error in the new test, and the next caught formatting; both were corrected before the successful run.
+
+[Verified] `mise run check:mutation` exited 0 with Python core mutation at 90.15% (7,627 of 8,460 killed) and Go core mutation at 97.32% (145 of 149 killed). `git diff --check`, `mise run check:vale`, and `mise run check:rumdl` exited 0 after the evidence update.
+
+[Verified] The prior pinned scc 4.1.0 measurement for this rollback slice was 987 changed code units against `origin/main`, already above the 800-unit limit. The current regression adds code to that slice. No coordinator exception appears in the paginated PR conversation as of this correction; size disposition remains pending. No live Project or issue write was made.
+
 ## Rollback recovery review correction
 
 [Verified] Three new regression cases failed against review head `82c36fa`: a header-only rollback journal admitted unrelated snapshot drift, a DELETE that failed before mutation left `intent, intent, response, verified` unreadable on reload, and a lost response after inverse trial-link deletion halted even though read-back showed the link absent. The corrected core derives expected full snapshot state from the forward journal and verified inverse records on every resume, allowing either state for one interrupted inverse and checking already undone records. A created issue remains as a closed record after its inverse. Repeated intents are accepted before verification while every intent still has to match the saved action. The inverse trial DELETE uses deletion recovery rules; the forward trial add still requires a response before adopting a link.

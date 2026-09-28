@@ -15,6 +15,8 @@ from agent_orchestration_poc.core.work_model_backfill_executor import (
     ProjectMetadata,
     Record,
     _tuplify,
+    recorded_actions,
+    validate_journal,
 )
 from agent_orchestration_poc.core.work_model_backfill_rollback import (
     inverse_action,
@@ -185,6 +187,39 @@ def test_plan_uses_only_verified_actions_in_reverse_order() -> None:
     for changed in (replace(cp1, version=cp1.version + 1), replace(cp1, pages=())):
         with pytest.raises(ValueError, match="checkpoint"):
             rollback_plan(cp1, changed, (first, second), records, METADATA)
+
+
+def test_forward_retry_reconstructs_one_rollback_action() -> None:
+    cp1 = fixture_snapshot()
+    action = Action(
+        "retry", "6T", "title", 1, "PATCH", "issues/1", {"title": "new"}, "old", "new"
+    )
+    rows: list[dict[str, Any]] = [{"version": 1, "run_id": "cp1"}]
+    rows.extend(
+        asdict(
+            Record(
+                action.id,
+                phase,
+                {"action": asdict(action), "payload": action.payload}
+                if phase == "intent"
+                else {},
+            )
+        )
+        for phase in ("intent", "intent", "response", "verified")
+    )
+    saved = recorded_actions(json.loads(json.dumps(rows)))
+    records = validate_journal(rows, "cp1", saved)
+    assert tuple(
+        item.id for item in rollback_plan(cp1, cp1, saved, records, METADATA)
+    ) == ("rollback:retry",)
+    changed = replace(action, payload={"title": "different"})
+    rows[2] = asdict(
+        Record(
+            action.id, "intent", {"action": asdict(changed), "payload": action.payload}
+        )
+    )
+    with pytest.raises(ValueError, match="changed"):
+        recorded_actions(rows)
 
 
 def test_rollback_journal_rejects_plan_and_order_changes() -> None:

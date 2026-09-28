@@ -137,7 +137,7 @@ def validate_resume_admission(
 
 def recorded_actions(rows: list[dict[str, Any]]) -> tuple[Action, ...]:
     """Recover stable action values after dynamic identities have been written."""
-    actions = []
+    actions: dict[str, Action] = {}
     for row in rows[1:]:
         if row.get("phase") != "intent" or "action" not in row.get("detail", {}):
             continue
@@ -155,8 +155,10 @@ def recorded_actions(rows: list[dict[str, Any]]) -> tuple[Action, ...]:
         )
         if row["action_id"] != action.id:
             raise ValueError("journal action identity changed")
-        actions.append(action)
-    return tuple(actions)
+        if action.id in actions and actions[action.id] != action:
+            raise ValueError("journal action changed across retry")
+        actions[action.id] = action
+    return tuple(actions.values())
 
 
 def _tuplify(value: object) -> object:
