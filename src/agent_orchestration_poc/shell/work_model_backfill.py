@@ -10,10 +10,10 @@ import sys
 import tomllib
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, cast, override
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urljoin, urlparse
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from agent_orchestration_poc.core.work_model_backfill import (
     Item,
@@ -40,6 +40,12 @@ NEXT = re.compile(r'<([^>]+)>;\s*rel="next"')
 PAGE_SIZE = 100
 
 
+class _NoRedirect(HTTPRedirectHandler):
+    @override
+    def redirect_request(self, *_args: Any, **_kwargs: Any) -> None:
+        raise ValueError("REST GET redirect refused")
+
+
 class Api:
     """Small authenticated REST GET client with complete page receipts."""
 
@@ -52,7 +58,8 @@ class Api:
         """Read one JSON response and retain status and safe rate headers."""
         url = urljoin(self.base, path)
         if (
-            urlparse(url).netloc != urlparse(self.base).netloc
+            urlparse(url).scheme not in {"http", "https"}
+            or urlparse(url).netloc != urlparse(self.base).netloc
             or urlparse(url).scheme != urlparse(self.base).scheme
         ):
             raise ValueError("pagination changed API origin")
@@ -63,7 +70,10 @@ class Api:
         if self.token:
             headers["Authorization"] = f"Bearer {self.token}"
         try:
-            with urlopen(Request(url, headers=headers), timeout=30) as response:  # noqa: S310 checked host above
+            with build_opener(_NoRedirect()).open(
+                Request(url, headers=headers),  # noqa: S310 checked scheme and origin above
+                timeout=30,
+            ) as response:
                 status = response.status
                 returned = {
                     key.lower(): value for key, value in response.headers.items()
@@ -198,11 +208,21 @@ def _tables(args: argparse.Namespace) -> tuple[Any, dict[str, str]]:
 def _snapshot(data: dict[str, Any]) -> Snapshot:
     return Snapshot(
         data["version"],
-        tuple(Item(**item) for item in data["items"]),
+        tuple(_item(item) for item in data["items"]),
         tuple(Page(**page) for page in data["pages"]),
         data["branch_sha"],
         data["run_state"],
     )
+
+
+def _item(data: dict[str, Any]) -> Item:
+    """Restore the immutable Item fields from a saved JSON value."""
+    values = data.copy()
+    for field in ("native", "project", "source_project"):
+        values[field] = tuple(tuple(pair) for pair in data[field])
+    values["blockers"] = tuple(data["blockers"])
+    values["labels"] = tuple(data["labels"])
+    return Item(**values)
 
 
 def run(args: argparse.Namespace) -> int:
@@ -227,6 +247,7 @@ def run(args: argparse.Namespace) -> int:
         "digests": digests,
         "ledger": api.ledger,
     }
+    difference_count = 0
     if args.checkpoint == "initial":
         validate_cp1(tables, snapshot)
         envelope["plan"] = [asdict(step) for step in operation_plan(tables, snapshot)]
@@ -239,7 +260,7 @@ def run(args: argparse.Namespace) -> int:
         validate_cp1(tables, cp1)
         inputs_data = json.loads(args.inputs.read_text())
         inputs = TargetInputs(
-            {key: Item(**item) for key, item in inputs_data["created"].items()},
+            {key: _item(item) for key, item in inputs_data["created"].items()},
             inputs_data["bodies"],
             frozenset(inputs_data["closed_at_cp0"]),
             frozenset(inputs_data["revoked"]),
@@ -250,10 +271,12 @@ def run(args: argparse.Namespace) -> int:
         expected = expected_cp13(tables, cp1, inputs)
         differences = compare_cp13(expected, snapshot, cp1.branch_sha)
         envelope["differences"] = [asdict(item) for item in differences]
-        if differences:
-            raise ValueError(f"CP13 differs in {len(differences)} fields")
+        difference_count = len(differences)
     if args.output:
         args.output.write_text(json.dumps(envelope, indent=2) + "\n")
+    if difference_count:
+        LOGGER.warning("CP13 differs in %s fields", difference_count)
+        return 2
     return 0
 
 
