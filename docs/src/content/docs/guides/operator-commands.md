@@ -23,7 +23,7 @@ A valid command adds only `operator/replied` with the additive label endpoint an
 
 ## Fixture gate and activation
 
-This workflow remains restricted to one reviewed disposable issue number and one reviewed disposable pull request number. The event item's `pull_request` marker selects the matching number. The gate must be replaced with the two recorded IDs before a fixture run, and removing it for ordinary items needs a later reviewed pull request. Read back the actual `tbhb` association, issue and pull request labels, and reactions before proposing broad activation. The coordinator's digest fixture result is a separate prerequisite.
+This workflow remains restricted to disposable [issue #262](https://github.com/tbhb-dev/agent-orchestration-poc/issues/262) and draft [pull request #263](https://github.com/tbhb-dev/agent-orchestration-poc/pull/263). The event item's `pull_request` marker selects the matching number. Removing the gate for ordinary items needs a later reviewed pull request. Read back the actual `tbhb` association, issue and pull request labels, and reactions before proposing broad activation. The coordinator's digest fixture result is a separate prerequisite.
 
 ## Coordinator digest handoff
 

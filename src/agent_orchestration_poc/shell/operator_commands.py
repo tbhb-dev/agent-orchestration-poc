@@ -19,9 +19,8 @@ from agent_orchestration_poc.core.operator_commands import (
 LOGGER = logging.getLogger(__name__)
 REPOSITORY = "tbhb-dev/agent-orchestration-poc"
 API = "https://api.github.com"
-# Replaced only by a reviewed change that records two disposable item IDs.
-FIXTURE_ISSUE = 0
-FIXTURE_PR = 0
+FIXTURE_ISSUE = 262
+FIXTURE_PR = 263
 
 
 def request_json(

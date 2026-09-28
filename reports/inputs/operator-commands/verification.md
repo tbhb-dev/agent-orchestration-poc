@@ -22,7 +22,15 @@
 
 ## Fixture-only gate and pending live evidence
 
-**Untested.** The issue and pull request fixture numbers are currently `0` and `0`, which match no GitHub item. Issue #254 does not provide disposable IDs, and this dispatch forbids creating issues. The workflow therefore remains inert until two existing reviewed fixture numbers are supplied. There is no live `tbhb` author association readback, workflow run link, or live label and reaction readback yet. Broad activation is outside this pull request.
+**Verified.** Operator decision OP-31 authorized two disposable items for #254. [Issue #262](https://github.com/tbhb-dev/agent-orchestration-poc/issues/262) has `needs-operator` and `operator/review`. Draft [pull request #263](https://github.com/tbhb-dev/agent-orchestration-poc/pull/263) has the same labels and comes from `fixture/254-operator-commands` at commit `56abc6d`, which adds only the empty `reports/inputs/operator-commands/fixture-pr-marker`. Each item has one active `Operator ask` comment with two approval lines, two options, a recommendation, `Unblocks: none`, and `Deadline: none`. The type-specific gate records issue `262` and pull request `263`.
+
+**Verified.** A pure `preflight` probe with the configured IDs accepts issue `262` and pull request `263`, and rejects the swapped item types and item `999` for each. The 55 targeted parser and loopback REST tests passed. `mise run check:imports`, `mise run check:ruff`, and `mise run check:workflow-forms` passed. **Observed.** `mise run check` passed its earlier subchecks and printed coverage above the Python and Go statement floors, then failed because `gobco -branch` exited 1 for `internal/core/layout` in `scripts/check-coverage.py`. The sandbox denied `ps -eo pid,etime,args`, so the local child process could not be inspected.
+
+**Verified.** `mise run check:mutation` passed after the fixture-ID change: Go core scored 97.32 percent (145 of 149 killed), and Python core scored 90.10 percent (7,396 of 8,209 killed). `mise run fmt` made no additional changes.
+
+**Observed.** A separate `mise run check:coverage` again printed Python and Go statement coverage above their floors but produced no further output from `gobco -branch` for more than two minutes; it was interrupted. `mise run docs:build` passed with 56 pages.
+
+**Untested.** There is no live `tbhb` author association readback, workflow run link, or live label and reaction readback yet. The operator will post positive fixture comments after merge through a separate ask. Broad activation is outside this pull request.
 
 **Untested.** The coordinator's external digest script and its fixture result are not present in this repository. The [event contract](/guides/operator-commands/#coordinator-digest-handoff) specifies the targeted REST reads, delayed-label pending record, and comment-ID deduplication. The coordinator must attach its external handoff and verification before this issue can close.
 
