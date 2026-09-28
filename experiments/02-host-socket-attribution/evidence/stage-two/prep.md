@@ -288,3 +288,49 @@ The root command in the approved ledger is `sudo /usr/bin/opensnoop -F -e -s > /
 **Inference, untested:** an open made through `openat` or `openat_nocancel` doesn't produce a line. A clean trace says nothing about opens a harness or its runtime makes with those calls. The missing `openat` probe adds to the inherited-descriptor and memory-map limits in `file-open-audit.md`.
 
 **Inference:** the operator's unprivileged shell performs the `>` and `2>` redirections, so `file-opens.raw` and `file-opens.err` will be owned by `tony`. Running `sudo` in the background cannot prompt for a password, so credentials should be cached with `sudo -v` first. `audit_pid=$!` records the `sudo` PID. **Documented in sudo(8) for Sudo 1.9.17p2, "Signal handling":** when the command runs as a child of `sudo`, `sudo` relays the signals it receives to that command. **Untested:** whether the ledger's unprivileged `kill -TERM "$audit_pid"` is permitted against the root `sudo` process, or whether the operator needs `sudo kill -TERM "$audit_pid"`.
+
+## Harness files after the permission change
+
+At 15:43 the coordinator reported new scoped permission rules for this run. At 15:44:02 EDT the executor confirmed them first-hand in `.claude/settings.local.json` of the main checkout, modified at 15:43. Its lines 21 to 24 list `Edit(//private/tmp/bv01-228-*/**)`, `Bash(tmux -S /private/tmp/bv01-228-probe.tmux *)`, `Bash(sh /private/tmp/bv01-228-*)`, and `Bash(sh -c *> /private/tmp/bv01-228-codex-headless/root.pid*)`.
+
+The executor then wrote the five previously denied files with the Claude Code Write tool, not a shell heredoc, using the runbook's heredoc bodies with a trailing newline. All five writes succeeded.
+
+Verification ran from the worktree root at 15:45:35 EDT. For each file, `awk` extracted the lines between the runbook's `cat > <file> <<'EOF'` line and the next `EOF` into a scratch file, and `cmp` compared that with the written file. `<scratch>` below stands for this session's scratchpad directory `expected/` path. The command for each file was:
+
+```text
+awk -v t="cat > <file> <<'EOF'" '$0==t{on=1;next} on&&$0=="EOF"{exit} on' experiments/02-host-socket-attribution/stage-two-runbook.md > <scratch>/<name> && wc -l < <scratch>/<name> && cmp <scratch>/<name> <file> && echo 'identical to runbook heredoc'
+```
+
+```text
+$ stat -c '%a %U %s %n' <five files>
+644 tony 202 /private/tmp/bv01-228-claude-headless/settings.json
+644 tony 205 /private/tmp/bv01-228-claude-interactive/settings.json
+644 tony 795 /private/tmp/bv01-228-codex-interactive/launch.sh
+644 tony 953 /private/tmp/bv01-228-claude-interactive/launch.sh
+644 tony 1133 /private/tmp/bv01-228-claude-headless/launch.sh
+[exit 0]
+```
+
+| File | Runbook lines | `cmp` result | Exit |
+| --- | --- | --- | --- |
+| `/private/tmp/bv01-228-claude-headless/settings.json` | 1 | identical to runbook heredoc | 0 |
+| `/private/tmp/bv01-228-claude-interactive/settings.json` | 1 | identical to runbook heredoc | 0 |
+| `/private/tmp/bv01-228-codex-interactive/launch.sh` | 5 | identical to runbook heredoc | 0 |
+| `/private/tmp/bv01-228-claude-interactive/launch.sh` | 6 | identical to runbook heredoc | 0 |
+| `/private/tmp/bv01-228-claude-headless/launch.sh` | 6 | identical to runbook heredoc | 0 |
+
+**Verified:** each file is byte-identical to its runbook heredoc body at `cb7fdd7`.
+
+**Mode not set.** The runbook states no explicit file mode. Its `umask 077` setup implies 600, and the scripts run as `sh <file>`, so no execute bit applies. The Write tool created all five files as 644 inside mode 700 directories. The executor then ran:
+
+```text
+date '+%Y-%m-%d %H:%M:%S %Z'; chmod 600 /private/tmp/bv01-228-claude-headless/settings.json /private/tmp/bv01-228-claude-interactive/settings.json /private/tmp/bv01-228-codex-interactive/launch.sh /private/tmp/bv01-228-claude-interactive/launch.sh /private/tmp/bv01-228-claude-headless/launch.sh && stat -c '%a %U %s %n' <five files> && sha256sum <five files>
+```
+
+The Claude Code auto mode classifier denied it before execution:
+
+```text
+Permission for this action was denied by the Claude Code auto mode classifier. Reason: [Auto-Mode Bypass].
+```
+
+The executor stopped without trying another method. All five files remain mode 644. **Inference:** the enclosing home directories are mode 700 and owned by `tony`, so other users cannot traverse to them. The runbook's `umask 077` intent still isn't met for these five files. No process was started in this step.
