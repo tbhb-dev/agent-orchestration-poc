@@ -1,0 +1,946 @@
+{
+  "complete": true,
+  "issue_count": 161,
+  "issues": [
+    {
+      "blockers": [],
+      "epic": "epic: toolchain, skeleton, and continuous integration",
+      "number": "3"
+    },
+    {
+      "blockers": [],
+      "epic": "epic: toolchain, skeleton, and continuous integration",
+      "number": "4"
+    },
+    {
+      "blockers": [],
+      "epic": "epic: toolchain, skeleton, and continuous integration",
+      "number": "5"
+    },
+    {
+      "blockers": ["3", "4", "5"],
+      "epic": "epic: toolchain, skeleton, and continuous integration",
+      "number": "6"
+    },
+    {
+      "blockers": ["3"],
+      "epic": "epic: toolchain, skeleton, and continuous integration",
+      "number": "7"
+    },
+    {
+      "blockers": [],
+      "epic": "epic: docs site and worker instructions",
+      "number": "8"
+    },
+    {
+      "blockers": ["3", "8"],
+      "epic": "epic: docs site and worker instructions",
+      "number": "9"
+    },
+    {
+      "blockers": [],
+      "epic": "epic: docs site and worker instructions",
+      "number": "10"
+    },
+    {
+      "blockers": ["3", "6", "9"],
+      "epic": "epic: docs site and worker instructions",
+      "number": "11"
+    },
+    {
+      "blockers": [],
+      "epic": "epic: foundation checkpoints and Project board",
+      "number": "12"
+    },
+    {
+      "blockers": [],
+      "epic": "epic: foundation checkpoints and Project board",
+      "number": "13"
+    },
+    {
+      "blockers": ["4"],
+      "epic": "epic: toolchain, skeleton, and continuous integration",
+      "number": "14"
+    },
+    {
+      "blockers": [],
+      "epic": "",
+      "number": "15"
+    },
+    {
+      "blockers": [],
+      "epic": "",
+      "number": "16"
+    },
+    {
+      "blockers": [],
+      "epic": "",
+      "number": "17"
+    },
+    {
+      "blockers": [],
+      "epic": "",
+      "number": "18"
+    },
+    {
+      "blockers": ["58"],
+      "epic": "epic: bus relay and shared context",
+      "number": "26"
+    },
+    {
+      "blockers": ["160", "26", "58"],
+      "epic": "epic: bus relay and shared context",
+      "number": "27"
+    },
+    {
+      "blockers": ["27"],
+      "epic": "epic: provisioned interactive workers",
+      "number": "28"
+    },
+    {
+      "blockers": ["149", "160", "26"],
+      "epic": "epic: bus relay and shared context",
+      "number": "29"
+    },
+    {
+      "blockers": [],
+      "epic": "epic: provisioned interactive workers",
+      "number": "30"
+    },
+    {
+      "blockers": ["27", "30"],
+      "epic": "epic: provisioned interactive workers",
+      "number": "31"
+    },
+    {
+      "blockers": ["26"],
+      "epic": "epic: provisioned interactive workers",
+      "number": "32"
+    },
+    {
+      "blockers": ["27"],
+      "epic": "epic: provisioned interactive workers",
+      "number": "33"
+    },
+    {
+      "blockers": ["10", "9"],
+      "epic": "",
+      "number": "34"
+    },
+    {
+      "blockers": [],
+      "epic": "epic: harnesses in Apple Containers virtual machines",
+      "number": "35"
+    },
+    {
+      "blockers": ["35"],
+      "epic": "epic: harnesses in Apple Containers virtual machines",
+      "number": "36"
+    },
+    {
+      "blockers": ["35"],
+      "epic": "epic: terminal, interface, and remote access path",
+      "number": "37"
+    },
+    {
+      "blockers": ["37"],
+      "epic": "epic: terminal, interface, and remote access path",
+      "number": "38"
+    },
+    {
+      "blockers": ["35"],
+      "epic": "epic: harnesses in Apple Containers virtual machines",
+      "number": "39"
+    },
+    {
+      "blockers": ["26"],
+      "epic": "epic: bus in the virtual machine and daemon decisions",
+      "number": "40"
+    },
+    {
+      "blockers": ["35", "40"],
+      "epic": "epic: bus in the virtual machine and daemon decisions",
+      "number": "41"
+    },
+    {
+      "blockers": ["40"],
+      "epic": "epic: bus in the virtual machine and daemon decisions",
+      "number": "42"
+    },
+    {
+      "blockers": ["32", "40"],
+      "epic": "epic: bus in the virtual machine and daemon decisions",
+      "number": "43"
+    },
+    {
+      "blockers": ["35", "40"],
+      "epic": "epic: bus in the virtual machine and daemon decisions",
+      "number": "44"
+    },
+    {
+      "blockers": ["35"],
+      "epic": "epic: harnesses in Apple Containers virtual machines",
+      "number": "45"
+    },
+    {
+      "blockers": ["35"],
+      "epic": "epic: harnesses in Apple Containers virtual machines",
+      "number": "46"
+    },
+    {
+      "blockers": ["35"],
+      "epic": "epic: harnesses in Apple Containers virtual machines",
+      "number": "47"
+    },
+    {
+      "blockers": ["38"],
+      "epic": "epic: terminal, interface, and remote access path",
+      "number": "48"
+    },
+    {
+      "blockers": [],
+      "epic": "epic: terminal, interface, and remote access path",
+      "number": "49"
+    },
+    {
+      "blockers": [],
+      "epic": "epic: terminal, interface, and remote access path",
+      "number": "50"
+    },
+    {
+      "blockers": ["35"],
+      "epic": "epic: harnesses in Apple Containers virtual machines",
+      "number": "51"
+    },
+    {
+      "blockers": ["40", "41"],
+      "epic": "epic: bus in the virtual machine and daemon decisions",
+      "number": "52"
+    },
+    {
+      "blockers": [],
+      "epic": "epic: bus in the virtual machine and daemon decisions",
+      "number": "53"
+    },
+    {
+      "blockers": ["49"],
+      "epic": "epic: terminal, interface, and remote access path",
+      "number": "54"
+    },
+    {
+      "blockers": [],
+      "epic": "epic: quality gates before core logic",
+      "number": "58"
+    },
+    {
+      "blockers": [],
+      "epic": "epic: quality gates before core logic",
+      "number": "59"
+    },
+    {
+      "blockers": [],
+      "epic": "epic: quality gates before core logic",
+      "number": "60"
+    },
+    {
+      "blockers": [],
+      "epic": "epic: quality gates before core logic",
+      "number": "61"
+    },
+    {
+      "blockers": [],
+      "epic": "epic: quality gates before core logic",
+      "number": "62"
+    },
+    {
+      "blockers": [],
+      "epic": "epic: quality gates before core logic",
+      "number": "63"
+    },
+    {
+      "blockers": [],
+      "epic": "epic: foundation checkpoints and Project board",
+      "number": "69"
+    },
+    {
+      "blockers": [],
+      "epic": "",
+      "number": "70"
+    },
+    {
+      "blockers": [],
+      "epic": "",
+      "number": "71"
+    },
+    {
+      "blockers": [],
+      "epic": "",
+      "number": "72"
+    },
+    {
+      "blockers": [],
+      "epic": "",
+      "number": "73"
+    },
+    {
+      "blockers": [],
+      "epic": "",
+      "number": "74"
+    },
+    {
+      "blockers": [],
+      "epic": "epic: quality gates before core logic",
+      "number": "77"
+    },
+    {
+      "blockers": [],
+      "epic": "epic: foundation checkpoints and Project board",
+      "number": "78"
+    },
+    {
+      "blockers": [],
+      "epic": "",
+      "number": "83"
+    },
+    {
+      "blockers": ["83"],
+      "epic": "",
+      "number": "84"
+    },
+    {
+      "blockers": [],
+      "epic": "epic: quality gates before core logic",
+      "number": "87"
+    },
+    {
+      "blockers": ["59", "60", "84", "87"],
+      "epic": "",
+      "number": "88"
+    },
+    {
+      "blockers": ["83", "84"],
+      "epic": "",
+      "number": "89"
+    },
+    {
+      "blockers": ["83", "84"],
+      "epic": "",
+      "number": "90"
+    },
+    {
+      "blockers": ["83", "84", "89", "92", "93"],
+      "epic": "",
+      "number": "91"
+    },
+    {
+      "blockers": ["83", "84", "88", "89", "90", "94"],
+      "epic": "",
+      "number": "92"
+    },
+    {
+      "blockers": ["142", "84", "88", "89", "90", "94"],
+      "epic": "",
+      "number": "93"
+    },
+    {
+      "blockers": ["27", "29", "84", "87", "96"],
+      "epic": "",
+      "number": "94"
+    },
+    {
+      "blockers": [],
+      "epic": "epic: bus relay and shared context",
+      "number": "96"
+    },
+    {
+      "blockers": [],
+      "epic": "epic: GitHub monitoring service",
+      "number": "98"
+    },
+    {
+      "blockers": ["104", "107"],
+      "epic": "",
+      "number": "100"
+    },
+    {
+      "blockers": ["100", "107", "84", "88"],
+      "epic": "",
+      "number": "101"
+    },
+    {
+      "blockers": [],
+      "epic": "",
+      "number": "102"
+    },
+    {
+      "blockers": ["104", "107", "108"],
+      "epic": "",
+      "number": "103"
+    },
+    {
+      "blockers": [],
+      "epic": "",
+      "number": "104"
+    },
+    {
+      "blockers": ["83", "84"],
+      "epic": "",
+      "number": "106"
+    },
+    {
+      "blockers": ["104"],
+      "epic": "",
+      "number": "107"
+    },
+    {
+      "blockers": ["104", "107"],
+      "epic": "",
+      "number": "108"
+    },
+    {
+      "blockers": ["104", "107"],
+      "epic": "",
+      "number": "109"
+    },
+    {
+      "blockers": ["104"],
+      "epic": "",
+      "number": "110"
+    },
+    {
+      "blockers": ["104", "107", "109", "110", "116"],
+      "epic": "",
+      "number": "111"
+    },
+    {
+      "blockers": [],
+      "epic": "",
+      "number": "114"
+    },
+    {
+      "blockers": ["110"],
+      "epic": "",
+      "number": "116"
+    },
+    {
+      "blockers": ["104", "107", "108"],
+      "epic": "epic: messaging through the orchestration service",
+      "number": "117"
+    },
+    {
+      "blockers": ["117"],
+      "epic": "epic: messaging through the orchestration service",
+      "number": "118"
+    },
+    {
+      "blockers": ["118", "89"],
+      "epic": "",
+      "number": "120"
+    },
+    {
+      "blockers": ["180"],
+      "epic": "",
+      "number": "123"
+    },
+    {
+      "blockers": [],
+      "epic": "",
+      "number": "124"
+    },
+    {
+      "blockers": [],
+      "epic": "",
+      "number": "125"
+    },
+    {
+      "blockers": ["104", "107", "110", "116"],
+      "epic": "",
+      "number": "126"
+    },
+    {
+      "blockers": ["104", "107", "130"],
+      "epic": "",
+      "number": "127"
+    },
+    {
+      "blockers": ["104", "107", "108", "117", "127", "129", "136"],
+      "epic": "",
+      "number": "128"
+    },
+    {
+      "blockers": [],
+      "epic": "",
+      "number": "129"
+    },
+    {
+      "blockers": ["108"],
+      "epic": "",
+      "number": "130"
+    },
+    {
+      "blockers": [],
+      "epic": "epic: agent identity and provenance cutover",
+      "number": "131"
+    },
+    {
+      "blockers": ["131"],
+      "epic": "epic: agent identity and provenance cutover",
+      "number": "132"
+    },
+    {
+      "blockers": ["131", "132", "84"],
+      "epic": "epic: agent identity and provenance cutover",
+      "number": "133"
+    },
+    {
+      "blockers": ["131", "132", "133", "135", "139", "140", "84", "89", "90"],
+      "epic": "epic: agent identity and provenance cutover",
+      "number": "134"
+    },
+    {
+      "blockers": ["132"],
+      "epic": "epic: agent identity and provenance cutover",
+      "number": "135"
+    },
+    {
+      "blockers": ["129"],
+      "epic": "",
+      "number": "136"
+    },
+    {
+      "blockers": ["131", "132", "133", "84", "89", "90"],
+      "epic": "epic: agent identity and provenance cutover",
+      "number": "139"
+    },
+    {
+      "blockers": ["132", "84", "89", "90"],
+      "epic": "epic: agent identity and provenance cutover",
+      "number": "140"
+    },
+    {
+      "blockers": ["84"],
+      "epic": "",
+      "number": "141"
+    },
+    {
+      "blockers": ["84"],
+      "epic": "",
+      "number": "142"
+    },
+    {
+      "blockers": ["104", "110"],
+      "epic": "",
+      "number": "143"
+    },
+    {
+      "blockers": ["104", "107", "143", "150"],
+      "epic": "",
+      "number": "145"
+    },
+    {
+      "blockers": ["109"],
+      "epic": "",
+      "number": "146"
+    },
+    {
+      "blockers": ["104", "107", "109", "146"],
+      "epic": "",
+      "number": "147"
+    },
+    {
+      "blockers": ["96"],
+      "epic": "epic: bus relay and shared context",
+      "number": "149"
+    },
+    {
+      "blockers": ["104", "143"],
+      "epic": "",
+      "number": "150"
+    },
+    {
+      "blockers": [],
+      "epic": "",
+      "number": "151"
+    },
+    {
+      "blockers": [],
+      "epic": "",
+      "number": "152"
+    },
+    {
+      "blockers": [],
+      "epic": "",
+      "number": "153"
+    },
+    {
+      "blockers": [],
+      "epic": "",
+      "number": "154"
+    },
+    {
+      "blockers": ["154", "163"],
+      "epic": "",
+      "number": "155"
+    },
+    {
+      "blockers": ["125", "155", "158", "90"],
+      "epic": "",
+      "number": "157"
+    },
+    {
+      "blockers": ["125", "84", "90"],
+      "epic": "",
+      "number": "158"
+    },
+    {
+      "blockers": ["157", "158"],
+      "epic": "",
+      "number": "159"
+    },
+    {
+      "blockers": ["149", "96", "27"],
+      "epic": "epic: bus relay and shared context",
+      "number": "160"
+    },
+    {
+      "blockers": ["90"],
+      "epic": "",
+      "number": "161"
+    },
+    {
+      "blockers": [],
+      "epic": "",
+      "number": "163"
+    },
+    {
+      "blockers": ["153"],
+      "epic": "",
+      "number": "164"
+    },
+    {
+      "blockers": ["107"],
+      "epic": "",
+      "number": "165"
+    },
+    {
+      "blockers": ["104", "107", "108"],
+      "epic": "",
+      "number": "166"
+    },
+    {
+      "blockers": [],
+      "epic": "",
+      "number": "167"
+    },
+    {
+      "blockers": ["167", "179"],
+      "epic": "",
+      "number": "168"
+    },
+    {
+      "blockers": ["167", "168", "179"],
+      "epic": "",
+      "number": "169"
+    },
+    {
+      "blockers": ["164", "167", "179"],
+      "epic": "",
+      "number": "170"
+    },
+    {
+      "blockers": ["170"],
+      "epic": "",
+      "number": "171"
+    },
+    {
+      "blockers": [],
+      "epic": "",
+      "number": "172"
+    },
+    {
+      "blockers": ["168", "170", "89"],
+      "epic": "",
+      "number": "173"
+    },
+    {
+      "blockers": [],
+      "epic": "epic: provisioned interactive workers",
+      "number": "176"
+    },
+    {
+      "blockers": ["176"],
+      "epic": "",
+      "number": "177"
+    },
+    {
+      "blockers": ["176", "177"],
+      "epic": "",
+      "number": "178"
+    },
+    {
+      "blockers": ["167"],
+      "epic": "",
+      "number": "179"
+    },
+    {
+      "blockers": ["89"],
+      "epic": "",
+      "number": "180"
+    },
+    {
+      "blockers": ["123", "180"],
+      "epic": "",
+      "number": "181"
+    },
+    {
+      "blockers": ["164", "167", "170", "172"],
+      "epic": "",
+      "number": "182"
+    },
+    {
+      "blockers": ["198", "90"],
+      "epic": "epic: work model Actions workflows",
+      "number": "183"
+    },
+    {
+      "blockers": ["168", "169", "170", "173", "188", "89"],
+      "epic": "",
+      "number": "184"
+    },
+    {
+      "blockers": ["176", "177", "178", "187"],
+      "epic": "",
+      "number": "185"
+    },
+    {
+      "blockers": [],
+      "epic": "epic: GitHub monitoring service",
+      "number": "186"
+    },
+    {
+      "blockers": ["176", "177", "178"],
+      "epic": "",
+      "number": "187"
+    },
+    {
+      "blockers": ["89"],
+      "epic": "",
+      "number": "188"
+    },
+    {
+      "blockers": [],
+      "epic": "epic: GitHub monitoring service",
+      "number": "189"
+    },
+    {
+      "blockers": ["189"],
+      "epic": "epic: GitHub monitoring service",
+      "number": "190"
+    },
+    {
+      "blockers": [],
+      "epic": "epic: work model backfill",
+      "number": "197"
+    },
+    {
+      "blockers": ["197"],
+      "epic": "epic: work model backfill",
+      "number": "198"
+    },
+    {
+      "blockers": ["197"],
+      "epic": "epic: work model backfill",
+      "number": "199"
+    },
+    {
+      "blockers": ["197", "198", "199", "201"],
+      "epic": "epic: work model backfill",
+      "number": "200"
+    },
+    {
+      "blockers": [],
+      "epic": "epic: work model backfill",
+      "number": "201"
+    },
+    {
+      "blockers": ["199"],
+      "epic": "epic: work model Actions workflows",
+      "number": "202"
+    },
+    {
+      "blockers": ["183", "197", "198", "205"],
+      "epic": "epic: work model Actions workflows",
+      "number": "203"
+    },
+    {
+      "blockers": ["197", "198"],
+      "epic": "epic: work model backfill",
+      "number": "204"
+    },
+    {
+      "blockers": ["197", "90"],
+      "epic": "epic: work model Actions workflows",
+      "number": "205"
+    },
+    {
+      "blockers": ["197", "198"],
+      "epic": "epic: work model Actions workflows",
+      "number": "206"
+    },
+    {
+      "blockers": [],
+      "epic": "epic: work model backfill",
+      "number": "207"
+    },
+    {
+      "blockers": [],
+      "epic": "epic: work model Actions workflows",
+      "number": "208"
+    },
+    {
+      "blockers": [],
+      "epic": "",
+      "number": "214"
+    },
+    {
+      "blockers": [],
+      "epic": "epic: tbhb-dev organization cutover",
+      "number": "215"
+    }
+  ],
+  "parent_count": 22,
+  "parents": [
+    {
+      "blockers": [],
+      "issue_id": 100000,
+      "number": 1000,
+      "title": "initiative: repository foundation"
+    },
+    {
+      "blockers": [],
+      "issue_id": 100001,
+      "number": 1001,
+      "title": "epic: toolchain, skeleton, and continuous integration"
+    },
+    {
+      "blockers": [100001],
+      "issue_id": 100002,
+      "number": 1002,
+      "title": "epic: docs site and worker instructions"
+    },
+    {
+      "blockers": [],
+      "issue_id": 100003,
+      "number": 1003,
+      "title": "epic: quality gates before core logic"
+    },
+    {
+      "blockers": [],
+      "issue_id": 100004,
+      "number": 1004,
+      "title": "epic: foundation checkpoints and Project board"
+    },
+    {
+      "blockers": [],
+      "issue_id": 100005,
+      "number": 1005,
+      "title": "initiative: organization move and agent identity"
+    },
+    {
+      "blockers": [100016],
+      "issue_id": 100006,
+      "number": 1006,
+      "title": "epic: agent identity and provenance cutover"
+    },
+    {
+      "blockers": [100016],
+      "issue_id": 100007,
+      "number": 1007,
+      "title": "epic: work model backfill"
+    },
+    {
+      "blockers": [100000],
+      "issue_id": 100008,
+      "number": 1008,
+      "title": "initiative: bootstrap orchestration"
+    },
+    {
+      "blockers": [100003],
+      "issue_id": 100009,
+      "number": 1009,
+      "title": "epic: bus relay and shared context"
+    },
+    {
+      "blockers": [100009, 100017, 100018],
+      "issue_id": 100010,
+      "number": 1010,
+      "title": "epic: provisioned interactive workers"
+    },
+    {
+      "blockers": [100008],
+      "issue_id": 100011,
+      "number": 1011,
+      "title": "initiative: design evidence and decisions"
+    },
+    {
+      "blockers": [],
+      "issue_id": 100012,
+      "number": 1012,
+      "title": "epic: harnesses in Apple Containers virtual machines"
+    },
+    {
+      "blockers": [100009, 100010, 100012],
+      "issue_id": 100013,
+      "number": 1013,
+      "title": "epic: bus in the virtual machine and daemon decisions"
+    },
+    {
+      "blockers": [100012],
+      "issue_id": 100014,
+      "number": 1014,
+      "title": "epic: terminal, interface, and remote access path"
+    },
+    {
+      "blockers": [100016],
+      "issue_id": 100015,
+      "number": 1015,
+      "title": "epic: GitHub monitoring service"
+    },
+    {
+      "blockers": [],
+      "issue_id": 100016,
+      "number": 1016,
+      "title": "epic: tbhb-dev organization cutover"
+    },
+    {
+      "blockers": [],
+      "issue_id": 100017,
+      "number": 1017,
+      "title": "epic: orchestration service and CLI identity"
+    },
+    {
+      "blockers": [100017],
+      "issue_id": 100018,
+      "number": 1018,
+      "title": "epic: messaging through the orchestration service"
+    },
+    {
+      "blockers": [100015, 100016, 100017],
+      "issue_id": 100019,
+      "number": 1019,
+      "title": "epic: GitHub gateway service"
+    },
+    {
+      "blockers": [],
+      "issue_id": 100020,
+      "number": 1020,
+      "title": "initiative: work model"
+    },
+    {
+      "blockers": [],
+      "issue_id": 100021,
+      "number": 1021,
+      "title": "epic: work model Actions workflows"
+    }
+  ]
+}
