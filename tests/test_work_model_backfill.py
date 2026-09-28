@@ -1,5 +1,6 @@
 """Synthetic table and initial snapshot tests for the work model."""
 
+import hashlib
 import json
 import tomllib
 from dataclasses import asdict, replace
@@ -15,6 +16,7 @@ from agent_orchestration_poc.core.work_model_backfill import (
     Difference,
     Item,
     Page,
+    RestValues,
     RollbackExtras,
     Snapshot,
     Tables,
@@ -25,10 +27,13 @@ from agent_orchestration_poc.core.work_model_backfill import (
     expected_cp13,
     operation_plan,
     parse_tables,
+    project_field_ids,
     rollback_values,
+    snapshot_from_rest,
     title_exemptions,
     title_repairs,
     validate_cp1,
+    verify_table_digests,
 )
 
 FIXTURES = Path(__file__).parent / "fixtures/work_model_backfill/plan"
@@ -165,6 +170,27 @@ def approved_tables() -> Tables:
         (inputs / "2026-09-27-work-model-v3-final-parents.tsv").read_text(),
         (inputs / "2026-09-27-work-model-v3-final-edges.tsv").read_text(),
     )
+
+
+def test_approved_manifest_matches_committed_table_bytes() -> None:
+    """The committed manifest pins all three approved inputs."""
+    inputs = next(
+        path / "reports/inputs/work-model-tables"
+        for path in Path(__file__).resolve().parents
+        if (path / "reports/inputs/work-model-tables").is_dir()
+    )
+    digests = {
+        name: hashlib.sha256((inputs / filename).read_bytes()).hexdigest()
+        for name, filename in (
+            ("assignments", "2026-09-27-work-model-v3-final.tsv"),
+            ("parents", "2026-09-27-work-model-v3-final-parents.tsv"),
+            ("edges", "2026-09-27-work-model-v3-final-edges.tsv"),
+        )
+    }
+    manifest = (inputs / "manifest.md").read_text()
+    verify_table_digests(digests, manifest, markdown=True)
+    with pytest.raises(ValueError, match="digest manifest differs"):
+        verify_table_digests({**digests, "edges": "changed"}, manifest, markdown=True)
 
 
 def approved_cp1_and_tables() -> tuple[Tables, Snapshot]:
@@ -418,23 +444,63 @@ def test_nested_pages_require_all_receipts(page_count: int) -> None:
     assert not complete(changed)
 
 
-@given(st.text(max_size=20), st.text(max_size=20))
-def test_validator_owned_fields_do_not_define_cp13_target(
-    validation: str, detail: str
-) -> None:
+def rest_fixture() -> tuple[RestValues, dict[str, Any]]:
+    """Load the exact REST conversion fixture as plain values."""
+    payload = json.loads((FIXTURES.parent / "runner/rest-snapshot.json").read_text())
+    values = payload["raw"]
+    return RestValues(
+        values["issues"],
+        tuple(Page(**page) for page in values["issue_pages"]),
+        values["old"],
+        values["project"],
+        tuple(Page(**page) for page in values["project_pages"]),
+        {key: tuple(groups) for key, groups in values["nested"].items()},
+        tuple(Page(**page) for page in values["nested_pages"]),
+        values["branch_sha"],
+        values["run_state"],
+    ), payload["expected"]
+
+
+def test_rest_snapshot_filters_pr_and_counts_nested_pages() -> None:
+    """REST values produce the reviewed complete issue and draft snapshot."""
+    raw, expected = rest_fixture()
+    assert json.loads(json.dumps(asdict(snapshot_from_rest(raw)))) == expected
+    assert complete(snapshot_from_rest(raw))
+    assert not complete(
+        snapshot_from_rest(replace(raw, nested_pages=raw.nested_pages[:-1]))
+    )
+
+
+def test_rest_snapshot_rejects_unreviewed_or_incomplete_identity() -> None:
+    """A CP1 must not silently drop issue reads or duplicate Project items."""
+    raw, _ = rest_fixture()
+    with pytest.raises(ValueError, match="page receipts"):
+        snapshot_from_rest(replace(raw, issue_pages=(Page("issues", 1, 0, 1, 0),)))
+    with pytest.raises(ValueError, match="nested issue reads"):
+        snapshot_from_rest(replace(raw, nested={}))
+    with pytest.raises(ValueError, match="duplicate Project content"):
+        snapshot_from_rest(replace(raw, project=[*raw.project, raw.project[0]]))
+
+
+def test_project_field_selection_requires_named_fields() -> None:
+    """Unknown definitions cannot alter the requested Project field set."""
+    fields = [
+        {"id": 1, "name": "Status"},
+        {"id": 2, "name": "Validation detail"},
+        {"id": 3, "name": "Secret"},
+    ]
+    assert project_field_ids(fields) == (1, 2)
+
+
+def test_validator_owned_fields_do_not_define_cp13_target() -> None:
     """The Actions validator owns its two Project fields after backfill."""
     target = expected_cp13(tables(), snapshot(), creation_inputs())
-    first = target[0]
     changed = replace(
-        first,
-        project=tuple(
-            sorted(
-                {
-                    **dict(first.project),
-                    "Validation": validation,
-                    "Validation detail": detail,
-                }.items()
-            )
+        target[0],
+        project=(
+            *target[0].project,
+            ("Validation", "Valid"),
+            ("Validation detail", "ok"),
         ),
     )
     actual = final_snapshot((changed, *target[1:]))

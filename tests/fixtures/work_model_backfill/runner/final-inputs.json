@@ -1,0 +1,43 @@
+{
+  "created": {
+    "title:Draft A": {
+      "key": "title:Draft A",
+      "title": "Draft A",
+      "state": "draft",
+      "state_reason": "",
+      "issue_type": "",
+      "native": [],
+      "project": [],
+      "source_project": [],
+      "parent": "",
+      "blockers": [],
+      "body": "",
+      "labels": [],
+      "issue_id": "",
+      "item_id": "item-a",
+      "draft_id": "draft-a"
+    },
+    "title:epic: migration": {
+      "key": "#3",
+      "title": "epic: migration",
+      "state": "open",
+      "state_reason": "",
+      "issue_type": "",
+      "native": [],
+      "project": [],
+      "source_project": [],
+      "parent": "",
+      "blockers": [],
+      "body": "",
+      "labels": [],
+      "issue_id": "3",
+      "item_id": "item-3",
+      "draft_id": ""
+    }
+  },
+  "bodies": {
+    "title:Draft B": ""
+  },
+  "closed_at_cp0": ["2"],
+  "revoked": []
+}
