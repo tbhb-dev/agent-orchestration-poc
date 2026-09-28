@@ -1,0 +1,3 @@
+Reading additional input from stdin...
+2026-09-28T21:24:16.155500Z ERROR codex_core::session: Failed to create session: failed to load AGENTS.md instructions for environment `local`: fs sandbox helper failed with status exit status: 71: sandbox-exec: execvp() of '/Users/tony/.local/bin/codex' failed: Operation not permitted
+Error: thread/start: thread/start failed: error creating thread: failed to load AGENTS.md instructions for environment `local`: fs sandbox helper failed with status exit status: 71: sandbox-exec: execvp() of '/Users/tony/.local/bin/codex' failed: Operation not permitted (code -32603)
