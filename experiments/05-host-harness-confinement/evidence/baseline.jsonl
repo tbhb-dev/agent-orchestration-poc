@@ -1,0 +1,10 @@
+{"target": "A/peer", "result": "allowed"}
+{"target": "B/peer", "result": "allowed"}
+{"target": "B/enroll", "result": "allowed"}
+{"target": "B/management", "result": "allowed"}
+{"target": "B/queue", "result": "allowed"}
+{"target": "B/cc-socks", "result": "allowed"}
+{"target": "B/oversight", "result": "allowed"}
+{"target": "B/canary", "read_bytes": 32, "digest_bytes": 32}
+{"target": "B/wrapper.conf", "after": "replacement=disposable\n"}
+{"cleanup": true}

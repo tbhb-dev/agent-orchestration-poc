@@ -1,0 +1,78 @@
+2026-09-28 macOS 26.5.1 arm64, worktree exp/242-host-harness-confinement
+
+mise run vale:sync
+exit 0
+
+find /private/tmp -maxdepth 1 -name 'bv02-242-*' -print
+exit 1: find reported Operation not permitted while traversing unrelated /private/tmp/codex-daemon-501
+No sandbox bypass or retry of that broad search occurred.
+
+PYTHONSAFEPATH=1 mise exec -- uv run python experiments/05-host-harness-confinement/fixture.py baseline > experiments/05-host-harness-confinement/evidence/baseline.jsonl
+exit 1: ModuleNotFoundError for fixture_core because PYTHONSAFEPATH removed the script directory
+
+PYTHONSAFEPATH=1 PYTHONPATH=experiments/05-host-harness-confinement mise exec -- uv run python experiments/05-host-harness-confinement/fixture.py baseline > experiments/05-host-harness-confinement/evidence/baseline.jsonl
+exit 0: ten JSON lines, last line {"cleanup": true}
+
+PYTHONPATH=experiments/05-host-harness-confinement mise exec -- uv run pytest -q experiments/05-host-harness-confinement/test_fixture_core.py
+first exit 0: 22 passed in 2.37s
+final exit 0: 26 passed in 4.09s
+
+mise run check:pyrefly
+exit 0: 0 diagnostics, 2 local import-path suppressions
+
+mise run check:ruff
+exit 0: all checks passed, 75 files formatted
+
+mise run check
+first exit 1: MD057 reported evidence/commands.txt before the file was created
+second exit 123: Vale reported new prose findings, recorded and corrected
+third exit 0: full aggregate green before the fixture's error-classification change
+fourth exit 1: a separate Project rank integration test met a host-wide lock held by another process
+mise exec -- uv run pytest --run-integration -q tests/test_project_rank_shell.py::test_fixture_dry_run_and_missing_item
+exit 0: 1 passed in 0.57s after the lock cleared
+final exit 0: full aggregate green on the delivered revision, Python core 97.64% lines and 94.08% branches, Go core 96.43% statements and 94.74% branches
+
+mise run check:mutation
+exit 0: Go efficacy 97.32%, Python core score 90.21%
+
+git commit -m 'exp(security): add disposable host confinement fixture' -m 'Add separate A and B socket stubs, a same-UID baseline, and pure result classification with table and property tests.' -m 'Refs: #242'
+exit 1: sandbox denied opening /Users/tony/.cache/prek/prek.log
+PREK_HOME=/private/tmp/prek-242 git commit -m 'exp(security): add disposable host confinement fixture' -m 'Add separate A and B socket stubs, a same-UID baseline, and pure result classification with table and property tests.' -m 'Refs: #242'
+exit 0 with normal hooks
+PREK_HOME=/private/tmp/prek-242 git commit -m 'exp(security): record bounded host confinement findings' -m 'Publish the disposable baseline, four-profile gap matrix, versioned source reads, operator proposal, and scanned check evidence. The managed harness cases remain untested.' -m 'Refs: #242'
+exit 0 with normal hooks
+
+PREK_HOME=/private/tmp/prek-242 git merge --no-ff origin/main -m 'chore(sync): update branch from main' -m 'Bring the latest Project backfill tooling onto the experiment branch before opening its pull request.' -m 'Refs: #242'
+exit 0: merged eca5c88 from main
+
+mise run check
+exit 0 on merged head: Python core 97.81% lines and 94.76% branches, Go core 96.43% statements and 94.74% branches
+
+mise run check:mutation
+exit 0 on merged head: Go mutant kill rate 97.32%, Python core score 90.14%
+
+Review response, 2026-09-28, branch exp/242-host-harness-confinement
+git fetch origin && git merge origin/main
+exit 0: already up to date; PR base is main
+
+PYTHONDONTWRITEBYTECODE=1 PYTHONSAFEPATH=1 mise exec -- python experiments/05-host-harness-confinement/fixture.py baseline
+before fix exit 1: ModuleNotFoundError for fixture_core, reproducing review comment 4125476094
+after fix exit 0: ten JSON lines, seven allowed socket reaches, and {"cleanup": true}; both spawned serve children started without PYTHONPATH
+
+PYTHONDONTWRITEBYTECODE=1 PYTHONSAFEPATH=1 mise exec -- uv run pytest -q experiments/05-host-harness-confinement/test_fixture_core.py
+exit 0: 26 passed in 1.47s without PYTHONPATH
+
+mise run fmt
+exit 0: formatter applied to one experiment test file
+
+mise run check
+exit 0: full aggregate after the safe-path fix, Python core 97.81% lines and 94.76% branches, Go core 96.43% statements and 94.74% branches
+
+mise run check:mutation
+exit 0: Go mutant kill rate 97.32%, Python core score 90.14%
+
+PYTHONDONTWRITEBYTECODE=1 PYTHONSAFEPATH=1 mise exec -- uv run pytest -q experiments/05-host-harness-confinement/test_fixture_core.py
+exit 0 after formatting: 26 passed in 1.39s
+
+ps -eo pid,etime,args
+exit 1: sandbox denied process listing; the check task completed without process inspection

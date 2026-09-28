@@ -1,0 +1,12 @@
+Stage one, 2026-09-28, macOS 26.5.1 build 25F80, arm64
+mise trust -> 0
+mise run vale:sync -> 0
+mise exec -- uv run pytest tests/test_host_socket_attribution.py --run-integration -q -> 0, 38 passed
+mise run check:pyrefly -> 0, 0 diagnostics
+mise run check:imports -> 0
+mise run check:vale -> 0, 0 alerts
+mise run fmt -> 0
+mise run check -> 0, exact output stage-one-check.raw.gz
+mise run check:mutation -> 0, exact output stage-one-mutation.raw.gz
+mise exec -- gitleaks dir --redact --no-banner --log-level error experiments/02-host-socket-attribution/evidence -> 0
+No harness, disposable profile home, or profile configuration was started or created.

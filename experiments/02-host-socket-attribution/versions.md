@@ -1,5 +1,7 @@
 # Versions and source reads
 
+Stage-one continuation on 2026-09-28 used macOS 26.5.1 build 25F80 on arm64, Python 3.14.6, Codex CLI 0.157.1, Claude Code 2.1.283, and tmux 3.7b. The source checkouts remained `openai/codex@a6bd19261c30ce0a0225fe90e646822d29916f11` and `anthropics/claude-code@7779afb12e3635f46f56ec823979d68350ae000b`. The Codex response fixtures follow `codex-rs/core/tests/common/responses.rs` at that commit, including `ev_function_call`, `ev_completed`, and `sse`. The Claude frames follow the [documented Messages stream event sequence](https://platform.claude.com/docs/en/build-with-claude/streaming), with `tool_use` and `input_json_delta`. The Claude web page is current documentation and is not frozen to CLI 2.1.283. Harness acceptance of these frames remains untested. The installed `/usr/bin/opensnoop` script and the `opensnoop(1m)` and `fs_usage(1)` manuals were read on build 25F80 for [the audit method](file-open-audit.md). This continuation used the existing dependency clones.
+
 | Item | Version or revision | Evidence read |
 | --- | --- | --- |
 | Host | macOS 26.5.1 build 25F80, Darwin 25.5.0, arm64 | `sw_vers`, `uname -m`, `uname -r` |
