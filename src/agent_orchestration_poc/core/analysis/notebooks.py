@@ -1,5 +1,6 @@
 """Parse notebook source and check committable analysis text."""
 
+import csv
 import re
 from hashlib import sha256
 
@@ -46,7 +47,21 @@ def is_private_notebook(source: str) -> bool:
     if len(parts) != 2:
         return False
     frontmatter = parts[0]
-    return bool(re.search(r"(?m)^private-input:\s*true\s*$", frontmatter))
+    flags = [
+        line.split(":", 1)[1].strip()
+        for line in frontmatter.splitlines()
+        if re.match(r"^[ \t]*private-input[ \t]*:", line)
+    ]
+    if not flags:
+        if re.search(r"(?m)^[^#\n]*private-input[^#\n]*:", frontmatter):
+            raise ValueError("unsupported private-input syntax")
+        return False
+    if len(flags) != 1:
+        raise ValueError("duplicate private-input flag")
+    flag = re.fullmatch(r"(true|false)(?:\s+#.*)?", flags[0], re.IGNORECASE)
+    if flag is None:
+        raise ValueError("private-input must be a YAML boolean")
+    return flag.group(1).lower() == "true"
 
 
 def privacy_findings(source: str) -> list[str]:
@@ -54,10 +69,10 @@ def privacy_findings(source: str) -> list[str]:
     findings: list[str] = []
     if re.search(r"ghp_[A-Za-z0-9]{36}\b", source):
         findings.append("GitHub token signature")
-    if re.search(
-        r'(?i)(?:"(?:prompt|transcript|private_prompt)"\s*:'
-        r"|\b(?:prompt|transcript|private_prompt)\s*,)",
-        source,
+    header: list[str] = next(csv.reader(source.splitlines()), [])
+    private_fields = {"prompt", "transcript", "private_prompt"}
+    if any(field.strip().lower() in private_fields for field in header) or re.search(
+        r'(?i)"(?:prompt|transcript|private_prompt)"\s*:', source
     ):
         findings.append("private raw record field")
     return findings

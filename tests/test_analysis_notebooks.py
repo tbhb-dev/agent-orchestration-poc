@@ -80,6 +80,15 @@ def test_privacy_csv_header() -> None:
     ]
 
 
+@pytest.mark.parametrize("field", ["prompt", "transcript", "private_prompt"])
+@pytest.mark.parametrize("header", ["{field},id", "id,{field}", 'id,"{field}"'])
+def test_privacy_csv_header_positions(field: str, header: str) -> None:
+    """Reject private CSV fields in first, final, and quoted positions."""
+    assert privacy_findings(f"{header.format(field=field)}\nrecord-1,1\n") == [
+        "private raw record field"
+    ]
+
+
 @given(st.text(alphabet="abc 123", max_size=100))
 def test_privacy_clean_text(source: str) -> None:
     """Plain aggregate text has no private signatures."""
@@ -109,6 +118,8 @@ def test_lint_rejects_private_record_fixture() -> None:
     [
         ("No frontmatter\n", False),
         ("---\nprivate-input: true\n---\n", True),
+        ("---\nprivate-input: true # local inputs\n---\n", True),
+        ("---\n  private-input: TRUE\t# local inputs\n---\n", True),
         ("---\nprivate-input: false\n---\n", False),
         ("---\nprivate-input: true\nNo closing fence\n", False),
         ("---\ntitle: Public\n---\nprivate-input: true\n", False),
@@ -123,6 +134,60 @@ def test_private_notebook_flag(source: str, expected: bool) -> None:
 def test_private_notebook_plain_text(source: str) -> None:
     """Body text alone cannot mark a notebook private."""
     assert not is_private_notebook(source)
+
+
+@pytest.mark.parametrize("flag", ["yes", '"true"', "true # note\nprivate-input: false"])
+def test_private_notebook_rejects_unsupported_flag(flag: str) -> None:
+    """Do not silently run an ambiguous private notebook in CI."""
+    with pytest.raises(ValueError, match="private-input"):
+        is_private_notebook(f"---\nprivate-input: {flag}\n---\n")
+
+
+@pytest.mark.parametrize("flag", ['"private-input": true', "{private-input: true}"])
+def test_private_notebook_rejects_unsupported_key_syntax(flag: str) -> None:
+    """Fail closed when a valid YAML key uses unsupported notation."""
+    with pytest.raises(ValueError, match="private-input"):
+        is_private_notebook(f"---\n{flag}\n---\n")
+
+
+@pytest.mark.integration
+def test_ci_excludes_commented_private_notebook(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Keep commented private-input notebooks out of CI execution."""
+    from agent_orchestration_poc.shell.analysis import (  # noqa: PLC0415
+        notebooks as shell_notebooks,
+    )
+
+    private = tmp_path / "private.qmd"
+    private.write_text("---\nprivate-input: true # local inputs\n---\n")
+    monkeypatch.setattr(shell_notebooks, "notebooks", lambda: [private])
+    monkeypatch.setattr(sys, "argv", ["notebooks", "ci"])
+    shell_notebooks.main()
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("header", ["prompt,id", "id,prompt", 'id,"prompt"'])
+def test_lint_rejects_private_csv_header(tmp_path: Path, header: str) -> None:
+    """Reject a private field in any position in a committable CSV artifact."""
+    from agent_orchestration_poc.shell.analysis.notebooks import lint  # noqa: PLC0415
+
+    notebook = tmp_path / "analysis.qmd"
+    notebook.write_text("---\ntitle: Example\n---\n")
+    (tmp_path / "analysis.csv").write_text(f"{header}\nrecord-1,1\n")
+    with pytest.raises(ValueError, match="private raw record"):
+        lint(notebook)
+
+
+@pytest.mark.integration
+def test_lint_accepts_aggregate_csv_artifact(tmp_path: Path) -> None:
+    """Allow a committable aggregate CSV beside its notebook."""
+    from agent_orchestration_poc.shell.analysis.notebooks import lint  # noqa: PLC0415
+
+    notebook = tmp_path / "analysis.qmd"
+    notebook.write_text("---\ntitle: Example\n---\n")
+    (tmp_path / "analysis.csv").write_text("group,total\nA,21\n")
+    lint(notebook)
 
 
 @pytest.mark.integration

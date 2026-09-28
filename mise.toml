@@ -152,7 +152,7 @@ run = "uv run pytest tests/fixtures/review_identity/test_policy.py tests/fixture
 description = "Gate Python lines and branches and Go statements and branches"
 run = [
   "mkdir -p .coverage-reports",
-  "uv run pytest --run-integration --cov=agent_orchestration_poc --cov-report=json:.coverage-reports/python.json --cov-report=term",
+  "uv run --group analysis pytest --run-integration --cov=agent_orchestration_poc --cov-report=json:.coverage-reports/python.json --cov-report=term",
   "go test -tags=integration -coverprofile=.coverage-reports/go.out ./...",
   "uv run python scripts/check-coverage.py",
 ]
