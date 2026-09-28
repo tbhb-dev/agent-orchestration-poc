@@ -99,7 +99,7 @@ def _with_nested(value: Snapshot) -> Snapshot:
         for item in value.items
         if item.issue_id
         for kind, count in (
-            ("native", len(item.native)),
+            ("native", sum(bool(value) for _, value in item.native)),
             ("blockers", len(item.blockers)),
             ("sub_issues", sum(child.parent == item.key for child in value.items)),
         )
@@ -948,7 +948,9 @@ def test_cp13_reports_each_changed_field(field: str) -> None:
     changed = cast("Any", replace)(
         before,
         **{
-            field: value + ("unexpected",)
+            field: value + (("unexpected", "value"),)
+            if field == "native"
+            else value + ("unexpected",)
             if isinstance(value, tuple)
             else str(value) + "unexpected"
         },
