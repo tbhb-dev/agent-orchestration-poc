@@ -1,0 +1,17 @@
+{
+  "id": "6:fields:#1",
+  "step": "6",
+  "kind": "project_fields",
+  "number": 1,
+  "method": "POST",
+  "path": "graphql",
+  "payload": {
+    "query": "mutation{f0:updateProjectV2ItemFieldValue(input:{projectId:\"p\",itemId:\"i\",fieldId:\"f\",value:{singleSelectOptionId:\"o\"}}){projectV2Item{id}}}",
+    "key": "#1",
+    "item_id": "13",
+    "node_id": "node-13",
+    "mutation_count": 1
+  },
+  "before": [["Status", ""]],
+  "after": [["Status", "Ready"]]
+}

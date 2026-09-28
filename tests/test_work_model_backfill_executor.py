@@ -3,7 +3,7 @@
 import json
 from dataclasses import asdict, replace
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from hypothesis import given
@@ -13,19 +13,27 @@ from agent_orchestration_poc.core.work_model_backfill import (
     Item,
     Page,
     Snapshot,
+    Tables,
     operation_plan,
     parse_tables,
     validate_cp1,
 )
 from agent_orchestration_poc.core.work_model_backfill_executor import (
     Action,
+    ProjectMetadata,
     Record,
+    _project_field_query,
     closure_actions,
     comment_observation,
     draft_actions,
     draft_observation,
+    graphql_field_receipt,
     journal_state,
+    membership_actions,
+    membership_observation,
     observation_value,
+    project_field_actions,
+    project_fields_observation,
     stage_actions,
     validate_journal,
     validate_progress,
@@ -91,6 +99,262 @@ def with_added_draft(cp1: Snapshot, item: Item, *, prepend: bool = False) -> Sna
     )
     items = (item, *cp1.items) if prepend else (*cp1.items, item)
     return replace(cp1, items=items, pages=pages)
+
+
+def without_membership(cp1: Snapshot) -> Snapshot:
+    """Copy the fixture with issue one absent from the new Project."""
+    return replace(
+        cp1,
+        items=tuple(
+            replace(item, item_id="") if item.key == "#1" else item
+            for item in cp1.items
+        ),
+        pages=tuple(
+            replace(page, count=page.count - 1, total_count=page.total_count - 1)
+            if page.collection == "project"
+            else page
+            for page in cp1.pages
+        ),
+    )
+
+
+def field_contract() -> tuple[Tables, Snapshot, ProjectMetadata]:
+    """Load the synthetic tables and REST Project field metadata."""
+    rows = FIXTURES / "plan"
+    tables = parse_tables(
+        *(
+            (rows / f"{name}.tsv").read_text()
+            for name in ("assignments", "parents", "edges")
+        )
+    )
+    cp1 = fixture_snapshot("executor-cp1")
+    data = json.loads((FIXTURES / "runner/project-fields.json").read_text())
+    return tables, cp1, ProjectMetadata(data["project"], data["fields"], data["items"])
+
+
+def with_project_fields(cp1: Snapshot, key: str, fields: object) -> Snapshot:
+    """Change one fixture item's Project fields."""
+    return replace(
+        cp1,
+        items=tuple(
+            replace(item, project=cast("tuple[tuple[str, str], ...]", fields))
+            if item.key == key
+            else item
+            for item in cp1.items
+        ),
+    )
+
+
+def test_membership_plan_readback_and_resume() -> None:
+    rows = FIXTURES / "plan"
+    tables = parse_tables(
+        *(
+            (rows / f"{name}.tsv").read_text()
+            for name in ("assignments", "parents", "edges")
+        )
+    )
+    cp1 = without_membership(fixture_snapshot("executor-cp1"))
+    validate_cp1(tables, cp1)
+    actions = membership_actions(cp1, operation_plan(tables, cp1))
+    assert actions == (
+        Action(
+            "6:item:1",
+            "6",
+            "project_item",
+            1,
+            "POST",
+            "orgs/tbhb-dev/projectsV2/1/items",
+            {"type": "Issue", "id": 1},
+            (0, "1"),
+            (1, "1"),
+        ),
+    )
+    action = actions[0]
+    assert membership_observation([], 1, "1") == (0, "1", None, ())
+    raw: dict[str, Any] = {
+        "content_type": "Issue",
+        "content": {"number": 1, "id": 1},
+        "id": 13,
+        "fields": [],
+    }
+    observed = membership_observation([raw], 1, "1")
+    assert observed == (1, "1", "13", ())
+    assert membership_observation([raw, raw], 1, "1") == (2, "1", None, ())
+    assert membership_observation(
+        [{**raw, "content": {"number": 1, "id": 9}}], 1, "1"
+    ) == (
+        1,
+        "9",
+        None,
+        (),
+    )
+    assert observation_value(action, observed) == action.after
+    assert (
+        journal_state(action, (Record(action.id, "intent", {}),), observed) == "verify"
+    )
+    assert journal_state(action, (), observed) == "halt"
+    assert (
+        journal_state(
+            action,
+            (
+                Record(action.id, "intent", {}),
+                Record(action.id, "response", {"id": 99}),
+            ),
+            observed,
+        )
+        == "halt"
+    )
+    receipt = Record(action.id, "verified", verified_detail(action, observed, {}))
+    assert receipt.detail["item_id"] == "13"
+    current = replace(
+        cp1,
+        items=tuple(
+            replace(item, item_id="13") if item.key == "#1" else item
+            for item in cp1.items
+        ),
+        pages=tuple(
+            replace(page, count=page.count + 1, total_count=page.total_count + 1)
+            if page.collection == "project"
+            else page
+            for page in cp1.pages
+        ),
+    )
+    records = (Record(action.id, "intent", {}), receipt)
+    validate_progress(cp1, current, actions, records)
+    validate_progress(cp1, cp1, actions, records[:1])
+    with pytest.raises(ValueError, match="journal"):
+        validate_progress(cp1, cp1, actions, records)
+    changed_fields = with_project_fields(current, "#1", (("Status", "Ready"),))
+    with pytest.raises(ValueError, match="fields"):
+        validate_progress(cp1, changed_fields, actions, records)
+    with pytest.raises(ValueError, match="journal"):
+        validate_progress(
+            cp1,
+            replace(
+                current,
+                items=tuple(
+                    replace(item, item_id="other") if item.key == "#1" else item
+                    for item in current.items
+                ),
+            ),
+            actions,
+            records,
+        )
+    with pytest.raises(ValueError, match="drifted"):
+        validate_progress(cp1, current, actions, ())
+
+
+def test_project_field_batch_uses_option_ids_and_readback() -> None:
+    tables, cp1, metadata = field_contract()
+    raw = metadata.items
+    actions = project_field_actions(tables, cp1, metadata)
+    assert {action.id for action in actions} == {
+        "6:fields:#1",
+        "6:fields:#2",
+        "6:fields:title:Draft B",
+    }
+    first = next(action for action in actions if action.id == "6:fields:#1")
+    assert first.after == (
+        ("Area", "tooling"),
+        ("Harness", "codex"),
+        ("Size", "M"),
+        ("Status", "Ready"),
+        ("Worker", "worker"),
+    )
+    assert first.payload is not None
+    query = first.payload["query"]
+    assert 'projectId:"project-id",itemId:"node-item-1",fieldId:"field-Status"' in query
+    assert 'value:{singleSelectOptionId:"option-Ready"}' in query
+    assert 'value:{text:"worker"}' in query
+    good = {
+        f"f{index}": {"projectV2Item": {"id": first.payload["node_id"]}}
+        for index in range(5)
+    }
+    graphql_field_receipt(first, {"data": good})
+    with pytest.raises(ValueError, match="GraphQL"):
+        graphql_field_receipt(first, None)
+    for bad in (
+        {"errors": [{"message": "rejected"}]},
+        {"data": {"f0": good["f0"]}},
+        {"data": {**good, "f0": {"projectV2Item": {"id": "other"}}}},
+    ):
+        with pytest.raises(ValueError, match="GraphQL"):
+            graphql_field_receipt(first, bad)
+    filled = {
+        **raw[0],
+        "fields": [
+            {"name": name, "value": value if name == "Worker" else {"name": value}}
+            for name, value in cast("tuple[tuple[str, str], ...]", first.after)
+        ],
+    }
+    assert project_fields_observation([filled], first) == first.after
+    with pytest.raises(ValueError, match="identity"):
+        project_fields_observation([], first)
+    with pytest.raises(ValueError, match="content"):
+        project_fields_observation([{**filled, "node_id": "replacement"}], first)
+    assert (
+        journal_state(first, (Record(first.id, "intent", {}),), first.after) == "verify"
+    )
+    draft = next(action for action in actions if action.id == "6:fields:title:Draft B")
+    for action in (first, draft):
+        key = cast("dict[str, Any]", action.payload)["key"]
+        changed = with_project_fields(cp1, key, action.after)
+        intent = (Record(action.id, "intent", {}),)
+        receipt = (*intent, Record(action.id, "verified", {}))
+        validate_progress(cp1, changed, (action,), intent)
+        validate_progress(cp1, changed, (action,), receipt)
+        validate_progress(cp1, cp1, (action,), intent)
+        with pytest.raises(ValueError, match="drifted"):
+            validate_progress(cp1, cp1, (action,), receipt)
+        with pytest.raises(ValueError, match="drifted"):
+            validate_progress(cp1, changed, (action,), ())
+
+
+def test_project_field_metadata_and_draft_identity() -> None:
+    tables, cp1, metadata = field_contract()
+    definitions = metadata.fields
+    raw = metadata.items
+    actions = project_field_actions(tables, cp1, metadata)
+    first = actions[0]
+    with pytest.raises(ValueError, match="definition"):
+        project_field_actions(tables, cp1, replace(metadata, fields=definitions[:1]))
+    with pytest.raises(ValueError, match="node identity"):
+        project_field_actions(tables, cp1, replace(metadata, project={}))
+    blank_worker = replace(
+        tables,
+        assignments=tuple(
+            {**row, "project worker": ""} if row["number"] == "1" else row
+            for row in tables.assignments
+        ),
+    )
+    blank_first = project_field_actions(blank_worker, cp1, metadata)[0]
+    assert blank_first.payload is not None
+    assert blank_first.payload["mutation_count"] == 4
+    revised = with_project_fields(cp1, "#1", first.after)
+    revised_ids = {
+        action.id for action in project_field_actions(tables, revised, metadata)
+    }
+    assert "6:fields:#1" not in revised_ids
+    assert "6:fields:#2" in revised_ids
+    definitions[0]["options"].append(
+        {"id": "option-Refinement", "name": {"raw": "Refinement"}}
+    )
+    overridden = project_field_actions(tables, cp1, metadata, {"#1": "Refinement"})
+    after = next(action for action in overridden if action.id == first.id).after
+    assert cast("tuple[tuple[str, str], ...]", after)[3] == (
+        "Status",
+        "Refinement",
+    )
+    assert "clearProjectV2ItemFieldValue" in _project_field_query(
+        "project-id",
+        "node-item-1",
+        {"Worker": ""},
+        {"Worker": definitions[-1]},
+    )
+    with pytest.raises(ValueError, match="content"):
+        project_fields_observation([{**raw[0], "content": {"number": 9}}], first)
+    draft = next(action for action in actions if action.id == "6:fields:title:Draft B")
+    assert project_fields_observation([raw[2]], draft) == draft.before
 
 
 def test_closure_actions_follow_plan() -> None:
@@ -280,12 +544,27 @@ def test_stage_actions_require_verified_closures() -> None:
         Action("b", "0", "issue_state", 1, "PATCH", "", {}, 0, 1),
     )
     drafts = (Action("c", "6", "draft", 0, "POST", "", {}, 0, 1),)
-    assert stage_actions("0", closures, drafts, ()) == closures
+    assert stage_actions("0", (*closures, *drafts), ()) == closures
     for records in ((), (Record("a", "intent", {}),), (Record("a", "verified", {}),)):
         with pytest.raises(ValueError, match="stage 0"):
-            stage_actions("6:drafts", closures, drafts, records)
+            stage_actions("6:drafts", (*closures, *drafts), records)
     complete = (Record("a", "verified", {}), Record("b", "verified", {}))
-    assert stage_actions("6:drafts", closures, drafts, complete) == drafts
+    assert stage_actions("6:drafts", (*closures, *drafts), complete) == drafts
+    membership = Action("m", "6", "project_item", 1, "POST", "", {}, 0, 1)
+    field = Action("f", "6", "project_fields", 1, "POST", "", {}, 0, 1)
+    all_actions = (*closures, membership, *drafts, field)
+    assert stage_actions("6:items", all_actions, complete) == (membership,)
+    with pytest.raises(ValueError, match="membership"):
+        stage_actions("6:drafts", all_actions, complete)
+    with_membership = (*complete, Record("m", "verified", {}))
+    assert stage_actions("6:drafts", all_actions, with_membership) == drafts
+    with pytest.raises(ValueError, match="draft creation"):
+        stage_actions("6:fields", all_actions, with_membership)
+    assert stage_actions(
+        "6:fields", all_actions, (*with_membership, Record("c", "verified", {}))
+    ) == (field,)
+    with pytest.raises(ValueError, match="unsupported"):
+        stage_actions("unknown", all_actions, ())
 
 
 @pytest.mark.parametrize(
@@ -362,6 +641,12 @@ def test_journal_header_and_order() -> None:
         )
     with pytest.raises(ValueError, match="phase"):
         validate_journal([rows[0], {**rows[1], "phase": "other"}], "digest", actions)
+    with pytest.raises(ValueError, match="payload"):
+        validate_journal(
+            [rows[0], {**rows[1], "detail": {"payload": {"changed": True}}}],
+            "digest",
+            actions,
+        )
     with pytest.raises(ValueError, match="order"):
         validate_journal(
             [rows[0], {**rows[1], "action_id": actions[1].id}, rows[1]],
