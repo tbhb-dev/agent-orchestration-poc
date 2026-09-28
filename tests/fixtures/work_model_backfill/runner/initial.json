@@ -1,0 +1,66 @@
+{
+  "/repos/tbhb-dev/agent-orchestration-poc/issues": [
+    {
+      "number": 1,
+      "id": 1,
+      "title": "tooling(project): old title",
+      "state": "open",
+      "state_reason": "",
+      "labels": [],
+      "type": null,
+      "body": ""
+    },
+    {
+      "number": 2,
+      "id": 2,
+      "title": "legacy title",
+      "state": "open",
+      "state_reason": "not_planned",
+      "labels": [],
+      "type": null,
+      "body": ""
+    }
+  ],
+  "/users/tbhb/projectsV2/9/fields": [{ "id": 1, "name": "Status" }],
+  "/users/tbhb/projectsV2/9/items": [],
+  "/orgs/tbhb-dev/projectsV2/1/fields": [{ "id": 2, "name": "Status" }],
+  "/orgs/tbhb-dev/projectsV2/1/items": [
+    {
+      "content_type": "Issue",
+      "content": { "number": 1 },
+      "id": 10,
+      "fields": []
+    },
+    {
+      "content_type": "Issue",
+      "content": { "number": 2 },
+      "id": 11,
+      "fields": []
+    },
+    {
+      "content_type": "DraftIssue",
+      "content": {
+        "id": "draft-b",
+        "title": "Draft B",
+        "body": "- Class: chore\n- Size: "
+      },
+      "id": 12,
+      "fields": []
+    }
+  ],
+  "/repos/tbhb-dev/agent-orchestration-poc/issues/1/issue-field-values": [],
+  "/repos/tbhb-dev/agent-orchestration-poc/issues/1/sub_issues": [],
+  "/repos/tbhb-dev/agent-orchestration-poc/issues/1/dependencies/blocked_by": [],
+  "/repos/tbhb-dev/agent-orchestration-poc/issues/2/issue-field-values": [],
+  "/repos/tbhb-dev/agent-orchestration-poc/issues/2/sub_issues": [],
+  "/repos/tbhb-dev/agent-orchestration-poc/issues/2/dependencies/blocked_by": [],
+  "/repos/tbhb-dev/agent-orchestration-poc/pulls/97": {
+    "head": {
+      "ref": "feat/28-registry-tmux",
+      "repo": { "full_name": "tbhb-dev/agent-orchestration-poc" }
+    }
+  },
+  "/repos/tbhb-dev/agent-orchestration-poc/git/ref/heads/feat/28-registry-tmux": {
+    "object": { "sha": "sha" }
+  }
+}

@@ -1,5 +1,6 @@
 """Synthetic table and initial snapshot tests for the work model."""
 
+import hashlib
 import json
 import tomllib
 from dataclasses import asdict, replace
@@ -15,6 +16,7 @@ from agent_orchestration_poc.core.work_model_backfill import (
     Difference,
     Item,
     Page,
+    RestValues,
     RollbackExtras,
     Snapshot,
     Tables,
@@ -26,9 +28,11 @@ from agent_orchestration_poc.core.work_model_backfill import (
     operation_plan,
     parse_tables,
     rollback_values,
+    snapshot_from_rest,
     title_exemptions,
     title_repairs,
     validate_cp1,
+    verify_table_digests,
 )
 
 FIXTURES = Path(__file__).parent / "fixtures/work_model_backfill/plan"
@@ -165,6 +169,27 @@ def approved_tables() -> Tables:
         (inputs / "2026-09-27-work-model-v3-final-parents.tsv").read_text(),
         (inputs / "2026-09-27-work-model-v3-final-edges.tsv").read_text(),
     )
+
+
+def test_approved_manifest_matches_committed_table_bytes() -> None:
+    """The committed manifest pins all three approved inputs."""
+    inputs = next(
+        path / "reports/inputs/work-model-tables"
+        for path in Path(__file__).resolve().parents
+        if (path / "reports/inputs/work-model-tables").is_dir()
+    )
+    digests = {
+        name: hashlib.sha256((inputs / filename).read_bytes()).hexdigest()
+        for name, filename in (
+            ("assignments", "2026-09-27-work-model-v3-final.tsv"),
+            ("parents", "2026-09-27-work-model-v3-final-parents.tsv"),
+            ("edges", "2026-09-27-work-model-v3-final-edges.tsv"),
+        )
+    }
+    manifest = (inputs / "manifest.md").read_text()
+    verify_table_digests(digests, manifest, markdown=True)
+    with pytest.raises(ValueError, match="digest manifest differs"):
+        verify_table_digests({**digests, "edges": "changed"}, manifest, markdown=True)
 
 
 def approved_cp1_and_tables() -> tuple[Tables, Snapshot]:
@@ -418,23 +443,79 @@ def test_nested_pages_require_all_receipts(page_count: int) -> None:
     assert not complete(changed)
 
 
-@given(st.text(max_size=20), st.text(max_size=20))
-def test_validator_owned_fields_do_not_define_cp13_target(
-    validation: str, detail: str
-) -> None:
+def test_rest_snapshot_filters_pr_and_counts_nested_pages() -> None:
+    """Raw REST values become a complete issue and draft snapshot."""
+    issue: dict[str, Any] = {
+        "number": 1,
+        "id": 101,
+        "title": "tooling(project): build a model",
+        "state": "open",
+        "state_reason": None,
+        "labels": [],
+        "type": None,
+    }
+    project_issue = {
+        "content_type": "Issue",
+        "content": {"number": 1},
+        "id": 201,
+        "fields": [{"name": "Status", "value": {"name": {"raw": "Ready"}}}],
+    }
+    draft: dict[str, Any] = {
+        "content_type": "DraftIssue",
+        "content": {"id": 301, "title": "Draft"},
+        "id": 202,
+        "fields": [],
+    }
+    nested = {
+        "#1": (
+            [
+                {
+                    "issue_field_name": "Work type",
+                    "single_select_option": {"name": "Planned"},
+                }
+            ],
+            [],
+            [{"number": 2}, {"number": 3}],
+        )
+    }
+    receipts = (
+        Page("native:#1", 1, 1, 1, 1),
+        Page("sub_issues:#1", 1, 0, 1, 0),
+        Page("blockers:#1", 1, 1, 2, 2),
+        Page("blockers:#1", 2, 1, 2, 2),
+    )
+    raw = RestValues(
+        [issue, {"pull_request": {}, "number": 9}],
+        (Page("issues", 1, 2, 1, 2),),
+        [],
+        [project_issue, draft],
+        (Page("project", 1, 2, 1, 2),),
+        nested,
+        receipts,
+        "branch",
+        "initial",
+    )
+    result = snapshot_from_rest(raw)
+    assert complete(result)
+    assert result.pages[0].count == 1
+    assert dict(result.items[0].native) == {
+        "Priority": "",
+        "Severity": "",
+        "Work type": "Planned",
+    }
+    assert result.items[0].blockers == ("#2", "#3")
+    assert not complete(snapshot_from_rest(replace(raw, nested_pages=receipts[:-1])))
+
+
+def test_validator_owned_fields_do_not_define_cp13_target() -> None:
     """The Actions validator owns its two Project fields after backfill."""
     target = expected_cp13(tables(), snapshot(), creation_inputs())
-    first = target[0]
     changed = replace(
-        first,
-        project=tuple(
-            sorted(
-                {
-                    **dict(first.project),
-                    "Validation": validation,
-                    "Validation detail": detail,
-                }.items()
-            )
+        target[0],
+        project=(
+            *target[0].project,
+            ("Validation", "Valid"),
+            ("Validation detail", "ok"),
         ),
     )
     actual = final_snapshot((changed, *target[1:]))
