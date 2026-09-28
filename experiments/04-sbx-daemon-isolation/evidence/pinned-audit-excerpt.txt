@@ -1,0 +1,18 @@
+    64	## Where records are stored
+    65
+    66	The daemon writes audit records, not the CLI. Running a command such as
+    67	`sbx create` sends a request to the daemon, and the daemon emits the resulting
+    68	record to its own audit directory.
+    69
+    70	The default location depends on your operating system:
+    71
+    72	| OS      | Default path                                                      |
+    73	| ------- | ----------------------------------------------------------------- |
+    74	| macOS   | `~/Library/Logs/com.docker.sandboxes/sandboxes/auditkit/`         |
+    75	| Linux   | `${XDG_STATE_HOME:-~/.local/state}/sandboxes/sandboxes/auditkit/` |
+    76	| Windows | `%LOCALAPPDATA%\DockerSandboxes\sandboxes\logs\auditkit\`         |
+    77
+    78	The directory layout differs by platform because each operating system places
+    79	application logs in its own conventional location.
+    80
+    81	Files are named `audit-<utc-timestamp>-<process-uuid>-<seq>.jsonl`.

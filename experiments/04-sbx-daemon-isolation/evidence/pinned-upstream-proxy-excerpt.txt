@@ -1,0 +1,25 @@
+    75	## Environment variables
+    76
+    77	Because `sbx` runs from your shell, it also honors the standard and legacy proxy
+    78	environment variables, so existing setups keep working without migration:
+    79
+    80	- `HTTP_PROXY`, `HTTPS_PROXY`, and `NO_PROXY` (and their lowercase forms) — the
+    81	  standard variables. They apply to both kinds of traffic when no `proxy` or
+    82	  `no_proxy` setting is configured.
+    83	- `DOCKER_SANDBOXES_PROXY` and `DOCKER_SANDBOXES_NO_PROXY` — the environment
+    84	  form of `proxy.sandbox` and `no_proxy.sandbox`. They apply to sandbox traffic
+    85	  only and never affect daemon traffic.
+    86
+    87	The daemon reads these variables when it starts, so set them before your first
+    88	`sbx` command, or restart the daemon for a change to take effect.
+    89
+    90	## Precedence
+    91
+    92	For each kind of traffic, the first match wins:
+    93
+    94	1. The scope-specific value:
+    95	   - `proxy.sandbox` or `DOCKER_SANDBOXES_PROXY` for sandbox traffic
+    96	   - `proxy.daemon` for daemon traffic
+    97	2. The `proxy` setting
+    98	3. `HTTP_PROXY` or `HTTPS_PROXY` from the shell
+    99	4. The OS system proxy (the default)
