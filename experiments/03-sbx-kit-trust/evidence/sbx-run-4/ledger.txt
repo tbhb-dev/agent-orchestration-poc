@@ -1,0 +1,1375 @@
+### 2026-09-28T17:13:51-0400
+$ sw_vers; uname -m
+ProductName:		macOS
+ProductVersion:		26.5.1
+BuildVersion:		25F80
+arm64
+[exit 0]
+
+### 2026-09-28T17:13:51-0400
+$ sbx version
+sbx version: v0.45.1 9d79d90ee4c5d297fb3d36b75384e8cea7a4fbcb
+[exit 0]
+
+### 2026-09-28T17:13:51-0400
+$ sbx daemon status
+Status: running
+Socket: /Users/tony/Library/Application Support/com.docker.sandboxes/sandboxes/sandboxd/sandboxd.sock
+Logs: /Users/tony/Library/Application Support/com.docker.sandboxes/sandboxes/sandboxd/daemon.log
+[exit 0]
+
+### 2026-09-28T17:13:51-0400
+$ ls -d /private/tmp/bv05-kit /private/tmp/bv05-pki /private/tmp/bv05-host-bundle.pem 2>&1; true
+ls: cannot access '/private/tmp/bv05-kit': No such file or directory
+ls: cannot access '/private/tmp/bv05-pki': No such file or directory
+ls: cannot access '/private/tmp/bv05-host-bundle.pem': No such file or directory
+[exit 0]
+
+### 2026-09-28T17:13:59-0400
+$ sbx ls --json
+{
+  "sandboxes": []
+}
+[exit 0]
+
+### 2026-09-28T17:13:59-0400
+$ sbx policy ls
+POLICY             SOURCE   APPLIES TO   SUMMARY
+default-deny-all   local    all          network: 1 deny
+local-policy       local    all          filesystem read: 1 allow; filesystem write: 1 allow
+[exit 0]
+
+### 2026-09-28T17:14:00-0400
+$ sbx settings list --json | sha256sum
+0477633d77404d7c39490df322dc92a5aa0f84181b2eec02debd4b3d2a9af0f4  -
+[exit 0]
+
+### 2026-09-28T17:14:00-0400
+$ sbx settings get --json kit.allowLocalKits
+{
+  "default": true,
+  "description": "Allow installing kits from local directories or ZIP files. Set to false to require a remote source.",
+  "env_var": "DOCKER_SANDBOXES_KIT_ALLOW_LOCAL",
+  "key": "kit.allowLocalKits",
+  "source": "default",
+  "type": "bool",
+  "value": true
+}
+[exit 0]
+
+### 2026-09-28T17:14:01-0400
+$ pgrep -fl sandboxd; ps -o pid,lstart,command -p $(pgrep -d, -f sandboxd) 2>&1 | cut -c1-200
+67975 /usr/libexec/sandboxd
+  PID STARTED                      COMMAND
+67975 Mon Sep 28 15:50:59 2026     /usr/libexec/sandboxd
+[exit 0]
+
+### 2026-09-28T17:14:08-0400
+$ sbx policy ls --wide
+SOURCE   CREATED VIA   APPLIES TO   POLICY             POLICY_ID      RULE   RULE_ID                      TYPE               METHOD   PATH   DECISION   PROTOCOLS   RESOURCES
+local    default       all          -                  local-policy   -      default-fs-read-allow-all    filesystem:read    -        -      allow      -           **
+
+local    default       all          -                  local-policy   -      default-fs-write-allow-all   filesystem:write   -        -      allow      -           **
+
+local    -             all          default-deny-all   -              -      default-deny-all             network            -        -      deny       tcp,udp     **
+[exit 0]
+
+### 2026-09-28T17:14:32-0400
+$ cd /Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.worktrees/exp-229-sbx-kit-trust-4 && PYTHONSAFEPATH=1 mise exec -- python experiments/03-sbx-kit-trust/fixture.py pki --root /private/tmp/bv05-pki
+{
+  "at": "2026-09-28T21:14:33.231016+00:00",
+  "ca_issued": {
+    "ca": true,
+    "unrelated-ca": true,
+    "client-ca": true
+  },
+  "leaves": {
+    "valid": "88:50:D2:72:61:47:DA:18:52:BF:B3:F0:35:F5:13:98:C7:8B:18:6B:E1:71:80:5D:70:22:E4:FF:87:09:92:75",
+    "hdi-only": "5D:90:F9:36:B4:95:4C:19:14:D9:91:A0:B9:14:FC:66:37:D3:79:A6:AA:6B:E1:CD:4A:B0:4A:67:D2:48:82:89",
+    "localhost-only": "6C:74:A7:C3:28:15:84:8E:A8:4D:29:C9:1F:50:82:64:8A:EB:B4:84:AB:64:E3:F3:93:E7:58:3B:92:A7:91:77",
+    "wrong-host": "28:56:C1:EC:79:6E:54:EE:3E:0E:54:5A:11:BA:11:96:87:0C:53:F4:4C:09:06:AE:F2:98:02:84:77:17:9E:9F",
+    "expired": "B7:BC:17:64:FC:DE:48:44:7E:93:2B:9E:D6:A5:83:33:E6:51:D7:D8:FB:FE:16:2F:23:A1:D7:E7:C9:07:76:63",
+    "unrelated": "3F:70:E1:C0:90:05:8F:7D:76:44:1C:7A:42:1C:8E:6C:51:F1:E0:40:0C:5D:C5:49:38:B0:9B:44:B8:E0:FB:AF",
+    "client": "0E:46:C9:66:67:15:D7:41:D6:CA:BA:07:AD:5F:D6:E1:BC:7B:34:05:6C:5A:93:FD:09:A4:93:82:16:0A:E1:B0"
+  }
+}
+[exit 0]
+
+### 2026-09-28T17:14:33-0400
+$ cd /Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.worktrees/exp-229-sbx-kit-trust-4 && PYTHONSAFEPATH=1 mise exec -- python experiments/03-sbx-kit-trust/fixture.py kit --root /private/tmp/bv05-pki --kit /private/tmp/bv05-kit --port 18443
+/private/tmp/bv05-kit/spec.yaml
+[exit 0]
+
+### 2026-09-28T17:14:33-0400
+$ grep -rl "PRIVATE KEY" /private/tmp/bv05-kit; find /private/tmp/bv05-kit -type f | sort
+/private/tmp/bv05-kit/files/home/bv05/bv05-ca.crt
+/private/tmp/bv05-kit/spec.yaml
+[exit 0]
+
+### 2026-09-28T17:17:25-0400
+NOTE coordinator answer: start state = deny-all initialized, daemon running, no sandboxes, allowLocalKits default, settings hash 0477633d...af0f4; no policy init; end undo = sbx rm bv05-clean bv05-kit and unset changed settings only; no policy reset, no daemon stop
+
+### 2026-09-28T17:17:25-0400
+$ cd /Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.worktrees/exp-229-sbx-kit-trust-4 && (PYTHONSAFEPATH=1 nohup mise exec -- python experiments/03-sbx-kit-trust/fixture.py serve --root /private/tmp/bv05-pki --leaf valid --port 18443 --log /private/tmp/bv05-run/receiver.jsonl --deliveries /private/tmp/bv05-run/deliveries.jsonl > /private/tmp/bv05-run/serve.out 2>&1 &) ; sleep 2; cat /private/tmp/bv05-run/serve.out; lsof -nP -iTCP:18443 -sTCP:LISTEN | tail -n +2
+listening 127.0.0.1:18443 leaf=valid
+python3.1 82427 tony    3u  IPv4 0x16bb7ad83b357b0f      0t0  TCP 127.0.0.1:18443 (LISTEN)
+[exit 0]
+
+### 2026-09-28T17:17:27-0400
+$ curl -sS --cacert /private/tmp/bv05-pki/ca.crt https://localhost:18443/host-control
+{"method": "GET", "path": "/host-control", "sni": "localhost", "tls": "TLSv1.3", "client_cert_sha256": null, "host": "localhost:18443", "auth_scheme": null, "auth_sha256_16": null, "header_names": ["Accept", "Host", "User-Agent"]}
+[exit 0]
+
+### 2026-09-28T17:17:27-0400
+$ curl -sS --max-time 5 https://localhost:18443/host-untrusted
+curl: (60) SSL certificate OpenSSL verify result: unable to get local issuer certificate (20)
+More details here: https://curl.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the webpage mentioned above.
+[exit 60]
+
+### 2026-09-28T17:17:33-0400
+$ sbx settings set kit.allowLocalKits false
+Setting "kit.allowLocalKits" updated: value=false source=override
+[exit 0]
+
+### 2026-09-28T17:17:34-0400
+$ sbx create --name bv05-kit shell --kit /private/tmp/bv05-kit < /dev/null
+error: resolve kits: kit "/private/tmp/bv05-kit": local kit sources are disabled (kit.allowLocalKits=false); the reference "/private/tmp/bv05-kit" points at a local directory or ZIP file
+  try: sbx settings set kit.allowLocalKits true
+[exit 1]
+
+### 2026-09-28T17:17:34-0400
+$ sbx ls --json
+{
+  "sandboxes": []
+}
+[exit 0]
+
+### 2026-09-28T17:17:35-0400
+$ sbx settings unset kit.allowLocalKits
+Override for "kit.allowLocalKits" removed; setting now evaluates from env var or default.
+[exit 0]
+
+### 2026-09-28T17:17:35-0400
+$ sbx settings get --json kit.allowLocalKits
+{
+  "default": true,
+  "description": "Allow installing kits from local directories or ZIP files. Set to false to require a remote source.",
+  "env_var": "DOCKER_SANDBOXES_KIT_ALLOW_LOCAL",
+  "key": "kit.allowLocalKits",
+  "source": "default",
+  "type": "bool",
+  "value": true
+}
+[exit 0]
+
+### 2026-09-28T17:17:36-0400
+$ sbx settings list --json | sha256sum
+0477633d77404d7c39490df322dc92a5aa0f84181b2eec02debd4b3d2a9af0f4  -
+[exit 0]
+
+### 2026-09-28T17:17:43-0400
+$ timeout 600 sbx create --name bv05-clean shell < /dev/null
+── RESOLVE SETUP
+   resolving configuration…
+     sandbox    bv05-clean
+     agent      shell
+     workspace  none · no workspace bind mount
+     image      docker/sandbox-templates:shell-docker
+     cpu        10
+     memory     16 GiB
+   ✓ configuration resolved
+── PREPARE IMAGE
+   → pull docker/sandbox-templates:shell-docker
+     1560168ac5fb downloaded
+     6a42a4149724 downloaded
+     b2c007bbb5dc downloaded
+     5bbe8539825f downloaded
+     fdc1c83df86c downloaded
+     cc5f104d36e3 downloaded
+     84e55b2a5e0b downloaded
+     f8f8ecffa9c3 downloaded
+     9530961de22c downloaded
+     2b5245e529fd downloaded
+     70624a8d6970 downloaded
+     db7874ec8640 downloaded  1.7 kB
+     10aa754f78dc downloaded  144 B
+     39c066998ee3 downloaded
+     7cb168fccdd2 downloaded  40.8 MB
+     08bc113e92f5 downloaded
+     ab3ee8061fc1 downloaded
+     e5e86281ec08 downloaded  21.2 MB
+     2fc637dc7f36 downloaded  40.2 MB
+     87d8ef431c26 downloaded  62.0 MB
+     6b675093af40 downloaded  93.3 MB
+     0f8bbe7021b6 downloaded  323.0 MB
+   ✓ image ready
+── CREATE SANDBOX
+   ✓ Created sandbox bv05-clean
+
+To connect to this sandbox, run:
+  sbx run --name bv05-clean
+[exit 0]
+
+### 2026-09-28T17:18:50-0400
+$ sbx ls --json
+{
+  "sandboxes": [
+    {
+      "name": "bv05-clean",
+      "id": "8d71842e-c10b-43f3-b69e-4261fc6b76be",
+      "agent": "shell",
+      "status": "running",
+      "last_used_at": "2026-09-28T21:18:50.252183Z",
+      "created_at": "2026-09-28T21:18:47Z"
+    }
+  ]
+}
+[exit 0]
+
+### 2026-09-28T17:18:56-0400
+$ timeout 600 sbx create --name bv05-kit shell --kit /private/tmp/bv05-kit < /dev/null
+WARN: required credential has no binding; sandbox will start without it
+── RESOLVE SETUP
+   resolving configuration…
+     sandbox    bv05-kit
+     agent      shell
+     kit        /private/tmp/bv05-kit
+     workspace  none · no workspace bind mount
+     image      docker/sandbox-templates:shell-docker
+     cpu        10
+     memory     16 GiB
+   ✓ configuration resolved
+── PREPARE IMAGE
+   → pull docker/sandbox-templates:shell-docker
+     1560168ac5fb already present
+     6a42a4149724 already present
+     fdc1c83df86c already present
+     b2c007bbb5dc already present
+     5bbe8539825f already present
+     cc5f104d36e3 already present
+     84e55b2a5e0b already present
+   ✓ image ready
+WARN: no credential resolved for required service; sandbox will start without it
+WARN: required credential not found for service
+── CONFIGURE AGENT
+   → set 8 environment variable(s)
+   → copy 1 home file(s)
+   → run 1 install command(s)
+     $ install -m 0644 /home/agent/bv05/bv05-ca.crt /usr/local/sha… (kit=bv05-kit, user=0)
+     ✓ install -m 0644 /home/agent/bv05/bv05-ca.crt /usr/local/sha… (kit=bv05-kit, user=0, 989ms)
+   → register 1 startup command(s), run on every container start
+     + sh -c { command -v apt-get && apt-get update -qq -y || true… (kit=shell, user=root)
+     view startup log: cat /var/log/sbx-kit-startup.log
+Note: no binding authorizes bv05-agentd — the credential was not injected. Create a binding (re-run interactively, or edit ~/.config/sbx/credentials.yaml) to use it.
+── CREATE SANDBOX
+   ✓ Created sandbox bv05-kit
+
+To connect to this sandbox, run:
+  sbx run --name bv05-kit
+[exit 0]
+
+### 2026-09-28T17:19:01-0400
+$ sbx ls --json
+{
+  "sandboxes": [
+    {
+      "name": "bv05-clean",
+      "id": "8d71842e-c10b-43f3-b69e-4261fc6b76be",
+      "agent": "shell",
+      "status": "running",
+      "last_used_at": "2026-09-28T21:18:50.252183Z",
+      "created_at": "2026-09-28T21:18:47Z"
+    },
+    {
+      "name": "bv05-kit",
+      "id": "f773abdb-00cb-46df-9e6c-b882b5c07b37",
+      "agent": "shell",
+      "status": "running",
+      "last_used_at": "2026-09-28T21:19:01.181186Z",
+      "created_at": "2026-09-28T21:18:58Z"
+    }
+  ]
+}
+[exit 0]
+
+### 2026-09-28T17:19:11-0400
+$ sbx exec bv05-clean sh -c 'id; env | grep -i -E "proxy|ssl|cert|BV05" | sed -E "s/(TOKEN|KEY|SECRET)=.*/\1=<redacted>/" | sort; getent hosts host.docker.internal; cat /etc/resolv.conf | grep -v ^#; ls /usr/local/share/ca-certificates/; grep -c BEGIN /etc/ssl/certs/ca-certificates.crt'
+uid=1000(agent) gid=1000(agent) groups=1000(agent),27(sudo),1001(docker)
+ANTHROPIC_API_KEY=<redacted>
+GH_TOKEN=<redacted>
+GOOGLE_API_KEY=<redacted>
+HTTPS_PROXY=http://gateway.docker.internal:3128
+HTTP_PROXY=http://gateway.docker.internal:3128
+JAVA_TOOL_OPTIONS=-Dhttp.proxyHost=gateway.docker.internal -Dhttp.proxyPort=3128 -Dhttps.proxyHost=gateway.docker.internal -Dhttps.proxyPort=3128 -Dhttp.nonProxyHosts=localhost|127.*|[::1]|gateway.docker.internal
+MCP_SENTINEL_TOKEN_NAME=proxy-managed
+MISTRAL_API_KEY=<redacted>
+NEBIUS_API_KEY=<redacted>
+NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt
+NODE_USE_ENV_PROXY=1
+NO_PROXY=localhost,127.0.0.1,::1,gateway.docker.internal
+OPENAI_API_KEY=<redacted>
+OPENROUTER_API_KEY=<redacted>
+PROXY_CA_CERT_B64=<public Docker Sandboxes Proxy CA PEM, base64, omitted; fingerprint in the bundle listing below>
+REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+SANDBOX_NAME=bv05-clean
+SANDBOX_VM_ID=bv05-clean
+SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+XAI_API_KEY=<redacted>
+http_proxy=http://gateway.docker.internal:3128
+https_proxy=http://gateway.docker.internal:3128
+no_proxy=localhost,127.0.0.1,::1,gateway.docker.internal
+fe80::1         host.docker.internal
+nameserver 172.17.0.0
+nameserver fd61:8f11:ddb2::
+search bv05-clean.docker.internal
+proxy-ca.crt
+123
+[exit 0]
+
+### 2026-09-28T17:19:12-0400
+$ sbx exec bv05-kit sh -c 'id; env | grep -i -E "proxy|ssl|cert|BV05" | sed -E "s/(TOKEN|KEY|SECRET)=.*/\1=<redacted>/" | sort; getent hosts host.docker.internal; cat /etc/resolv.conf | grep -v ^#; ls /usr/local/share/ca-certificates/; grep -c BEGIN /etc/ssl/certs/ca-certificates.crt'
+uid=1000(agent) gid=1000(agent) groups=1000(agent),27(sudo),1001(docker)
+ANTHROPIC_API_KEY=<redacted>
+BV05_TOKEN=<redacted>
+GH_TOKEN=<redacted>
+GOOGLE_API_KEY=<redacted>
+HTTPS_PROXY=http://gateway.docker.internal:3128
+HTTP_PROXY=http://gateway.docker.internal:3128
+JAVA_TOOL_OPTIONS=-Dhttp.proxyHost=gateway.docker.internal -Dhttp.proxyPort=3128 -Dhttps.proxyHost=gateway.docker.internal -Dhttps.proxyPort=3128 -Dhttp.nonProxyHosts=localhost|127.*|[::1]|gateway.docker.internal
+MCP_SENTINEL_TOKEN_NAME=proxy-managed
+MISTRAL_API_KEY=<redacted>
+NEBIUS_API_KEY=<redacted>
+NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt
+NODE_USE_ENV_PROXY=1
+NO_PROXY=localhost,127.0.0.1,::1,gateway.docker.internal
+OPENAI_API_KEY=<redacted>
+OPENROUTER_API_KEY=<redacted>
+PROXY_CA_CERT_B64=<public Docker Sandboxes Proxy CA PEM, base64, omitted; fingerprint in the bundle listing below>
+REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+SANDBOX_NAME=bv05-kit
+SANDBOX_VM_ID=bv05-kit
+SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+XAI_API_KEY=<redacted>
+http_proxy=http://gateway.docker.internal:3128
+https_proxy=http://gateway.docker.internal:3128
+no_proxy=localhost,127.0.0.1,::1,gateway.docker.internal
+fe80::1         host.docker.internal
+nameserver 172.17.0.2
+nameserver fd61:8f11:ddb2::2
+search bv05-kit.docker.internal
+bv05-ca.crt
+proxy-ca.crt
+123
+[exit 0]
+
+### 2026-09-28T17:19:27-0400
+$ sbx exec bv05-clean sh -c 'awk "/BEGIN/{n++} {print > \"/tmp/c\" n \".pem\"}" /etc/ssl/certs/ca-certificates.crt; for f in /tmp/c*.pem; do openssl x509 -in $f -noout -subject 2>/dev/null; done | grep -i -E "bv05|docker"; ls -la /etc/ssl/certs | grep -i -E "bv05|proxy"; rm -f /tmp/c*.pem; tail -5 /var/log/sbx-kit-startup.log 2>&1'
+subject=C=US, ST=, L=, street=, postalCode=, O=Docker Sandboxes, CN=Docker Sandboxes Proxy CA
+lrwxrwxrwx 1 root root     45 Sep 28 21:18 35064f42.0 -> /usr/local/share/ca-certificates/proxy-ca.crt
+=== dispatcher run 2026-09-28T21:18:50Z ===
+> /etc/durable-startup.d/001-startup-shell/000-cmd.sh
+ok /etc/durable-startup.d/001-startup-shell/000-cmd.sh
+=== dispatcher complete ===
+[exit 0]
+
+### 2026-09-28T17:19:28-0400
+$ sbx exec bv05-kit sh -c 'awk "/BEGIN/{n++} {print > \"/tmp/c\" n \".pem\"}" /etc/ssl/certs/ca-certificates.crt; for f in /tmp/c*.pem; do openssl x509 -in $f -noout -subject 2>/dev/null; done | grep -i -E "bv05|docker"; ls -la /etc/ssl/certs | grep -i -E "bv05|proxy"; rm -f /tmp/c*.pem; tail -5 /var/log/sbx-kit-startup.log 2>&1'
+subject=C=US, ST=, L=, street=, postalCode=, O=Docker Sandboxes, CN=Docker Sandboxes Proxy CA
+lrwxrwxrwx 1 root root     45 Sep 28 21:18 35064f42.0 -> /usr/local/share/ca-certificates/proxy-ca.crt
+lrwxrwxrwx 1 root root     12 Sep 28 21:19 35064f42.1 -> proxy-ca.pem
+lrwxrwxrwx 1 root root     44 Sep 28 21:18 bv05-ca.pem -> /usr/local/share/ca-certificates/bv05-ca.crt
+lrwxrwxrwx 1 root root     11 Sep 28 21:19 f35af91d.0 -> bv05-ca.pem
+lrwxrwxrwx 1 root root     45 Sep 28 21:18 proxy-ca.pem -> /usr/local/share/ca-certificates/proxy-ca.crt
+=== dispatcher run 2026-09-28T21:19:01Z ===
+> /etc/durable-startup.d/001-startup-shell/000-cmd.sh
+ok /etc/durable-startup.d/001-startup-shell/000-cmd.sh
+=== dispatcher complete ===
+[exit 0]
+
+### 2026-09-28T17:19:37-0400
+$ sbx exec bv05-clean sh -c 'cd /tmp && awk "/BEGIN/{n++} {print > \"c\" n \".pem\"}" /etc/ssl/certs/ca-certificates.crt; ls c*.pem | wc -l; for f in c*.pem; do openssl x509 -in $f -noout -subject -fingerprint -sha256 2>/dev/null | paste - -; done | grep -E "BV-05|Docker Sandboxes"; rm -f c*.pem'
+123
+subject=C=US, ST=, L=, street=, postalCode=, O=Docker Sandboxes, CN=Docker Sandboxes Proxy CA	sha256 Fingerprint=57:BA:40:D3:EB:31:A8:31:6C:EE:11:61:77:CD:6F:7C:51:6B:28:06:0B:6D:C7:14:29:02:72:61:BA:29:B6:CF
+[exit 0]
+
+### 2026-09-28T17:19:38-0400
+$ sbx exec bv05-kit sh -c 'cd /tmp && awk "/BEGIN/{n++} {print > \"c\" n \".pem\"}" /etc/ssl/certs/ca-certificates.crt; ls c*.pem | wc -l; for f in c*.pem; do openssl x509 -in $f -noout -subject -fingerprint -sha256 2>/dev/null | paste - -; done | grep -E "BV-05|Docker Sandboxes"; rm -f c*.pem'
+123
+subject=CN=BV-05 disposable ca	sha256 Fingerprint=0F:36:FD:3C:48:DD:10:BA:8C:F9:4E:0D:33:3A:70:82:73:B3:1E:B1:13:03:C4:C7:98:B1:4D:B0:32:69:47:27
+subject=C=US, ST=, L=, street=, postalCode=, O=Docker Sandboxes, CN=Docker Sandboxes Proxy CA	sha256 Fingerprint=AC:09:E9:B1:7E:F7:C4:62:56:68:4D:BD:58:B1:E4:BF:9E:90:E1:88:5C:30:B6:05:DE:90:12:1D:0D:6A:5E:04
+[exit 0]
+
+### 2026-09-28T17:19:49-0400
+$ sbx exec bv05-clean curl -sS -v --max-time 20 https://host.docker.internal:18443/c3-bv05-clean-proxy 2>&1 | grep -v -i -E '^> (authorization|proxy-authorization)' | tail -40
+* TLSv1.3 (OUT), TLS handshake, Client hello (1):
+} [1575 bytes data]
+* SSL Trust Anchors:
+*   CAfile: /etc/ssl/certs/ca-certificates.crt
+*   CApath: /etc/ssl/certs
+{ [5 bytes data]
+* TLSv1.3 (IN), TLS handshake, Server hello (2):
+{ [1210 bytes data]
+* TLSv1.3 (IN), TLS change cipher, Change cipher spec (1):
+{ [1 bytes data]
+* TLSv1.3 (IN), TLS handshake, Encrypted Extensions (8):
+{ [25 bytes data]
+* TLSv1.3 (IN), TLS handshake, Certificate (11):
+{ [1994 bytes data]
+* TLSv1.3 (IN), TLS handshake, CERT verify (15):
+{ [264 bytes data]
+* TLSv1.3 (IN), TLS handshake, Finished (20):
+{ [36 bytes data]
+* TLSv1.3 (OUT), TLS change cipher, Change cipher spec (1):
+} [1 bytes data]
+* TLSv1.3 (OUT), TLS handshake, Finished (20):
+} [36 bytes data]
+* SSL connection using TLSv1.3 / TLS_AES_128_GCM_SHA256 / X25519MLKEM768 / RSASSA-PSS
+* ALPN: server accepted http/1.1
+* Server certificate:
+*   subject: O=Docker Sandboxes; CN=localhost
+*   start date: Aug 29 21:19:50 2026 GMT
+*   expire date: Sep 28 21:19:50 2027 GMT
+*   issuer: C=US; ST=; L=; street=; postalCode=; O=Docker Sandboxes; CN=Docker Sandboxes Proxy CA
+*   Certificate level 0: Public key type RSA (2048/112 Bits/secBits), signed using sha256WithRSAEncryption
+*   Certificate level 1: Public key type RSA (2048/112 Bits/secBits), signed using sha256WithRSAEncryption
+*  subjectAltName does not match hostname host.docker.internal
+* SSL: no alternative certificate subject name matches target hostname 'host.docker.internal'
+* closing connection #0
+curl: (60) SSL: no alternative certificate subject name matches target hostname 'host.docker.internal'
+More details here: https://curl.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the webpage mentioned above.
+[exit 0]
+
+### 2026-09-28T17:19:50-0400
+$ sbx exec bv05-kit curl -sS -v --max-time 20 https://host.docker.internal:18443/c3-bv05-kit-proxy 2>&1 | grep -v -i -E '^> (authorization|proxy-authorization)' | tail -40
+{ [52 bytes data]
+* TLSv1.3 (OUT), TLS change cipher, Change cipher spec (1):
+} [1 bytes data]
+* TLSv1.3 (OUT), TLS handshake, Finished (20):
+} [52 bytes data]
+* SSL connection using TLSv1.3 / TLS_AES_256_GCM_SHA384 / X25519MLKEM768 / id-ecPublicKey
+* ALPN: server did not agree on a protocol. Uses default.
+* Server certificate:
+*   subject: CN=host.docker.internal
+*   start date: Sep 28 21:14:33 2026 GMT
+*   expire date: Oct  5 21:14:33 2026 GMT
+*   issuer: CN=BV-05 disposable ca
+*   Certificate level 0: Public key type EC/prime256v1 (256/128 Bits/secBits), signed using ecdsa-with-SHA256
+*   Certificate level 1: Public key type EC/prime256v1 (256/128 Bits/secBits), signed using ecdsa-with-SHA256
+*   subjectAltName: "host.docker.internal" matches cert's "host.docker.internal"
+* SSL certificate verified via OpenSSL.
+* Established connection to gateway.docker.internal (fd61:8f11:ddb2::2 port 3128) from fd61:8f11:ddb2::3 port 37918
+* using HTTP/1.x
+} [5 bytes data]
+> GET /c3-bv05-kit-proxy HTTP/1.1
+> Host: host.docker.internal:18443
+> User-Agent: curl/8.18.0
+> Accept: */*
+>
+* Request completely sent off
+{ [5 bytes data]
+* TLSv1.3 (IN), TLS handshake, Newsession Ticket (4):
+{ [265 bytes data]
+* TLSv1.3 (IN), TLS handshake, Newsession Ticket (4):
+{ [265 bytes data]
+* HTTP 1.0, assume close after body
+< HTTP/1.0 200 OK
+< Server: BaseHTTP/0.6 Python/3.14.6
+< Date: Mon, 28 Sep 2026 21:19:50 GMT
+< Content-Type: application/json
+< Content-Length: 258
+<
+{ [5 bytes data]
+* shutting down connection #0
+{"method": "GET", "path": "/c3-bv05-kit-proxy", "sni": "host.docker.internal", "tls": "TLSv1.3", "client_cert_sha256": null, "host": "host.docker.internal:18443", "auth_scheme": null, "auth_sha256_16": null, "header_names": ["Accept", "Host", "User-Agent"]}
+[exit 0]
+
+### 2026-09-28T17:19:50-0400
+$ tail -n +3 /private/tmp/bv05-run/receiver.jsonl
+{"event": "tls_read_error", "sni": "localhost", "error": "[Errno 54] Connection reset by peer", "at": "2026-09-28T21:17:27.750+00:00"}
+{"event": "request", "method": "GET", "path": "/c3-bv05-kit-proxy", "sni": "host.docker.internal", "tls": "TLSv1.3", "client_cert_sha256": null, "host": "host.docker.internal:18443", "auth_scheme": null, "auth_sha256_16": null, "header_names": ["Accept", "Host", "User-Agent"], "at": "2026-09-28T21:19:50.850+00:00"}
+[exit 0]
+
+### 2026-09-28T17:20:03-0400
+$ sbx policy log --json --limit 20
+{
+  "blocked_hosts": [
+    {
+      "host": "localhost:18443",
+      "vm_name": "bv05-clean",
+      "proxy_type": "forward",
+      "rule": "no applicable policies for op(action=net:connect:tcp, resource=net:domain:localhost:18443)",
+      "last_seen": "2026-09-28T17:19:50.284636-04:00",
+      "since": "2026-09-28T17:19:50.284636-04:00",
+      "count_since": 1,
+      "reason": "No matching allow rule (default deny)"
+    },
+    {
+      "host": "ports.ubuntu.com:80",
+      "vm_name": "bv05-kit",
+      "proxy_type": "forward",
+      "rule": "no applicable policies for op(action=net:connect:tcp, resource=net:domain:ports.ubuntu.com:80)",
+      "last_seen": "2026-09-28T17:19:01.20135-04:00",
+      "since": "2026-09-28T17:19:01.19926-04:00",
+      "count_since": 4,
+      "reason": "No matching allow rule (default deny)"
+    },
+    {
+      "host": "download.docker.com:443",
+      "vm_name": "bv05-kit",
+      "proxy_type": "forward",
+      "rule": "no applicable policies for op(action=net:connect:tcp, resource=net:domain:download.docker.com:443)",
+      "last_seen": "2026-09-28T17:19:01.199198-04:00",
+      "since": "2026-09-28T17:19:01.199198-04:00",
+      "count_since": 1,
+      "reason": "No matching allow rule (default deny)"
+    },
+    {
+      "host": "ports.ubuntu.com:80",
+      "vm_name": "bv05-clean",
+      "proxy_type": "forward",
+      "rule": "no applicable policies for op(action=net:connect:tcp, resource=net:domain:ports.ubuntu.com:80)",
+      "last_seen": "2026-09-28T17:18:50.325272-04:00",
+      "since": "2026-09-28T17:18:50.321822-04:00",
+      "count_since": 4,
+      "reason": "No matching allow rule (default deny)"
+    },
+    {
+      "host": "download.docker.com:443",
+      "vm_name": "bv05-clean",
+      "proxy_type": "forward",
+      "rule": "no applicable policies for op(action=net:connect:tcp, resource=net:domain:download.docker.com:443)",
+      "last_seen": "2026-09-28T17:18:50.321863-04:00",
+      "since": "2026-09-28T17:18:50.321863-04:00",
+      "count_since": 1,
+      "reason": "No matching allow rule (default deny)"
+    }
+  ],
+  "allowed_hosts": [
+    {
+      "host": "localhost:18443",
+      "vm_name": "bv05-kit",
+      "proxy_type": "forward-bypass",
+      "rule": "",
+      "last_seen": "2026-09-28T17:19:50.841049-04:00",
+      "since": "2026-09-28T17:19:50.841049-04:00",
+      "count_since": 1
+    }
+  ]
+}
+[exit 0]
+
+### 2026-09-28T17:20:03-0400
+$ sbx policy check network --verbose --sandbox bv05-clean host.docker.internal:18443
+Denied: host.docker.internal:18443
+Governance: Local policy only
+Context: sandbox:bv05-clean
+Reason: no matching allow rule (default deny)
+Action: net:connect:tcp
+Resource: net:domain host.docker.internal:18443
+Deny kind: implicit
+[exit 1]
+
+### 2026-09-28T17:20:04-0400
+$ sbx policy check network --verbose --sandbox bv05-clean localhost:18443
+Denied: localhost:18443
+Governance: Local policy only
+Context: sandbox:bv05-clean
+Reason: no matching allow rule (default deny)
+Action: net:connect:tcp
+Resource: net:domain localhost:18443
+Deny kind: implicit
+[exit 1]
+
+### 2026-09-28T17:20:04-0400
+$ sbx policy check network --verbose --sandbox bv05-kit host.docker.internal:18443
+Allowed: host.docker.internal:18443
+Governance: Local policy only
+Context: sandbox:bv05-kit
+Action: net:connect:tcp
+Resource: net:domain host.docker.internal:18443
+[exit 0]
+
+### 2026-09-28T17:20:04-0400
+$ sbx policy check network --verbose --sandbox bv05-kit localhost:18443
+Allowed: localhost:18443
+Governance: Local policy only
+Context: sandbox:bv05-kit
+Action: net:connect:tcp
+Resource: net:domain localhost:18443
+[exit 0]
+
+### 2026-09-28T17:20:05-0400
+$ sbx policy ls bv05-kit
+Policy for sandbox: bv05-kit
+NETWORK
+  allow 2 hosts from 7c8104fa-cd6e-4001-84da-ee60213c0cb3
+
+FILESYSTEM
+  read allow all paths from local-policy
+  write allow all paths from local-policy
+
+Details: sbx policy ls bv05-kit --wide
+[exit 0]
+
+### 2026-09-28T17:20:20-0400
+$ /private/tmp/claude-501/-Users-tony-Code-github-com-tbhb-agent-orchestration-poc/349b16d0-2964-4b4f-8e5a-2d911ebe9dc8/scratchpad/bv05-run4/serve.sh wrong-host
+listening 127.0.0.1:18443 leaf=wrong-host
+[exit 0]
+
+### 2026-09-28T17:20:24-0400
+$ sbx exec bv05-kit sh -c 'curl -sS --max-time 20 https://host.docker.internal:18443/c2-kit-wrong-host; echo curl_exit=$?'
+Sandbox bv05-kit started successfully
+curl: (60) SSL: no alternative certificate subject name matches target hostname 'host.docker.internal'
+More details here: https://curl.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the webpage mentioned above.
+curl_exit=60
+[exit 0]
+
+### 2026-09-28T17:20:28-0400
+$ /private/tmp/claude-501/-Users-tony-Code-github-com-tbhb-agent-orchestration-poc/349b16d0-2964-4b4f-8e5a-2d911ebe9dc8/scratchpad/bv05-run4/serve.sh expired
+listening 127.0.0.1:18443 leaf=expired
+[exit 0]
+
+### 2026-09-28T17:20:31-0400
+$ sbx exec bv05-kit sh -c 'curl -sS --max-time 20 https://host.docker.internal:18443/c2-kit-expired; echo curl_exit=$?'
+curl: (60) SSL certificate OpenSSL verify result: certificate has expired (10)
+More details here: https://curl.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the webpage mentioned above.
+curl_exit=60
+[exit 0]
+
+### 2026-09-28T17:20:32-0400
+$ /private/tmp/claude-501/-Users-tony-Code-github-com-tbhb-agent-orchestration-poc/349b16d0-2964-4b4f-8e5a-2d911ebe9dc8/scratchpad/bv05-run4/serve.sh unrelated
+listening 127.0.0.1:18443 leaf=unrelated
+[exit 0]
+
+### 2026-09-28T17:20:35-0400
+$ sbx exec bv05-kit sh -c 'curl -sS --max-time 20 https://host.docker.internal:18443/c2-kit-unrelated; echo curl_exit=$?'
+curl: (60) SSL certificate OpenSSL verify result: unable to get local issuer certificate (20)
+More details here: https://curl.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the webpage mentioned above.
+curl_exit=60
+[exit 0]
+
+### 2026-09-28T17:20:36-0400
+$ /private/tmp/claude-501/-Users-tony-Code-github-com-tbhb-agent-orchestration-poc/349b16d0-2964-4b4f-8e5a-2d911ebe9dc8/scratchpad/bv05-run4/serve.sh localhost-only
+listening 127.0.0.1:18443 leaf=localhost-only
+[exit 0]
+
+### 2026-09-28T17:20:39-0400
+$ sbx exec bv05-kit sh -c 'curl -sS --max-time 20 https://host.docker.internal:18443/c2-kit-localhost-only; echo curl_exit=$?'
+curl: (60) SSL: no alternative certificate subject name matches target hostname 'host.docker.internal'
+More details here: https://curl.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the webpage mentioned above.
+curl_exit=60
+[exit 0]
+
+### 2026-09-28T17:20:39-0400
+$ /private/tmp/claude-501/-Users-tony-Code-github-com-tbhb-agent-orchestration-poc/349b16d0-2964-4b4f-8e5a-2d911ebe9dc8/scratchpad/bv05-run4/serve.sh hdi-only
+listening 127.0.0.1:18443 leaf=hdi-only
+[exit 0]
+
+### 2026-09-28T17:20:42-0400
+$ sbx exec bv05-kit sh -c 'curl -sS --max-time 20 https://host.docker.internal:18443/c2-kit-hdi-only; echo curl_exit=$?'
+{"method": "GET", "path": "/c2-kit-hdi-only", "sni": "host.docker.internal", "tls": "TLSv1.3", "client_cert_sha256": null, "host": "host.docker.internal:18443", "auth_scheme": null, "auth_sha256_16": null, "header_names": ["Accept", "Host", "User-Agent"]}
+curl_exit=0
+[exit 0]
+
+### 2026-09-28T17:20:43-0400
+$ /private/tmp/claude-501/-Users-tony-Code-github-com-tbhb-agent-orchestration-poc/349b16d0-2964-4b4f-8e5a-2d911ebe9dc8/scratchpad/bv05-run4/serve.sh valid
+listening 127.0.0.1:18443 leaf=valid
+[exit 0]
+
+### 2026-09-28T17:20:46-0400
+$ tail -n 12 /private/tmp/bv05-run/receiver.jsonl
+{"event": "listen", "port": 18443, "leaf": "valid", "client_ca": false, "at": "2026-09-28T21:17:25.638+00:00"}
+{"event": "request", "method": "GET", "path": "/host-control", "sni": "localhost", "tls": "TLSv1.3", "client_cert_sha256": null, "host": "localhost:18443", "auth_scheme": null, "auth_sha256_16": null, "header_names": ["Accept", "Host", "User-Agent"], "at": "2026-09-28T21:17:27.635+00:00"}
+{"event": "tls_read_error", "sni": "localhost", "error": "[Errno 54] Connection reset by peer", "at": "2026-09-28T21:17:27.750+00:00"}
+{"event": "request", "method": "GET", "path": "/c3-bv05-kit-proxy", "sni": "host.docker.internal", "tls": "TLSv1.3", "client_cert_sha256": null, "host": "host.docker.internal:18443", "auth_scheme": null, "auth_sha256_16": null, "header_names": ["Accept", "Host", "User-Agent"], "at": "2026-09-28T21:19:50.850+00:00"}
+{"event": "listen", "port": 18443, "leaf": "wrong-host", "client_ca": false, "at": "2026-09-28T21:20:22.161+00:00"}
+{"event": "listen", "port": 18443, "leaf": "expired", "client_ca": false, "at": "2026-09-28T21:20:29.886+00:00"}
+{"event": "listen", "port": 18443, "leaf": "unrelated", "client_ca": false, "at": "2026-09-28T21:20:33.860+00:00"}
+{"event": "listen", "port": 18443, "leaf": "localhost-only", "client_ca": false, "at": "2026-09-28T21:20:37.331+00:00"}
+{"event": "listen", "port": 18443, "leaf": "hdi-only", "client_ca": false, "at": "2026-09-28T21:20:40.940+00:00"}
+{"event": "request", "method": "GET", "path": "/c2-kit-hdi-only", "sni": "host.docker.internal", "tls": "TLSv1.3", "client_cert_sha256": null, "host": "host.docker.internal:18443", "auth_scheme": null, "auth_sha256_16": null, "header_names": ["Accept", "Host", "User-Agent"], "at": "2026-09-28T21:20:43.177+00:00"}
+{"event": "listen", "port": 18443, "leaf": "valid", "client_ca": false, "at": "2026-09-28T21:20:44.302+00:00"}
+[exit 0]
+
+### 2026-09-28T17:20:57-0400
+$ sbx ls --json
+{
+  "sandboxes": [
+    {
+      "name": "bv05-clean",
+      "id": "8d71842e-c10b-43f3-b69e-4261fc6b76be",
+      "agent": "shell",
+      "status": "stopped",
+      "last_used_at": "2026-09-28T21:19:50.375718Z",
+      "created_at": "2026-09-28T21:18:47Z"
+    },
+    {
+      "name": "bv05-kit",
+      "id": "f773abdb-00cb-46df-9e6c-b882b5c07b37",
+      "agent": "shell",
+      "status": "running",
+      "last_used_at": "2026-09-28T21:20:43.184938Z",
+      "created_at": "2026-09-28T21:18:58Z"
+    }
+  ]
+}
+[exit 0]
+
+### 2026-09-28T17:20:57-0400
+$ sbx exec bv05-clean sh -c 'curl -sS -v --noproxy "*" --max-time 10 https://host.docker.internal:18443/direct-bv05-clean 2>&1 | grep -E "Trying|Connected|curl:|subject:|issuer:"; echo curl_exit=$?'
+Sandbox bv05-clean started successfully
+*   Trying [fe80::1]:18443...
+*   Trying 169.254.1.1:18443...
+curl: (35) TLS connect error: error:0A000126:SSL routines::unexpected eof while reading
+curl_exit=0
+[exit 0]
+
+### 2026-09-28T17:20:59-0400
+$ sbx exec bv05-kit sh -c 'curl -sS -v --noproxy "*" --max-time 10 https://host.docker.internal:18443/direct-bv05-kit 2>&1 | grep -E "Trying|Connected|curl:|subject:|issuer:"; echo curl_exit=$?'
+*   Trying [fe80::1]:18443...
+*   Trying 169.254.1.1:18443...
+*   subject: CN=host.docker.internal
+*   issuer: CN=BV-05 disposable ca
+curl_exit=0
+[exit 0]
+
+### 2026-09-28T17:21:00-0400
+$ tail -n 3 /private/tmp/bv05-run/receiver.jsonl
+{"event": "request", "method": "GET", "path": "/c2-kit-hdi-only", "sni": "host.docker.internal", "tls": "TLSv1.3", "client_cert_sha256": null, "host": "host.docker.internal:18443", "auth_scheme": null, "auth_sha256_16": null, "header_names": ["Accept", "Host", "User-Agent"], "at": "2026-09-28T21:20:43.177+00:00"}
+{"event": "listen", "port": 18443, "leaf": "valid", "client_ca": false, "at": "2026-09-28T21:20:44.302+00:00"}
+{"event": "request", "method": "GET", "path": "/direct-bv05-kit", "sni": "host.docker.internal", "tls": "TLSv1.3", "client_cert_sha256": null, "host": "host.docker.internal:18443", "auth_scheme": null, "auth_sha256_16": null, "header_names": ["Accept", "Host", "User-Agent"], "at": "2026-09-28T21:21:00.497+00:00"}
+[exit 0]
+
+### 2026-09-28T17:21:00-0400
+$ sbx policy log --json --limit 5
+{
+  "blocked_hosts": [
+    {
+      "host": "ports.ubuntu.com:80",
+      "vm_name": "bv05-clean",
+      "proxy_type": "forward",
+      "rule": "no applicable policies for op(action=net:connect:tcp, resource=net:domain:ports.ubuntu.com:80)",
+      "last_seen": "2026-09-28T17:20:59.927114-04:00",
+      "since": "2026-09-28T17:18:50.321822-04:00",
+      "count_since": 8,
+      "reason": "No matching allow rule (default deny)"
+    },
+    {
+      "host": "download.docker.com:443",
+      "vm_name": "bv05-clean",
+      "proxy_type": "forward",
+      "rule": "no applicable policies for op(action=net:connect:tcp, resource=net:domain:download.docker.com:443)",
+      "last_seen": "2026-09-28T17:20:59.920603-04:00",
+      "since": "2026-09-28T17:18:50.321863-04:00",
+      "count_since": 2,
+      "reason": "No matching allow rule (default deny)"
+    },
+    {
+      "host": "localhost:18443",
+      "vm_name": "bv05-clean",
+      "proxy_type": "transparent",
+      "rule": "no applicable policies for op(action=net:connect:tcp, resource=net:domain:localhost:18443)",
+      "last_seen": "2026-09-28T17:20:59.92042-04:00",
+      "since": "2026-09-28T17:20:59.92042-04:00",
+      "count_since": 1,
+      "reason": "No matching allow rule (default deny)"
+    },
+    {
+      "host": "ports.ubuntu.com:80",
+      "vm_name": "bv05-kit",
+      "proxy_type": "forward",
+      "rule": "no applicable policies for op(action=net:connect:tcp, resource=net:domain:ports.ubuntu.com:80)",
+      "last_seen": "2026-09-28T17:20:28.474681-04:00",
+      "since": "2026-09-28T17:19:01.19926-04:00",
+      "count_since": 8,
+      "reason": "No matching allow rule (default deny)"
+    },
+    {
+      "host": "download.docker.com:443",
+      "vm_name": "bv05-kit",
+      "proxy_type": "forward",
+      "rule": "no applicable policies for op(action=net:connect:tcp, resource=net:domain:download.docker.com:443)",
+      "last_seen": "2026-09-28T17:20:28.463728-04:00",
+      "since": "2026-09-28T17:19:01.199198-04:00",
+      "count_since": 2,
+      "reason": "No matching allow rule (default deny)"
+    },
+    {
+      "host": "localhost:18443",
+      "vm_name": "bv05-clean",
+      "proxy_type": "forward",
+      "rule": "no applicable policies for op(action=net:connect:tcp, resource=net:domain:localhost:18443)",
+      "last_seen": "2026-09-28T17:19:50.284636-04:00",
+      "since": "2026-09-28T17:19:50.284636-04:00",
+      "count_since": 1,
+      "reason": "No matching allow rule (default deny)"
+    }
+  ],
+  "allowed_hosts": [
+    {
+      "host": "localhost:18443",
+      "vm_name": "bv05-kit",
+      "proxy_type": "transparent",
+      "rule": "",
+      "last_seen": "2026-09-28T17:21:00.488323-04:00",
+      "since": "2026-09-28T17:21:00.488323-04:00",
+      "count_since": 1
+    },
+    {
+      "host": "localhost:18443",
+      "vm_name": "bv05-kit",
+      "proxy_type": "forward-bypass",
+      "rule": "",
+      "last_seen": "2026-09-28T17:20:43.173024-04:00",
+      "since": "2026-09-28T17:19:50.841049-04:00",
+      "count_since": 6
+    }
+  ]
+}
+[exit 0]
+
+### 2026-09-28T17:21:11-0400
+$ cd /Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.worktrees/exp-229-sbx-kit-trust-4 && PYTHONSAFEPATH=1 mise exec -- python experiments/03-sbx-kit-trust/fixture.py pki --root /private/tmp/bv05-pki --leaf renewed
+{
+  "at": "2026-09-28T21:21:12.492001+00:00",
+  "ca_issued": {
+    "ca": false,
+    "unrelated-ca": false,
+    "client-ca": false
+  },
+  "leaves": {
+    "renewed": "65:43:22:79:6C:12:C5:7A:C9:E9:76:89:62:FD:B7:2D:46:42:F0:12:14:8B:57:35:A9:8C:69:6C:DB:03:9B:64",
+    "client": "F2:9B:80:8E:A1:AA:C9:05:26:DC:1C:3F:59:F0:16:82:2B:37:8E:6B:57:A9:1F:1E:AE:D1:82:F5:62:67:53:75"
+  }
+}
+[exit 0]
+
+### 2026-09-28T17:21:12-0400
+$ /private/tmp/claude-501/-Users-tony-Code-github-com-tbhb-agent-orchestration-poc/349b16d0-2964-4b4f-8e5a-2d911ebe9dc8/scratchpad/bv05-run4/serve.sh renewed
+listening 127.0.0.1:18443 leaf=renewed
+[exit 0]
+
+### 2026-09-28T17:21:15-0400
+$ sbx exec bv05-kit sh -c 'curl -sS --max-time 20 https://host.docker.internal:18443/c4-renewed-before-restart; echo curl_exit=$?'
+{"method": "GET", "path": "/c4-renewed-before-restart", "sni": "host.docker.internal", "tls": "TLSv1.3", "client_cert_sha256": null, "host": "host.docker.internal:18443", "auth_scheme": null, "auth_sha256_16": null, "header_names": ["Accept", "Host", "User-Agent"]}
+curl_exit=0
+[exit 0]
+
+### 2026-09-28T17:21:16-0400
+$ sbx stop bv05-kit
+Sandbox 'bv05-kit' stopped; state preserved. Restart with: sbx run --name bv05-kit
+[exit 0]
+
+### 2026-09-28T17:21:22-0400
+$ sbx ls --json | grep -A3 bv05-kit
+      "name": "bv05-kit",
+      "id": "f773abdb-00cb-46df-9e6c-b882b5c07b37",
+      "agent": "shell",
+      "status": "stopped",
+[exit 0]
+
+### 2026-09-28T17:21:22-0400
+$ sbx exec bv05-kit sh -c 'uptime -s; ls -la /etc/ssl/certs | grep -E "bv05|f35af91d"; curl -sS --max-time 20 https://host.docker.internal:18443/c4-renewed-after-restart; echo curl_exit=$?; tail -4 /var/log/sbx-kit-startup.log'
+Sandbox bv05-kit started successfully
+2026-09-28 21:21:23
+lrwxrwxrwx 1 root root     44 Sep 28 21:18 bv05-ca.pem -> /usr/local/share/ca-certificates/bv05-ca.crt
+lrwxrwxrwx 1 root root     11 Sep 28 21:19 f35af91d.0 -> bv05-ca.pem
+{"method": "GET", "path": "/c4-renewed-after-restart", "sni": "host.docker.internal", "tls": "TLSv1.3", "client_cert_sha256": null, "host": "host.docker.internal:18443", "auth_scheme": null, "auth_sha256_16": null, "header_names": ["Accept", "Host", "User-Agent"]}
+curl_exit=0
+=== dispatcher run 2026-09-28T21:21:25Z ===
+> /etc/durable-startup.d/001-startup-shell/000-cmd.sh
+ok /etc/durable-startup.d/001-startup-shell/000-cmd.sh
+=== dispatcher complete ===
+[exit 0]
+
+### 2026-09-28T17:21:25-0400
+$ tail -n 3 /private/tmp/bv05-run/receiver.jsonl
+{"event": "listen", "port": 18443, "leaf": "renewed", "client_ca": false, "at": "2026-09-28T21:21:14.213+00:00"}
+{"event": "request", "method": "GET", "path": "/c4-renewed-before-restart", "sni": "host.docker.internal", "tls": "TLSv1.3", "client_cert_sha256": null, "host": "host.docker.internal:18443", "auth_scheme": null, "auth_sha256_16": null, "header_names": ["Accept", "Host", "User-Agent"], "at": "2026-09-28T21:21:16.672+00:00"}
+{"event": "request", "method": "GET", "path": "/c4-renewed-after-restart", "sni": "host.docker.internal", "tls": "TLSv1.3", "client_cert_sha256": null, "host": "host.docker.internal:18443", "auth_scheme": null, "auth_sha256_16": null, "header_names": ["Accept", "Host", "User-Agent"], "at": "2026-09-28T21:21:25.269+00:00"}
+[exit 0]
+
+### 2026-09-28T17:21:38-0400
+$ /private/tmp/claude-501/-Users-tony-Code-github-com-tbhb-agent-orchestration-poc/349b16d0-2964-4b4f-8e5a-2d911ebe9dc8/scratchpad/bv05-run4/serve.sh valid --client-ca
+listening 127.0.0.1:18443 leaf=valid
+[exit 0]
+
+### 2026-09-28T17:21:41-0400
+$ sbx cp /private/tmp/bv05-pki/client.crt bv05-kit:/tmp/bv05-client.crt && sbx cp /private/tmp/bv05-pki/client.key bv05-kit:/tmp/bv05-client.key && echo copied
+copied
+[exit 0]
+
+### 2026-09-28T17:21:42-0400
+$ sbx exec bv05-kit sh -c 'curl -sS --max-time 20 https://host.docker.internal:18443/c5-no-client-cert; echo curl_exit=$?; curl -sS --max-time 20 -H "Authorization: Bearer <fake-bearer-redacted>" https://host.docker.internal:18443/c5-guest-bearer-no-cert; echo curl_exit=$?; curl -sS --max-time 20 --cert /tmp/bv05-client.crt --key /tmp/bv05-client.key -H "Authorization: Bearer <fake-bearer-redacted>" https://host.docker.internal:18443/c5-guest-bearer-with-cert; echo curl_exit=$?; rm -f /tmp/bv05-client.key /tmp/bv05-client.crt'
+{"method": "GET", "path": "/c5-no-client-cert", "sni": "host.docker.internal", "tls": "TLSv1.3", "client_cert_sha256": null, "host": "host.docker.internal:18443", "auth_scheme": null, "auth_sha256_16": null, "header_names": ["Accept", "Host", "User-Agent"]}
+curl_exit=0
+{"method": "GET", "path": "/c5-guest-bearer-no-cert", "sni": "host.docker.internal", "tls": "TLSv1.3", "client_cert_sha256": null, "host": "host.docker.internal:18443", "auth_scheme": "Bearer", "auth_sha256_16": "9150fd2388d38a26", "header_names": ["Accept", "Authorization", "Host", "User-Agent"]}
+curl_exit=0
+curl: (43) unable to set private key file: '/tmp/bv05-client.key' type PEM
+curl_exit=43
+rm: cannot remove '/tmp/bv05-client.key': Operation not permitted
+rm: cannot remove '/tmp/bv05-client.crt': Operation not permitted
+[exit 1]
+
+### 2026-09-28T17:21:43-0400
+$ tail -n 4 /private/tmp/bv05-run/receiver.jsonl
+{"event": "listen", "port": 18443, "leaf": "valid", "client_ca": true, "at": "2026-09-28T21:21:39.928+00:00"}
+{"event": "request", "method": "GET", "path": "/c5-no-client-cert", "sni": "host.docker.internal", "tls": "TLSv1.3", "client_cert_sha256": null, "host": "host.docker.internal:18443", "auth_scheme": null, "auth_sha256_16": null, "header_names": ["Accept", "Host", "User-Agent"], "at": "2026-09-28T21:21:43.227+00:00"}
+{"event": "request", "method": "GET", "path": "/c5-guest-bearer-no-cert", "sni": "host.docker.internal", "tls": "TLSv1.3", "client_cert_sha256": null, "host": "host.docker.internal:18443", "auth_scheme": "Bearer", "auth_sha256_16": "9150fd2388d38a26", "header_names": ["Accept", "Authorization", "Host", "User-Agent"], "at": "2026-09-28T21:21:43.243+00:00"}
+{"event": "tls_error", "error": "[SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1082)", "at": "2026-09-28T21:21:43.255+00:00"}
+[exit 0]
+
+### 2026-09-28T17:21:43-0400
+$ sbx policy log bv05-kit --json --limit 3
+{
+  "blocked_hosts": [
+    {
+      "host": "ports.ubuntu.com:80",
+      "vm_name": "bv05-kit",
+      "proxy_type": "forward",
+      "rule": "no applicable policies for op(action=net:connect:tcp, resource=net:domain:ports.ubuntu.com:80)",
+      "last_seen": "2026-09-28T17:21:25.260595-04:00",
+      "since": "2026-09-28T17:19:01.19926-04:00",
+      "count_since": 12,
+      "reason": "No matching allow rule (default deny)"
+    },
+    {
+      "host": "download.docker.com:443",
+      "vm_name": "bv05-kit",
+      "proxy_type": "forward",
+      "rule": "no applicable policies for op(action=net:connect:tcp, resource=net:domain:download.docker.com:443)",
+      "last_seen": "2026-09-28T17:21:25.25582-04:00",
+      "since": "2026-09-28T17:19:01.199198-04:00",
+      "count_since": 3,
+      "reason": "No matching allow rule (default deny)"
+    }
+  ],
+  "allowed_hosts": [
+    {
+      "host": "localhost:18443",
+      "vm_name": "bv05-kit",
+      "proxy_type": "forward-bypass",
+      "rule": "",
+      "last_seen": "2026-09-28T17:21:43.25263-04:00",
+      "since": "2026-09-28T17:19:50.841049-04:00",
+      "count_since": 11
+    },
+    {
+      "host": "localhost:18443",
+      "vm_name": "bv05-kit",
+      "proxy_type": "transparent",
+      "rule": "",
+      "last_seen": "2026-09-28T17:21:00.488323-04:00",
+      "since": "2026-09-28T17:21:00.488323-04:00",
+      "count_since": 1
+    }
+  ]
+}
+[exit 0]
+
+### 2026-09-28T17:21:51-0400
+$ sbx exec -u root bv05-kit sh -c 'ls -la /tmp/bv05-client.*; curl -sS --max-time 20 --cert /tmp/bv05-client.crt --key /tmp/bv05-client.key -H "Authorization: Bearer <fake-bearer-redacted>" https://host.docker.internal:18443/c5-guest-bearer-with-cert; echo curl_exit=$?; rm -f /tmp/bv05-client.key /tmp/bv05-client.crt; ls /tmp/bv05-client.* 2>&1'
+-rw-r--r-- 1 501 root 623 Sep 28 21:21 /tmp/bv05-client.crt
+-rw------- 1 501 root 241 Sep 28 21:21 /tmp/bv05-client.key
+{"method": "GET", "path": "/c5-guest-bearer-with-cert", "sni": "host.docker.internal", "tls": "TLSv1.3", "client_cert_sha256": "f29b808ea1aac905", "host": "host.docker.internal:18443", "auth_scheme": "Bearer", "auth_sha256_16": "9150fd2388d38a26", "header_names": ["Accept", "Authorization", "Host", "User-Agent"]}
+curl_exit=0
+ls: cannot access '/tmp/bv05-client.*': No such file or directory
+[exit 2]
+
+### 2026-09-28T17:21:52-0400
+$ tail -n 1 /private/tmp/bv05-run/receiver.jsonl
+{"event": "request", "method": "GET", "path": "/c5-guest-bearer-with-cert", "sni": "host.docker.internal", "tls": "TLSv1.3", "client_cert_sha256": "f29b808ea1aac905", "host": "host.docker.internal:18443", "auth_scheme": "Bearer", "auth_sha256_16": "9150fd2388d38a26", "header_names": ["Accept", "Authorization", "Host", "User-Agent"], "at": "2026-09-28T21:21:52.096+00:00"}
+[exit 0]
+
+### 2026-09-28T17:22:05-0400
+$ /private/tmp/claude-501/-Users-tony-Code-github-com-tbhb-agent-orchestration-poc/349b16d0-2964-4b4f-8e5a-2d911ebe9dc8/scratchpad/bv05-run4/serve.sh valid
+listening 127.0.0.1:18443 leaf=valid
+[exit 0]
+
+### 2026-09-28T17:22:08-0400
+$ wc -l < /private/tmp/bv05-run/deliveries.jsonl; sha256sum < /private/tmp/bv05-run/deliveries.jsonl
+0
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  -
+[exit 0]
+
+### 2026-09-28T17:22:09-0400
+$ sbx exec bv05-kit sh -c 'curl -sS --max-time 20 -X POST --data bv05-positive-control-1 https://host.docker.internal:18443/deliver; echo curl_exit=$?'
+{"delivered": true}
+curl_exit=0
+[exit 0]
+
+### 2026-09-28T17:22:09-0400
+$ wc -l < /private/tmp/bv05-run/deliveries.jsonl; sha256sum < /private/tmp/bv05-run/deliveries.jsonl
+1
+70e03a5710365fd0f2af7b12691234b5213a352eb5039cb387589d204bc21d3c  -
+[exit 0]
+
+### 2026-09-28T17:22:09-0400
+$ sbx exec bv05-kit sh -c 'curl -sS -w " time_total=%{time_total}\n" https://host.docker.internal:18443/wait?hold=5\&id=sbx-hold-5; echo curl_exit=$?'
+{"permit": false, "id": "sbx-hold-5", "elapsed_s": 5.057}
+ time_total=5.077566
+curl_exit=0
+[exit 0]
+
+### 2026-09-28T17:22:15-0400
+$ wc -l < /private/tmp/bv05-run/deliveries.jsonl; sha256sum < /private/tmp/bv05-run/deliveries.jsonl
+1
+70e03a5710365fd0f2af7b12691234b5213a352eb5039cb387589d204bc21d3c  -
+[exit 0]
+
+### 2026-09-28T17:22:15-0400
+$ sbx exec bv05-kit sh -c 'curl -sS -w " time_total=%{time_total}\n" https://host.docker.internal:18443/wait?hold=60\&id=sbx-hold-60; echo curl_exit=$?'
+{"permit": false, "id": "sbx-hold-60", "elapsed_s": 60.24}
+ time_total=60.259497
+curl_exit=0
+[exit 0]
+
+### 2026-09-28T17:23:16-0400
+$ wc -l < /private/tmp/bv05-run/deliveries.jsonl; sha256sum < /private/tmp/bv05-run/deliveries.jsonl
+1
+70e03a5710365fd0f2af7b12691234b5213a352eb5039cb387589d204bc21d3c  -
+[exit 0]
+
+### 2026-09-28T17:23:16-0400
+$ sbx exec bv05-kit sh -c 'curl -sS --max-time 2 -w " time_total=%{time_total}\n" https://host.docker.internal:18443/wait?hold=10\&id=sbx-client-timeout; echo curl_exit=$?'
+curl: (28) Operation timed out after 2003 milliseconds with 0 bytes received
+ time_total=2.003068
+curl_exit=28
+[exit 0]
+
+### 2026-09-28T17:23:20-0400
+$ wc -l < /private/tmp/bv05-run/deliveries.jsonl; sha256sum < /private/tmp/bv05-run/deliveries.jsonl
+1
+70e03a5710365fd0f2af7b12691234b5213a352eb5039cb387589d204bc21d3c  -
+[exit 0]
+
+### 2026-09-28T17:23:20-0400
+$ sbx exec bv05-kit sh -c 'curl -sS -w " time_total=%{time_total}\n" https://host.docker.internal:18443/wait?hold=3\&id=sbx-reconnect; echo curl_exit=$?'
+{"permit": false, "id": "sbx-reconnect", "elapsed_s": 3.043}
+ time_total=3.076660
+curl_exit=0
+[exit 0]
+
+### 2026-09-28T17:23:24-0400
+$ wc -l < /private/tmp/bv05-run/deliveries.jsonl; sha256sum < /private/tmp/bv05-run/deliveries.jsonl
+1
+70e03a5710365fd0f2af7b12691234b5213a352eb5039cb387589d204bc21d3c  -
+[exit 0]
+
+### 2026-09-28T17:23:24-0400
+$ grep -E 'wait_|delivery' /private/tmp/bv05-run/receiver.jsonl
+{"event": "delivery", "method": "POST", "path": "/deliver", "sni": "host.docker.internal", "tls": "TLSv1.3", "client_cert_sha256": null, "host": "host.docker.internal:18443", "auth_scheme": null, "auth_sha256_16": null, "header_names": ["Accept", "Content-Length", "Content-Type", "Host", "User-Agent"], "at": "2026-09-28T21:22:09.720+00:00"}
+{"event": "wait_start", "id": "sbx-hold-5", "hold": 5.0, "method": "GET", "path": "/wait?hold=5&id=sbx-hold-5", "sni": "host.docker.internal", "tls": "TLSv1.3", "client_cert_sha256": null, "host": "host.docker.internal:18443", "auth_scheme": null, "auth_sha256_16": null, "header_names": ["Accept", "Host", "User-Agent"], "at": "2026-09-28T21:22:10.437+00:00"}
+{"event": "wait_end", "id": "sbx-hold-5", "reason": "hold_elapsed", "elapsed_s": 5.057, "at": "2026-09-28T21:22:15.494+00:00"}
+{"event": "wait_start", "id": "sbx-hold-60", "hold": 60.0, "method": "GET", "path": "/wait?hold=60&id=sbx-hold-60", "sni": "host.docker.internal", "tls": "TLSv1.3", "client_cert_sha256": null, "host": "host.docker.internal:18443", "auth_scheme": null, "auth_sha256_16": null, "header_names": ["Accept", "Host", "User-Agent"], "at": "2026-09-28T21:22:16.283+00:00"}
+{"event": "wait_end", "id": "sbx-hold-60", "reason": "hold_elapsed", "elapsed_s": 60.24, "at": "2026-09-28T21:23:16.523+00:00"}
+{"event": "wait_start", "id": "sbx-client-timeout", "hold": 10.0, "method": "GET", "path": "/wait?hold=10&id=sbx-client-timeout", "sni": "host.docker.internal", "tls": "TLSv1.3", "client_cert_sha256": null, "host": "host.docker.internal:18443", "auth_scheme": null, "auth_sha256_16": null, "header_names": ["Accept", "Host", "User-Agent"], "at": "2026-09-28T21:23:17.520+00:00"}
+{"event": "wait_end", "id": "sbx-client-timeout", "reason": "peer_closed", "elapsed_s": 1.957, "at": "2026-09-28T21:23:19.477+00:00"}
+{"event": "wait_start", "id": "sbx-reconnect", "hold": 3.0, "method": "GET", "path": "/wait?hold=3&id=sbx-reconnect", "sni": "host.docker.internal", "tls": "TLSv1.3", "client_cert_sha256": null, "host": "host.docker.internal:18443", "auth_scheme": null, "auth_sha256_16": null, "header_names": ["Accept", "Host", "User-Agent"], "at": "2026-09-28T21:23:21.187+00:00"}
+{"event": "wait_end", "id": "sbx-reconnect", "reason": "hold_elapsed", "elapsed_s": 3.043, "at": "2026-09-28T21:23:24.230+00:00"}
+[exit 0]
+
+### 2026-09-28T17:23:35-0400
+$ sbx exec bv05-kit sh -c 'curl -sS -w " time_total=%{time_total}\n" https://host.docker.internal:18443/wait?hold=300\&id=sbx-hold-300; echo curl_exit=$?'
+{"permit": false, "id": "sbx-hold-300", "elapsed_s": 300.238}
+ time_total=300.261863
+curl_exit=0
+[exit 0]
+
+### 2026-09-28T17:28:36-0400
+$ wc -l < /private/tmp/bv05-run/deliveries.jsonl; sha256sum < /private/tmp/bv05-run/deliveries.jsonl
+1
+70e03a5710365fd0f2af7b12691234b5213a352eb5039cb387589d204bc21d3c  -
+[exit 0]
+
+### 2026-09-28T17:28:36-0400
+$ grep sbx-hold-300 /private/tmp/bv05-run/receiver.jsonl | grep wait_end
+{"event": "wait_end", "id": "sbx-hold-300", "reason": "hold_elapsed", "elapsed_s": 300.238, "at": "2026-09-28T21:28:36.048+00:00"}
+[exit 0]
+
+### 2026-09-28T17:28:47-0400
+$ sbx policy ls bv05-kit --wide
+SOURCE   CREATED VIA   APPLIES TO         POLICY   POLICY_ID                              RULE           RULE_ID                                TYPE               METHOD   PATH   DECISION   PROTOCOLS   RESOURCES
+local    default       all                -        local-policy                           -              default-fs-read-allow-all              filesystem:read    -        -      allow      -           **
+
+local    default       all                -        local-policy                           -              default-fs-write-allow-all             filesystem:write   -        -      allow      -           **
+
+kit      provisioned   sandbox:bv05-kit   -        7c8104fa-cd6e-4001-84da-ee60213c0cb3   kit:bv05-kit   adde556b-7984-4b9c-ae6a-95cc125118b8   network            -        -      allow      tcp         host.docker.internal:18443
+                                                                                                                                                                   -        -                             localhost:18443
+[exit 0]
+
+### 2026-09-28T17:28:48-0400
+$ sbx policy ls --wide
+SOURCE   CREATED VIA   APPLIES TO         POLICY   POLICY_ID                              RULE           RULE_ID                                TYPE               METHOD   PATH   DECISION   PROTOCOLS   RESOURCES
+local    default       all                -        local-policy                           -              default-fs-read-allow-all              filesystem:read    -        -      allow      -           **
+
+local    default       all                -        local-policy                           -              default-fs-write-allow-all             filesystem:write   -        -      allow      -           **
+
+kit      provisioned   sandbox:bv05-kit   -        7c8104fa-cd6e-4001-84da-ee60213c0cb3   kit:bv05-kit   adde556b-7984-4b9c-ae6a-95cc125118b8   network            -        -      allow      tcp         host.docker.internal:18443
+                                                                                                                                                                   -        -                             localhost:18443
+[exit 0]
+
+### 2026-09-28T17:28:48-0400
+$ sbx ls --json
+{
+  "sandboxes": [
+    {
+      "name": "bv05-clean",
+      "id": "8d71842e-c10b-43f3-b69e-4261fc6b76be",
+      "agent": "shell",
+      "status": "stopped",
+      "last_used_at": "2026-09-28T21:20:59.930877Z",
+      "created_at": "2026-09-28T21:18:47Z"
+    },
+    {
+      "name": "bv05-kit",
+      "id": "f773abdb-00cb-46df-9e6c-b882b5c07b37",
+      "agent": "shell",
+      "status": "running",
+      "last_used_at": "2026-09-28T21:28:36.088916Z",
+      "created_at": "2026-09-28T21:18:58Z"
+    }
+  ]
+}
+[exit 0]
+
+### 2026-09-28T17:28:56-0400
+$ sbx policy ls
+POLICY                                 SOURCE   APPLIES TO         SUMMARY
+7c8104fa-cd6e-4001-84da-ee60213c0cb3   kit      sandbox:bv05-kit   network: 2 allow
+local-policy                           local    all                filesystem read: 1 allow; filesystem write: 1 allow
+[exit 0]
+
+### 2026-09-28T17:28:57-0400
+$ sbx policy ls --json
+{
+  "rules": [
+    {
+      "id": "default-fs-read-allow-all",
+      "name": "default-fs-read-allow-all",
+      "policy_id": "local-policy",
+      "scope": "global",
+      "applies_to": "all",
+      "resource_type": "filesystem:read",
+      "decision": "allow",
+      "resources": [
+        "**"
+      ],
+      "origin": "local",
+      "layer": "local",
+      "status": "active",
+      "editable": false,
+      "provenance": {
+        "created_via": "default"
+      },
+      "actions": [
+        "fs:mount:read"
+      ]
+    },
+    {
+      "id": "default-fs-write-allow-all",
+      "name": "default-fs-write-allow-all",
+      "policy_id": "local-policy",
+      "scope": "global",
+      "applies_to": "all",
+      "resource_type": "filesystem:write",
+      "decision": "allow",
+      "resources": [
+        "**"
+      ],
+      "origin": "local",
+      "layer": "local",
+      "status": "active",
+      "editable": false,
+      "provenance": {
+        "created_via": "default"
+      },
+      "actions": [
+        "fs:mount:read",
+        "fs:mount:write"
+      ]
+    },
+    {
+      "id": "adde556b-7984-4b9c-ae6a-95cc125118b8",
+      "name": "kit:bv05-kit",
+      "policy_id": "7c8104fa-cd6e-4001-84da-ee60213c0cb3",
+      "scope": "sandbox:bv05-kit",
+      "applies_to": "sandbox:bv05-kit",
+      "resource_type": "network",
+      "decision": "allow",
+      "resources": [
+        "localhost:18443",
+        "host.docker.internal:18443"
+      ],
+      "origin": "scoped",
+      "layer": "local",
+      "status": "active",
+      "editable": false,
+      "sandbox_id": "bv05-kit",
+      "provenance": {
+        "created_via": "provisioned",
+        "source": "sandboxes"
+      },
+      "actions": [
+        "net:connect:tcp"
+      ]
+    }
+  ]
+}
+[exit 0]
+
+### 2026-09-28T17:28:58-0400
+$ sbx policy check network --sandbox bv05-clean example.com:443
+Denied: example.com:443
+Governance: Local policy only
+Context: sandbox:bv05-clean
+Reason: no matching allow rule (default deny)
+[exit 1]
+
+### 2026-09-28T17:29:06-0400
+$ ps -axo pid,lstart,command | grep -E 'sbx daemon' | grep -v grep
+61775 Mon Sep 28 17:09:55 2026     /opt/homebrew/bin/sbx daemon start
+[exit 0]
+
+### 2026-09-28T17:29:06-0400
+$ sbx policy check network --verbose example.com:443
+Denied: example.com:443
+Governance: Local policy only
+Context: global
+Reason: no matching allow rule (default deny)
+Action: net:connect:tcp
+Resource: net:domain example.com:443
+Deny kind: implicit
+[exit 1]
+
+### 2026-09-28T17:29:14-0400
+$ pkill -f 'fixture.py serve'; sleep 1; lsof -nP -iTCP:18443 -sTCP:LISTEN; pgrep -fl 'fixture.py serve'; true
+
+[exit 0]
+
+### 2026-09-28T17:29:16-0400
+$ sbx rm bv05-clean bv05-kit < /dev/null
+error: stdin is not a terminal; use --force to skip confirmation
+[exit 1]
+
+### 2026-09-28T17:29:16-0400
+$ sbx ls --json
+{
+  "sandboxes": [
+    {
+      "name": "bv05-clean",
+      "id": "8d71842e-c10b-43f3-b69e-4261fc6b76be",
+      "agent": "shell",
+      "status": "stopped",
+      "last_used_at": "2026-09-28T21:20:59.930877Z",
+      "created_at": "2026-09-28T21:18:47Z"
+    },
+    {
+      "name": "bv05-kit",
+      "id": "f773abdb-00cb-46df-9e6c-b882b5c07b37",
+      "agent": "shell",
+      "status": "stopped",
+      "last_used_at": "2026-09-28T21:28:36.088916Z",
+      "created_at": "2026-09-28T21:18:58Z"
+    }
+  ]
+}
+[exit 0]
+
+### 2026-09-28T17:29:23-0400
+$ sbx rm --force bv05-clean bv05-kit
+Deleting sandbox bv05-clean...
+Sandbox 'bv05-clean' removed
+Deleting sandbox bv05-kit...
+Sandbox 'bv05-kit' removed
+[exit 0]
+
+### 2026-09-28T17:29:24-0400
+$ sbx ls --json
+{
+  "sandboxes": []
+}
+[exit 0]
+
+### 2026-09-28T17:29:30-0400
+$ sbx version
+sbx version: v0.45.1 9d79d90ee4c5d297fb3d36b75384e8cea7a4fbcb
+[exit 0]
+
+### 2026-09-28T17:29:30-0400
+$ sbx daemon status
+Status: running
+Socket: /Users/tony/Library/Application Support/com.docker.sandboxes/sandboxes/sandboxd/sandboxd.sock
+Logs: /Users/tony/Library/Application Support/com.docker.sandboxes/sandboxes/sandboxd/daemon.log
+[exit 0]
+
+### 2026-09-28T17:29:31-0400
+$ sbx ls --json
+{
+  "sandboxes": []
+}
+[exit 0]
+
+### 2026-09-28T17:29:32-0400
+$ sbx policy ls
+POLICY             SOURCE   APPLIES TO   SUMMARY
+default-deny-all   local    all          network: 1 deny
+local-policy       local    all          filesystem read: 1 allow; filesystem write: 1 allow
+[exit 0]
+
+### 2026-09-28T17:29:32-0400
+$ sbx policy ls --wide
+SOURCE   CREATED VIA   APPLIES TO   POLICY             POLICY_ID      RULE   RULE_ID                      TYPE               METHOD   PATH   DECISION   PROTOCOLS   RESOURCES
+local    default       all          -                  local-policy   -      default-fs-read-allow-all    filesystem:read    -        -      allow      -           **
+
+local    default       all          -                  local-policy   -      default-fs-write-allow-all   filesystem:write   -        -      allow      -           **
+
+local    -             all          default-deny-all   -              -      default-deny-all             network            -        -      deny       tcp,udp     **
+[exit 0]
+
+### 2026-09-28T17:29:33-0400
+$ sbx settings list --json | sha256sum
+0477633d77404d7c39490df322dc92a5aa0f84181b2eec02debd4b3d2a9af0f4  -
+[exit 0]
+
+### 2026-09-28T17:29:33-0400
+$ sbx settings get --json kit.allowLocalKits
+{
+  "default": true,
+  "description": "Allow installing kits from local directories or ZIP files. Set to false to require a remote source.",
+  "env_var": "DOCKER_SANDBOXES_KIT_ALLOW_LOCAL",
+  "key": "kit.allowLocalKits",
+  "source": "default",
+  "type": "bool",
+  "value": true
+}
+[exit 0]
+
+### 2026-09-28T17:29:34-0400
+$ ps -axo pid,lstart,command | grep -E 'sbx daemon' | grep -v grep
+61775 Mon Sep 28 17:09:55 2026     /opt/homebrew/bin/sbx daemon start
+[exit 0]
