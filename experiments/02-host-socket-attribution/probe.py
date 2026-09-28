@@ -14,8 +14,7 @@ from pathlib import Path
 from agent_orchestration_poc.core.host_socket_attribution import (
     Peer,
     Process,
-    membership,
-    peer_stable,
+    request_record,
 )
 
 
@@ -106,31 +105,23 @@ def serve(socket_path: Path, root_pid: int, count: int) -> None:
     with socket.socket(socket.AF_UNIX) as listener:
         listener.bind(str(socket_path))
         listener.listen(count)
-        for _ in range(count):
+        for connection_id in range(1, count + 1):
             conn, _ = listener.accept()
             accepted_us = time.time_ns() // 1_000
             with conn:
                 initial = peer_info(conn, accepted_us)
                 request = conn.recv(512).decode()
                 peer = peer_info(conn, time.time_ns() // 1_000)
-                observed = ancestry(peer.pid)
-                decision = (
-                    membership(peer, root, observed)
-                    if peer_stable(initial, peer)
-                    else "changed-peer"
+                record = request_record(
+                    f"{os.getpid()}:{connection_id}",
+                    request,
+                    (initial, peer),
+                    root,
+                    ancestry(peer.pid),
                 )
-                conn.sendall(decision.encode())
+                conn.sendall(str(record["decision"]).encode())
                 print(
-                    json.dumps(
-                        {
-                            "initial": asdict(initial),
-                            "peer": asdict(peer),
-                            "root": asdict(root),
-                            "observed": [asdict(p) for p in observed.values()],
-                            "claim": request,
-                            "decision": decision,
-                        }
-                    ),
+                    json.dumps({**record, "claim": request}),
                     flush=True,
                 )
     socket_path.unlink()
