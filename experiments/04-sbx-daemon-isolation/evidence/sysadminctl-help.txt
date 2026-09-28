@@ -1,0 +1,21 @@
+2026-09-28 11:34:47.702 sysadminctl[90575:1512070406] Usage: sysadminctl
+	-deleteUser <user name> [-secure || -keepHome] (interactive || -adminUser <administrator user name> -adminPassword <administrator password>)
+	-newPassword <new password> -oldPassword <old password> [-passwordHint <password hint>]
+	-resetPasswordFor <local user name> -newPassword <new password> [-passwordHint <password hint>] (interactive] || -adminUser <administrator user name> -adminPassword <administrator password>)
+	-addUser <user name> [-fullName <full name>] [-UID <user ID>] [-GID <group ID>] [-shell <path to shell>] [-password <user password>] [-hint <user hint>] [-home <full path to home>] [-admin] [-roleAccount] [-picture <full path to user image>] (interactive] || -adminUser <administrator user name> -adminPassword <administrator password>)
+	-secureTokenStatus <user name>
+	-secureTokenOn <user name> -password <password> (interactive || -adminUser <administrator user name> -adminPassword <administrator password>)
+	-secureTokenOff <user name> -password <password> (interactive || -adminUser <administrator user name> -adminPassword <administrator password>)
+	-autologin set -userName <user name> [-password <user password>] || off || status (interactive || -adminUser <administrator user name> -adminPassword <administrator password>)
+	-guestAccount <on || off || status>
+	-afpGuestAccess <on || off || status>
+	-smbGuestAccess <on || off || status>
+	-automaticTime <on || off || status>
+	-use12HourClockForLoginWindow <on || off || status>
+	-filesystem status
+	-screenLock <status || immediate || off || seconds> -password <password>
+
+Pass '-' instead of password in commands above to request prompt.
+'-adminPassword' used mostly for scripted operation. Use '-' or 'interactive' to get the authentication string interactively. This preferred for security reasons
+
+	*Role accounts require name starting with _ and UID in 450-499 range.
