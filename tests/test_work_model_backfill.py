@@ -783,6 +783,36 @@ def test_existing_d2_draft_requires_corrected_body() -> None:
     )
 
 
+def test_existing_draft_body_is_preserved_after_classification() -> None:
+    """An existing draft's reviewed body survives CP13 byte-for-byte."""
+    approved, cp1 = approved_cp1_and_tables()
+    title = "tooling(workers): report worker completion without process exit"
+    row = next(row for row in approved.assignments if row["title"] == title)
+    draft = next(item for item in cp1.items if item.title == title)
+    body = (
+        f"- Class: {row['issue type'].lower()}\n"
+        f"- Priority: {row['priority']}\n"
+        f"- Work type: {row['work type']}\n"
+        f"- Severity: {row['severity'] or 'none'}\n"
+        f"- Size: {row['size']}\n\n"
+        "## Context\n\nKeep the worker session available.\n"
+    )
+    cp1 = replace(
+        cp1,
+        items=tuple(
+            replace(item, body=body) if item == draft else item for item in cp1.items
+        ),
+    )
+    validate_cp1(approved, cp1)
+    inputs = approved_creation_inputs(approved, cp1)
+    target = expected_cp13(approved, cp1, inputs)
+    assert next(item for item in target if item.key == draft.key).body == body
+    unchanged = tuple(
+        replace(item, body=body) if item.key == draft.key else item for item in target
+    )
+    assert compare_cp13(target, final_snapshot(unchanged), "after") == ()
+
+
 def test_revoked_closed_title_needs_valid_replacement() -> None:
     """Reclosing after revocation cannot bless the old invalid title."""
     inputs = replace(creation_inputs(), revoked=frozenset({"2"}))

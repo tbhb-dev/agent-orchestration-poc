@@ -1180,7 +1180,9 @@ def _assignment_target(
         else "",
         blockers=tuple(sorted(context.links[key])) if not draft else (),
         body=(
-            _draft_body(row, context.bodies.get(key, item.body))
+            context.bodies[key]
+            if row["backfill mode"] == "existing draft"
+            else _draft_body(row, context.bodies.get(key, item.body))
             if draft
             else _incident_body(row)
             if row["backfill mode"] == "issue"
