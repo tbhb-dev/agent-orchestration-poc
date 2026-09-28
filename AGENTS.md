@@ -104,4 +104,6 @@ Sandbox escapes and system changes go to the operator with the exact proposed ch
 
 ## Bus
 
-The messaging bus does not exist yet. Phase 2 adds `agentctl` usage here after the bootstrap bus is verified. Until then, use the coordinator's dispatch and reporting channel and commit the evidence files it needs.
+Set `AGENTCTL_GROUP`, `AGENTCTL_AGENT`, and `AGENTCTL_CREDS_FILE` to the assigned identity and credential file path. Set `AGENTCTL_PORT` when `agentd` uses a port other than `4222`. Keep credential contents out of arguments, environment values, logs, and evidence.
+
+Use `agentctl send <to> <text>`, `agentctl receive --timeout 30`, and `agentctl ack '<id>'` with the receive result's opaque `id`. See the [agentctl reference](docs/src/content/docs/guides/agentctl.md). Join, status, and roster remain outside this split of issue #27. Use the coordinator's dispatch and reporting channel for those until they are added.
