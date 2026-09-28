@@ -191,6 +191,71 @@ def test_lint_accepts_aggregate_csv_artifact(tmp_path: Path) -> None:
 
 
 @pytest.mark.integration
+@pytest.mark.parametrize("command", ["render", "verify", "ci"])
+@pytest.mark.parametrize("artifact", ["result.csv", "chart.svg"])
+@pytest.mark.parametrize("existing", [False, True])
+def test_render_rejects_generated_private_artifact(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    command: str,
+    artifact: str,
+    existing: bool,
+) -> None:
+    """Reject new and overwritten sidecars before a task reports success."""
+    from agent_orchestration_poc.shell.analysis import (  # noqa: PLC0415
+        notebooks as shell_notebooks,
+    )
+
+    notebook = tmp_path / "analysis.qmd"
+    notebook.write_text("---\ntitle: Example\n---\n")
+    sidecar = tmp_path / artifact
+    if existing:
+        sidecar.write_text("group,total\nA,21\n")
+    unsafe_content = (
+        "id,prompt\nrecord-1,invented private record\n"
+        if sidecar.suffix == ".csv"
+        else f"<svg><text>{'gh' + 'p_' + 'A' * 36}</text></svg>"
+    )
+    finding = "private raw record" if sidecar.suffix == ".csv" else "GitHub token"
+
+    def fake_run(*args: str, env: dict[str, str] | None = None) -> None:
+        if args[0] == "quarto":
+            sidecar.write_text(unsafe_content)
+            output = tmp_path / ".local-cache/notebooks/analysis.html"
+            output.parent.mkdir(parents=True, exist_ok=True)
+            output.write_text("<html>Aggregate result</html>")
+
+    monkeypatch.setattr(shell_notebooks, "run", fake_run)
+    monkeypatch.setattr(shell_notebooks, "notebooks", lambda: [notebook])
+    monkeypatch.setattr(sys, "argv", ["notebooks", command, str(notebook)])
+    with pytest.raises(ValueError, match=finding):
+        shell_notebooks.main()
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("command", ["render", "verify"])
+def test_private_notebook_rejects_generated_artifact(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, command: str
+) -> None:
+    """Scan sidecars even when private notebook HTML stays local."""
+    from agent_orchestration_poc.shell.analysis import (  # noqa: PLC0415
+        notebooks as shell_notebooks,
+    )
+
+    notebook = tmp_path / "analysis.qmd"
+    notebook.write_text("---\nprivate-input: true\n---\n")
+
+    def fake_run(*args: str, env: dict[str, str] | None = None) -> None:
+        if args[0] == "quarto":
+            (tmp_path / "result.csv").write_text("id,prompt\nrecord-1,invented\n")
+
+    monkeypatch.setattr(shell_notebooks, "run", fake_run)
+    monkeypatch.setattr(sys, "argv", ["notebooks", command, str(notebook)])
+    with pytest.raises(ValueError, match="private raw record"):
+        shell_notebooks.main()
+
+
+@pytest.mark.integration
 def test_prose_lint_fixtures() -> None:
     """The pinned prose tools accept one fixture and reject a wrapped paragraph."""
     # mutmut copies only core source, so shell imports belong in integration tests.

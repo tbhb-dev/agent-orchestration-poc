@@ -38,12 +38,19 @@ def notebooks() -> list[Path]:
     return [Path(name) for name in result.stdout.splitlines()]
 
 
+def scan_artifacts(path: Path) -> list[str]:
+    """Check adjacent committable tables and charts for private content."""
+    findings = []
+    for artifact in (*path.parent.glob("*.csv"), *path.parent.glob("*.svg")):
+        findings.extend(privacy_findings(artifact.read_text()))
+    return findings
+
+
 def lint(path: Path) -> None:
     """Lint prose, Python cells, and privacy of one notebook."""
     source = path.read_text()
     findings = privacy_findings(source)
-    for artifact in (*path.parent.glob("*.csv"), *path.parent.glob("*.svg")):
-        findings.extend(privacy_findings(artifact.read_text()))
+    findings.extend(scan_artifacts(path))
     if findings:
         raise ValueError(f"{path}: {', '.join(findings)}")
     prose, code = split_qmd(source)
@@ -91,6 +98,9 @@ def render(path: Path) -> None:
         ".local-cache/notebooks",
         env=environment,
     )
+    findings = scan_artifacts(path)
+    if findings:
+        raise ValueError(f"{path}: {', '.join(findings)}")
     if not is_private_notebook(path.read_text()):
         output = path.parent / ".local-cache/notebooks" / f"{path.stem}.html"
         findings = privacy_findings(output.read_text())
