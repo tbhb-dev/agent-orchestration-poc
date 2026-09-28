@@ -505,6 +505,10 @@ def _execute(
         payload = (
             {"query": cast("dict[str, Any]", action.payload)["query"]}
             if action.kind in {"project_fields", "draft_body"}
+            else {
+                "sub_issue_id": cast("dict[str, Any]", action.payload)["sub_issue_id"]
+            }
+            if action.kind == "parent" and action.method == "DELETE"
             else None
             if action.method == "DELETE"
             else action.payload

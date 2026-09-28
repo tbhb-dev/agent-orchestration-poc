@@ -729,8 +729,69 @@ def test_rollback_comment_delete_recovers_lost_response(tmp_path: Path) -> None:
         rows = [json.loads(line) for line in path.read_text().splitlines()]
         records = list(validate_rollback_journal(rows, "cp1", (inverse,)))
         _execute(api, path, inverse, records)
-    assert len(deletes) == 1
+    assert deletes == ["/repos/tbhb-dev/agent-orchestration-poc/issues/comments/10"]
     assert [row.phase for row in records] == ["intent", "verified"]
+
+
+@pytest.mark.integration
+def test_rollback_parent_removal_sends_required_body(tmp_path: Path) -> None:
+    """The inverse parent write uses GitHub's singular endpoint and body."""
+    from agent_orchestration_poc.core.work_model_backfill_executor import (  # noqa: PLC0415
+        Action,
+        ProjectMetadata,
+    )
+    from agent_orchestration_poc.core.work_model_backfill_rollback import (  # noqa: PLC0415
+        inverse_action,
+    )
+    from agent_orchestration_poc.shell.work_model_backfill import (  # noqa: PLC0415
+        Api,
+        _execute,
+    )
+
+    children = [{"number": 2}]
+    writes: list[tuple[str, object]] = []
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self) -> None:
+            send_json(self, 200, children)
+
+        def do_DELETE(self) -> None:
+            writes.append(
+                (
+                    self.path,
+                    json.loads(self.rfile.read(int(self.headers["Content-Length"]))),
+                )
+            )
+            children.clear()
+            send_json(self, 200, {})
+
+        @override
+        def log_message(self, format: str, *args: object) -> None:
+            pass
+
+    assert callable(Handler.do_DELETE)
+    forward = Action(
+        "10:parent:2",
+        "10",
+        "parent",
+        1,
+        "POST",
+        "issues/1/sub_issues",
+        {"sub_issue_id": 22, "child": "#2"},
+        "",
+        "#1",
+    )
+    inverse = inverse_action(forward, {}, ProjectMetadata({}, [], []))
+    path = tmp_path / "rollback.jsonl"
+    path.write_text(json.dumps({"version": 1, "run_id": "cp1"}) + "\n")
+    with live_server(Handler) as base:
+        _execute(Api(base, ""), path, inverse, [])
+    assert writes == [
+        (
+            "/repos/tbhb-dev/agent-orchestration-poc/issues/1/sub_issue",
+            {"sub_issue_id": 22},
+        )
+    ]
 
 
 @pytest.mark.integration

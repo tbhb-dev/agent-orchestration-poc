@@ -103,7 +103,7 @@ def _inverse_issue(
         return replace(
             result,
             method="DELETE",
-            path=f"issues/{action.number}/comments/{identity}",
+            path=f"issues/comments/{identity}",
             payload={"body": value["body"]},
         )
     if action.kind == "pr_state":
@@ -188,7 +188,7 @@ def _inverse_relation(action: Action, result: Action, value: dict[str, Any]) -> 
         return replace(
             result,
             method="DELETE",
-            path=f"issues/{action.number}/sub_issues/{value['sub_issue_id']}",
+            path=f"issues/{action.number}/sub_issue",
             payload=value,
         )
     raise ValueError(f"unsupported rollback action: {action.kind}")

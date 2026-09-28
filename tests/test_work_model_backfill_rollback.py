@@ -3,7 +3,7 @@
 import json
 from dataclasses import asdict, replace
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from hypothesis import given
@@ -14,6 +14,7 @@ from agent_orchestration_poc.core.work_model_backfill_executor import (
     Action,
     ProjectMetadata,
     Record,
+    _tuplify,
 )
 from agent_orchestration_poc.core.work_model_backfill_rollback import (
     inverse_action,
@@ -47,225 +48,35 @@ def fixture_snapshot() -> Snapshot:
 
 
 @pytest.mark.parametrize(
-    ("action", "detail", "method", "path", "after"),
-    [
+    "case",
+    json.loads(
         (
-            Action(
-                "comment",
-                "0",
-                "comment",
-                1,
-                "POST",
-                "issues/1/comments",
-                {"body": "saved"},
-                0,
-                1,
-            ),
-            {"comment_id": 42},
-            "DELETE",
-            "issues/1/comments/42",
-            0,
-        ),
-        (
-            Action(
-                "state",
-                "0",
-                "issue_state",
-                1,
-                "PATCH",
-                "issues/1",
-                {"state": "closed"},
-                ("open", ""),
-                ("closed", "not_planned"),
-            ),
-            {},
-            "PATCH",
-            "issues/1",
-            ("open", ""),
-        ),
-        (
-            Action(
-                "type",
-                "6:native",
-                "issue_type",
-                1,
-                "PATCH",
-                "issues/1",
-                {"type": "Chore"},
-                "",
-                "Chore",
-            ),
-            {},
-            "PATCH",
-            "issues/1",
-            "",
-        ),
-        (
-            Action(
-                "native",
-                "6:native",
-                "native",
-                1,
-                "POST",
-                "issues/1/issue-field-values",
-                {"fields": {"Work type": "Planned"}},
-                (("Work type", ""),),
-                (("Work type", "Planned"),),
-            ),
-            {},
-            "PUT",
-            "issues/1/issue-field-values",
-            (("Work type", ""),),
-        ),
-        (
-            Action(
-                "item",
-                "6",
-                "project_item",
-                1,
-                "POST",
-                "orgs/tbhb-dev/projectsV2/1/items",
-                {"id": 1},
-                (0, "1"),
-                (1, "1"),
-            ),
-            {"item_id": "13"},
-            "DELETE",
-            "orgs/tbhb-dev/projectsV2/1/items/13",
-            (0, "1"),
-        ),
-        (
-            Action(
-                "label",
-                "15",
-                "label_delete",
-                1,
-                "DELETE",
-                "issues/1/labels/type%2Fold",
-                None,
-                ("type/old",),
-                (),
-            ),
-            {},
-            "POST",
-            "issues/1/labels",
-            ("type/old",),
-        ),
-        (
-            Action(
-                "parent",
-                "10",
-                "parent",
-                1,
-                "POST",
-                "issues/1/sub_issues",
-                {"sub_issue_id": 2, "child": "#2"},
-                "",
-                "#1",
-            ),
-            {},
-            "DELETE",
-            "issues/1/sub_issues/2",
-            "",
-        ),
-        (
-            Action(
-                "created",
-                "9:create",
-                "issue_create",
-                0,
-                "POST",
-                "issues",
-                {"title": "P", "body": "B", "type": "Epic"},
-                0,
-                1,
-            ),
-            {"created_item": {"key": "#29"}},
-            "PATCH",
-            "issues/29",
-            ("closed", "not_planned"),
-        ),
-    ],
+            Path(__file__).parent
+            / "fixtures/work_model_backfill/runner/rollback-actions.json"
+        ).read_text()
+    ),
 )
-def test_inverse_action_table(
-    action: Action, detail: dict[str, Any], method: str, path: str, after: object
-) -> None:
-    inverse = inverse_action(action, detail, METADATA)
+def test_inverse_action_table(case: dict[str, Any]) -> None:
+    value = case["action"]
+    action = Action(
+        value["id"],
+        value["step"],
+        value["kind"],
+        value["number"],
+        value["method"],
+        value["path"],
+        value["payload"],
+        _tuplify(value["before"]),
+        _tuplify(value["after"]),
+    )
+    inverse = inverse_action(action, case["detail"], METADATA)
     assert inverse.id == f"rollback:{action.id}"
-    assert (inverse.method, inverse.path, inverse.after) == (method, path, after)
-
-
-def test_relation_and_project_inverse_payloads() -> None:
-    """Keep only saved identities and restore exact prior field values."""
-    actions = (
-        Action(
-            "label",
-            "4:labels",
-            "label_create",
-            0,
-            "POST",
-            "labels",
-            {"name": "phase/2", "color": "abc", "description": "d"},
-            0,
-            ("phase/2", "abc", "d"),
-        ),
-        Action(
-            "blocker",
-            "11:links",
-            "blocker",
-            1,
-            "POST",
-            "issues/1/dependencies/blocked_by",
-            {"issue_id": 2},
-            (),
-            ("#2",),
-        ),
-        Action(
-            "draft",
-            "6",
-            "draft",
-            0,
-            "POST",
-            "orgs/tbhb-dev/projectsV2/1/drafts",
-            {"title": "D", "body": "B"},
-            (0, ""),
-            (1, "B"),
-        ),
-        Action(
-            "draft-body",
-            "6:body",
-            "draft_body",
-            0,
-            "POST",
-            "graphql",
-            {"query": "old", "key": "title:D", "draft_id": "D-node"},
-            "before",
-            "after",
-        ),
+    assert (inverse.method, inverse.path, inverse.after) == (
+        case["method"],
+        case["path"],
+        _tuplify(case["after"]),
     )
-    details: tuple[dict[str, Any], ...] = ({}, {}, {"item_id": "34"}, {})
-    inverses = tuple(
-        inverse_action(action, detail, METADATA)
-        for action, detail in zip(actions, details, strict=True)
-    )
-    assert (inverses[0].method, inverses[0].path, inverses[0].after) == (
-        "DELETE",
-        "labels/phase%2F2",
-        0,
-    )
-    assert (inverses[1].method, inverses[1].path, inverses[1].payload) == (
-        "DELETE",
-        "issues/1/dependencies/blocked_by/2",
-        None,
-    )
-    assert (inverses[2].method, inverses[2].path) == (
-        "DELETE",
-        "orgs/tbhb-dev/projectsV2/1/items/34",
-    )
-    assert inverses[3].payload is not None
-    assert 'body:"before"' in inverses[3].payload["query"]
-    with pytest.raises(ValueError, match="identity"):
-        inverse_action(actions[2], {}, METADATA)
+    assert inverse.payload == case["payload"]
 
 
 def test_project_fields_restore_reviewed_option_and_clear_blank() -> None:
@@ -339,14 +150,24 @@ def test_plan_uses_only_verified_actions_in_reverse_order() -> None:
         for action in (first, second)
         for phase in ("intent", "response", "verified")
     )
+    records = (
+        *records[:3],
+        Record("stage:6T", "complete", {"stage": "6T"}),
+        *records[3:],
+    )
     plan = rollback_plan(cp1, cp1, (first, second), records, METADATA)
     assert tuple(action.id for action in plan) == ("rollback:second", "rollback:first")
-    with pytest.raises(ValueError, match="no verified"):
+    with pytest.raises(ValueError, match="no verified") as error:
         rollback_plan(cp1, cp1, (first, second), records[:-1], METADATA)
-    with pytest.raises(ValueError, match="branch"):
+    assert str(error.value) == "forward write has no verified read-back"
+    with pytest.raises(ValueError, match="branch") as error:
         rollback_plan(
             cp1, replace(cp1, branch_sha="changed"), (first, second), records, METADATA
         )
+    assert str(error.value) == "rollback checkpoint or retained branch changed"
+    for changed in (replace(cp1, version=cp1.version + 1), replace(cp1, pages=())):
+        with pytest.raises(ValueError, match="checkpoint"):
+            rollback_plan(cp1, changed, (first, second), records, METADATA)
 
 
 def test_rollback_journal_rejects_plan_and_order_changes() -> None:
@@ -378,6 +199,95 @@ def test_rollback_journal_rejects_plan_and_order_changes() -> None:
         validate_rollback_journal([*rows, rows[-1]], "cp1", (action,))
 
 
+def test_rollback_journal_requires_ordered_saved_intents() -> None:
+    first = inverse_action(
+        Action(
+            "first",
+            "6T",
+            "title",
+            1,
+            "PATCH",
+            "issues/1",
+            {"title": "new"},
+            "old",
+            "new",
+        ),
+        {},
+        METADATA,
+    )
+    second = replace(first, id="rollback:second", number=2, path="issues/2")
+    header = {"version": 1, "run_id": "cp1"}
+    intent = asdict(Record(first.id, "intent", {"action": asdict(first)}))
+    verified = asdict(Record(first.id, "verified", {}))
+    next_intent = asdict(Record(second.id, "intent", {"action": asdict(second)}))
+
+    def encode(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        return cast("list[dict[str, Any]]", json.loads(json.dumps(rows)))
+
+    assert (
+        len(
+            validate_rollback_journal(
+                encode([header, intent, verified, next_intent]), "cp1", (first, second)
+            )
+        )
+        == 3
+    )
+    for rows, message in (
+        ([{**header, "run_id": "other"}], "rollback journal header differs from CP1"),
+        ([header, verified], "rollback journal transition is invalid"),
+        ([header, next_intent], "rollback journal order differs from plan"),
+        ([header, intent, next_intent], "rollback journal has an unfinished action"),
+        (
+            [header, intent, verified, next_intent, intent],
+            "rollback journal order differs from plan",
+        ),
+        (
+            [
+                header,
+                {**intent, "detail": {"action": {**asdict(first), "path": "issues/9"}}},
+            ],
+            "rollback action changed",
+        ),
+    ):
+        with pytest.raises(ValueError, match=message) as error:
+            validate_rollback_journal(encode(rows), "cp1", (first, second))
+        assert str(error.value) == message
+
+
+def test_missing_created_identity_refuses_inverse() -> None:
+    comment = Action(
+        "comment", "0", "comment", 1, "POST", "issues/1/comments", {"body": "B"}, 0, 1
+    )
+    item = Action(
+        "item",
+        "6",
+        "project_item",
+        1,
+        "POST",
+        "orgs/tbhb-dev/projectsV2/1/items",
+        {"id": 1},
+        (0, "1"),
+        (1, "1"),
+    )
+    created = Action(
+        "created", "9:create", "issue_create", 0, "POST", "issues", {"title": "P"}, 0, 1
+    )
+    cases: tuple[tuple[Action, dict[str, Any], str], ...] = (
+        (comment, {}, "comment identity is missing"),
+        (item, {}, "created Project item identity is missing"),
+        (created, {}, "created issue identity is missing"),
+        (
+            created,
+            {"created_item": {"key": "title:P"}},
+            "created issue identity is missing",
+        ),
+    )
+    for action, detail, message in cases:
+        with pytest.raises(ValueError, match="identity") as error:
+            inverse_action(action, detail, METADATA)
+        assert str(error.value) == message
+
+
 def test_completed_trial_has_no_net_rollback() -> None:
     cp1 = fixture_snapshot()
     add = Action(
@@ -403,10 +313,38 @@ def test_completed_trial_has_no_net_rollback() -> None:
     )
     records = tuple(Record(action.id, "verified", {}) for action in (add, remove))
     assert rollback_plan(cp1, cp1, (add, remove), records, METADATA) == ()
-    with pytest.raises(ValueError, match="duplicate"):
+    with pytest.raises(ValueError, match="duplicate") as error:
         rollback_plan(cp1, cp1, (add, add), records, METADATA)
-    with pytest.raises(ValueError, match="unknown"):
+    assert str(error.value) == "duplicate forward action"
+    with pytest.raises(ValueError, match="unknown") as error:
         rollback_plan(cp1, cp1, (add,), records, METADATA)
+    assert str(error.value) == "unknown forward operation"
+
+
+def test_plan_uses_verified_comment_identity_once() -> None:
+    cp1 = fixture_snapshot()
+    comment = Action(
+        "0:comment:1",
+        "0",
+        "comment",
+        1,
+        "POST",
+        "issues/1/comments",
+        {"body": "saved"},
+        0,
+        1,
+    )
+    records = (
+        Record(comment.id, "intent", {}),
+        Record(comment.id, "verified", {"comment_id": 42}),
+    )
+    assert (
+        rollback_plan(cp1, cp1, (comment,), records, METADATA)[0].path
+        == "issues/comments/42"
+    )
+    with pytest.raises(ValueError, match="duplicate forward verification") as error:
+        rollback_plan(cp1, cp1, (comment,), (*records, records[-1]), METADATA)
+    assert str(error.value) == "duplicate forward verification"
 
 
 @given(st.text(max_size=40))
