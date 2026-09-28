@@ -1,0 +1,70 @@
+{
+  "project": { "node_id": "project-id" },
+  "fields": [
+    {
+      "name": "Status",
+      "node_id": "field-Status",
+      "data_type": "single_select",
+      "options": [
+        { "id": "option-Ready", "name": { "raw": "Ready" } },
+        { "id": "option-Done", "name": { "raw": "Done" } },
+        { "id": "option-Backlog", "name": { "raw": "Backlog" } }
+      ]
+    },
+    {
+      "name": "Size",
+      "node_id": "field-Size",
+      "data_type": "single_select",
+      "options": [
+        { "id": "option-M", "name": { "raw": "M" } },
+        { "id": "option-S", "name": { "raw": "S" } }
+      ]
+    },
+    {
+      "name": "Area",
+      "node_id": "field-Area",
+      "data_type": "single_select",
+      "options": [
+        { "id": "option-tooling", "name": { "raw": "tooling" } },
+        { "id": "option-research", "name": { "raw": "research" } }
+      ]
+    },
+    {
+      "name": "Harness",
+      "node_id": "field-Harness",
+      "data_type": "single_select",
+      "options": [{ "id": "option-codex", "name": { "raw": "codex" } }]
+    },
+    { "name": "Worker", "node_id": "field-Worker", "data_type": "text" }
+  ],
+  "items": [
+    {
+      "id": "item-1",
+      "node_id": "node-item-1",
+      "content_type": "Issue",
+      "content": { "id": 1, "number": 1 },
+      "fields": []
+    },
+    {
+      "id": "item-2",
+      "node_id": "node-item-2",
+      "content_type": "Issue",
+      "content": { "id": 2, "number": 2 },
+      "fields": []
+    },
+    {
+      "id": "item-b",
+      "node_id": "node-item-b",
+      "content_type": "DraftIssue",
+      "content": { "id": "draft-b", "title": "Draft B" },
+      "fields": []
+    },
+    {
+      "id": "item-held",
+      "node_id": "node-item-held",
+      "content_type": "DraftIssue",
+      "content": { "id": "draft-held", "title": "Held" },
+      "fields": []
+    }
+  ]
+}
