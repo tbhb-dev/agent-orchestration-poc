@@ -4,6 +4,8 @@ import http.client
 import json
 import os
 import select
+import shutil
+import socket
 import subprocess
 import sys
 import tempfile
@@ -317,6 +319,79 @@ def test_committed_frames_request_one_profile_command(profile: str) -> None:
         assert len(deltas) == 1
         assert json.loads(deltas[0]["partial_json"])["command"] == command
     assert command.encode() not in final
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "profile",
+    ["codex-interactive", "codex-headless", "claude-interactive", "claude-headless"],
+)
+def test_disposable_connector_imports_copied_package(profile: str) -> None:
+    with tempfile.TemporaryDirectory(prefix="bv01-", dir="/tmp") as directory:
+        workspace = Path(directory) / "workspace"
+        probe_dir = workspace / "experiments/02-host-socket-attribution"
+        probe_dir.mkdir(parents=True)
+        shutil.copyfile(
+            REPOSITORY / "experiments/02-host-socket-attribution/probe.py",
+            probe_dir / "probe.py",
+        )
+        package = workspace / "agent_orchestration_poc"
+        (package / "core").mkdir(parents=True)
+        for relative in (
+            "__init__.py",
+            "core/__init__.py",
+            "core/host_socket_attribution.py",
+        ):
+            shutil.copyfile(
+                REPOSITORY / "src/agent_orchestration_poc" / relative,
+                package / relative,
+            )
+        socket_path = Path(directory) / "gateway.sock"
+        with socket.socket(socket.AF_UNIX) as listener:
+            listener.bind(str(socket_path))
+            listener.listen(1)
+            process = subprocess.Popen(
+                [
+                    sys.executable,
+                    "-S",
+                    "experiments/02-host-socket-attribution/probe.py",
+                    "client",
+                    str(socket_path),
+                    profile,
+                ],
+                cwd=workspace,
+                env={
+                    "PATH": os.environ["PATH"],
+                    "PYTHONSAFEPATH": "1",
+                    "PYTHONPATH": str(workspace),
+                },
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            try:
+                empty: list[socket.socket] = []
+                ready, _, _ = select.select([listener], empty, empty, 5)
+                if not ready:
+                    _output, errors = process.communicate(timeout=5)
+                    pytest.fail(
+                        f"disposable connector did not reach the socket: {errors}"
+                    )
+                conn, _ = listener.accept()
+                with conn:
+                    assert conn.recv(512).decode() == profile
+                    conn.sendall(b"allowed")
+                output, errors = process.communicate(timeout=5)
+                assert process.returncode == 0, errors
+                assert output.strip() == "allowed"
+            finally:
+                if process.poll() is None:
+                    process.terminate()
+                    process.wait(timeout=5)
+                if process.stdout is not None:
+                    process.stdout.close()
+                if process.stderr is not None:
+                    process.stderr.close()
 
 
 @pytest.fixture
