@@ -9,6 +9,7 @@
     "**/node_modules/**",
     "**/.venv/**",
     "**/.worktrees/**",
+    "**/.holding/**",
     "**/docs/dist/**",
     "**/docs/.astro/**",
     "**/*.lock",

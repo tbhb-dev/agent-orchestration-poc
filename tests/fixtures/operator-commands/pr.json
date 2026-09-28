@@ -1,0 +1,33 @@
+{
+  "event": {
+    "action": "created",
+    "actor": "tbhb",
+    "number": 12,
+    "is_pr": true,
+    "comment_id": 100,
+    "issue_url": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/issues/12"
+  },
+  "item": {
+    "number": 12,
+    "state": "open",
+    "pull_request": {
+      "url": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/pulls/12"
+    },
+    "labels": [{ "name": "needs-operator" }, { "name": "operator/approval" }]
+  },
+  "ask": {
+    "id": 99,
+    "created_at": "2026-09-28T12:00:00Z",
+    "updated_at": "2026-09-28T12:00:00Z",
+    "body": "### Operator ask: fixture\nApproval lines:\n1. First action\n2. Second action\n3. Third action\nOptions:\nOption 1: Wait\nOption 2: Proceed"
+  },
+  "comment": {
+    "id": 100,
+    "user": { "login": "tbhb" },
+    "author_association": "OWNER",
+    "created_at": "2026-09-28T12:01:00Z",
+    "updated_at": "2026-09-28T12:01:00Z",
+    "issue_url": "https://api.github.com/repos/tbhb-dev/agent-orchestration-poc/issues/12",
+    "body": "/approve all"
+  }
+}

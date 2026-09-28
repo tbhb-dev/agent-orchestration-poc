@@ -1,0 +1,30 @@
+---
+name: operator-commands
+
+"on":
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  acknowledge:
+    if: github.actor == 'tbhb' && github.event.action == 'created'
+    runs-on: ubuntu-latest
+    steps:
+      # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      # v4.3.0
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c
+        with:
+          version: 2026.8.6
+          install: true
+          cache: true
+      - name: Validate and acknowledge the comment
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: >-
+          mise exec -- uv run python -m
+          agent_orchestration_poc.shell.operator_commands

@@ -14,7 +14,13 @@ bin/
 .ruff_cache/
 .import_linter_cache/
 .local-cache/
+.holding/
 .observability/
+/research/gates/data-analysis/example_files/
+*.ipynb
+*.quarto_ipynb
+.quarto/
+_freeze/
 .coverage
 .coverage-reports/
 mutants/

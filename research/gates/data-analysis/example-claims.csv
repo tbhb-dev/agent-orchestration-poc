@@ -1,0 +1,5 @@
+claim_id,kind,statement,value,unit,population,denominator,source_ids,query_path,result_table,result_row_id,input_version,verification,limitations
+N-01,headline,Total duration,48,minutes,12 synthetic events,12,example-data.csv,research/gates/data-analysis/example.qmd,research/gates/data-analysis/example-results.csv,TOTAL,issue-107 synthetic,independent Python CSV sum,No real workload
+N-02,supporting,Category A duration,21,minutes,6 synthetic events,6,example-data.csv,research/gates/data-analysis/example.qmd,research/gates/data-analysis/example-results.csv,G-A,issue-107 synthetic,independent Python CSV group,No real workload
+N-03,supporting,Category B duration,27,minutes,6 synthetic events,6,example-data.csv,research/gates/data-analysis/example.qmd,research/gates/data-analysis/example-results.csv,G-B,issue-107 synthetic,independent Python CSV group,No real workload
+Q-01,documented,DuckDB read_ndjson accepts explicit columns,,,,,DuckDB v1.5.5,research/gates/data-analysis/versions.md,,,,documented source,Applies to pinned version
