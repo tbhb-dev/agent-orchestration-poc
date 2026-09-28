@@ -300,7 +300,7 @@ def complete(snapshot: Snapshot) -> bool:
         for item in snapshot.items
         if item.issue_id
         for kind, value in (
-            ("native", len(item.native)),
+            ("native", sum(bool(value) for _, value in item.native)),
             ("blockers", len(item.blockers)),
             ("sub_issues", sum(child.parent == item.key for child in snapshot.items)),
         )
