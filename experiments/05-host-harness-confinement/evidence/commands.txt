@@ -50,3 +50,29 @@ exit 0 on merged head: Python core 97.81% lines and 94.76% branches, Go core 96.
 
 mise run check:mutation
 exit 0 on merged head: Go mutant kill rate 97.32%, Python core score 90.14%
+
+Review response, 2026-09-28, branch exp/242-host-harness-confinement
+git fetch origin && git merge origin/main
+exit 0: already up to date; PR base is main
+
+PYTHONDONTWRITEBYTECODE=1 PYTHONSAFEPATH=1 mise exec -- python experiments/05-host-harness-confinement/fixture.py baseline
+before fix exit 1: ModuleNotFoundError for fixture_core, reproducing review comment 4125476094
+after fix exit 0: ten JSON lines, seven allowed socket reaches, and {"cleanup": true}; both spawned serve children started without PYTHONPATH
+
+PYTHONDONTWRITEBYTECODE=1 PYTHONSAFEPATH=1 mise exec -- uv run pytest -q experiments/05-host-harness-confinement/test_fixture_core.py
+exit 0: 26 passed in 1.47s without PYTHONPATH
+
+mise run fmt
+exit 0: formatter applied to one experiment test file
+
+mise run check
+exit 0: full aggregate after the safe-path fix, Python core 97.81% lines and 94.76% branches, Go core 96.43% statements and 94.74% branches
+
+mise run check:mutation
+exit 0: Go mutant kill rate 97.32%, Python core score 90.14%
+
+PYTHONDONTWRITEBYTECODE=1 PYTHONSAFEPATH=1 mise exec -- uv run pytest -q experiments/05-host-harness-confinement/test_fixture_core.py
+exit 0 after formatting: 26 passed in 1.39s
+
+ps -eo pid,etime,args
+exit 1: sandbox denied process listing; the check task completed without process inspection

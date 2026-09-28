@@ -1,18 +1,23 @@
 """Plain-value tests for the fixture's pure target and qualification rules."""
 
+from collections.abc import Callable
 from pathlib import Path
+from runpy import run_path
+from typing import cast
 
 import pytest
-from fixture_core import (  # pyrefly: ignore[missing-import] - local experiment module is outside the configured import roots
-    ENDPOINTS,
-    REQUIRED,
-    failure_result,
-    profile_status,
-    socket_path,
-    socket_result,
-)
 from hypothesis import given
 from hypothesis import strategies as st
+
+fixture = run_path(str(Path(__file__).with_name("fixture.py")))
+ENDPOINTS = cast("tuple[str, ...]", fixture["ENDPOINTS"])
+REQUIRED = cast("dict[str, str]", fixture["REQUIRED"])
+failure_result = cast("Callable[[str], str]", fixture["failure_result"])
+profile_status = cast("Callable[[dict[str, str]], str]", fixture["profile_status"])
+socket_path = cast("Callable[[Path, str, str], Path]", fixture["socket_path"])
+socket_result = cast(
+    "Callable[[dict[str, str], str, str], str]", fixture["socket_result"]
+)
 
 
 def is_unknown_workload(value: str) -> bool:

@@ -15,13 +15,13 @@ The imported [BV-02 definition](../../research/imported/design-wiki-8384ca7/back
 Run from the repository root after `mise run vale:sync`. The two `serve` children are independent disposable wrapper processes. Each binds six Unix sockets below its own `/private/tmp/bv02-242-*` directory. The parent connects from the current shell path and removes the children and directory on exit. A and B are one-incarnation processes with no resume or SVID binding. No operator control socket is used, so no peer-UID check or operator authentication is claimed.
 
 ```sh
-PYTHONSAFEPATH=1 PYTHONPATH=experiments/05-host-harness-confinement mise exec -- uv run python experiments/05-host-harness-confinement/fixture.py baseline > experiments/05-host-harness-confinement/evidence/baseline.jsonl
-PYTHONPATH=experiments/05-host-harness-confinement mise exec -- uv run pytest -q experiments/05-host-harness-confinement/test_fixture_core.py
+PYTHONDONTWRITEBYTECODE=1 PYTHONSAFEPATH=1 mise exec -- python experiments/05-host-harness-confinement/fixture.py baseline > experiments/05-host-harness-confinement/evidence/baseline.jsonl
+PYTHONDONTWRITEBYTECODE=1 PYTHONSAFEPATH=1 mise exec -- uv run pytest -q experiments/05-host-harness-confinement/test_fixture_core.py
 ```
 
-**Observed:** the baseline command exited 0. The local table and property tests passed, and the fixture's exact-path cleanup check returned true. A broader `/private/tmp` search was denied while traversing an unrelated daemon directory and was not retried. `evidence/commands.txt` records the exact invocations and exit codes. `fixture_core.py` transforms values without I/O. `fixture.py` owns process, socket, and file operations. Python imports from the hyphenated experiment directory need an explicit `PYTHONPATH` for the standalone test command.
+**Observed:** the baseline command exited 0 without `PYTHONPATH`, including both spawned `serve` processes. The local table and property tests passed, and the fixture's exact-path cleanup check returned true. A broader `/private/tmp` search was denied while traversing an unrelated daemon directory and was not retried. `evidence/commands.txt` records the exact invocations and exit codes. `fixture.py` keeps pure decision functions separate from its process, socket, and file operations. The standalone tests load that file by path.
 
-**Verified:** `mise run check` exited 0 on the merged head. Python core line and branch coverage were 97.81% and 94.76%, and Go core statement and branch coverage were 96.43% and 94.74%. `mise run check:mutation` exited 0 with a Go mutant kill rate of 97.32% and a Python score of 90.14%. Those repository gates score product core code. The experiment's pure functions have standalone table and property tests. The complete command outputs are compressed in `evidence/check.txt.gz` and `evidence/mutation.txt.gz`.
+**Verified:** `mise run check` exited 0 after the safe-path fix. Python core line and branch coverage were 97.81% and 94.76%, and Go core statement and branch coverage were 96.43% and 94.74%. `mise run check:mutation` exited 0 with a Go mutant kill rate of 97.32% and a Python score of 90.14%. Those repository gates score product core code. The experiment's pure functions have standalone table and property tests. The complete command outputs are compressed in `evidence/check.txt.gz` and `evidence/mutation.txt.gz`.
 
 ## Case matrix
 
@@ -48,7 +48,7 @@ M-001 remains **untested** for `thread/queue/add` and a real `cc-socks` write fr
 
 **Proposed startup capability check:** require a trusted configuration source that fixes the sandbox and loaded hook/helper/plugin policy. Resolve effective settings for the selected harness and mode, then run an isolated canary suite through shell, native file, configured MCP, hooks, and project-added servers. Require own-peer and workspace positives and every protection negative, including M-001. Record every prompt as `prompted`, never `blocked`. Mark any unavailable tool path `unsupported` or `incomplete`. Refuse the qualified profile unless all required observations match. An operator may explicitly select a weaker profile that reports which secrecy, integrity, and availability guarantees are absent.
 
-`fixture_core.profile_status` encodes the conservative allow/deny subset for that proposal. Its `incomplete` and `unsupported` outcomes must be treated as nonqualified. Its `qualified` return is a value-level check only and cannot replace the additional effective-settings and topology checks described above. Product startup integration remains outside this issue's allowed paths.
+`fixture.profile_status` encodes the conservative allow/deny subset for that proposal. Its `incomplete` and `unsupported` outcomes must be treated as nonqualified. Its `qualified` return is a value-level check only and cannot replace the additional effective-settings and topology checks described above. Product startup integration remains outside this issue's allowed paths.
 
 ## Decision
 
