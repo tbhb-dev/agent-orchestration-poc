@@ -43,6 +43,7 @@ from agent_orchestration_poc.core.work_model_backfill_executor import (
     draft_observation,
     journal_state,
     observation_value,
+    stage_actions,
     validate_journal,
     validate_progress,
     verified_detail,
@@ -406,17 +407,9 @@ def run_apply(args: argparse.Namespace) -> int:
         records = list(
             _journal(args.journal, run_id, actions, create=args.stage == "0")
         )
-        if args.stage == "6:drafts" and any(
-            not any(
-                record.action_id == action.id and record.phase == "verified"
-                for record in records
-            )
-            for action in closures
-        ):
-            raise ValueError("stage 0 must be verified before draft creation")
+        selected = stage_actions(args.stage, closures, drafts, tuple(records))
         api = _api(args.api_base)
         validate_progress(cp1, collect(api, "initial"), actions, tuple(records))
-        selected = closures if args.stage == "0" else drafts
         for action in selected:
             _execute(api, args.journal, action, records, pace=True)
     return 0

@@ -14,9 +14,15 @@
 
 [Verified] Pinned scc 4.1.0 classified the added and deleted Python diff fragments against `main` as 424 changed code units, excluding this report under the workflow size rule. `git diff --check` exited 0. No live backfill write was made.
 
+## PR #235 review correction
+
+[Verified] Three plain-value regressions failed against the reviewed executor before the correction: replacing a verified draft with the same title and body but different IDs was accepted, a second pre-existing draft with the same key was hidden by dictionary conversion, and stage admission had no pure core function. The corrected executor compares saved response and verified identities when present, rejects duplicate snapshot keys before conversion, and permits Project draft count growth only for journaled creation actions. The shell now executes the actions admitted by the pure stage decision. Recovery by title and body remains available while identity is unknown after an interrupted POST.
+
+[Verified] The focused executor and shell suite passed 36 tests. `mise run check:imports` and `mise run check:ruff` exited 0. The first aggregate run found duplicated fixture setup; after consolidation, the final `mise run -j 1 check` exited 0 with 473 integration-coverage Python tests, Python core line coverage 97.60%, core branch coverage 93.99%, and shell line coverage 77.80%. The first mutation rerun scored 89.94% (4,202/4,672); tests separating item ID and draft ID drift after verification raised the final `mise run check:mutation` result to 90.15% (4,212/4,672), with Go core efficacy 97.32% (145/149). No live backfill write was made.
+
 ## Journaled issue closure slice
 
-[Verified] The `apply` command accepts stage 0 only and requires `--apply`, a saved CP1, a journal path, and `CP1:<digest>` confirmation for the SHA-256 of that exact CP1 envelope. It rechecks table digests and the pure operation plan, locks the journal, and compares a fresh complete read with CP1 plus journaled changes before writing. No live GitHub backfill write was made.
+[Verified] The initial closure-only `apply` slice accepted stage 0 and required `--apply`, a saved CP1, a journal path, and `CP1:<digest>` confirmation for the SHA-256 of that exact CP1 envelope. It rechecked table digests and the pure operation plan, locked the journal, and compared a fresh complete read with CP1 plus journaled changes before writing. No live GitHub backfill write was made.
 
 [Verified] The pure executor derives closure comments and state changes from the reviewed plan and `fold into` cells. Its append-only JSONL journal saves intent before each REST write, the response receipt after it, and a fresh observed value and GET receipt after read-back. An interrupted comment POST is matched by its unique marker, so a recovered comment is not posted twice. Recovery persists the uniquely matched numeric `comment_id` in the verified record for later rollback.
 
@@ -24,7 +30,7 @@
 
 [Documented] The [GitHub issue comment endpoint](https://docs.github.com/en/rest/issues/comments?apiVersion=2026-03-10) returns a numeric comment ID after POST, and the [issue update endpoint](https://docs.github.com/en/rest/issues/issues?apiVersion=2026-03-10) accepts `state` and `state_reason`. The earlier rate-limit source in this report gives 500 content-creating requests per hour. The executor spaces local writes by at least eight seconds from the last saved intent and stops when the primary remaining header is below 50. This does not establish a shared account-wide content budget.
 
-[Untested] This partial executor omits the PR #97 size-decision comment and closure, the closed-blocker trial and cleanup, label creation, Project membership and draft writes, title migration, parent and incident creation, hierarchy and accepted dependency links, body revisions, native type and field values, label retirement, CP13 final comparison of writes, and rollback. Issue #207 stays open. Live execution and checkpoint evidence belong to #200.
+[Untested] At the closure-only slice, the executor omitted the PR #97 size-decision comment and closure, the closed-blocker trial and cleanup, label creation, Project membership and draft writes, title migration, parent and incident creation, hierarchy and accepted dependency links, body revisions, native type and field values, label retirement, CP13 final comparison of writes, and rollback. Issue #207 stays open. Live execution and checkpoint evidence belong to #200.
 
 [Verified] Pinned scc 4.1.0 `--trace`, intersected with added and deleted lines in the diff from merge base `8285627`, counted 658 changed Python code units for this narrowed delivery: executor core 157, shell 183 (170 added plus 13 deleted), executor tests 209, and shell tests 109. The JSON files under `tests/fixtures/` and this `reports/inputs/` evidence are excluded by the workflow size rule. The closure action values remain fixed in `tests/fixtures/work_model_backfill/runner/executor-actions.json`.
 
