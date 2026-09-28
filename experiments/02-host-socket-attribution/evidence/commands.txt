@@ -75,3 +75,23 @@ find /tmp -maxdepth 1 -type d -name 'bv01-*' -print
 exit 0, empty output
 
 The detached tmux command does not expose the fixture process exit code. Both server_exit fields are 0 and all seven case replies are present in tmux.jsonl.
+
+The unpublished branch was rebased onto the then-current origin/main after commits c90d749 and 454cd98 landed. The gate evidence was refreshed on that base.
+
+git fetch origin main
+exit 0
+
+git rebase origin/main
+exit 0
+
+NO_COLOR=1 mise run check > experiments/02-host-socket-attribution/evidence/check.txt 2>&1
+exit 0
+
+mise exec -- gzip -n -c experiments/02-host-socket-attribution/evidence/check.txt > experiments/02-host-socket-attribution/evidence/check.raw.gz
+exit 0
+
+sed -i 's/[[:blank:]]\+$//' experiments/02-host-socket-attribution/evidence/check.txt
+exit 0
+
+NO_COLOR=1 mise run check:mutation > experiments/02-host-socket-attribution/evidence/mutation.txt 2>&1
+exit 0

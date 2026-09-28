@@ -1,35 +1,35 @@
-[check:dupl] $ jscpd --config .jscpd.json --exit-code=1 cmd internal src tests …
+[check:ruff] $ uv run ruff check .
 [check:go] $ scripts/check-gofumpt.sh
+[check:pytest] $ uv run pytest
+[check:dupl] $ jscpd --config .jscpd.json --exit-code=1 cmd internal src tests …
 [check:review-identity] $ uv run pytest tests/fixtures/review_identity/test_pol…
 [check:shell] $ shellcheck --severity=style scripts/*.sh
-[check:deadcode] $ scripts/check-deadcode.sh
 [check:imports] $ uv run lint-imports --no-logo
-[check:pytest] $ uv run pytest
-[check:ruff] $ uv run ruff check .
+[check:deadcode] $ scripts/check-deadcode.sh
 [check:dupl] Using config from .jscpd.json
-[check:ruff] All checks passed!
 [check:dupl] [90mNo duplicates found.[39m
 [check:dupl] [90m┌────────┬────────────────┬─────────────┬──────────────┬──────────────┬──────────────────┬───────────────────┐[39m
 [check:dupl] [90m│[39m[31m Format [39m[90m│[39m[31m Files analyzed [39m[90m│[39m[31m Total lines [39m[90m│[39m[31m Total tokens [39m[90m│[39m[31m Clones found [39m[90m│[39m[31m Duplicated lines [39m[90m│[39m[31m Duplicated tokens [39m[90m│[39m
 [check:dupl] [90m├────────┼────────────────┼─────────────┼──────────────┼──────────────┼──────────────────┼───────────────────┤[39m
 [check:dupl] [90m│[39m go     [90m│[39m 20             [90m│[39m 2351        [90m│[39m 17414        [90m│[39m 0            [90m│[39m 0 (0.00%)        [90m│[39m 0 (0.00%)         [90m│[39m
 [check:dupl] [90m├────────┼────────────────┼─────────────┼──────────────┼──────────────┼──────────────────┼───────────────────┤[39m
-[check:dupl] [90m│[39m python [90m│[39m 47             [90m│[39m 10272       [90m│[39m 67033        [90m│[39m 0            [90m│[39m 0 (0.00%)        [90m│[39m 0 (0.00%)         [90m│[39m
+[check:dupl] [90m│[39m python [90m│[39m 47             [90m│[39m 10856       [90m│[39m 70813        [90m│[39m 0            [90m│[39m 0 (0.00%)        [90m│[39m 0 (0.00%)         [90m│[39m
 [check:dupl] [90m├────────┼────────────────┼─────────────┼──────────────┼──────────────┼──────────────────┼───────────────────┤[39m
-[check:dupl] [90m│[39m [1mTotal:[22m [90m│[39m 67             [90m│[39m 12623       [90m│[39m 84447        [90m│[39m 0            [90m│[39m 0 (0.00%)        [90m│[39m 0 (0.00%)         [90m│[39m
+[check:dupl] [90m│[39m [1mTotal:[22m [90m│[39m 67             [90m│[39m 13207       [90m│[39m 88227        [90m│[39m 0            [90m│[39m 0 (0.00%)        [90m│[39m 0 (0.00%)         [90m│[39m
 [check:dupl] [90m└────────┴────────────────┴─────────────┴──────────────┴──────────────┴──────────────────┴───────────────────┘[39m
 [check:dupl] [90mFound 0 clones.[39m
-[check:dupl] [90mtime: 55.904ms[39m
+[check:dupl] [90mtime: 61.102ms[39m
 [check:dupl]
 [check:dupl] [90m💡 Auto-refactor with AI: [1m[39mnpx skills add https://github.com/kucherenko/jscpd --skill dry-refactoring[90m[22m
 [check:dupl] [90m🎩 New: Gangsta Agents — discipline your AI coding → gangsta.page[39m
 [check:dupl] [90m💖 Support jscpd project → https://opencollective.com/jscpd[39m
-[check:ruff] $ uv run ruff format --check .
-[check:dupl] Finished in 83.8ms
+[check:dupl] Finished in 100.9ms
 [check:coverage] $ mkdir -p .coverage-reports
 [check:coverage] $ uv run pytest --run-integration --cov=agent_orchestration_po…
+[check:ruff] All checks passed!
+[check:ruff] $ uv run ruff format --check .
 [check:ruff] 72 files already formatted
-[check:ruff] Finished in 113.1ms
+[check:ruff] Finished in 351.4ms
 [check:pyrefly] $ uv run pyrefly check --search-path scaffolding/github-monitor
 [check:imports]
 [check:imports] ---------
@@ -44,18 +44,23 @@
 [check:imports]
 [check:imports] Contracts: 2 kept, 0 broken.
 [check:pyrefly]  WARN PYTHONPATH environment variable is set to `scaffolding/worker-messaging`. Checks in other environments may not include these paths.
-[check:imports] Finished in 276.2ms
-[check:go] $ go vet ./...
+[check:imports] Finished in 435.5ms
 [check:biome] $ biome check --no-errors-on-unmatched .
 [check:pyrefly]  INFO Checking project configured at `/Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.worktrees/exp-228-host-gateway-attribution/pyproject.toml`
 [check:shell] $ shfmt -d -i 4 -ci scripts/*.sh
-[check:shell] Finished in 409.2ms
+[check:shell] Finished in 503.5ms
 [check:vale] $ scripts/check-vale.sh
-[check:biome] Checked 128 files in 101ms. No fixes applied.
-[check:biome] Finished in 234.7ms
+[check:biome] Checked 128 files in 74ms. No fixes applied.
+[check:biome] Finished in 184.4ms
 [check:rumdl] $ rumdl check .
+[check:go] $ go vet ./...
 [check:pyrefly]  INFO 0 diagnostics
-[check:pyrefly] Finished in 614.5ms
+[check:pyrefly] Finished in 597.3ms
+[check:rumdl]
+[check:rumdl] Success: No issues found in 174 files (114ms)
+[check:rumdl] Finished in 267.9ms
+[check:ryl] $ ryl check .
+[check:tombi] $ tombi lint
 [check:review-identity] ============================= test session starts ==============================
 [check:review-identity] platform darwin -- Python 3.14.6, pytest-9.1.1, pluggy-1.6.0
 [check:review-identity] rootdir: /Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.worktrees/exp-228-host-gateway-attribution
@@ -63,90 +68,80 @@
 [check:review-identity] plugins: platformdirs-4.12.0, hypothesis-6.168.1, cov-7.0.0
 [check:review-identity] collected 43 items
 [check:review-identity]
-[check:ryl] $ ryl check .
 [check:review-identity] tests/fixtures/review_identity/test_policy.py .......................... [ 60%]
-[check:go] $ go mod tidy -diff
-[check:go] $ go mod verify
-[check:ryl] Finished in 240.0ms
-[check:tombi] $ tombi lint
-[check:rumdl]
-[check:rumdl] Success: No issues found in 171 files (238ms)
-[check:rumdl] Finished in 526.9ms
-[check:guard-markdown] $ scripts/markdown-files.sh | xargs -r guard-markdown
 [check:tombi] 8 files linted successfully
 [check:tombi] $ tombi format --check
+[check:ryl] Finished in 221.5ms
+[check:guard-markdown] $ scripts/markdown-files.sh | xargs -r guard-markdown
+[check:tombi] 8 files did not need formatting
+[check:tombi] Finished in 375.7ms
+[check:mermaid] $ scripts/check-mermaid.sh
+[check:go] $ go mod tidy -diff
+[check:guard-markdown] Finished in 299.0ms
+[check:experiments] $ scripts/check-experiments.sh
+[check:go] $ go mod verify
+[check:experiments] Finished in 47.2ms
+[check:ignore-collisions] $ scripts/check-ignore-collisions.sh
 [check:pytest] ============================= test session starts ==============================
 [check:pytest] platform darwin -- Python 3.14.6, pytest-9.1.1, pluggy-1.6.0
 [check:pytest] rootdir: /Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.worktrees/exp-228-host-gateway-attribution
 [check:pytest] configfile: pyproject.toml
 [check:pytest] testpaths: tests
 [check:pytest] plugins: platformdirs-4.12.0, hypothesis-6.168.1, cov-7.0.0
-[check:pytest] collected 466 items
+[check:pytest] collected 474 items
 [check:pytest]
 [check:pytest] tests/fixtures/review_identity/test_policy.py .......................... [  5%]
-[check:tombi] 8 files did not need formatting
-[check:tombi] Finished in 226.7ms
-[check:mermaid] $ scripts/check-mermaid.sh
-[check:guard-markdown] Finished in 250.4ms
-[check:experiments] $ scripts/check-experiments.sh
-[check:experiments] Finished in 88.0ms
-[check:ignore-collisions] $ scripts/check-ignore-collisions.sh
-[check:go] all modules verified
-[check:go] $ golangci-lint run ./...
 [check:coverage] ============================= test session starts ==============================
 [check:coverage] platform darwin -- Python 3.14.6, pytest-9.1.1, pluggy-1.6.0
 [check:coverage] rootdir: /Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.worktrees/exp-228-host-gateway-attribution
 [check:coverage] configfile: pyproject.toml
 [check:coverage] testpaths: tests
 [check:coverage] plugins: platformdirs-4.12.0, hypothesis-6.168.1, cov-7.0.0
-[check:coverage] collected 466 items
+[check:coverage] collected 474 items
 [check:coverage]
 [check:coverage] tests/fixtures/review_identity/test_policy.py .......................... [  5%]
+[check:go] all modules verified
+[check:go] $ golangci-lint run ./...
 [check:review-identity] ...........                                                              [ 86%]
 [check:pytest] ...........                                                              [  7%]
 [check:pytest] tests/fixtures/review_identity/test_wrapper.py ssssss                    [  9%]
-[check:pytest] tests/test_coordinator_preflight.py ................................     [ 16%]
+[check:pytest] tests/test_coordinator_preflight.py ................................     [ 15%]
 [check:pytest] tests/test_coordinator_preflight_shell.py sss                            [ 16%]
-[check:pytest] tests/test_coverage_floors.py .......                                    [ 18%]
-[check:pytest] tests/test_gremlins_output.py ....                                       [ 19%]
+[check:pytest] tests/test_coverage_floors.py .......                                    [ 17%]
+[check:pytest] tests/test_gremlins_output.py ....                                       [ 18%]
 [check:pytest] tests/test_mutation_score.py ...........                                 [ 21%]
 [check:pytest] tests/test_package.py .s                                                 [ 21%]
-[check:pytest] tests/test_parent_link_sync.py ...........                               [ 24%]
-[check:pytest] tests/test_parent_link_sync_shell.py ..sssss..                           [ 26%]
+[check:pytest] tests/test_parent_link_sync.py ...........                               [ 23%]
+[check:coverage] ...........                                                              [  7%]
+[check:pytest] tests/test_parent_link_sync_shell.py ..sssss..                           [ 25%]
 [check:go] 0 issues.
 [check:go] $ go build ./...
-[check:coverage] ...........                                                              [  7%]
 [check:pytest] tests/test_project_probe.py .........................................    [ 34%]
-[check:pytest] tests/test_project_rank.py .........................                     [ 40%]
+[check:pytest] tests/test_project_rank.py .........................                     [ 39%]
 [check:pytest] tests/test_project_rank_shell.py sssssss                                 [ 41%]
-[check:mermaid] mermaid: 9 block(s) in 171 file(s), 0 invalid
-[check:mermaid] Finished in 3.01s
-[check:handoff-classifier] $ scripts/test-handoff-pr-classifier.sh
 [check:ignore-collisions] case-insensitive directory match: /Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.git/info/exclude:21:/.codex/ -> research/imported/agent-peering-tests/.codex
 [check:ignore-collisions] $ scripts/test-ignore-collisions.sh
-[check:handoff-classifier] handoff classifier fixtures ok
-[check:handoff-classifier] Finished in 39.1ms
-[check:secrets] $ gitleaks git --redact --no-banner .
+[check:mermaid] mermaid: 9 block(s) in 174 file(s), 0 invalid
+[check:mermaid] Finished in 4.07s
+[check:handoff-classifier] $ scripts/test-handoff-pr-classifier.sh
 [check:ignore-collisions] negated fixture: exit 0
+[check:handoff-classifier] handoff classifier fixtures ok
+[check:handoff-classifier] Finished in 40.1ms
+[check:review-identity] tests/fixtures/review_identity/test_wrapper.py ......                    [100%]
+[check:review-identity]
+[check:review-identity] ============================== 43 passed in 4.99s ==============================
+[check:secrets] $ gitleaks git --redact --no-banner .
 [check:ignore-collisions] ignored fixture: exit 1
 [check:ignore-collisions] ignored tracked path: .gitignore:1:*.txt	blocked.txt
 [check:ignore-collisions] ignore collision fixtures ok
-[check:ignore-collisions] Finished in 3.15s
+[check:review-identity] Finished in 5.60s
+[check:ignore-collisions] Finished in 4.01s
 [check:actions] $ actionlint
-[check:review-identity] tests/fixtures/review_identity/test_wrapper.py ......                    [100%]
-[check:review-identity]
-[check:review-identity] ============================== 43 passed in 4.30s ==============================
-[check:review-identity] Finished in 4.75s
-[check:pytest] tests/test_subject.py ....................                               [ 46%]
+[check:pytest] tests/test_subject.py ....................                               [ 45%]
 [check:workflow-forms] $ uv run pytest tests/test_workflow_forms.py
-[check:actions] Finished in 127.1ms
 [check:deadcode] $ uv run vulture
+[check:actions] Finished in 150.0ms
 [check:go] $ go test -race -shuffle=on ./...
-[check:go] ?   	github.com/tbhb/agent-orchestration-poc/cmd/agentctl	[no test files]
-[check:go] ?   	github.com/tbhb/agent-orchestration-poc/cmd/agentd	[no test files]
-[check:go] ?   	github.com/tbhb/agent-orchestration-poc/internal/api	[no test files]
-[check:go] ?   	github.com/tbhb/agent-orchestration-poc/internal/backend/container	[no test files]
-[check:go] ?   	github.com/tbhb/agent-orchestration-poc/internal/backend/tmux	[no test files]
 [check:workflow-forms] ============================= test session starts ==============================
 [check:workflow-forms] platform darwin -- Python 3.14.6, pytest-9.1.1, pluggy-1.6.0
 [check:workflow-forms] rootdir: /Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.worktrees/exp-228-host-gateway-attribution
@@ -154,23 +149,30 @@
 [check:workflow-forms] plugins: platformdirs-4.12.0, hypothesis-6.168.1, cov-7.0.0
 [check:workflow-forms] collected 110 items
 [check:workflow-forms]
-[check:pytest] tests/test_work_model_backfill.py ...................................... [ 54%]
+[check:pytest] tests/test_work_model_backfill.py ...................................... [ 53%]
 [check:workflow-forms] tests/test_workflow_forms.py ........................................... [ 39%]
-[check:deadcode] Finished in 5.92s
-[check:secrets] 11:17AM INF 279 commits scanned.
-[check:secrets] 11:17AM INF scanned ~15670535 bytes (15.67 MB) in 1.51s
-[check:secrets] 11:17AM INF no leaks found
-[check:secrets] Finished in 1.98s
+[check:deadcode] Finished in 6.24s
+[check:go] ?   	github.com/tbhb/agent-orchestration-poc/cmd/agentctl	[no test files]
+[check:go] ?   	github.com/tbhb/agent-orchestration-poc/cmd/agentd	[no test files]
+[check:go] ?   	github.com/tbhb/agent-orchestration-poc/internal/api	[no test files]
+[check:go] ?   	github.com/tbhb/agent-orchestration-poc/internal/backend/container	[no test files]
+[check:go] ?   	github.com/tbhb/agent-orchestration-poc/internal/backend/tmux	[no test files]
+[check:coverage] tests/fixtures/review_identity/test_wrapper.py ......                    [  9%]
 [check:workflow-forms] ...................................................................      [100%]
 [check:workflow-forms]
-[check:workflow-forms] ============================= 110 passed in 1.41s ==============================
-[check:pytest] ............................................................             [ 67%]
+[check:workflow-forms] ============================= 110 passed in 1.31s ==============================
+[check:coverage] tests/test_coordinator_preflight.py ................................     [ 15%]
+[check:pytest] ............................................................             [ 66%]
 [check:workflow-forms] $ uv run python -m agent_orchestration_poc.shell.workflo…
-[check:pytest] tests/test_work_model_backfill_executor.py ....................          [ 71%]
-[check:pytest] tests/test_work_model_backfill_shell.py sssssss.s                        [ 73%]
-[check:workflow-forms] Finished in 1.86s
+[check:workflow-forms] Finished in 1.90s
+[check:pytest] tests/test_work_model_backfill_executor.py .........................     [ 71%]
+[check:pytest] tests/test_work_model_backfill_shell.py ssssssss.sss                     [ 73%]
 [check:pytest] tests/test_workflow_forms.py ........................................... [ 82%]
-[check:pytest] ...................................................................      [ 96%]
+[check:secrets] 11:24AM INF 283 commits scanned.
+[check:secrets] 11:24AM INF scanned ~16159371 bytes (16.16 MB) in 1.58s
+[check:secrets] 11:24AM INF no leaks found
+[check:secrets] Finished in 2.06s
+[check:pytest] ...................................................................      [ 97%]
 [check:pytest] tests/test_workflow_forms_shell.py ssssssssssssss                        [100%]
 [check:pytest]
 [check:pytest] =========================== short test summary info ============================
@@ -187,14 +189,16 @@
 [check:pytest] SKIPPED [1] tests/test_project_rank_shell.py:180: needs --run-integration
 [check:pytest] SKIPPED [2] tests/test_project_rank_shell.py:188: needs --run-integration
 [check:pytest] SKIPPED [1] tests/test_project_rank_shell.py:210: needs --run-integration
-[check:pytest] SKIPPED [1] tests/test_work_model_backfill_shell.py:83: needs --run-integration
-[check:pytest] SKIPPED [1] tests/test_work_model_backfill_shell.py:106: needs --run-integration
-[check:pytest] SKIPPED [1] tests/test_work_model_backfill_shell.py:121: needs --run-integration
-[check:pytest] SKIPPED [1] tests/test_work_model_backfill_shell.py:156: needs --run-integration
-[check:pytest] SKIPPED [1] tests/test_work_model_backfill_shell.py:198: needs --run-integration
-[check:pytest] SKIPPED [1] tests/test_work_model_backfill_shell.py:247: needs --run-integration
-[check:pytest] SKIPPED [1] tests/test_work_model_backfill_shell.py:268: needs --run-integration
-[check:pytest] SKIPPED [1] tests/test_work_model_backfill_shell.py:347: needs --run-integration
+[check:pytest] SKIPPED [1] tests/test_work_model_backfill_shell.py:108: needs --run-integration
+[check:pytest] SKIPPED [1] tests/test_work_model_backfill_shell.py:131: needs --run-integration
+[check:pytest] SKIPPED [1] tests/test_work_model_backfill_shell.py:146: needs --run-integration
+[check:pytest] SKIPPED [1] tests/test_work_model_backfill_shell.py:181: needs --run-integration
+[check:pytest] SKIPPED [1] tests/test_work_model_backfill_shell.py:223: needs --run-integration
+[check:pytest] SKIPPED [1] tests/test_work_model_backfill_shell.py:311: needs --run-integration
+[check:pytest] SKIPPED [1] tests/test_work_model_backfill_shell.py:360: needs --run-integration
+[check:pytest] SKIPPED [1] tests/test_work_model_backfill_shell.py:381: needs --run-integration
+[check:pytest] SKIPPED [1] tests/test_work_model_backfill_shell.py:460: needs --run-integration
+[check:pytest] SKIPPED [2] tests/test_work_model_backfill_shell.py:564: needs --run-integration
 [check:pytest] SKIPPED [1] tests/test_workflow_forms_shell.py:21: needs --run-integration
 [check:pytest] SKIPPED [1] tests/test_workflow_forms_shell.py:46: needs --run-integration
 [check:pytest] SKIPPED [1] tests/test_workflow_forms_shell.py:89: needs --run-integration
@@ -204,29 +208,27 @@
 [check:pytest] SKIPPED [2] tests/test_workflow_forms_shell.py:159: needs --run-integration
 [check:pytest] SKIPPED [5] tests/test_workflow_forms_shell.py:196: needs --run-integration
 [check:pytest] SKIPPED [1] tests/test_workflow_forms_shell.py:230: needs --run-integration
-[check:pytest] ======================= 422 passed, 44 skipped in 6.56s ========================
-[check:pytest] Finished in 6.95s
-[check:coverage] tests/fixtures/review_identity/test_wrapper.py ......                    [  9%]
-[check:coverage] tests/test_coordinator_preflight.py ................................     [ 16%]
+[check:pytest] ======================= 427 passed, 47 skipped in 7.39s ========================
+[check:pytest] Finished in 7.99s
 [check:coverage] tests/test_coordinator_preflight_shell.py ...                            [ 16%]
-[check:coverage] tests/test_coverage_floors.py .......                                    [ 18%]
-[check:coverage] tests/test_gremlins_output.py ....                                       [ 19%]
+[check:coverage] tests/test_coverage_floors.py .......                                    [ 17%]
+[check:coverage] tests/test_gremlins_output.py ....                                       [ 18%]
 [check:coverage] tests/test_mutation_score.py ...........                                 [ 21%]
 [check:coverage] tests/test_package.py ..                                                 [ 21%]
-[check:coverage] tests/test_parent_link_sync.py ...........                               [ 24%]
-[check:coverage] tests/test_parent_link_sync_shell.py .........                           [ 26%]
+[check:coverage] tests/test_parent_link_sync.py ...........                               [ 23%]
+[check:coverage] tests/test_parent_link_sync_shell.py .........                           [ 25%]
 [check:coverage] tests/test_project_probe.py .........................................    [ 34%]
-[check:coverage] tests/test_project_rank.py .........................                     [ 40%]
-[check:vale] ✔ 0 errors, 0 warnings and 0 suggestions in 171 files.
-[check:vale] Finished in 11.45s
+[check:coverage] tests/test_project_rank.py .........................                     [ 39%]
+[check:vale] ✔ 0 errors, 0 warnings and 0 suggestions in 174 files.
+[check:vale] Finished in 13.70s
 [check:coverage] tests/test_project_rank_shell.py .......                                 [ 41%]
-[check:coverage] tests/test_subject.py ....................                               [ 46%]
-[check:coverage] tests/test_work_model_backfill.py ...................................... [ 54%]
-[check:coverage] ............................................................             [ 67%]
-[check:coverage] tests/test_work_model_backfill_executor.py ....................          [ 71%]
-[check:coverage] tests/test_work_model_backfill_shell.py .........                        [ 73%]
+[check:coverage] tests/test_subject.py ....................                               [ 45%]
+[check:coverage] tests/test_work_model_backfill.py ...................................... [ 53%]
+[check:coverage] ............................................................             [ 66%]
+[check:coverage] tests/test_work_model_backfill_executor.py .........................     [ 71%]
+[check:coverage] tests/test_work_model_backfill_shell.py ............                     [ 73%]
 [check:coverage] tests/test_workflow_forms.py ........................................... [ 82%]
-[check:coverage] ...................................................................      [ 96%]
+[check:coverage] ...................................................................      [ 97%]
 [check:coverage] tests/test_workflow_forms_shell.py ..............                        [100%]
 [check:coverage]
 [check:coverage] ================================ tests coverage ================================
@@ -245,19 +247,19 @@
 [check:coverage] src/agent_orchestration_poc/core/review_identity.py                   20      0      2      0   100%
 [check:coverage] src/agent_orchestration_poc/core/subject.py                           10      0     10      0   100%
 [check:coverage] src/agent_orchestration_poc/core/work_model_backfill.py              483     21    224     18    94%
-[check:coverage] src/agent_orchestration_poc/core/work_model_backfill_executor.py      89      3     42      3    95%
+[check:coverage] src/agent_orchestration_poc/core/work_model_backfill_executor.py     151      4     84      5    96%
 [check:coverage] src/agent_orchestration_poc/core/workflow_forms.py                   186      0     74      0   100%
 [check:coverage] src/agent_orchestration_poc/shell/__init__.py                          0      0      0      0   100%
 [check:coverage] src/agent_orchestration_poc/shell/coordinator_preflight.py           108     26     28      7    71%
 [check:coverage] src/agent_orchestration_poc/shell/parent_link_sync.py                148     45     54     10    62%
 [check:coverage] src/agent_orchestration_poc/shell/project_rank.py                    157     19     52     15    84%
 [check:coverage] src/agent_orchestration_poc/shell/review_identity.py                  30      5      8      2    82%
-[check:coverage] src/agent_orchestration_poc/shell/work_model_backfill.py             281     79     80     17    67%
+[check:coverage] src/agent_orchestration_poc/shell/work_model_backfill.py             291     83     82     17    67%
 [check:coverage] src/agent_orchestration_poc/shell/workflow_forms.py                  122     12     44      6    89%
 [check:coverage] ----------------------------------------------------------------------------------------------------
-[check:coverage] TOTAL                                                               1953    213    742     84    87%
+[check:coverage] TOTAL                                                               2025    218    786     86    87%
 [check:coverage] Coverage JSON written to file .coverage-reports/python.json
-[check:coverage] ============================= 466 passed in 16.60s =============================
+[check:coverage] ============================= 474 passed in 19.71s =============================
 [check:coverage] $ go test -tags=integration -coverprofile=.coverage-reports/go…
 [check:coverage] 	github.com/tbhb/agent-orchestration-poc/cmd/agentctl		coverage: 0.0% of statements
 [check:coverage] ok  	github.com/tbhb/agent-orchestration-poc/cmd/agentd	(cached)	coverage: 60.7% of statements
@@ -276,23 +278,23 @@
 [check:coverage] ?   	github.com/tbhb/agent-orchestration-poc/internal/term	[no test files]
 [check:coverage] ok  	github.com/tbhb/agent-orchestration-poc/internal/version	(cached)	coverage: 100.0% of statements
 [check:coverage] $ uv run python scripts/check-coverage.py
-[check:go] ok  	github.com/tbhb/agent-orchestration-poc/internal/bus	43.424s
-[check:go] ok  	github.com/tbhb/agent-orchestration-poc/internal/cli	1.558s
+[check:go] ok  	github.com/tbhb/agent-orchestration-poc/internal/bus	42.285s
+[check:go] ok  	github.com/tbhb/agent-orchestration-poc/internal/cli	1.708s
 [check:go] ?   	github.com/tbhb/agent-orchestration-poc/internal/core	[no test files]
-[check:go] ok  	github.com/tbhb/agent-orchestration-poc/internal/core/command	2.557s
-[check:go] ok  	github.com/tbhb/agent-orchestration-poc/internal/core/layout	2.239s
-[check:go] ok  	github.com/tbhb/agent-orchestration-poc/internal/core/perms	1.353s
-[check:go] ok  	github.com/tbhb/agent-orchestration-poc/internal/core/relay	2.027s
-[check:go] ok  	github.com/tbhb/agent-orchestration-poc/internal/core/subject	1.815s
+[check:go] ok  	github.com/tbhb/agent-orchestration-poc/internal/core/command	2.153s
+[check:go] ok  	github.com/tbhb/agent-orchestration-poc/internal/core/layout	1.976s
+[check:go] ok  	github.com/tbhb/agent-orchestration-poc/internal/core/perms	2.650s
+[check:go] ok  	github.com/tbhb/agent-orchestration-poc/internal/core/relay	2.423s
+[check:go] ok  	github.com/tbhb/agent-orchestration-poc/internal/core/subject	2.897s
 [check:go] ?   	github.com/tbhb/agent-orchestration-poc/internal/registry	[no test files]
 [check:go] ?   	github.com/tbhb/agent-orchestration-poc/internal/term	[no test files]
-[check:go] ok  	github.com/tbhb/agent-orchestration-poc/internal/version	2.389s
-[check:go] Finished in 49.69s
-[check:coverage] Python core lines: 97.56% (floor 95%)
-[check:coverage] Python core branches: 93.91% (floor 90%)
-[check:coverage] Python shell lines: 78.01% (floor 70%)
+[check:go] ok  	github.com/tbhb/agent-orchestration-poc/internal/version	3.077s
+[check:go] Finished in 49.72s
+[check:coverage] Python core lines: 97.60% (floor 95%)
+[check:coverage] Python core branches: 94.02% (floor 90%)
+[check:coverage] Python shell lines: 77.80% (floor 70%)
 [check:coverage] Go core statements: 96.43% (floor 95%)
 [check:coverage] Go shell statements: 74.58% (floor 70%)
 [check:coverage] Go core branches: 94.74% (floor 90%)
-[check:coverage] Finished in 89.90s
-Finished in 90.04s
+[check:coverage] Finished in 102.25s
+Finished in 102.40s
