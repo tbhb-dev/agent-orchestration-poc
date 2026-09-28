@@ -1,7 +1,8 @@
 ---
-# research/imported/ is immutable once the import lands: nothing under it may
-# be modified, renamed, or deleted, and additions are allowed only from a
-# `research(import)` PR. See scripts/check-imported-research.sh.
+# Imported copies are immutable. A `research(import)` PR may add paths and
+# append lines to MANIFEST.md and MANIFEST.tsv without deleting existing lines.
+# Other modifications, renames, and deletions fail.
+# See scripts/check-imported-research.sh.
 name: imported-research
 
 "on":

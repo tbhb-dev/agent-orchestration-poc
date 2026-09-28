@@ -1,0 +1,31 @@
+{
+  "closure": [
+    {
+      "id": "0:comment:2",
+      "step": "0",
+      "kind": "comment",
+      "number": 2,
+      "method": "POST",
+      "path": "issues/2/comments",
+      "payload": {
+        "body": "Folded into 1.\n\n<!-- work-model-backfill:digest:0:comment:2 -->"
+      },
+      "before": 0,
+      "after": 1
+    },
+    {
+      "id": "0:close:2",
+      "step": "0",
+      "kind": "issue_state",
+      "number": 2,
+      "method": "PATCH",
+      "path": "issues/2",
+      "payload": {
+        "state": "closed",
+        "state_reason": "not_planned"
+      },
+      "before": ["open", "not_planned"],
+      "after": ["closed", "not_planned"]
+    }
+  ]
+}
