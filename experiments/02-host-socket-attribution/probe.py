@@ -4,7 +4,6 @@ import argparse
 import ctypes
 import json
 import os
-import runpy
 import socket
 import subprocess
 import sys
@@ -12,11 +11,12 @@ import time
 from dataclasses import asdict
 from pathlib import Path
 
-core = runpy.run_path(str(Path(__file__).with_name("attribution_core.py")))
-Process = core["Process"]
-Peer = core["Peer"]
-membership = core["membership"]
-peer_stable = core["peer_stable"]
+from agent_orchestration_poc.core.host_socket_attribution import (
+    Peer,
+    Process,
+    membership,
+    peer_stable,
+)
 
 
 class AuditToken(ctypes.Structure):

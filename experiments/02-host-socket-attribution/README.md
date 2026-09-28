@@ -6,7 +6,7 @@ This BV-01 fixture tests whether a host gateway can bind each Unix-socket reques
 
 The fixture uses two one-incarnation Python launch roots, A and B, separate short Unix socket paths under `/tmp`, and a third disposable server process for each socket. No SVID binding, issuance, credential, operator control socket, or interim peer-UID control path is exercised. There is no resume, relay, network listener, harness session, or agentd process. The exact full-path SVID registration rule remains a provisional fixture for BV-03 and BV-07. BV-01 does not test that binding.
 
-`attribution_core.py` holds value-only membership and peer-change decisions. `probe.py`, `run_fixture.py`, and `edge_cases.py` read processes and sockets at the shell edge. The core tests pass plain process and peer values without mocks.
+`src/agent_orchestration_poc/core/host_socket_attribution.py` holds value-only membership and peer-change decisions under the repository core gates. `probe.py`, `run_fixture.py`, and `edge_cases.py` read processes and sockets at the shell edge. `tests/test_host_socket_attribution.py` passes plain process and peer values without mocks.
 
 ## Commands and cleanup
 
@@ -16,11 +16,13 @@ Run from the repository root with the mise-pinned environment. Each command belo
 PYTHONSAFEPATH=1 mise exec -- uv run python experiments/02-host-socket-attribution/run_fixture.py > experiments/02-host-socket-attribution/evidence/two-workload.jsonl
 PYTHONSAFEPATH=1 mise exec -- uv run python experiments/02-host-socket-attribution/edge_cases.py > experiments/02-host-socket-attribution/evidence/edge-cases.jsonl
 for run in {1..10}; do PYTHONSAFEPATH=1 mise exec -- uv run python experiments/02-host-socket-attribution/run_fixture.py > experiments/02-host-socket-attribution/evidence/churn-${run}.jsonl || exit 1; done
-mise exec -- uv run pytest experiments/02-host-socket-attribution/test_probe.py
+mise exec -- uv run pytest tests/test_host_socket_attribution.py
 tmux -S /private/tmp/bv01-228-tmux.sock -f /dev/null new-session -d -s bv01 'cd /Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.worktrees/exp-228-host-gateway-attribution && PYTHONSAFEPATH=1 mise exec -- uv run python experiments/02-host-socket-attribution/run_fixture.py > experiments/02-host-socket-attribution/evidence/tmux.jsonl'
 ```
 
 `run_fixture.py` stops its child processes and removes its temporary directory. `edge_cases.py` uses context managers and a temporary directory. Both finish without a socket path or daemon left behind. The tmux session exited after the fixture, and the remaining dedicated server socket was removed. No pre-existing process, configuration, trust store, or daemon was changed. [Churn results](evidence/churn-summary.json) summarize 10 runs. The script uses only Unix sockets under `/tmp`, with no TCP fallback. The tmux cleanup commands and their exit status are recorded in [commands.txt](evidence/commands.txt).
+
+**Verified:** the moved decision module has 100% statement and branch coverage in the repository gate. The Python core mutation run scored 90.21% overall; the module's 23 mutants had 22 kills, one timeout, and no survivors. The raw outputs and run limits are in [check evidence](evidence/check.raw.gz), [mutation evidence](evidence/mutation.raw.gz), and [commands](evidence/commands.txt).
 
 ## Case results
 
@@ -29,7 +31,7 @@ tmux -S /private/tmp/bv01-228-tmux.sock -f /dev/null new-session -d -s bv01 'cd 
 | 1. A descendants and B rejection | A direct and nested children were allowed at A, B's forged `A pid=1` claim was rejected, and A's forged `B pid=1` claim was still judged by ancestry. B was allowed at B. Under one disposable tmux session, A and B roots shared PID 65222 as their parent. A requests were allowed and B's forged A claim was rejected. | [Two-workload trace](evidence/two-workload.jsonl), [shared-tmux trace](evidence/tmux.jsonl) | Observed allowed and blocked in fixture, including shared tmux |
 | 2. Connecting process and relay | `LOCAL_PEERTOKEN` identified the direct child PID in each fixture request. The nested path identified the final client, with the intermediate relay visible as its parent. No Codex or Claude execution path was started, so their actual connector and any authenticated relay binding are unknown. | [Two-workload trace](evidence/two-workload.jsonl) | Observed for fixture, integrated profiles inconclusive |
 | 3. Process lifecycle | A fresh interpreter process and nested child were allowed. A new session detached child remained allowed while its parent lived. A child reparented to PID 1 after the launch root exited was rejected. An in-place exec across the same PID and harness helpers were not measured. | [Two-workload trace](evidence/two-workload.jsonl) | Observed allowed and blocked, exec and helpers inconclusive |
-| 4. Stale records and churn | Repeated two-workload runs matched the expected decisions in all 10 attempts. Value-only table and Hypothesis tests reject a replaced root start time, a process born after acceptance, a missing link, and a parent cycle. No OS PID reuse event was observed. The token PID version lacks a validated comparison with the later `proc_pidinfo` lookup. | [Churn summary](evidence/churn-summary.json), [tests](test_probe.py) | Observed churn, simulated reuse, PID-reuse property inconclusive |
+| 4. Stale records and churn | Repeated two-workload runs matched the expected decisions in all 10 attempts. Value-only table and Hypothesis tests reject a replaced root start time, a process born after acceptance, a missing link, and a parent cycle. No OS PID reuse event was observed. The token PID version lacks a validated comparison with the later `proc_pidinfo` lookup. | [Churn summary](evidence/churn-summary.json), [tests](../../tests/test_host_socket_attribution.py) | Observed churn, simulated reuse, PID-reuse property inconclusive |
 | 5. Descriptors, replacement, lifetime | An inherited connected descriptor wrote `held` after its original connector exited. A later `LOCAL_PEERTOKEN` read identified the successor PID and version. After a socket path was renamed and replaced, a client connected to the new listener. The descriptor was inherited by a child. Transfer to the separate B root remains untested. | [Edge cases](evidence/edge-cases.jsonl) | Observed inherited descriptor and replacement, foreign transfer inconclusive |
 
 ## Attribution finding

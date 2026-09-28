@@ -5,6 +5,8 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class Process:
+    """Snapshot of one process and its parent."""
+
     pid: int
     ppid: int
     start_us: int
@@ -12,6 +14,8 @@ class Process:
 
 @dataclass(frozen=True)
 class Peer:
+    """Kernel peer identity observed at a request boundary."""
+
     pid: int
     pidversion: int
     accepted_us: int

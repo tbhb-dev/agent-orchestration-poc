@@ -45,6 +45,53 @@ check.raw.gz retains the exact aggregate output. check.txt removes trailing spac
 NO_COLOR=1 mise run check:mutation > experiments/02-host-socket-attribution/evidence/mutation.txt 2>&1
 exit 0
 
+Review correction on 2026-09-28: moved pure attribution logic to the enforced core package and value tests to the default pytest path. Issue #228's Allowed paths now names those two exact files. The scripts still use the same socket and process operations.
+
+git fetch origin && git merge origin/main
+exit 0, already up to date
+
+mise run check:pytest
+exit 2 before the module move: tests/test_host_socket_attribution.py could not import agent_orchestration_poc.core.host_socket_attribution
+
+mise exec -- uv run pytest tests/test_host_socket_attribution.py
+exit 0, 12 passed before the acceptance-time boundary test was added
+
+mise run check:imports
+exit 0, both contracts kept
+
+mise run check:pyrefly
+exit 0, zero diagnostics
+
+PYTHONSAFEPATH=1 mise exec -- uv run python experiments/02-host-socket-attribution/run_fixture.py
+exit 0, same seven case decisions; output was inspected but the original evidence trace remains the committed run
+
+PYTHONSAFEPATH=1 mise exec -- uv run python experiments/02-host-socket-attribution/edge_cases.py
+exit 0, successor peer token and path replacement observed again; original evidence trace remains the committed run
+
+mise run check:coverage
+exit 0, attribution core module 100% statements and branches
+
+NO_COLOR=1 mise run check > experiments/02-host-socket-attribution/evidence/check.txt 2>&1
+exit 1 in the first concurrent run: gobco failed for internal/core/subject while mutation testing ran; standalone check:coverage passed before this run
+
+NO_COLOR=1 mise run check:mutation > experiments/02-host-socket-attribution/evidence/mutation.txt 2>&1
+exit 0, attribution module had one surviving acceptance-time boundary mutant; a value test was added for it
+
+NO_COLOR=1 mise run check > experiments/02-host-socket-attribution/evidence/check.txt 2>&1
+exit 0 in a standalone rerun before the added boundary test
+
+NO_COLOR=1 mise run check:mutation > experiments/02-host-socket-attribution/evidence/mutation.txt 2>&1
+exit 0, Python core 90.21%; attribution module 22 killed, 1 timeout, 0 survived
+
+mise exec -- gzip -n -c experiments/02-host-socket-attribution/evidence/mutation.txt > experiments/02-host-socket-attribution/evidence/mutation.raw.gz
+exit 0; the compressed raw output was captured before progress lines were removed from mutation.txt
+
+NO_COLOR=1 mise run check > experiments/02-host-socket-attribution/evidence/check.txt 2>&1
+exit 0, 440 passed and 47 skipped in default pytest; 487 passed with integration coverage
+
+mise exec -- gzip -n -c experiments/02-host-socket-attribution/evidence/check.txt > experiments/02-host-socket-attribution/evidence/check.raw.gz
+exit 0; the compressed raw output was captured before whitespace cleanup of check.txt
+
 The mutation task was rerun after attribution_core.py was extracted from probe.py. It scores only src/agent_orchestration_poc/core and internal/core, which were unchanged by that extraction.
 
 test ! -e /private/tmp/bv01-228-tmux.sock
