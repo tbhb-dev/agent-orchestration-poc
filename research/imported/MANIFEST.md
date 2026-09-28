@@ -28,6 +28,12 @@ The inventory covers every regular file in both folders, including the files ins
 
 [Observed] Pull request #232's [imported-research CI job](https://github.com/tbhb-dev/agent-orchestration-poc/actions/runs/36386056944/job/108811561649) concluded failure. The local reproduction, `scripts/check-imported-research.sh origin/main 'research(import): add the frozen design wiki snapshot'`, returned exit code 1 because the guard rejects modifications to the existing `MANIFEST.md` and `MANIFEST.tsv` files. It accepted the 39 added snapshot files. The required manifest updates cannot pass this gate under the issue's allowed paths until the guard permits this case.
 
+[Verified] After `git fetch origin && git merge origin/main` reported `Already up to date` on 2026-09-28, `mise exec -- sh scripts/check-imported-research.sh origin/main 'research(import): add the frozen design wiki snapshot'` still returned exit code 1. The guard rejected only the two modified manifest files and accepted all 39 added snapshot files. The latest [review on pull request #232](https://github.com/tbhb-dev/agent-orchestration-poc/pull/232) also identified a PR form failure: `validate_type_label` returns `title type does not match type/ label` for the mandated title with `type/chore`, confirmed by a `mise exec -- uv run python -c` call against the current workflow reference. Both fixes require changes outside issue #227's allowed paths.
+
+[Verified] `mise run check` returned exit code 0 on this branch after the review, with 402 passed and 43 skipped in the standard Python suite and 445 passed in the coverage suite. Python core coverage was 97.64% lines and 94.01% branches; Go core coverage was 96.43% statements and 94.74% branches.
+
+[Verified] `mise run check:mutation` returned exit code 0 after the review. The Go core run classified 149 mutants with 97.32% test efficacy, and the Python core score was 90.10% (3,659 killed of 4,061).
+
 ## Tools
 
 | Tool | Version | Use |
