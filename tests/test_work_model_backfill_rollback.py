@@ -20,9 +20,26 @@ from agent_orchestration_poc.core.work_model_backfill_rollback import (
     inverse_action,
     rollback_plan,
     validate_rollback_journal,
+    validate_rollback_progress,
 )
 
 METADATA = ProjectMetadata({"node_id": "project"}, [], [])
+
+
+def title_inverse() -> Action:
+    """Build the saved title inverse shared by journal cases."""
+    forward = Action(
+        "title",
+        "6T",
+        "title",
+        1,
+        "PATCH",
+        "issues/1",
+        {"title": "new"},
+        "old",
+        "new",
+    )
+    return inverse_action(forward, {}, METADATA)
 
 
 def fixture_snapshot() -> Snapshot:
@@ -171,21 +188,7 @@ def test_plan_uses_only_verified_actions_in_reverse_order() -> None:
 
 
 def test_rollback_journal_rejects_plan_and_order_changes() -> None:
-    action = inverse_action(
-        Action(
-            "title",
-            "6T",
-            "title",
-            1,
-            "PATCH",
-            "issues/1",
-            {"title": "new"},
-            "old",
-            "new",
-        ),
-        {},
-        METADATA,
-    )
+    action = title_inverse()
     rows = [
         {"version": 1, "run_id": "cp1"},
         asdict(Record(action.id, "intent", {"action": asdict(action)})),
@@ -197,6 +200,135 @@ def test_rollback_journal_rejects_plan_and_order_changes() -> None:
         validate_rollback_journal(rows, "cp1", (replace(action, path="issues/2"),))
     with pytest.raises(ValueError, match="transition"):
         validate_rollback_journal([*rows, rows[-1]], "cp1", (action,))
+
+
+def test_rollback_retry_journal_reloads_after_second_intent() -> None:
+    action = title_inverse()
+    rows: list[dict[str, Any]] = [{"version": 1, "run_id": "cp1"}]
+    rows.extend(
+        asdict(
+            Record(
+                action.id,
+                phase,
+                {"action": asdict(action)} if phase == "intent" else {},
+            )
+        )
+        for phase in ("intent", "intent", "response", "verified")
+    )
+    assert (
+        len(validate_rollback_journal(json.loads(json.dumps(rows)), "cp1", (action,)))
+        == 4
+    )
+    after_response = [rows[0], rows[1], rows[3], rows[2], rows[3], rows[4]]
+    assert len(validate_rollback_journal(after_response, "cp1", (action,))) == 5
+    changed_retry = [*after_response]
+    changed_retry[3] = {
+        **rows[2],
+        "detail": {"action": {**asdict(action), "path": "issues/9"}},
+    }
+    with pytest.raises(ValueError, match="rollback action changed"):
+        validate_rollback_journal(changed_retry, "cp1", (action,))
+
+
+def test_rollback_progress_rejects_header_and_partial_resume_drift() -> None:
+    cp1 = fixture_snapshot()
+    item = cp1.items[0]
+    first = Action(
+        "title",
+        "6T",
+        "title",
+        int(item.key[1:]),
+        "PATCH",
+        f"issues/{item.key[1:]}",
+        {"title": "new"},
+        item.title,
+        "new",
+    )
+    second = Action(
+        "body",
+        "11:bodies",
+        "body",
+        int(item.key[1:]),
+        "PATCH",
+        f"issues/{item.key[1:]}",
+        {"body": "new body"},
+        item.body,
+        "new body",
+    )
+    forward = (first, second)
+    records = tuple(Record(action.id, "verified", {}) for action in forward)
+    inverse = tuple(
+        inverse_action(action, {}, METADATA) for action in reversed(forward)
+    )
+    current = replace(
+        cp1, items=(replace(item, title="new", body="new body"), *cp1.items[1:])
+    )
+    validate_rollback_progress(cp1, current, (forward, records), (inverse, ()))
+    drift = replace(
+        current,
+        items=(replace(current.items[0], labels=("unrelated",)), *current.items[1:]),
+    )
+    with pytest.raises(ValueError, match="drifted"):
+        validate_rollback_progress(cp1, drift, (forward, records), (inverse, ()))
+    undone = (Record(inverse[0].id, "verified", {}),)
+    partial = replace(
+        current, items=(replace(current.items[0], body=item.body), *current.items[1:])
+    )
+    validate_rollback_progress(cp1, partial, (forward, records), (inverse, undone))
+    with pytest.raises(ValueError, match="drifted"):
+        validate_rollback_progress(cp1, current, (forward, records), (inverse, undone))
+    pending = (*undone, Record(inverse[1].id, "intent", {}))
+    validate_rollback_progress(cp1, partial, (forward, records), (inverse, pending))
+    validate_rollback_progress(
+        cp1,
+        replace(
+            partial,
+            items=(replace(partial.items[0], title=item.title), *partial.items[1:]),
+        ),
+        (forward, records),
+        (inverse, pending),
+    )
+
+
+def test_rollback_progress_retains_created_issue_as_closed_record() -> None:
+    cp1 = fixture_snapshot()
+    created = Item("#99", "new issue", "open", issue_id="99", body="body")
+    action = Action(
+        "9:create:99",
+        "9:create",
+        "issue_create",
+        0,
+        "POST",
+        "issues",
+        {"title": "new issue", "body": "body", "type": ""},
+        0,
+        1,
+    )
+    record = Record(action.id, "verified", {"created_item": asdict(created)})
+    inverse = inverse_action(action, record.detail, METADATA)
+    closed = replace(created, state="closed", state_reason="not_planned")
+    pages = tuple(
+        replace(page, count=3, total_count=3)
+        if page.collection in {"issues", "native", "parents", "blockers"}
+        else page
+        for page in cp1.pages
+    ) + tuple(
+        Page(f"{kind}:#99", 1, 0, 1, 0) for kind in ("native", "blockers", "sub_issues")
+    )
+    current = replace(cp1, items=(*cp1.items, closed), pages=pages)
+    validate_rollback_progress(
+        cp1,
+        current,
+        ((action,), (record,)),
+        ((inverse,), (Record(inverse.id, "verified", {}),)),
+    )
+    with pytest.raises(ValueError, match="drifted"):
+        validate_rollback_progress(
+            cp1,
+            replace(current, items=(*cp1.items, created)),
+            ((action,), (record,)),
+            ((inverse,), (Record(inverse.id, "verified", {}),)),
+        )
 
 
 def test_rollback_journal_requires_ordered_saved_intents() -> None:

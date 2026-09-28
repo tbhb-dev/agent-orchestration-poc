@@ -11,6 +11,7 @@ from agent_orchestration_poc.core.work_model_backfill_executor import (
     ProjectMetadata,
     Record,
     _project_field_query,
+    validate_progress,
 )
 
 PROJECT_ITEMS = "orgs/tbhb-dev/projectsV2/1/items"
@@ -180,6 +181,9 @@ def _inverse_relation(action: Action, result: Action, value: dict[str, Any]) -> 
         method = "DELETE" if action.method == "POST" else "POST"
         return replace(
             result,
+            kind="blocker"
+            if action.kind == "trial_add" and method == "DELETE"
+            else result.kind,
             method=method,
             path=f"{prefix}/{blocker_id}" if method == "DELETE" else prefix,
             payload=None if method == "DELETE" else {"issue_id": int(blocker_id)},
@@ -250,15 +254,16 @@ def validate_rollback_journal(
                 raise ValueError("rollback journal has an unfinished action")
             phases = []
             index = current
-        if record.phase not in (
+        allowed = (
             ("intent",)
             if not phases
-            else ("response", "verified")
-            if phases == ["intent"]
-            else ("verified",)
-            if phases == ["intent", "response"]
+            else ("intent", "response", "verified")
+            if phases[-1] == "intent"
+            else ("intent", "verified")
+            if phases[-1] == "response"
             else ()
-        ):
+        )
+        if record.phase not in allowed:
             raise ValueError("rollback journal transition is invalid")
         if record.phase == "intent" and record.detail.get("action") != json.loads(
             json.dumps(asdict(actions[index]))
@@ -266,3 +271,53 @@ def validate_rollback_journal(
             raise ValueError("rollback action changed")
         phases.append(record.phase)
     return records
+
+
+def validate_rollback_progress(
+    cp1: Snapshot,
+    current: Snapshot,
+    forward_journal: tuple[tuple[Action, ...], tuple[Record, ...]],
+    rollback_journal: tuple[tuple[Action, ...], tuple[Record, ...]],
+) -> None:
+    """Check the full snapshot against forward writes minus saved inverses."""
+    forward, forward_records = forward_journal
+    inverse, rollback_records = rollback_journal
+    verified = {row.action_id for row in rollback_records if row.phase == "verified"}
+    pending = next(
+        (row.action_id for row in rollback_records if row.action_id not in verified),
+        None,
+    )
+    candidates = (verified, verified | {pending}) if pending else (verified,)
+    for undone in candidates:
+        removed = {
+            action.id.removeprefix("rollback:")
+            for action in inverse
+            if action.id in undone
+        }
+        retained = {action.id for action in forward if action.kind == "issue_create"}
+        selected = tuple(
+            row
+            for row in forward_records
+            if row.action_id not in removed or row.action_id in retained
+        )
+        closures = tuple(
+            action
+            for action in inverse
+            if action.id in undone
+            and action.kind == "issue_state"
+            and action.id.removeprefix("rollback:") in retained
+        )
+        try:
+            validate_progress(
+                cp1,
+                current,
+                (*forward, *closures),
+                (
+                    *selected,
+                    *(Record(action.id, "verified", {}) for action in closures),
+                ),
+            )
+        except ValueError:
+            continue
+        return
+    raise ValueError("checkpoint state drifted outside rollback journals")

@@ -72,6 +72,7 @@ from agent_orchestration_poc.core.work_model_backfill_executor import (
 from agent_orchestration_poc.core.work_model_backfill_rollback import (
     rollback_plan,
     validate_rollback_journal,
+    validate_rollback_progress,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -651,7 +652,7 @@ def run_rollback(args: argparse.Namespace) -> int:
         current = collect(api, "initial")
         inverse = rollback_plan(cp1, current, actions, records, metadata)
         if not args.rollback_journal.exists():
-            validate_progress(cp1, current, actions, records)
+            validate_rollback_progress(cp1, current, (actions, records), (inverse, ()))
             descriptor = os.open(
                 args.rollback_journal, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600
             )
@@ -666,6 +667,9 @@ def run_rollback(args: argparse.Namespace) -> int:
             json.loads(line) for line in args.rollback_journal.read_text().splitlines()
         ]
         undone = list(validate_rollback_journal(rows, run_id, inverse))
+        validate_rollback_progress(
+            cp1, current, (actions, records), (inverse, tuple(undone))
+        )
         verified = {row.action_id for row in undone if row.phase == "verified"}
         for action in inverse:
             if action.id in verified:

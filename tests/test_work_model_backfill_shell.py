@@ -675,8 +675,12 @@ def test_journaled_write_resumes_without_duplicate_comment(
 
 
 @pytest.mark.integration
-def test_rollback_comment_delete_recovers_lost_response(tmp_path: Path) -> None:
-    """A completed deletion is read back without sending a second DELETE."""
+@pytest.mark.parametrize(
+    ("kind", "fail_before"),
+    [("comment", False), ("comment", True), ("trial_add", False)],
+)
+def test_rollback_delete_recovery(tmp_path: Path, kind: str, fail_before: bool) -> None:
+    """Lost responses and safe retries reload without replaying completed DELETEs."""
     from agent_orchestration_poc.core.work_model_backfill_executor import (  # noqa: PLC0415
         Action,
         ProjectMetadata,
@@ -690,47 +694,71 @@ def test_rollback_comment_delete_recovers_lost_response(tmp_path: Path) -> None:
         _execute,
     )
 
-    comments = [{"id": 10, "body": "saved"}]
+    collection = (
+        [{"id": 10, "body": "saved"}] if kind == "comment" else [{"number": 96}]
+    )
     deletes: list[str] = []
 
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:
-            send_json(self, 200, comments)
+            send_json(self, 200, collection)
 
         def do_DELETE(self) -> None:
             deletes.append(self.path)
-            comments.clear()
-            send_json(self, 503, {})
+            if not fail_before or len(deletes) > 1:
+                collection.clear()
+            send_json(self, 503 if len(deletes) == 1 else 204, {})
 
         @override
         def log_message(self, format: str, *args: object) -> None:
             pass
 
-    assert callable(Handler.do_DELETE)
-    forward = Action(
-        "0:comment:2",
-        "0",
-        "comment",
-        2,
-        "POST",
-        "issues/2/comments",
-        {"body": "saved"},
-        0,
-        1,
+    if kind == "comment":
+        forward = Action(
+            "0:comment:2",
+            "0",
+            "comment",
+            2,
+            "POST",
+            "issues/2/comments",
+            {"body": "saved"},
+            0,
+            1,
+        )
+    else:
+        forward = Action(
+            "3:add:149:96",
+            "3:trial",
+            "trial_add",
+            149,
+            "POST",
+            "issues/149/dependencies/blocked_by",
+            {"issue_id": 96},
+            (),
+            ("#96",),
+        )
+    inverse = inverse_action(
+        forward,
+        {"comment_id": 10} if kind == "comment" else {},
+        ProjectMetadata({}, [], []),
     )
-    inverse = inverse_action(forward, {"comment_id": 10}, ProjectMetadata({}, [], []))
     path = tmp_path / "rollback.jsonl"
     path.write_text(json.dumps({"version": 1, "run_id": "cp1"}) + "\n")
-    records: list[Any] = []
     with live_server(Handler) as base:
         api = Api(base, "")
         with pytest.raises(ValueError, match="HTTP 503"):
-            _execute(api, path, inverse, records)
+            _execute(api, path, inverse, [])
         rows = [json.loads(line) for line in path.read_text().splitlines()]
         records = list(validate_rollback_journal(rows, "cp1", (inverse,)))
         _execute(api, path, inverse, records)
-    assert deletes == ["/repos/tbhb-dev/agent-orchestration-poc/issues/comments/10"]
-    assert [row.phase for row in records] == ["intent", "verified"]
+    rows = [json.loads(line) for line in path.read_text().splitlines()]
+    assert len(validate_rollback_journal(rows, "cp1", (inverse,))) == (
+        4 if fail_before else 2
+    )
+    assert len(deletes) == (2 if fail_before else 1)
+    assert deletes == [f"/repos/tbhb-dev/agent-orchestration-poc/{inverse.path}"] * len(
+        deletes
+    )
 
 
 @pytest.mark.integration

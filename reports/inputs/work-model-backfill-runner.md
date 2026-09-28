@@ -1,5 +1,11 @@
 # Work model backfill runner evidence
 
+## Rollback recovery review correction
+
+[Verified] Three new regression cases failed against review head `82c36fa`: a header-only rollback journal admitted unrelated snapshot drift, a DELETE that failed before mutation left `intent, intent, response, verified` unreadable on reload, and a lost response after inverse trial-link deletion halted even though read-back showed the link absent. The corrected core derives expected full snapshot state from the forward journal and verified inverse records on every resume, allowing either state for one interrupted inverse and checking already undone records. A created issue remains as a closed record after its inverse. Repeated intents are accepted before verification while every intent still has to match the saved action. The inverse trial DELETE uses deletion recovery rules; the forward trial add still requires a response before adopting a link.
+
+[Verified] The focused rollback and loopback shell suite passed 49 tests after the first corrections; the final aggregate `mise run -j 1 check` exited 0 with 580 integration coverage Python tests, Python core coverage 97.08% lines and 93.27% branches, and shell coverage 72.49% lines. `mise run check:mutation` first exited 1: Go core passed at 97.32% (145/149), while Python core scored 89.74% (7,587/8,454). Added plain-value cases for interrupted inverse state and the retained closed issue; `mise run check:mutation:python` then exited 0 at 90.06% (7,614/8,454). `mise run check:pyrefly` and `git diff --check` exited 0. These tests use plain values and a loopback fake; no live Project or issue write was made.
+
 ## Slice C selective rollback
 
 [Verified] Against base `1c141a12cee97fea6136858f0ac61cdac8097068` and later merged `main` at `320738f4947f6c2354757714662bb5672dc6e365`, the rollback planner reads only verified forward journal operations, checks the complete CP1 and current snapshot and retained branch, and produces inverse actions in reverse verification order. A completed closed-blocker add and cleanup trial has no net inverse. An unverified forward write stops rollback until it is safely resumed and read back.
