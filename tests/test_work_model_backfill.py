@@ -68,7 +68,14 @@ def snapshot() -> Snapshot:
         if row["number"]
     )
     drafts = (
-        Item("title:Draft B", "Draft B", "draft", draft_id="draft-b", item_id="item-b"),
+        Item(
+            "title:Draft B",
+            "Draft B",
+            "draft",
+            body="- Class: chore\n- Size: ",
+            draft_id="draft-b",
+            item_id="item-b",
+        ),
         Item("title:Held", "Held", "draft", draft_id="draft-held", item_id="item-held"),
     )
     pages = tuple(
@@ -82,7 +89,22 @@ def snapshot() -> Snapshot:
             ("blockers", 2),
         )
     )
-    return Snapshot(1, (*issues, *drafts), pages, "sha")
+    return _with_nested(Snapshot(1, (*issues, *drafts), pages, "sha"))
+
+
+def _with_nested(value: Snapshot) -> Snapshot:
+    """Supply one complete nested receipt for each numbered issue and endpoint."""
+    nested = tuple(
+        Page(f"{kind}:{item.key}", 1, count, 1, count)
+        for item in value.items
+        if item.issue_id
+        for kind, count in (
+            ("native", sum(bool(value) for _, value in item.native)),
+            ("blockers", len(item.blockers)),
+            ("sub_issues", sum(child.parent == item.key for child in value.items)),
+        )
+    )
+    return replace(value, pages=(*value.pages, *nested))
 
 
 def creation_inputs() -> TargetInputs:
@@ -128,7 +150,7 @@ def final_snapshot(items: tuple[Item, ...]) -> Snapshot:
             ("blockers", issues),
         )
     )
-    return Snapshot(1, items, pages, "after", "final")
+    return _with_nested(Snapshot(1, items, pages, "after", "final"))
 
 
 def approved_tables() -> Tables:
@@ -190,6 +212,7 @@ def approved_cp1_and_tables() -> tuple[Tables, Snapshot]:
                     f"title:{row['title']}",
                     row["title"],
                     "draft",
+                    body=f"- Class: {row['issue type'].lower()}\n- Size: {row['size']}",
                     draft_id=row["target content id"],
                     item_id=row["target project item"],
                 )
@@ -280,6 +303,7 @@ def test_approved_incidents_are_open_numbered_issues_at_cp13() -> None:
             project=project,
             issue_id=identity.issue_id,
             item_id=identity.item_id,
+            body=f"## Incident\n\n{row['title']}\n\n## Record\n\n{row['note']}",
         )
     assert len(incidents) == 2
     actual = final_snapshot(tuple(incidents.get(item.key, item) for item in target))
@@ -333,6 +357,88 @@ def test_cp1_rejects_changed_existing_draft_content_id() -> None:
     )
     with pytest.raises(ValueError, match="changed existing draft identity"):
         operation_plan(approved, changed)
+
+
+@pytest.mark.parametrize("change", ["key", "class", "size"])
+def test_cp1_rejects_draft_identity_or_classification(change: str) -> None:
+    """A copied draft is checked before closures, including its body Size."""
+    approved, cp1 = approved_cp1_and_tables()
+    draft = next(item for item in cp1.items if item.draft_id)
+    changed = {
+        "key": replace(draft, key="title:wrong"),
+        "class": replace(
+            draft, body=draft.body.replace("Class: chore", "Class: spike")
+        ),
+        "size": replace(draft, body=draft.body.replace("Size: L", "Size: S")),
+    }[change]
+    cp1 = replace(
+        cp1,
+        items=tuple(changed if item == draft else item for item in cp1.items),
+    )
+    with pytest.raises(ValueError, match="draft key and title|draft class or Size"):
+        operation_plan(approved, cp1)
+
+
+def test_created_bodies_come_from_tables() -> None:
+    """Returned creation bodies cannot define the reviewed CP13 target."""
+    approved, cp1 = approved_cp1_and_tables()
+    inputs = approved_creation_inputs(approved, cp1)
+    target = expected_cp13(approved, cp1, inputs)
+    parent = approved.parents[0]
+    parent_item = next(
+        item for item in target if item.title == parent["proposed title"]
+    )
+    assert parent["goal"] in parent_item.body
+    assert parent["finish line"] in parent_item.body
+    assert parent_item.body != inputs.created[f"title:{parent['proposed title']}"].body
+    incident = next(item for item in target if item.issue_type == "Incident")
+    assert "## Incident" in incident.body
+    draft = next(
+        item
+        for item in target
+        if item.draft_id and item.key not in {old.key for old in cp1.items}
+    )
+    for name in ("Class", "Priority", "Work type", "Severity", "Size"):
+        assert f"- {name}: " in draft.body
+
+
+@given(st.integers(min_value=2, max_value=5))
+def test_nested_pages_require_all_receipts(page_count: int) -> None:
+    """Any missing later nested page makes the snapshot incomplete."""
+    cp1 = snapshot()
+    selected = next(page for page in cp1.pages if page.collection == "blockers:#1")
+    extra = tuple(
+        replace(selected, index=index, count=0, total_pages=page_count)
+        for index in range(1, page_count)
+    )
+    changed = replace(
+        cp1,
+        pages=tuple(page for page in cp1.pages if page != selected) + extra,
+    )
+    assert not complete(changed)
+
+
+@given(st.text(max_size=20), st.text(max_size=20))
+def test_validator_owned_fields_do_not_define_cp13_target(
+    validation: str, detail: str
+) -> None:
+    """The Actions validator owns its two Project fields after backfill."""
+    target = expected_cp13(tables(), snapshot(), creation_inputs())
+    first = target[0]
+    changed = replace(
+        first,
+        project=tuple(
+            sorted(
+                {
+                    **dict(first.project),
+                    "Validation": validation,
+                    "Validation detail": detail,
+                }.items()
+            )
+        ),
+    )
+    actual = final_snapshot((changed, *target[1:]))
+    assert compare_cp13(target, actual, "after") == ()
 
 
 def test_approved_table_counts_and_numbered_exemptions() -> None:
@@ -531,7 +637,7 @@ def test_existing_d2_draft_requires_corrected_body() -> None:
     cp1 = replace(
         cp1,
         items=tuple(
-            replace(item, body="old planned") if item == d2 else item
+            replace(item, body=f"{item.body}\nold planned") if item == d2 else item
             for item in cp1.items
         ),
     )
@@ -570,15 +676,47 @@ def test_existing_d2_draft_requires_corrected_body() -> None:
     already_correct = replace(
         cp1,
         items=tuple(
-            replace(item, body="corrected unplanned") if item.key == d2.key else item
+            replace(item, body=f"{item.body}\ncorrected unplanned")
+            if item.key == d2.key
+            else item
             for item in cp1.items
         ),
     )
     target = expected_cp13(approved, already_correct, inputs)
     assert (
-        next(item for item in target if item.key == d2.key).body
-        == "corrected unplanned"
+        "corrected unplanned"
+        in next(item for item in target if item.key == d2.key).body
     )
+
+
+def test_existing_draft_body_is_preserved_after_classification() -> None:
+    """An existing draft's reviewed body survives CP13 byte-for-byte."""
+    approved, cp1 = approved_cp1_and_tables()
+    title = "tooling(workers): report worker completion without process exit"
+    row = next(row for row in approved.assignments if row["title"] == title)
+    draft = next(item for item in cp1.items if item.title == title)
+    body = (
+        f"- Class: {row['issue type'].lower()}\n"
+        f"- Priority: {row['priority']}\n"
+        f"- Work type: {row['work type']}\n"
+        f"- Severity: {row['severity'] or 'none'}\n"
+        f"- Size: {row['size']}\n\n"
+        "## Context\n\nKeep the worker session available.\n"
+    )
+    cp1 = replace(
+        cp1,
+        items=tuple(
+            replace(item, body=body) if item == draft else item for item in cp1.items
+        ),
+    )
+    validate_cp1(approved, cp1)
+    inputs = approved_creation_inputs(approved, cp1)
+    target = expected_cp13(approved, cp1, inputs)
+    assert next(item for item in target if item.key == draft.key).body == body
+    unchanged = tuple(
+        replace(item, body=body) if item.key == draft.key else item for item in target
+    )
+    assert compare_cp13(target, final_snapshot(unchanged), "after") == ()
 
 
 def test_revoked_closed_title_needs_valid_replacement() -> None:
@@ -811,6 +949,8 @@ def test_target_matches_reviewed_snapshot_fixture() -> None:
     actual = [
         asdict(item) for item in expected_cp13(tables(), snapshot(), creation_inputs())
     ]
+    for item in (*actual, *saved):
+        item.pop("body")
     assert json.loads(json.dumps(actual)) == saved
 
 
@@ -838,7 +978,9 @@ def test_cp13_reports_each_changed_field(field: str) -> None:
     changed = cast("Any", replace)(
         before,
         **{
-            field: value + ("unexpected",)
+            field: value + (("unexpected", "value"),)
+            if field == "native"
+            else value + ("unexpected",)
             if isinstance(value, tuple)
             else str(value) + "unexpected"
         },
@@ -916,7 +1058,7 @@ def test_rollback_uses_exact_saved_values_and_created_ids() -> None:
         native=(("Priority", "Standard"),),
         project=(("Status", "Ready"),),
     )
-    cp1 = replace(cp1, items=(old, *cp1.items[1:]))
+    cp1 = _with_nested(replace(cp1, items=(old, *cp1.items[1:]), pages=cp1.pages[:6]))
     created = creation_inputs().created
     order = tuple(item.item_id for item in cp1.items)
     rollback = rollback_values(
@@ -1100,7 +1242,7 @@ def test_approved_closure_uses_source_project_values() -> None:
             ("blockers", 1),
         )
     )
-    cp1 = Snapshot(1, (item,), pages, "sha")
+    cp1 = _with_nested(Snapshot(1, (item,), pages, "sha"))
     selected = Tables(approved.version, (row,), (), ())
     validate_cp1(selected, cp1)
     drift = replace(
@@ -1202,7 +1344,7 @@ def test_cycle_property(length: int) -> None:
     assert cycle_nodes(replace(parsed, parents=(parent,)))
 
 
-@given(st.permutations(tuple(range(6))))
+@given(st.permutations(tuple(range(12))))
 def test_complete_page_order_property(order: list[int]) -> None:
     """Collection order cannot change a complete snapshot verdict."""
     cp1 = snapshot()
