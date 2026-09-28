@@ -27,6 +27,7 @@ from agent_orchestration_poc.core.work_model_backfill import (
     expected_cp13,
     operation_plan,
     parse_tables,
+    project_field_ids,
     rollback_values,
     snapshot_from_rest,
     title_exemptions,
@@ -444,67 +445,79 @@ def test_nested_pages_require_all_receipts(page_count: int) -> None:
 
 
 def test_rest_snapshot_filters_pr_and_counts_nested_pages() -> None:
-    """Raw REST values become a complete issue and draft snapshot."""
+    """REST values produce the reviewed complete issue and draft snapshot."""
+    payload = json.loads((FIXTURES.parent / "runner/rest-snapshot.json").read_text())
+    values = payload["raw"]
+    raw = RestValues(
+        values["issues"],
+        tuple(Page(**page) for page in values["issue_pages"]),
+        values["old"],
+        values["project"],
+        tuple(Page(**page) for page in values["project_pages"]),
+        {key: tuple(groups) for key, groups in values["nested"].items()},
+        tuple(Page(**page) for page in values["nested_pages"]),
+        values["branch_sha"],
+        values["run_state"],
+    )
+    assert (
+        json.loads(json.dumps(asdict(snapshot_from_rest(raw)))) == payload["expected"]
+    )
+    assert complete(snapshot_from_rest(raw))
+    assert not complete(
+        snapshot_from_rest(replace(raw, nested_pages=raw.nested_pages[:-1]))
+    )
+
+
+def test_rest_snapshot_rejects_unreviewed_or_incomplete_identity() -> None:
+    """A CP1 must not silently drop issue reads or duplicate Project items."""
     issue: dict[str, Any] = {
         "number": 1,
         "id": 101,
-        "title": "tooling(project): build a model",
+        "title": "Title",
         "state": "open",
-        "state_reason": None,
         "labels": [],
-        "type": None,
     }
-    project_issue = {
+    project: dict[str, Any] = {
         "content_type": "Issue",
         "content": {"number": 1},
         "id": 201,
-        "fields": [{"name": "Status", "value": {"name": {"raw": "Ready"}}}],
-    }
-    draft: dict[str, Any] = {
-        "content_type": "DraftIssue",
-        "content": {"id": 301, "title": "Draft"},
-        "id": 202,
         "fields": [],
     }
-    nested = {
-        "#1": (
-            [
-                {
-                    "issue_field_name": "Work type",
-                    "single_select_option": {"name": "Planned"},
-                }
-            ],
-            [],
-            [{"number": 2}, {"number": 3}],
-        )
-    }
-    receipts = (
-        Page("native:#1", 1, 1, 1, 1),
-        Page("sub_issues:#1", 1, 0, 1, 0),
-        Page("blockers:#1", 1, 1, 2, 2),
-        Page("blockers:#1", 2, 1, 2, 2),
-    )
     raw = RestValues(
-        [issue, {"pull_request": {}, "number": 9}],
-        (Page("issues", 1, 2, 1, 2),),
+        [issue],
+        (Page("issues", 1, 1, 1, 1),),
         [],
-        [project_issue, draft],
-        (Page("project", 1, 2, 1, 2),),
-        nested,
-        receipts,
-        "branch",
+        [project],
+        (Page("project", 1, 1, 1, 1),),
+        {"#1": ([], [], [])},
+        (),
+        "sha",
         "initial",
     )
-    result = snapshot_from_rest(raw)
-    assert complete(result)
-    assert result.pages[0].count == 1
-    assert dict(result.items[0].native) == {
-        "Priority": "",
-        "Severity": "",
-        "Work type": "Planned",
-    }
-    assert result.items[0].blockers == ("#2", "#3")
-    assert not complete(snapshot_from_rest(replace(raw, nested_pages=receipts[:-1])))
+    with pytest.raises(ValueError, match="page receipts"):
+        snapshot_from_rest(replace(raw, issue_pages=(Page("issues", 1, 0, 1, 0),)))
+    with pytest.raises(ValueError, match="nested issue reads"):
+        snapshot_from_rest(replace(raw, nested={}))
+    with pytest.raises(ValueError, match="duplicate Project content"):
+        snapshot_from_rest(replace(raw, project=[project, project]))
+
+
+def test_project_field_selection_requires_named_fields() -> None:
+    """Unknown definitions cannot alter the requested Project field set."""
+    names = (
+        "Status",
+        "Size",
+        "Area",
+        "Harness",
+        "Worker",
+        "Phase",
+        "Priority",
+        "Validation",
+        "Validation detail",
+    )
+    fields = [{"id": index, "name": name} for index, name in enumerate(names, 1)]
+    fields.append({"id": 99, "name": "Secret"})
+    assert project_field_ids(fields) == tuple(range(1, 10))
 
 
 def test_validator_owned_fields_do_not_define_cp13_target() -> None:

@@ -230,6 +230,7 @@ def run(args: argparse.Namespace) -> int:
     if args.checkpoint == "initial":
         validate_cp1(tables, snapshot)
         envelope["plan"] = [asdict(step) for step in operation_plan(tables, snapshot)]
+        sys.stdout.write(json.dumps(envelope["plan"], indent=2) + "\n")
     else:
         cp1_data = json.loads(args.cp1.read_text())
         if cp1_data["digests"] != digests:
@@ -253,12 +254,6 @@ def run(args: argparse.Namespace) -> int:
             raise ValueError(f"CP13 differs in {len(differences)} fields")
     if args.output:
         args.output.write_text(json.dumps(envelope, indent=2) + "\n")
-    LOGGER.info(
-        "%s checkpoint: %s issues, %s REST reads",
-        args.checkpoint,
-        sum(bool(item.issue_id) for item in snapshot.items),
-        len(api.ledger),
-    )
     return 0
 
 

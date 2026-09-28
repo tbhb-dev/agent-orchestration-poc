@@ -98,7 +98,9 @@ def test_refuses_unlinked_full_page() -> None:
 
 
 @pytest.mark.integration
-def test_initial_checkpoint_uses_rest_gets_only(tmp_path: Path) -> None:
+def test_initial_checkpoint_uses_rest_gets_only(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
     """A complete loopback CP1 yields the reviewed plan and a safe ledger."""
     # Mutmut copies only the core package before collecting tests.
     from agent_orchestration_poc.shell.work_model_backfill import (  # noqa: PLC0415
@@ -135,6 +137,7 @@ def test_initial_checkpoint_uses_rest_gets_only(tmp_path: Path) -> None:
         )
         assert run(args) == 0
     data = json.loads(output.read_text())
+    assert json.loads(capsys.readouterr().out) == data["plan"]
     assert data["snapshot"]["branch_sha"] == "sha"
     assert data["plan"][0]["number"] == "1"
     assert all(

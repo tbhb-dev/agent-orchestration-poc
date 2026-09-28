@@ -307,34 +307,25 @@ def _rest_project_map(items: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
 
 def snapshot_from_rest(source: RestValues) -> Snapshot:
     """Turn complete REST values into a plain CP1 or CP13 snapshot."""
-    raw_issues = source.issues
-    issue_pages = source.issue_pages
-    old = source.old
-    project = source.project
-    project_pages = source.project_pages
-    nested = source.nested
-    issues = [issue for issue in raw_issues if "pull_request" not in issue]
+    issues = [issue for issue in source.issues if "pull_request" not in issue]
     offset = 0
     filtered_pages = []
-    for page in issue_pages:
+    for page in source.issue_pages:
         count = sum(
             "pull_request" not in issue
-            for issue in raw_issues[offset : offset + page.count]
+            for issue in source.issues[offset : offset + page.count]
         )
         filtered_pages.append(replace(page, count=count))
         offset += page.count
-    if offset != len(raw_issues):
+    if offset != len(source.issues):
         raise ValueError("issue page receipts differ from returned rows")
-    if set(nested) != {f"#{issue['number']}" for issue in issues}:
+    if set(source.nested) != {f"#{issue['number']}" for issue in issues}:
         raise ValueError("nested issue reads are incomplete or unexpected")
-    filtered_total = len(issues)
-    filtered_pages = [
-        replace(page, total_count=filtered_total) for page in filtered_pages
-    ]
-    old_map = _rest_project_map(old)
-    project_map = _rest_project_map(project)
+    filtered_pages = [replace(page, total_count=len(issues)) for page in filtered_pages]
+    old_map = _rest_project_map(source.old)
+    project_map = _rest_project_map(source.project)
     parents: dict[str, str] = {}
-    for key, (_, children, _) in nested.items():
+    for key, (_, children, _) in source.nested.items():
         for child in children:
             child_key = f"#{child['number']}"
             if child_key in parents:
@@ -343,7 +334,7 @@ def snapshot_from_rest(source: RestValues) -> Snapshot:
     items = []
     for issue in issues:
         key = f"#{issue['number']}"
-        field_values, _, blockers = nested[key]
+        field_values, _, blockers = source.nested[key]
         returned = {
             entry["issue_field_name"]: (entry.get("single_select_option") or {}).get(
                 "name", ""
@@ -370,7 +361,7 @@ def snapshot_from_rest(source: RestValues) -> Snapshot:
                 item_id=str(new_item["id"]) if new_item else "",
             )
         )
-    drafts = [item for item in project if item["content_type"] == "DraftIssue"]
+    drafts = [item for item in source.project if item["content_type"] == "DraftIssue"]
     for draft in drafts:
         content = draft["content"]
         items.append(
@@ -387,7 +378,7 @@ def snapshot_from_rest(source: RestValues) -> Snapshot:
     count = len(issues)
     pages = (
         *filtered_pages,
-        *project_pages,
+        *source.project_pages,
         Page("drafts", 1, len(drafts), 1, len(drafts)),
         *(Page(name, 1, count, 1, count) for name in ("native", "parents", "blockers")),
         *source.nested_pages,
