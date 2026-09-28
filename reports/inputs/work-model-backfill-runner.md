@@ -1,5 +1,19 @@
 # Work model backfill runner evidence
 
+## Reviewed Status and draft creation slice
+
+[Verified] The `initial` command accepts `--reviewed-status '{"#215": "Refinement"}'`, supplies that map to both CP1 validation and the pure operation plan, and saves it in the CP1 envelope. The `final` command supplies the reviewed Status map from its target inputs to its first CP1 validation. The `apply` command reuses the saved CP1 map when building its plan. A loopback integration case keeps the old Project Status at Backlog, sets the copied Project Status to Refinement, observes CP1 refusal without the override, then passes initial and final CP1 validation with the override. The synthetic case uses #1 as its fixture identity; the reviewed live disposition names #215.
+
+[Verified] `apply --stage 6:drafts` adds only absent planned Project drafts after every stage-0 action has a verified journal record. The pure action builder follows the stage-six plan targets and derives each draft body from its assignment row. Each POST has a saved intent, response receipt when returned, and full Project read-back of title, body, item ID, and draft content ID. A loopback test returned HTTP 503 after creating a draft; resume found the matching draft and verified it without a duplicate POST. No live issue or Project mutation was made.
+
+[Documented] The [versioned GitHub REST draft item reference](https://docs.github.com/en/rest/projects/drafts?apiVersion=2026-03-10) specifies the organization Project draft endpoint, required title, optional body, and HTTP 201 creation response. The runner's draft read-back uses the complete Project item collector already exercised by the read-only slice.
+
+[Untested] This partial stage-six delivery does not add missing numbered issues to the new Project, set Project field values, update matched draft bodies, or write native types and issue field values. Later stages still need hierarchy and dependency links, retitles, parent and incident issues, and rollback. The issue stays open.
+
+[Verified] `mise exec -- uv run pytest -q tests/test_work_model_backfill_executor.py tests/test_work_model_backfill_shell.py --run-integration` passed 33 tests. The first `mise run -j 1 check` stopped at duplicate test-server code, which was consolidated into shared loopback helpers. The final aggregate exited 0 with 470 integration-coverage tests passing, Python core lines 97.71%, branches 94.29%, and shell lines 77.62%. The first mutation run scored 89.63% and failed. Exact action and receipt assertions plus malformed draft progress cases raised the final `mise run check:mutation` score to 90.11% (4,111 of 4,562 Python core mutants killed), with Go efficacy 97.32% (145 of 149 killed).
+
+[Verified] Pinned scc 4.1.0 classified the added and deleted Python diff fragments against `main` as 424 changed code units, excluding this report under the workflow size rule. `git diff --check` exited 0. No live backfill write was made.
+
 ## Journaled issue closure slice
 
 [Verified] The `apply` command accepts stage 0 only and requires `--apply`, a saved CP1, a journal path, and `CP1:<digest>` confirmation for the SHA-256 of that exact CP1 envelope. It rechecks table digests and the pure operation plan, locks the journal, and compares a fresh complete read with CP1 plus journaled changes before writing. No live GitHub backfill write was made.
