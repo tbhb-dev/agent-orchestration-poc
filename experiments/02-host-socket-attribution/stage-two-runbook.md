@@ -2,19 +2,25 @@
 
 ## Boundary and preflight
 
-**Untested:** none of these harness commands ran in stage one. The operator must review [the responder source](model_responder.py) and all eight exact [response fixtures](fixtures/responder/). Review [the listener](probe.py) and [the file-open audit](file-open-audit.md) before a cell starts. The responder returns one fixed native shell tool call and one final frame, then rejects another request. A startup request outside the fixed Responses or Messages endpoint is rejected. Stop that cell and report `unsupported with fake key` if it cannot reach the one connector command. The model HTTP port is separate from the Unix workload connector. No SVID is issued or bound, and there is no operator control socket.
+**Untested rerun preparation under OP-33:** the [stage-two record](evidence/stage-two/run.md) lists the four startup blockers. The operator must review [the responder source](model_responder.py) and all eight exact [response fixtures](fixtures/responder/) before a rerun. The [listener](probe.py) and [file-open audit](file-open-audit.md) also need review. The responder returns one fixed native shell tool call and one final frame, then rejects another Messages request. It also accepts the recorded Claude startup request shapes. Stop a cell and report `unsupported with fake key` if it cannot reach the one connector command. The model HTTP port is separate from the Unix workload connector. No SVID is issued or bound, and there is no operator control socket.
 
-Run from `/Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.worktrees/exp-228-host-harness-connectors` in a fresh operator-approved shell. Use the pinned `codex-cli 0.157.1`, Claude Code `2.1.283`, and the source commits in [versions.md](versions.md). Record output and exit codes for each preflight command without inspecting an operator profile.
+Run from `/Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.worktrees/exp-228-harness-rerun-prep` in a fresh operator-approved shell. Use the pinned `codex-cli 0.157.1`, Claude Code `2.1.284` observed in [stage two](evidence/stage-two/run.md), and `openai/codex@a6bd19261c30ce0a0225fe90e646822d29916f11`. Record output and exit codes for each preflight command without inspecting an operator profile. **OP-33 deviation 2:** first check the exact Codex binary and stop if absent or a different version.
 
 ```sh
 date '+%Y-%m-%d %H:%M:%S %Z'
+codex_bin=/Users/tony/.codex/packages/standalone/releases/0.157.1-aarch64-apple-darwin/bin/codex
+test -x "$codex_bin" || exit 1
+codex_version=$("$codex_bin" --version) || exit 1
+test "$codex_version" = 'codex-cli 0.157.1' || exit 1
+printf '%s\n' "$codex_version"
 sw_vers
 uname -m
-codex --version
 claude --version
 git status --short
 for name in codex-interactive codex-headless claude-interactive claude-headless; do test ! -e "/private/tmp/bv01-228-$name" || exit 1; done
 ```
+
+**Source-confirmed:** the sandbox helper runs `codex_self_exe`. It grants a read path to that executable. The `current_exe()` call supplies the path ([fs_sandbox.rs](https://github.com/openai/codex/blob/a6bd19261c30ce0a0225fe90e646822d29916f11/codex-rs/exec-server/src/fs_sandbox.rs#L152-L155), [fs_sandbox.rs](https://github.com/openai/codex/blob/a6bd19261c30ce0a0225fe90e646822d29916f11/codex-rs/exec-server/src/fs_sandbox.rs#L232-L270), [arg0/src/lib.rs](https://github.com/openai/codex/blob/a6bd19261c30ce0a0225fe90e646822d29916f11/codex-rs/arg0/src/lib.rs#L426-L430)). **Inference:** launching the pinned release binary directly avoids the denied `~/.local/bin/codex` helper path observed in [stage two](evidence/stage-two/run.md#cell-codex-headless-attempt-2). The rerun must verify this behavior.
 
 ## Disposable homes and trace
 
@@ -30,7 +36,16 @@ for name in codex-interactive codex-headless claude-interactive claude-headless;
 for name in codex-interactive codex-headless claude-interactive claude-headless; do sha256sum "/private/tmp/bv01-228-$name/workspace/experiments/02-host-socket-attribution/probe.py" "/private/tmp/bv01-228-$name/workspace/agent_orchestration_poc/core/host_socket_attribution.py"; done
 ```
 
-Use this fixed executable path, recorded from stage one on this host. Check that Codex, Claude, and Python still resolve to the pinned versions before launching. The responder runs once per cell so its two-frame sequence and log remain isolated.
+**OP-33 deviation 3, source-confirmed and inference:** pre-seed only each disposable Codex workspace as trusted in its own `config.toml`. Codex writes `trust_level = "trusted"` under `[projects."<path>"]` ([config/mod.rs](https://github.com/openai/codex/blob/a6bd19261c30ce0a0225fe90e646822d29916f11/codex-rs/core/src/config/mod.rs#L2334-L2400)). Whether this suppresses the [observed folder prompt](evidence/stage-two/run.md#cell-codex-interactive) is untested. The read-only command `strings /Users/tony/.local/share/claude/versions/2.1.284 | rg -x 'hasCompletedOnboarding|theme|dark'` found those three identifiers in the installed Claude Code 2.1.284 binary. [Stage two](evidence/stage-two/run.md#cell-claude-interactive) observed the theme prompt, and the headless cell created `claude/.claude.json`. **Inference:** the following disposable `.claude.json` values suppress the first-run theme picker. The procedure does not permit answering a prompt.
+
+```sh
+for name in claude-interactive claude-headless; do cat > "/private/tmp/bv01-228-$name/claude/.claude.json" <<'EOF'
+{"hasCompletedOnboarding":true,"theme":"dark"}
+EOF
+done
+```
+
+Use the preflight-checked Codex release path. Check that Claude and Python still resolve to the pinned versions before launching. The responder runs once per cell so its two-frame sequence and log remain isolated.
 
 ```sh
 probe=experiments/02-host-socket-attribution/probe.py
@@ -52,7 +67,7 @@ printf '%s\n' "$port" > "$home/model-port"
 lsof -nP -a -p "$model_pid" -iTCP
 ```
 
-Run the same block in sequence with `profile=codex-interactive`, `profile=claude-headless`, and `profile=claude-interactive`, always using a fresh responder process and that cell's own home. Do not run two responder instances against the same profile log. Record the responder PID, port, request count, and exit status. A path or host mismatch in `model.jsonl` stops that cell.
+**OP-33 deviation 1:** run the same block in sequence with `profile=codex-interactive`, `profile=claude-headless`, and `profile=claude-interactive`, always using a fresh responder process and that cell's own home. Do not run two responder instances against the same profile log. Record the responder PID, port, request count, and exit status. A path or host mismatch in `model.jsonl` stops that cell. The log records method, raw request path, and status without headers or body values. `HEAD /v1/messages` receives an empty 200, and `POST /v1/messages?beta=true` uses the same two fixed frames as `POST /v1/messages`. Any other path, including `/`, remains refused. Those method and path pairs are an **inference** from the [stage-two binary strings and responses](evidence/stage-two/run.md#cell-claude-headless), and the rerun log will identify the actual method and path.
 
 Write the Codex file inside that profile's `codex` directory. Substitute the recorded loopback port and the literal mode in the socket path. The following example lists the intended Codex settings.
 
@@ -60,6 +75,11 @@ Write the Codex file inside that profile's `codex` directory. Substitute the rec
 cat > /private/tmp/bv01-228-codex-headless/codex/config.toml <<EOF
 model_provider = "bv01"
 default_permissions = "bv01"
+check_for_update_on_startup = false
+[features]
+plugins = false
+[projects."/private/tmp/bv01-228-codex-headless/workspace"]
+trust_level = "trusted"
 [model_providers.bv01]
 name = "bv01"
 base_url = "http://127.0.0.1:$port/v1"
@@ -78,6 +98,11 @@ For Codex interactive, use the port from that profile's fresh responder. Do not 
 cat > /private/tmp/bv01-228-codex-interactive/codex/config.toml <<EOF
 model_provider = "bv01"
 default_permissions = "bv01"
+check_for_update_on_startup = false
+[features]
+plugins = false
+[projects."/private/tmp/bv01-228-codex-interactive/workspace"]
+trust_level = "trusted"
 [model_providers.bv01]
 name = "bv01"
 base_url = "http://127.0.0.1:$port/v1"
@@ -89,6 +114,8 @@ enabled = true
 "/private/tmp/bv01-228-codex-interactive/gateway.sock" = "allow"
 EOF
 ```
+
+**OP-33 deviation 4, source-confirmed:** `check_for_update_on_startup = false` disables the TUI update path that requests `api.github.com/repos/openai/codex/releases/latest` ([config_toml.rs](https://github.com/openai/codex/blob/a6bd19261c30ce0a0225fe90e646822d29916f11/codex-rs/config/src/config_toml.rs#L519-L522), [updates.rs](https://github.com/openai/codex/blob/a6bd19261c30ce0a0225fe90e646822d29916f11/codex-rs/tui/src/updates.rs#L27-L44)). `[features] plugins = false` uses the pinned feature key and disables the plugin manager's curated repository sync and plugin discovery paths, including the `openai/plugins` clone and the `chatgpt.com` featured request ([features/src/lib.rs](https://github.com/openai/codex/blob/a6bd19261c30ce0a0225fe90e646822d29916f11/codex-rs/features/src/lib.rs#L1440-L1452), [config/mod.rs](https://github.com/openai/codex/blob/a6bd19261c30ce0a0225fe90e646822d29916f11/codex-rs/core/src/config/mod.rs#L1707-L1715), [manager.rs](https://github.com/openai/codex/blob/a6bd19261c30ce0a0225fe90e646822d29916f11/codex-rs/core-plugins/src/manager.rs#L729-L743), [manager.rs](https://github.com/openai/codex/blob/a6bd19261c30ce0a0225fe90e646822d29916f11/codex-rs/core-plugins/src/manager.rs#L1849-L1870)). **Untested:** the rerun must confirm both controls stop the observed requests. **Source-confirmed:** the TUI directly prewarms `announcement_tip.toml` without a config check ([tui/lib.rs](https://github.com/openai/codex/blob/a6bd19261c30ce0a0225fe90e646822d29916f11/codex-rs/tui/src/lib.rs#L1150-L1155), [tooltips.rs](https://github.com/openai/codex/blob/a6bd19261c30ce0a0225fe90e646822d29916f11/codex-rs/tui/src/tooltips.rs#L18-L19)). No disabling config key was found at this revision. Record any `raw.githubusercontent.com` announcement request as a rerun finding, as [stage two](evidence/stage-two/run.md#cell-codex-interactive) did.
 
 Write the Claude file inside each Claude home. Use the mode's literal socket path. Each command writes settings for its own profile.
 
@@ -108,7 +135,7 @@ Inspect each effective file for unexpected socket paths, provider URLs, and sett
 The listener needs the launch-root PID before it binds. Start a wrapper shell that writes its own PID to `root.pid`, waits for `go`, and then replaces itself with `env -i` and the harness. Run the wrapper from that profile's `workspace`. For an interactive cell, enter its wrapper command in a dedicated tmux server made with `tmux -S /private/tmp/bv01-228-probe.tmux -f /dev/null`, without addressing the default server or session `0`. The wrapper command for Codex headless is shown exactly. For another cell, use its literal home and the corresponding harness command below.
 
 ```sh
-sh -c 'printf "%s\n" "$$" > /private/tmp/bv01-228-codex-headless/root.pid; while test ! -e /private/tmp/bv01-228-codex-headless/go; do sleep 0.05; done; cd /private/tmp/bv01-228-codex-headless/workspace || exit 1; exec env -i HOME=/private/tmp/bv01-228-codex-headless CODEX_HOME=/private/tmp/bv01-228-codex-headless/codex TMPDIR=/private/tmp/bv01-228-codex-headless/tmp XDG_CONFIG_HOME=/private/tmp/bv01-228-codex-headless/xdg PYTHONPATH=/private/tmp/bv01-228-codex-headless/workspace BV01_FAKE_OPENAI_KEY=not-a-real-key PATH=/Users/tony/.local/bin:/Users/tony/.local/share/mise/installs/python/3.14.6/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin TERM=xterm-256color LANG=C.UTF-8 codex exec --ephemeral --skip-git-repo-check -C /private/tmp/bv01-228-codex-headless/workspace -c approval_policy=never "Run python3 experiments/02-host-socket-attribution/probe.py client /private/tmp/bv01-228-codex-headless/gateway.sock codex-headless and then stop."' &
+sh -c 'printf "%s\n" "$$" > /private/tmp/bv01-228-codex-headless/root.pid; while test ! -e /private/tmp/bv01-228-codex-headless/go; do sleep 0.05; done; cd /private/tmp/bv01-228-codex-headless/workspace || exit 1; exec env -i HOME=/private/tmp/bv01-228-codex-headless CODEX_HOME=/private/tmp/bv01-228-codex-headless/codex TMPDIR=/private/tmp/bv01-228-codex-headless/tmp XDG_CONFIG_HOME=/private/tmp/bv01-228-codex-headless/xdg PYTHONPATH=/private/tmp/bv01-228-codex-headless/workspace BV01_FAKE_OPENAI_KEY=not-a-real-key PATH=/Users/tony/.local/bin:/Users/tony/.local/share/mise/installs/python/3.14.6/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin TERM=xterm-256color LANG=C.UTF-8 /Users/tony/.codex/packages/standalone/releases/0.157.1-aarch64-apple-darwin/bin/codex exec --ephemeral --skip-git-repo-check -C /private/tmp/bv01-228-codex-headless/workspace -c approval_policy=never "Run python3 experiments/02-host-socket-attribution/probe.py client /private/tmp/bv01-228-codex-headless/gateway.sock codex-headless and then stop."' &
 ```
 
 From the supervisor shell, wait for `root.pid` and start a one-request listener. Then release the wrapper. Repeat with a fresh listener for each cell. Capture listener stdout under that cell's home and keep its `gateway.sock` path there. The listener records the root's PID and start time through `proc_pidinfo`.
@@ -132,7 +159,7 @@ cat > /private/tmp/bv01-228-codex-interactive/launch.sh <<'EOF'
 printf '%s\n' "$$" > /private/tmp/bv01-228-codex-interactive/root.pid
 while test ! -e /private/tmp/bv01-228-codex-interactive/go; do sleep 0.05; done
 cd /private/tmp/bv01-228-codex-interactive/workspace || exit 1
-exec env -i HOME=/private/tmp/bv01-228-codex-interactive CODEX_HOME=/private/tmp/bv01-228-codex-interactive/codex TMPDIR=/private/tmp/bv01-228-codex-interactive/tmp XDG_CONFIG_HOME=/private/tmp/bv01-228-codex-interactive/xdg PYTHONPATH=/private/tmp/bv01-228-codex-interactive/workspace BV01_FAKE_OPENAI_KEY=not-a-real-key PATH=/Users/tony/.local/bin:/Users/tony/.local/share/mise/installs/python/3.14.6/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin TERM=xterm-256color LANG=C.UTF-8 codex -C /private/tmp/bv01-228-codex-interactive/workspace -c approval_policy=never
+exec env -i HOME=/private/tmp/bv01-228-codex-interactive CODEX_HOME=/private/tmp/bv01-228-codex-interactive/codex TMPDIR=/private/tmp/bv01-228-codex-interactive/tmp XDG_CONFIG_HOME=/private/tmp/bv01-228-codex-interactive/xdg PYTHONPATH=/private/tmp/bv01-228-codex-interactive/workspace BV01_FAKE_OPENAI_KEY=not-a-real-key PATH=/Users/tony/.local/bin:/Users/tony/.local/share/mise/installs/python/3.14.6/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin TERM=xterm-256color LANG=C.UTF-8 /Users/tony/.codex/packages/standalone/releases/0.157.1-aarch64-apple-darwin/bin/codex -C /private/tmp/bv01-228-codex-interactive/workspace -c approval_policy=never
 EOF
 cat > /private/tmp/bv01-228-claude-interactive/launch.sh <<'EOF'
 #!/bin/sh
