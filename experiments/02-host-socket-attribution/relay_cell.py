@@ -483,10 +483,13 @@ class Cell:
                 f"bv01:{self.profile}",
             )
             if "Accessing workspace:" in pane or "Quick safety check:" in pane:
+                (self.run / "pane-trust-prompt.txt").write_text(pane)
                 raise RuntimeError("workspace trust prompt appeared")
             if "Sign in" in pane or "Enter your API key" in pane:
+                (self.run / "pane-credential-prompt.txt").write_text(pane)
                 raise RuntimeError("credential prompt appeared")
             if "Pane is dead" in pane:
+                (self.run / "pane-dead.txt").write_text(pane)
                 raise RuntimeError("harness pane exited before its input prompt")
             if self.profile == "claude-interactive" and claude_theme_choice(pane):
                 if not theme_answered:
@@ -535,37 +538,46 @@ class Cell:
             "Enter",
         )
 
+    def save_pane(self, name: str) -> None:
+        """Retain the dedicated tmux pane before teardown."""
+        (self.run / name).write_text(
+            checked(
+                "tmux",
+                "-S",
+                str(TMUX_SOCKET),
+                "capture-pane",
+                "-p",
+                "-S",
+                "-2000",
+                "-t",
+                f"bv01:{self.profile}",
+            )
+        )
+
     def observe(self, deadline: float) -> str:
         """Wait for a connector request and retain only cell process evidence."""
         listener = self.listener
         harness = self.harness
         if listener is None:
             raise RuntimeError("listener absent")
-        wait_for(
-            lambda: (
-                listener.poll() is not None
-                or (harness is not None and harness.poll() is not None)
-            ),
-            deadline,
-            "cell completion before 540 seconds",
-        )
+        try:
+            wait_for(
+                lambda: (
+                    listener.poll() is not None
+                    or (harness is not None and harness.poll() is not None)
+                ),
+                deadline,
+                "cell completion before 540 seconds",
+            )
+        except TimeoutError:
+            if self.tmux_started:
+                self.save_pane("pane-observe-timeout.txt")
+            raise
         if harness is not None:
             harness.wait(timeout=max(1, deadline - time.monotonic()))
         time.sleep(1)
         if self.tmux_started:
-            (self.run / "harness-pane.txt").write_text(
-                checked(
-                    "tmux",
-                    "-S",
-                    str(TMUX_SOCKET),
-                    "capture-pane",
-                    "-p",
-                    "-S",
-                    "-2000",
-                    "-t",
-                    f"bv01:{self.profile}",
-                )
-            )
+            self.save_pane("harness-pane.txt")
             exit_status = checked(
                 "tmux",
                 "-S",
@@ -614,6 +626,8 @@ class Cell:
             except (OSError, RuntimeError, subprocess.SubprocessError) as error:
                 errors.append(str(error))
 
+        if self.tmux_started:
+            attempt(lambda: self.save_pane("pane-at-cleanup.txt"))
         attempt(
             lambda: terminate(
                 self.harness,

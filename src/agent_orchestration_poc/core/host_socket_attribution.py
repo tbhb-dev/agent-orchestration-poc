@@ -130,6 +130,28 @@ def responder_log(method: str, path: str, status: int) -> dict[str, str | int]:
 def codex_config(home: Path, python: Path, port: int) -> str:
     """Build the disposable Codex profile and exact read grants."""
     workspace = home / "workspace"
+    denied = [home / "relay-run-r2", home / "codex"]
+    denied.extend(
+        home.parent / f"bv01-228-{profile}"
+        for profile in (
+            "codex-headless",
+            "codex-interactive",
+            "claude-headless",
+            "claude-interactive",
+        )
+        if home.name != f"bv01-228-{profile}"
+    )
+    if home.name == "bv01-228-codex-headless":
+        denied.extend(
+            home / name
+            for name in (
+                "file-opens-relay-r2.json",
+                "file-opens-relay-r2.pid",
+                "file-opens-relay-r2.err",
+                "audit-positive-relay-r2",
+            )
+        )
+    deny_entries = "\n".join(f'"{path}" = "deny"' for path in denied)
     return f'''model_provider = "bv01"
 default_permissions = "bv01"
 check_for_update_on_startup = false
@@ -146,6 +168,7 @@ env_key = "BV01_FAKE_OPENAI_KEY"
 ":minimal" = "read"
 "{workspace}" = "read"
 "{python.parent.parent}" = "read"
+{deny_entries}
 [permissions.bv01.network]
 enabled = true
 [permissions.bv01.network.unix_sockets]
@@ -200,8 +223,6 @@ def claude_theme_choice(pane: str) -> bool:
     """Recognize only the pinned first-run theme dialog with dark selected."""
     lines = [line.strip() for line in pane.splitlines()]
     required = {
-        "Welcome to Claude Code v2.1.284",
-        "Let's get started.",
         "Choose the text style that looks best with your terminal",
         "To change this later, run /theme",
         "1. Auto (match terminal)",

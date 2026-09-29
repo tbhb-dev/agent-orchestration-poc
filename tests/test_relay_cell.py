@@ -10,6 +10,7 @@ import tomllib
 from collections.abc import Callable
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any
 
 import pytest
 
@@ -43,6 +44,14 @@ def set_cell_paths(
     monkeypatch.setattr(cell_type, "evidence", property(cell_evidence))
 
 
+def interactive_cell(monkeypatch: pytest.MonkeyPatch, home: Path) -> Any:  # noqa: ANN401 - runpy class
+    """Create an interactive cell with an owned test run directory."""
+    (home / "relay-run-r2").mkdir()
+    cell_type = RELAY["Cell"]
+    set_cell_paths(monkeypatch, cell_type, home, home / "evidence")
+    return cell_type("claude-interactive", tmux_started=True)
+
+
 @pytest.mark.parametrize("profile", ["codex-headless", "codex-interactive"])
 def test_codex_profile_reads_platform_defaults_workspace_and_python(
     profile: str,
@@ -57,11 +66,38 @@ def test_codex_profile_reads_platform_defaults_workspace_and_python(
     )
     workspace = home / "workspace"
     python = Path("/Users/tony/.local/share/mise/installs/python/3.14.6")
+    denied = {
+        str(home / "relay-run-r2"): "deny",
+        str(home / "codex"): "deny",
+        **{
+            f"/private/tmp/bv01-228-{other}": "deny"
+            for other in (
+                "codex-headless",
+                "codex-interactive",
+                "claude-headless",
+                "claude-interactive",
+            )
+            if other != profile
+        },
+    }
+    if profile == "codex-headless":
+        denied.update(
+            {
+                str(home / name): "deny"
+                for name in (
+                    "file-opens-relay-r2.json",
+                    "file-opens-relay-r2.pid",
+                    "file-opens-relay-r2.err",
+                    "audit-positive-relay-r2",
+                )
+            }
+        )
     assert config["default_permissions"] == "bv01"
     assert config["permissions"]["bv01"]["filesystem"] == {
         ":minimal": "read",
         str(workspace): "read",
         str(python): "read",
+        **denied,
     }
     assert config["permissions"]["bv01"]["network"]["unix_sockets"] == {
         str(home / "gateway.sock"): "allow"
@@ -245,6 +281,11 @@ CLAUDE_THEME_PANE = """Welcome to Claude Code v2.1.284
 
 def test_claude_theme_choice_requires_exact_dialog() -> None:
     assert claude_theme_choice(CLAUDE_THEME_PANE)
+    assert claude_theme_choice(
+        CLAUDE_THEME_PANE.replace(
+            "Welcome to Claude Code v2.1.284", "Welcome!"
+        ).replace("Let's get started.", "Ready to begin.")
+    )
     assert not claude_theme_choice(
         CLAUDE_THEME_PANE.replace("Dark mode ✔", "Light mode ✔")
     )
@@ -286,6 +327,7 @@ def test_interactive_prompt_handling(
     cell.prompt_interactive(time.monotonic() + 5)
     assert (run / "pane-before-prompt.txt").is_file()
     sent = [call for call in calls if "send-keys" in call]
+    assert all(call[:3] == ("tmux", "-S", str(RELAY["TMUX_SOCKET"])) for call in sent)
     if profile.startswith("claude-"):
         assert (run / "pane-theme-choice.txt").read_text() == CLAUDE_THEME_PANE
         assert [call[-1] for call in sent[::2]] == ["Enter", "Enter"]
@@ -301,22 +343,100 @@ def test_interactive_prompt_handling(
     )
 
 
+def test_persistent_theme_screen_gets_one_enter(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    cell = interactive_cell(monkeypatch, tmp_path)
+    calls: list[tuple[str, ...]] = []
+
+    def fake_checked(*args: str) -> str:
+        calls.append(args)
+        return CLAUDE_THEME_PANE if "capture-pane" in args else ""
+
+    monkeypatch.setitem(cell.prompt_interactive.__globals__, "checked", fake_checked)
+    with pytest.raises(TimeoutError, match="input prompt did not appear"):
+        cell.prompt_interactive(time.monotonic() + 0.25)
+    assert [call[-1] for call in calls if "send-keys" in call] == ["Enter"]
+    assert (
+        tmp_path / "relay-run-r2/pane-prompt-timeout.txt"
+    ).read_text() == CLAUDE_THEME_PANE
+
+
+@pytest.mark.parametrize(
+    ("pane", "name", "message"),
+    [
+        ("Accessing workspace:\n", "pane-trust-prompt.txt", "workspace trust"),
+        ("Sign in\n", "pane-credential-prompt.txt", "credential prompt"),
+        ("Pane is dead\n", "pane-dead.txt", "harness pane exited"),
+    ],
+)
+def test_interactive_stop_saves_pane(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    pane: str,
+    name: str,
+    message: str,
+) -> None:
+    cell = interactive_cell(monkeypatch, tmp_path)
+    monkeypatch.setitem(
+        cell.prompt_interactive.__globals__, "checked", lambda *_args: pane
+    )
+    with pytest.raises(RuntimeError, match=message):
+        cell.prompt_interactive(time.monotonic() + 5)
+    assert (tmp_path / "relay-run-r2" / name).read_text() == pane
+
+
+def test_observe_timeout_saves_pane_before_cleanup(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    cell = interactive_cell(monkeypatch, tmp_path)
+    cell.listener = SimpleNamespace(poll=lambda: None)
+    cell.harness = SimpleNamespace(poll=lambda: None)
+    calls: list[tuple[str, ...]] = []
+
+    def fake_checked(*args: str) -> str:
+        calls.append(args)
+        return "Waiting for permission\n"
+
+    def timed_out(*_args: object) -> None:
+        raise TimeoutError("cell completion before 540 seconds")
+
+    monkeypatch.setitem(cell.observe.__globals__, "checked", fake_checked)
+    monkeypatch.setitem(cell.observe.__globals__, "wait_for", timed_out)
+    with pytest.raises(TimeoutError, match="cell completion"):
+        cell.observe(time.monotonic() + 5)
+    assert (
+        tmp_path / "relay-run-r2/pane-observe-timeout.txt"
+    ).read_text() == "Waiting for permission\n"
+    assert calls == [
+        (
+            "tmux",
+            "-S",
+            str(RELAY["TMUX_SOCKET"]),
+            "capture-pane",
+            "-p",
+            "-S",
+            "-2000",
+            "-t",
+            "bv01:claude-interactive",
+        )
+    ]
+
+
 def test_prompt_timeout_saves_last_pane(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    cell_type = RELAY["Cell"]
-    run = tmp_path / "relay-run-r2"
-    run.mkdir()
-    set_cell_paths(monkeypatch, cell_type, tmp_path, tmp_path / "evidence")
-    cell = cell_type("claude-interactive", tmux_started=True)
+    cell = interactive_cell(monkeypatch, tmp_path)
     monkeypatch.setitem(
-        cell_type.prompt_interactive.__globals__,
+        cell.prompt_interactive.__globals__,
         "checked",
         lambda *_args: "Waiting...\n",
     )
     with pytest.raises(TimeoutError, match="input prompt did not appear"):
         cell.prompt_interactive(time.monotonic() + 0.1)
-    assert (run / "pane-prompt-timeout.txt").read_text() == "Waiting...\n"
+    assert (
+        tmp_path / "relay-run-r2/pane-prompt-timeout.txt"
+    ).read_text() == "Waiting...\n"
 
 
 @pytest.mark.parametrize(
@@ -515,6 +635,41 @@ def test_cleanup_continues_after_tmux_failure(monkeypatch: pytest.MonkeyPatch) -
         assert stopped == [101, 102]
         assert (evidence / "summary.json").is_file()
         assert "cleanup:" in (evidence / "summary.json").read_text()
+
+
+def test_cleanup_saves_pane_before_tmux_shutdown(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    cell_type = RELAY["Cell"]
+    run = tmp_path / "relay-run-r2"
+    run.mkdir()
+    evidence = tmp_path / "evidence"
+    set_cell_paths(monkeypatch, cell_type, tmp_path, evidence)
+    cell = cell_type("claude-interactive", tmux_started=True, run_owned=True)
+    calls: list[tuple[str, ...]] = []
+
+    def fake_checked(*args: str) -> str:
+        calls.append(args)
+        return "Last pane\n" if "capture-pane" in args else ""
+
+    monkeypatch.setitem(cell_type.cleanup.__globals__, "checked", fake_checked)
+    assert cell.cleanup("passed", "connected")
+    assert calls[:2] == [
+        (
+            "tmux",
+            "-S",
+            str(RELAY["TMUX_SOCKET"]),
+            "capture-pane",
+            "-p",
+            "-S",
+            "-2000",
+            "-t",
+            "bv01:claude-interactive",
+        ),
+        ("tmux", "-S", str(RELAY["TMUX_SOCKET"]), "kill-server"),
+    ]
+    assert (run / "pane-at-cleanup.txt").read_text() == "Last pane\n"
+    assert (evidence / "pane-at-cleanup.txt").read_text() == "Last pane\n"
 
 
 @pytest.mark.socket
