@@ -1,0 +1,1 @@
+{"hasCompletedOnboarding": true, "theme": "dark", "projects": {"/private/tmp/bv01-228-claude-interactive/workspace": {"hasTrustDialogAccepted": true}}}
