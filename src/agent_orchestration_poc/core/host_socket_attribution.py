@@ -1,6 +1,8 @@
-"""Pure process-membership decisions for the disposable fixture."""
+"""Pure decisions for the disposable host-socket fixture."""
 
 from dataclasses import asdict, dataclass
+from pathlib import Path
+from typing import cast
 
 
 @dataclass(frozen=True)
@@ -123,3 +125,125 @@ def responder_reply(request: ResponderRequest) -> tuple[int, str | None]:
 def responder_log(method: str, path: str, status: int) -> dict[str, str | int]:
     """Record the request line and result without headers or body values."""
     return {"method": method, "path": path, "status": status}
+
+
+def codex_config(home: Path, python: Path, port: int) -> str:
+    """Build the disposable Codex profile and exact read grants."""
+    workspace = home / "workspace"
+    return f'''model_provider = "bv01"
+default_permissions = "bv01"
+check_for_update_on_startup = false
+[features]
+plugins = false
+[projects."{workspace}"]
+trust_level = "trusted"
+[model_providers.bv01]
+name = "bv01"
+base_url = "http://127.0.0.1:{port}/v1"
+wire_api = "responses"
+env_key = "BV01_FAKE_OPENAI_KEY"
+[permissions.bv01.filesystem]
+"{workspace}" = "read"
+"{python.parent.parent}" = "read"
+[permissions.bv01.network]
+enabled = true
+[permissions.bv01.network.unix_sockets]
+"{home}/gateway.sock" = "allow"
+'''
+
+
+def claude_trust(workspace: Path) -> dict[str, object]:
+    """Seed first-run and workspace trust for a disposable home."""
+    return {
+        "hasCompletedOnboarding": True,
+        "theme": "dark",
+        "projects": {str(workspace): {"hasTrustDialogAccepted": True}},
+    }
+
+
+def claude_settings(home: Path) -> dict[str, object]:
+    """Allow only this cell's gateway in the Claude sandbox."""
+    return {
+        "sandbox": {
+            "enabled": True,
+            "network": {
+                "allowUnixSockets": [str(home / "gateway.sock")],
+                "allowAllUnixSockets": False,
+                "allowLocalBinding": False,
+            },
+            "allowUnsandboxedCommands": False,
+        }
+    }
+
+
+def launch_command(
+    profile: str, port: int, home: Path, codex: Path, python: Path
+) -> tuple[list[str], dict[str, str]]:
+    """Return the pinned harness argv and empty-home environment."""
+    workspace = home / "workspace"
+    env = {
+        "HOME": str(home),
+        "TMPDIR": str(home / "tmp"),
+        "XDG_CONFIG_HOME": str(home / "xdg"),
+        "PYTHONPATH": str(workspace),
+        "PATH": f"/Users/tony/.local/bin:{python.parent}:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+        "TERM": "xterm-256color",
+        "LANG": "C.UTF-8",
+        "NO_COLOR": "1",
+        "PYTHONUNBUFFERED": "1",
+    }
+    prompt = (
+        "Run python3 experiments/02-host-socket-attribution/probe.py client "
+        f"{home}/gateway.sock {profile} and then stop."
+    )
+    if profile.startswith("codex-"):
+        env.update(
+            CODEX_HOME=str(home / "codex"), BV01_FAKE_OPENAI_KEY="not-a-real-key"
+        )
+        argv = [str(codex)]
+        if profile.endswith("headless"):
+            argv += ["exec", "--ephemeral", "--skip-git-repo-check"]
+        argv += ["-C", str(workspace), "-c", "approval_policy=never"]
+        if profile.endswith("headless"):
+            argv.append(prompt)
+    else:
+        env.update(
+            CLAUDE_CONFIG_DIR=str(home / "claude"),
+            ANTHROPIC_API_KEY="not-a-real-key",
+            ANTHROPIC_BASE_URL=f"http://127.0.0.1:{port}",
+        )
+        argv = [
+            "claude",
+            "--bare",
+            "--strict-mcp-config",
+            "--setting-sources",
+            "",
+            "--settings",
+            str(home / "settings.json"),
+        ]
+        if profile.endswith("headless"):
+            argv += [
+                "--print",
+                "--no-session-persistence",
+                "--permission-prompts",
+                "none",
+                prompt,
+            ]
+    return argv, env
+
+
+def relay_result(
+    rows: list[dict[str, object]],
+    requests: list[dict[str, object]],
+    harness_exit: int | None,
+) -> str:
+    """Require an accepted model path and one connector request."""
+    if any(row["status"] != 200 for row in rows):
+        raise ValueError("responder refused a request")
+    if len(requests) != 1:
+        raise ValueError("listener did not handle exactly one connector request")
+    if harness_exit is not None and harness_exit != 0:
+        raise ValueError(f"headless harness exited {harness_exit}")
+    request = requests[0]
+    peer = cast("dict[str, object]", request["peer"])
+    return f"peer={peer['pid']} decision={request['decision']} requests={len(rows)}"

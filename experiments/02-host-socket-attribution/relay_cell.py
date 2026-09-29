@@ -14,6 +14,14 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from agent_orchestration_poc.core.host_socket_attribution import (
+    claude_settings,
+    claude_trust,
+    codex_config,
+    launch_command,
+    relay_result,
+)
+
 ROOT = Path(__file__).resolve().parents[2]
 EXPERIMENT = Path(__file__).resolve().parent
 CODEX = Path(
@@ -28,41 +36,6 @@ PROFILES = (
     "claude-headless",
     "claude-interactive",
 )
-
-
-def codex_config(profile: str, port: int) -> str:
-    """Build the one disposable Codex profile and its exact read grants."""
-    home = Path(f"/private/tmp/bv01-228-{profile}")
-    workspace = home / "workspace"
-    return f'''model_provider = "bv01"
-default_permissions = "bv01"
-check_for_update_on_startup = false
-[features]
-plugins = false
-[projects."{workspace}"]
-trust_level = "trusted"
-[model_providers.bv01]
-name = "bv01"
-base_url = "http://127.0.0.1:{port}/v1"
-wire_api = "responses"
-env_key = "BV01_FAKE_OPENAI_KEY"
-[permissions.bv01.filesystem]
-"{workspace}" = "read"
-"{PYTHON.parent.parent}" = "read"
-[permissions.bv01.network]
-enabled = true
-[permissions.bv01.network.unix_sockets]
-"{home}/gateway.sock" = "allow"
-'''
-
-
-def claude_trust(workspace: Path) -> dict[str, object]:
-    """Seed only first-run and workspace-trust state in a disposable home."""
-    return {
-        "hasCompletedOnboarding": True,
-        "theme": "dark",
-        "projects": {str(workspace): {"hasTrustDialogAccepted": True}},
-    }
 
 
 def wait_for(predicate: Callable[[], bool], deadline: float, label: str) -> None:
@@ -127,88 +100,19 @@ def prepare(profile: str, run: Path, port: int) -> dict[str, str]:
         ).hexdigest()
     if profile.startswith("codex-"):
         config = home / "codex/config.toml"
-        config.write_text(codex_config(profile, port))
+        config.write_text(codex_config(home, PYTHON, port))
         if tomllib.loads(config.read_text())["default_permissions"] != "bv01":
             raise RuntimeError("Codex profile was not written")
         (run / "config.toml.raw.txt").write_text(config.read_text())
     else:
         (home / "claude/.claude.json").write_text(json.dumps(claude_trust(workspace)))
-        (home / "settings.json").write_text(
-            json.dumps(
-                {
-                    "sandbox": {
-                        "enabled": True,
-                        "network": {
-                            "allowUnixSockets": [str(home / "gateway.sock")],
-                            "allowAllUnixSockets": False,
-                            "allowLocalBinding": False,
-                        },
-                        "allowUnsandboxedCommands": False,
-                    }
-                }
-            )
-        )
+        (home / "settings.json").write_text(json.dumps(claude_settings(home)))
         (run / "claude.json.raw.txt").write_text(
             (home / "claude/.claude.json").read_text()
         )
         (run / "settings.json.raw.txt").write_text((home / "settings.json").read_text())
     (run / "source-sha256.json").write_text(json.dumps(hashes, indent=2) + "\n")
     return hashes
-
-
-def launch_command(profile: str, port: int) -> tuple[list[str], dict[str, str]]:
-    """Return the pinned harness argv and empty-home environment."""
-    home = Path(f"/private/tmp/bv01-228-{profile}")
-    workspace = home / "workspace"
-    env = {
-        "HOME": str(home),
-        "TMPDIR": str(home / "tmp"),
-        "XDG_CONFIG_HOME": str(home / "xdg"),
-        "PYTHONPATH": str(workspace),
-        "PATH": f"/Users/tony/.local/bin:{PYTHON.parent}:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin",
-        "TERM": "xterm-256color",
-        "LANG": "C.UTF-8",
-        "NO_COLOR": "1",
-        "PYTHONUNBUFFERED": "1",
-    }
-    prompt = (
-        "Run python3 experiments/02-host-socket-attribution/probe.py client "
-        f"{home}/gateway.sock {profile} and then stop."
-    )
-    if profile.startswith("codex-"):
-        env.update(
-            CODEX_HOME=str(home / "codex"), BV01_FAKE_OPENAI_KEY="not-a-real-key"
-        )
-        argv = [str(CODEX)]
-        if profile.endswith("headless"):
-            argv += ["exec", "--ephemeral", "--skip-git-repo-check"]
-        argv += ["-C", str(workspace), "-c", "approval_policy=never"]
-        if profile.endswith("headless"):
-            argv.append(prompt)
-    else:
-        env.update(
-            CLAUDE_CONFIG_DIR=str(home / "claude"),
-            ANTHROPIC_API_KEY="not-a-real-key",
-            ANTHROPIC_BASE_URL=f"http://127.0.0.1:{port}",
-        )
-        argv = [
-            "claude",
-            "--bare",
-            "--strict-mcp-config",
-            "--setting-sources",
-            "",
-            "--settings",
-            str(home / "settings.json"),
-        ]
-        if profile.endswith("headless"):
-            argv += [
-                "--print",
-                "--no-session-persistence",
-                "--permission-prompts",
-                "none",
-                prompt,
-            ]
-    return argv, env
 
 
 def launcher(run: Path, workspace: Path, argv: list[str], env: dict[str, str]) -> Path:
@@ -272,6 +176,8 @@ class Cell:
     harness: subprocess.Popen[bytes] | None = None
     root: int | None = None
     tmux_started: bool = False
+    run_owned: bool = False
+    socket_inode: int | None = None
 
     @property
     def home(self) -> Path:
@@ -322,6 +228,7 @@ class Cell:
         if not PYTHON.is_file():
             raise RuntimeError("pinned Python is absent")
         self.run.mkdir(mode=0o700)
+        self.run_owned = True
         (self.run / "versions.txt").write_text(
             checked("date", "+%Y-%m-%d %H:%M:%S %Z")
             + checked("sw_vers")
@@ -376,7 +283,7 @@ class Cell:
     def start_harness(self, port: int, deadline: float) -> None:
         """Launch behind a root-PID barrier in a shell or dedicated tmux."""
         prepare(self.profile, self.run, port)
-        argv, env = launch_command(self.profile, port)
+        argv, env = launch_command(self.profile, port, self.home, CODEX, PYTHON)
         (self.run / "launch-argv.json").write_text(json.dumps(argv) + "\n")
         script = launcher(self.run, self.home / "workspace", argv, env)
         if self.profile.endswith("interactive"):
@@ -463,6 +370,7 @@ class Cell:
         (self.run / "listener-open.txt").write_text(opened)
         if str(self.home / "gateway.sock") not in opened:
             raise RuntimeError("listener does not own gateway socket")
+        self.socket_inode = (self.home / "gateway.sock").stat().st_ino
         (self.run / "go").touch()
 
     def prompt_interactive(self, deadline: float) -> None:
@@ -584,13 +492,7 @@ class Cell:
             json.loads(line)
             for line in (self.run / "listener.jsonl").read_text().splitlines()
         ]
-        if any(row["status"] != 200 for row in rows):
-            raise RuntimeError("responder refused a request")
-        if len(requests) != 1:
-            raise RuntimeError("listener did not handle exactly one connector request")
-        if harness is not None and harness.returncode != 0:
-            raise RuntimeError(f"headless harness exited {harness.returncode}")
-        return f"peer={requests[0]['peer']['pid']} decision={requests[0]['decision']} requests={len(rows)}"
+        return relay_result(rows, requests, harness.returncode if harness else None)
 
     def cleanup(self, status: str, detail: str) -> None:
         """Stop owned processes, preserve evidence, and print one result."""
@@ -604,16 +506,16 @@ class Cell:
         terminate(self.listener, self.listener.pid if self.listener else None)
         terminate(self.model, self.model.pid if self.model else None)
         socket = self.home / "gateway.sock"
-        if socket.is_socket():
+        if socket.is_socket() and self.socket_inode == socket.stat().st_ino:
             socket.unlink()
-        if self.run.exists():
+        if self.run_owned:
             (self.run / "summary.json").write_text(
                 json.dumps(
                     {"profile": self.profile, "status": status, "detail": detail}
                 )
                 + "\n"
             )
-            self.evidence.mkdir(parents=True, mode=0o700, exist_ok=True)
+            self.evidence.mkdir(parents=True, mode=0o700, exist_ok=False)
             for item in self.run.iterdir():
                 if item.is_file() and item.name not in {"go", "launch.sh"}:
                     shutil.copyfile(item, self.evidence / item.name)
