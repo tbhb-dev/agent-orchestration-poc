@@ -1,0 +1,184 @@
+{
+  "claude-headless": [
+    {
+      "executable": "/Users/tony/.local/share/claude/versions/2.1.284",
+      "pid": 52175,
+      "ppid": 92822,
+      "start_time": "2026-09-29T01:38:48.732112Z"
+    },
+    {
+      "executable": "/opt/homebrew/Cellar/coreutils/9.11/bin/gcat",
+      "pid": 53833,
+      "ppid": 52175,
+      "start_time": "2026-09-29T01:38:57.322015Z"
+    },
+    {
+      "executable": "/usr/bin/security",
+      "pid": 53937,
+      "ppid": 52175,
+      "start_time": "2026-09-29T01:38:57.541870Z"
+    },
+    {
+      "executable": "/opt/homebrew/Cellar/git/2.55.0/bin/git",
+      "pid": 53940,
+      "ppid": 52175,
+      "start_time": "2026-09-29T01:38:57.579508Z"
+    },
+    {
+      "executable": "/opt/homebrew/Cellar/git/2.55.0/bin/git",
+      "pid": 53941,
+      "ppid": 52175,
+      "start_time": "2026-09-29T01:38:57.588063Z"
+    },
+    {
+      "executable": "/Users/tony/.local/share/claude/versions/2.1.284",
+      "pid": 53945,
+      "ppid": 52175,
+      "start_time": "2026-09-29T01:38:57.627262Z"
+    },
+    {
+      "executable": "/bin/bash",
+      "pid": 53946,
+      "ppid": 52175,
+      "start_time": "2026-09-29T01:38:57.644910Z"
+    },
+    {
+      "executable": "/opt/homebrew/Cellar/node/26.5.1/bin/node",
+      "pid": 53947,
+      "ppid": 52175,
+      "start_time": "2026-09-29T01:38:57.656804Z"
+    },
+    {
+      "executable": "/opt/homebrew/Cellar/git/2.55.0/bin/git",
+      "pid": 53949,
+      "ppid": 52175,
+      "start_time": "2026-09-29T01:38:57.660934Z"
+    },
+    {
+      "executable": "/bin/bash",
+      "pid": 53951,
+      "ppid": 52175,
+      "start_time": "2026-09-29T01:38:57.780374Z"
+    },
+    {
+      "executable": "/bin/zsh",
+      "pid": 53955,
+      "ppid": 52175,
+      "start_time": "2026-09-29T01:38:57.803397Z"
+    },
+    {
+      "executable": "/bin/zsh",
+      "pid": 53965,
+      "ppid": 52175,
+      "start_time": "2026-09-29T01:38:57.851826Z"
+    },
+    {
+      "executable": "/usr/libexec/path_helper",
+      "pid": 53966,
+      "ppid": 53965,
+      "start_time": "2026-09-29T01:38:57.855398Z"
+    },
+    {
+      "executable": "/bin/zsh",
+      "pid": 53967,
+      "ppid": 53965,
+      "start_time": "2026-09-29T01:38:57.859681Z"
+    },
+    {
+      "executable": "/bin/zsh",
+      "pid": 53968,
+      "ppid": 53965,
+      "start_time": "2026-09-29T01:38:57.862340Z"
+    },
+    {
+      "executable": "/bin/zsh",
+      "pid": 53969,
+      "ppid": 53965,
+      "start_time": "2026-09-29T01:38:57.864055Z"
+    },
+    {
+      "executable": "/bin/zsh",
+      "pid": 53970,
+      "ppid": 53965,
+      "start_time": "2026-09-29T01:38:57.866078Z"
+    },
+    {
+      "executable": "/bin/zsh",
+      "pid": 53972,
+      "ppid": 52175,
+      "start_time": "2026-09-29T01:38:57.873723Z"
+    }
+  ],
+  "claude-interactive": [
+    {
+      "executable": "/Users/tony/.local/share/claude/versions/2.1.284",
+      "pid": 71137,
+      "ppid": 38859,
+      "start_time": "2026-09-29T01:40:13.948916Z"
+    },
+    {
+      "executable": "/opt/homebrew/Cellar/coreutils/9.11/bin/gcat",
+      "pid": 72818,
+      "ppid": 71137,
+      "start_time": "2026-09-29T01:40:21.028348Z"
+    },
+    {
+      "executable": "/usr/bin/security",
+      "pid": 72831,
+      "ppid": 71137,
+      "start_time": "2026-09-29T01:40:21.247984Z"
+    }
+  ],
+  "codex-headless": [
+    {
+      "executable": "/Users/tony/.codex/packages/standalone/releases/0.157.1-aarch64-apple-darwin/bin/codex",
+      "pid": 2994,
+      "ppid": 92822,
+      "start_time": "2026-09-29T01:35:07.811133Z"
+    },
+    {
+      "executable": "/bin/zsh",
+      "pid": 11438,
+      "ppid": 2994,
+      "start_time": "2026-09-29T01:35:43.444263Z"
+    },
+    {
+      "executable": "/usr/libexec/path_helper",
+      "pid": 11441,
+      "ppid": 11438,
+      "start_time": "2026-09-29T01:35:43.448873Z"
+    },
+    {
+      "executable": "/bin/zsh",
+      "pid": 11460,
+      "ppid": 2994,
+      "start_time": "2026-09-29T01:35:43.474521Z"
+    }
+  ],
+  "codex-interactive": [
+    {
+      "executable": "/Users/tony/.codex/packages/standalone/releases/0.157.1-aarch64-apple-darwin/bin/codex",
+      "pid": 38862,
+      "ppid": 38859,
+      "start_time": "2026-09-29T01:37:46.301008Z"
+    },
+    {
+      "executable": "/bin/zsh",
+      "pid": 40687,
+      "ppid": 38862,
+      "start_time": "2026-09-29T01:37:54.358344Z"
+    },
+    {
+      "executable": "/usr/libexec/path_helper",
+      "pid": 40690,
+      "ppid": 40687,
+      "start_time": "2026-09-29T01:37:54.362922Z"
+    },
+    {
+      "executable": "/bin/zsh",
+      "pid": 40710,
+      "ppid": 38862,
+      "start_time": "2026-09-29T01:37:54.380830Z"
+    }
+  ]
+}
