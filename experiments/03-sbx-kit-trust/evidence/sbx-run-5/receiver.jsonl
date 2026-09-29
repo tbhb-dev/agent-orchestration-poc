@@ -1,0 +1,5 @@
+{"event": "listen", "port": 18443, "leaf": "valid", "client_ca": false, "at": "2026-09-29T00:27:54.048+00:00"}
+{"event": "listen", "port": 18443, "leaf": "valid", "client_ca": false, "at": "2026-09-29T00:28:30.420+00:00"}
+{"event": "request", "method": "GET", "path": "/c3-injection", "sni": "host.docker.internal", "tls": "TLSv1.3", "client_cert_sha256": null, "host": "host.docker.internal:18443", "auth_scheme": null, "header_names": ["Accept", "Host", "User-Agent"], "at": "2026-09-29T00:28:37.307+00:00"}
+{"event": "request", "method": "GET", "path": "/c3-placeholder", "sni": "host.docker.internal", "tls": "TLSv1.3", "client_cert_sha256": null, "host": "host.docker.internal:18443", "auth_scheme": "Bearer", "header_names": ["Accept", "Authorization", "Host", "User-Agent"], "at": "2026-09-29T00:29:33.247+00:00"}
+{"event": "request", "method": "GET", "path": "/c3-transparent", "sni": "host.docker.internal", "tls": "TLSv1.3", "client_cert_sha256": null, "host": "host.docker.internal:18443", "auth_scheme": "Bearer", "header_names": ["Accept", "Authorization", "Host", "User-Agent"], "at": "2026-09-29T00:30:34.797+00:00"}
