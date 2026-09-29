@@ -184,7 +184,15 @@ def empty_input_prompt(pane: str, marker: str) -> bool:
     ready = {marker}
     if marker == "›":
         ready.add("› Ask Codex to do anything")
-    return any(line.strip() in ready for line in pane.splitlines())
+    return any(
+        line.strip() in ready
+        or (
+            marker == "❯"
+            and line.strip().startswith('❯ Try "')
+            and line.strip().endswith('"')
+        )
+        for line in pane.splitlines()
+    )
 
 
 def launch_command(

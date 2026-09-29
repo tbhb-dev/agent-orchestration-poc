@@ -220,6 +220,45 @@ def test_codex_fresh_thread_placeholder_is_ready() -> None:
     assert not empty_input_prompt("Codex\n› No, exit\n", "›")
 
 
+def test_claude_empty_prompt_hint_is_ready() -> None:
+    assert empty_input_prompt('❯ Try "..."', "❯")
+    assert empty_input_prompt('Claude\n❯ Try "write a unit test"\n', "❯")
+    assert not empty_input_prompt("Claude\n❯ No, exit\n", "❯")
+
+
+@pytest.mark.parametrize(
+    "profile",
+    ["codex-headless", "codex-interactive", "claude-headless", "claude-interactive"],
+)
+def test_wrapper_imports_core_outside_venv(profile: str, tmp_path: Path) -> None:
+    wrapper = (EXPERIMENT / f"relay-{profile}.sh").read_text()
+    setup, command = wrapper.rsplit("\nexec ", 1)
+    python = command.split(" experiments/02-host-socket-attribution/relay_cell.py ")[0]
+    import_command = (
+        setup
+        + "\nexec "
+        + python
+        + ' -c \'import runpy; runpy.run_path("experiments/02-host-socket-attribution/relay_cell.py", run_name="bv01_import_test")\'\n'
+    )
+    result = subprocess.run(
+        [
+            "/usr/bin/env",
+            "-i",
+            "PATH=/usr/bin:/bin",
+            f"HOME={tmp_path}",
+            "/bin/sh",
+            "-c",
+            import_command,
+        ],
+        cwd=REPOSITORY,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=30,
+    )
+    assert result.returncode == 0, result.stderr
+
+
 @pytest.mark.parametrize("append_event", [False, True])
 def test_capture_gate_requires_event_after_marker_open(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, append_event: bool
