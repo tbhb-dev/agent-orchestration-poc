@@ -1,0 +1,401 @@
+[
+  {
+    "action": {
+      "id": "comment",
+      "step": "0",
+      "kind": "comment",
+      "number": 1,
+      "method": "POST",
+      "path": "issues/1/comments",
+      "payload": {
+        "body": "saved"
+      },
+      "before": 0,
+      "after": 1
+    },
+    "detail": {
+      "comment_id": 42
+    },
+    "method": "DELETE",
+    "path": "issues/comments/42",
+    "after": 0,
+    "payload": {
+      "body": "saved"
+    }
+  },
+  {
+    "action": {
+      "id": "state",
+      "step": "0",
+      "kind": "issue_state",
+      "number": 1,
+      "method": "PATCH",
+      "path": "issues/1",
+      "payload": {
+        "state": "closed"
+      },
+      "before": ["open", ""],
+      "after": ["closed", "not_planned"]
+    },
+    "detail": {},
+    "method": "PATCH",
+    "path": "issues/1",
+    "after": ["open", ""],
+    "payload": {
+      "state": "open"
+    }
+  },
+  {
+    "action": {
+      "id": "type",
+      "step": "6:native",
+      "kind": "issue_type",
+      "number": 1,
+      "method": "PATCH",
+      "path": "issues/1",
+      "payload": {
+        "type": "Chore"
+      },
+      "before": "",
+      "after": "Chore"
+    },
+    "detail": {},
+    "method": "PATCH",
+    "path": "issues/1",
+    "after": "",
+    "payload": {
+      "type": null
+    }
+  },
+  {
+    "action": {
+      "id": "native",
+      "step": "6:native",
+      "kind": "native",
+      "number": 1,
+      "method": "POST",
+      "path": "issues/1/issue-field-values",
+      "payload": {
+        "fields": {
+          "Work type": "Planned"
+        }
+      },
+      "before": [["Work type", ""]],
+      "after": [["Work type", "Planned"]]
+    },
+    "detail": {},
+    "method": "PUT",
+    "path": "issues/1/issue-field-values",
+    "after": [["Work type", ""]],
+    "payload": {
+      "fields": {
+        "Work type": ""
+      }
+    }
+  },
+  {
+    "action": {
+      "id": "item",
+      "step": "6",
+      "kind": "project_item",
+      "number": 1,
+      "method": "POST",
+      "path": "orgs/tbhb-dev/projectsV2/1/items",
+      "payload": {
+        "id": 1
+      },
+      "before": [0, "1"],
+      "after": [1, "1"]
+    },
+    "detail": {
+      "item_id": "13"
+    },
+    "method": "DELETE",
+    "path": "orgs/tbhb-dev/projectsV2/1/items/13",
+    "after": [0, "1"],
+    "payload": {
+      "id": 1
+    }
+  },
+  {
+    "action": {
+      "id": "label",
+      "step": "15",
+      "kind": "label_delete",
+      "number": 1,
+      "method": "DELETE",
+      "path": "issues/1/labels/type%2Fold",
+      "payload": null,
+      "before": ["type/old"],
+      "after": []
+    },
+    "detail": {},
+    "method": "POST",
+    "path": "issues/1/labels",
+    "after": ["type/old"],
+    "payload": {
+      "labels": ["type/old"]
+    }
+  },
+  {
+    "action": {
+      "id": "parent",
+      "step": "10",
+      "kind": "parent",
+      "number": 1,
+      "method": "POST",
+      "path": "issues/1/sub_issues",
+      "payload": {
+        "sub_issue_id": 2,
+        "child": "#2"
+      },
+      "before": "",
+      "after": "#1"
+    },
+    "detail": {},
+    "method": "DELETE",
+    "path": "issues/1/sub_issue",
+    "after": "",
+    "payload": {
+      "sub_issue_id": 2,
+      "child": "#2"
+    }
+  },
+  {
+    "action": {
+      "id": "created",
+      "step": "9:create",
+      "kind": "issue_create",
+      "number": 0,
+      "method": "POST",
+      "path": "issues",
+      "payload": {
+        "title": "P",
+        "body": "B",
+        "type": "Epic"
+      },
+      "before": 0,
+      "after": 1
+    },
+    "detail": {
+      "created_item": {
+        "key": "#29"
+      }
+    },
+    "method": "PATCH",
+    "path": "issues/29",
+    "after": ["closed", "not_planned"],
+    "payload": {
+      "state": "closed",
+      "state_reason": "not_planned"
+    }
+  },
+  {
+    "action": {
+      "id": "pr",
+      "step": "0",
+      "kind": "pr_state",
+      "number": 97,
+      "method": "PATCH",
+      "path": "pulls/97",
+      "payload": {
+        "state": "closed"
+      },
+      "before": ["open", false],
+      "after": ["closed", false]
+    },
+    "detail": {},
+    "method": "PATCH",
+    "path": "pulls/97",
+    "after": ["open", false],
+    "payload": {
+      "state": "open"
+    }
+  },
+  {
+    "action": {
+      "id": "title",
+      "step": "6T",
+      "kind": "title",
+      "number": 1,
+      "method": "PATCH",
+      "path": "issues/1",
+      "payload": {
+        "title": "New"
+      },
+      "before": "Old",
+      "after": "New"
+    },
+    "detail": {},
+    "method": "PATCH",
+    "path": "issues/1",
+    "after": "Old",
+    "payload": {
+      "title": "Old"
+    }
+  },
+  {
+    "action": {
+      "id": "body",
+      "step": "11:bodies",
+      "kind": "body",
+      "number": 1,
+      "method": "PATCH",
+      "path": "issues/1",
+      "payload": {
+        "body": "New"
+      },
+      "before": "",
+      "after": "New"
+    },
+    "detail": {},
+    "method": "PATCH",
+    "path": "issues/1",
+    "after": "",
+    "payload": {
+      "body": ""
+    }
+  },
+  {
+    "action": {
+      "id": "label-create",
+      "step": "4:labels",
+      "kind": "label_create",
+      "number": 0,
+      "method": "POST",
+      "path": "labels",
+      "payload": {
+        "name": "phase/2",
+        "color": "abc",
+        "description": "d"
+      },
+      "before": 0,
+      "after": ["phase/2", "abc", "d"]
+    },
+    "detail": {},
+    "method": "DELETE",
+    "path": "labels/phase%2F2",
+    "after": 0,
+    "payload": {
+      "name": "phase/2",
+      "color": "abc",
+      "description": "d"
+    }
+  },
+  {
+    "action": {
+      "id": "blocker-delete",
+      "step": "11:links",
+      "kind": "blocker",
+      "number": 1,
+      "method": "DELETE",
+      "path": "issues/1/dependencies/blocked_by/2",
+      "payload": null,
+      "before": ["#2"],
+      "after": []
+    },
+    "detail": {},
+    "method": "POST",
+    "path": "issues/1/dependencies/blocked_by",
+    "after": ["#2"],
+    "payload": {
+      "issue_id": 2
+    }
+  },
+  {
+    "action": {
+      "id": "trial-add",
+      "step": "3:trial",
+      "kind": "trial_add",
+      "number": 1,
+      "method": "POST",
+      "path": "issues/1/dependencies/blocked_by",
+      "payload": {
+        "issue_id": 2
+      },
+      "before": [],
+      "after": ["#2"]
+    },
+    "detail": {},
+    "method": "DELETE",
+    "path": "issues/1/dependencies/blocked_by/2",
+    "after": [],
+    "payload": null
+  },
+  {
+    "action": {
+      "id": "draft",
+      "step": "6",
+      "kind": "draft",
+      "number": 0,
+      "method": "POST",
+      "path": "orgs/tbhb-dev/projectsV2/1/drafts",
+      "payload": {
+        "title": "D",
+        "body": "B"
+      },
+      "before": [0, ""],
+      "after": [1, "B"]
+    },
+    "detail": {
+      "item_id": "34"
+    },
+    "method": "DELETE",
+    "path": "orgs/tbhb-dev/projectsV2/1/items/34",
+    "after": [0, ""],
+    "payload": {
+      "title": "D",
+      "body": "B"
+    }
+  },
+  {
+    "action": {
+      "id": "closed-state",
+      "step": "9:close",
+      "kind": "issue_state",
+      "number": 5,
+      "method": "PATCH",
+      "path": "issues/5",
+      "payload": {
+        "state": "closed",
+        "state_reason": "completed"
+      },
+      "before": ["closed", "not_planned"],
+      "after": ["closed", "completed"]
+    },
+    "detail": {},
+    "method": "PATCH",
+    "path": "issues/5",
+    "after": ["closed", "not_planned"],
+    "payload": {
+      "state": "closed",
+      "state_reason": "not_planned"
+    }
+  },
+  {
+    "action": {
+      "id": "draft-body",
+      "step": "6:body",
+      "kind": "draft_body",
+      "number": 0,
+      "method": "POST",
+      "path": "graphql",
+      "payload": {
+        "query": "forward",
+        "key": "title:D",
+        "draft_id": "D-node"
+      },
+      "before": "before",
+      "after": "after"
+    },
+    "detail": {},
+    "method": "POST",
+    "path": "graphql",
+    "after": "before",
+    "payload": {
+      "query": "mutation{updateProjectV2DraftIssue(input:{draftIssueId:\"D-node\",body:\"before\"}){draftIssue{id body}}}",
+      "key": "title:D",
+      "draft_id": "D-node"
+    }
+  }
+]
