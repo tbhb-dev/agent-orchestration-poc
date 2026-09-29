@@ -32,7 +32,9 @@ class ResponderRequest:
     host: str
     port: int
     profile: str
-    completed: int
+    body: object = None
+    tool_served: bool = False
+    final_served: bool = False
     content_length: str = "0"
     transfer_encoding: str = ""
 
@@ -82,21 +84,91 @@ def request_record(
     }
 
 
-def responder_reply(request: ResponderRequest) -> tuple[int, str | None]:
-    """Select only the next fixed fixture for an exact loopback request."""
+def _probe_prompt(profile: str) -> str:
+    python = (
+        "/Users/tony/.local/share/mise/installs/python/3.14.6/bin/python3"
+        if profile.startswith("codex-")
+        else "python3"
+    )
+    return (
+        f"Run {python} experiments/02-host-socket-attribution/probe.py client "
+        f"/private/tmp/bv01-228-{profile}/gateway.sock {profile} and then stop."
+    )
+
+
+def _content_signals(content: object, expected_prompt: str) -> tuple[bool, bool]:
+    """Find only text prompts and the fixed Claude tool result ID."""
+    if isinstance(content, str):
+        return expected_prompt in content, False
+    if not isinstance(content, list):
+        return False, False
+    prompt = False
+    result = False
+    for part in content:
+        if not isinstance(part, dict):
+            continue
+        prompt |= (
+            part.get("type") in {"text", "input_text"}
+            and isinstance(part.get("text"), str)
+            and expected_prompt in part["text"]
+        )
+        result |= (
+            part.get("type") == "tool_result"
+            and part.get("tool_use_id") == "toolu_bv01"
+        )
+    return prompt, result
+
+
+def responder_route(request: ResponderRequest) -> str:
+    """Classify model input using only the probe prompt and its tool result."""
+    body = request.body
+    if not isinstance(body, dict):
+        return "side-request"
+    messages = body.get("input" if request.profile.startswith("codex-") else "messages")
+    if isinstance(messages, str):
+        messages = [{"role": "user", "content": messages}]
+    if not isinstance(messages, list):
+        return "side-request"
+    prompt = False
+    result = False
+    for message in messages:
+        if not isinstance(message, dict):
+            continue
+        result |= request.profile.startswith("codex-") and (
+            message.get("type") == "function_call_output"
+            and message.get("call_id") == "call-bv01"
+        )
+        if message.get("role") != "user":
+            continue
+        has_prompt, has_result = _content_signals(
+            message.get("content"), _probe_prompt(request.profile)
+        )
+        prompt |= has_prompt
+        result |= has_result and request.profile.startswith("claude-")
+    if result:
+        return (
+            "final" if request.tool_served and not request.final_served else "follow-up"
+        )
+    if prompt:
+        return "tool" if not request.tool_served else "retry"
+    return "follow-up" if request.tool_served else "side-request"
+
+
+def responder_reply(request: ResponderRequest) -> tuple[int, str | None, str]:
+    """Select a fixed frame for a validated loopback request."""
     if request.profile not in {
         "codex-interactive",
         "codex-headless",
         "claude-interactive",
         "claude-headless",
     }:
-        return 400, None
+        return 400, None, "invalid"
     if request.profile.startswith("claude-") and request.method == "HEAD":
         return (
-            (200, None)
+            (200, None, "probe")
             if request.path in {"/v1/messages", "/api/hello"}
             and request.host == f"127.0.0.1:{request.port}"
-            else (403, None)
+            else (403, None, "invalid")
         )
     expected_paths = (
         ("/v1/responses",)
@@ -108,7 +180,7 @@ def responder_reply(request: ResponderRequest) -> tuple[int, str | None]:
         or request.path not in expected_paths
         or request.host != f"127.0.0.1:{request.port}"
     ):
-        return 403, None
+        return 403, None, "invalid"
     if (
         request.transfer_encoding
         or not request.content_length.isascii()
@@ -116,19 +188,36 @@ def responder_reply(request: ResponderRequest) -> tuple[int, str | None]:
         or len(request.content_length) > 7
         or int(request.content_length) > 2_000_000
     ):
-        return 403, None
-    if request.completed < 0 or (
-        request.completed >= 2 and not request.profile.endswith("interactive")
-    ):
-        return 409, None
-    return 200, f"{request.profile}-{'tool' if request.completed == 0 else 'final'}.sse"
+        return 403, None, "invalid"
+    route = responder_route(request)
+    fixture = (
+        f"{request.profile}-{route}.sse"
+        if route in {"tool", "final"}
+        else f"{'codex' if request.profile.startswith('codex-') else 'claude'}-side.sse"
+    )
+    return 200, fixture, route
 
 
 def responder_log(
-    method: str, path: str, status: int, fixture: str | None = None
+    method: str,
+    path: str,
+    status: int,
+    fixture: str | None = None,
+    classification: str = "invalid",
 ) -> dict[str, str | int]:
-    """Record the request line and result without headers or body values."""
-    row: dict[str, str | int] = {"method": method, "path": path, "status": status}
+    """Record bounded request metadata without headers or body values."""
+    safe_path = (
+        path
+        if path
+        in {"/v1/responses", "/v1/messages", "/v1/messages?beta=true", "/api/hello"}
+        else "<rejected>"
+    )
+    row: dict[str, str | int] = {
+        "method": method if method in {"POST", "HEAD", "GET", "PUT"} else "<rejected>",
+        "path": safe_path,
+        "status": status,
+        "classification": classification,
+    }
     if fixture is not None:
         row["fixture"] = fixture
     return row
@@ -141,6 +230,7 @@ def codex_config(home: Path, python: Path, port: int) -> str:
         home / "relay-run-r2",
         home / "relay-run-r3",
         home / "relay-run-r4",
+        home / "relay-run-r5",
         home / "codex",
     ]
     denied.extend(
@@ -321,13 +411,12 @@ def relay_result(
     """Require the tool and final frames and one connector request."""
     if any(row["status"] != 200 for row in rows):
         raise ValueError("responder refused a request")
-    frames = [row["fixture"] for row in rows if "fixture" in row]
     expected = [f"{profile}-tool.sse", f"{profile}-final.sse"]
-    if (
-        frames[:2] != expected
-        or (profile.endswith("headless") and len(frames) != 2)
-        or any(frame != expected[1] for frame in frames[2:])
-    ):
+    frames = [row for row in rows if row.get("fixture") in expected]
+    if [(row["fixture"], row.get("classification")) for row in frames] != [
+        (expected[0], "tool"),
+        (expected[1], "final"),
+    ]:
         raise ValueError("responder did not serve tool and final frames")
     if len(requests) != 1:
         raise ValueError("listener did not handle exactly one connector request")
@@ -339,5 +428,5 @@ def relay_result(
     peer = cast("dict[str, object]", request["peer"])
     return (
         f"peer={peer['pid']} decision={request['decision']} requests={len(rows)} "
-        f"extra_model_requests={len(frames) - 2}"
+        f"side_requests={sum(row.get('classification') in {'side-request', 'retry', 'follow-up'} for row in rows)}"
     )

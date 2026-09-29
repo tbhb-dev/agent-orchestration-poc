@@ -176,168 +176,241 @@ def test_request_record_preserves_values(pid: int, tag: str, version: int) -> No
     assert record["initial"] == record["peer"]
 
 
+def model_body(profile: str, phase: str) -> dict[str, object]:
+    python = (
+        "/Users/tony/.local/share/mise/installs/python/3.14.6/bin/python3"
+        if profile.startswith("codex-")
+        else "python3"
+    )
+    prompt = (
+        f"Run {python} experiments/02-host-socket-attribution/probe.py client "
+        f"/private/tmp/bv01-228-{profile}/gateway.sock {profile} and then stop."
+    )
+    if profile.startswith("codex-"):
+        item = (
+            {
+                "type": "function_call_output",
+                "call_id": "call-bv01",
+                "output": "allowed",
+            }
+            if phase == "result"
+            else {
+                "type": "message",
+                "role": "user",
+                "content": [
+                    {
+                        "type": "input_text",
+                        "text": prompt if phase == "prompt" else "Name this session",
+                    }
+                ],
+            }
+        )
+        return {"input": [item]}
+    item = (
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "tool_result",
+                    "tool_use_id": "toolu_bv01",
+                    "content": "allowed",
+                }
+            ],
+        }
+        if phase == "result"
+        else {
+            "role": "user",
+            "content": [
+                {
+                    "type": "text",
+                    "text": prompt if phase == "prompt" else "Name this session",
+                }
+            ],
+        }
+    )
+    return {"messages": [item]}
+
+
 @pytest.mark.parametrize(
-    ("req", "expected"),
+    "profile",
+    ["codex-interactive", "codex-headless", "claude-interactive", "claude-headless"],
+)
+def test_responder_routes_side_retry_and_follow_up(profile: str) -> None:
+    path = "/v1/responses" if profile.startswith("codex-") else "/v1/messages"
+
+    def reply(
+        phase: str, tool: bool = False, final: bool = False
+    ) -> tuple[int, str | None, str]:
+        return responder_reply(
+            ResponderRequest(
+                "POST",
+                path,
+                "127.0.0.1:1234",
+                1234,
+                profile,
+                model_body(profile, phase),
+                tool,
+                final,
+            )
+        )
+
+    side = f"{'codex' if profile.startswith('codex-') else 'claude'}-side.sse"
+    assert reply("side") == (200, side, "side-request")
+    assert reply("prompt") == (200, f"{profile}-tool.sse", "tool")
+    assert reply("prompt", tool=True) == (200, side, "retry")
+    assert reply("result", tool=True) == (200, f"{profile}-final.sse", "final")
+    assert reply("result") == (200, side, "follow-up")
+    assert reply("result", tool=True, final=True) == (200, side, "follow-up")
+    assert reply("side", tool=True, final=True) == (200, side, "follow-up")
+
+
+@pytest.mark.parametrize(
+    "body",
     [
-        (
-            ResponderRequest(
-                "POST", "/v1/responses", "127.0.0.1:1234", 1234, "codex-headless", 0
-            ),
-            (200, "codex-headless-tool.sse"),
-        ),
-        (
-            ResponderRequest(
-                "POST", "/v1/messages", "127.0.0.1:1234", 1234, "claude-interactive", 1
-            ),
-            (200, "claude-interactive-final.sse"),
-        ),
-        (
-            ResponderRequest(
-                "POST",
-                "/v1/messages?beta=true",
-                "127.0.0.1:1234",
-                1234,
-                "claude-headless",
-                0,
-            ),
-            (200, "claude-headless-tool.sse"),
-        ),
-        (
-            ResponderRequest(
-                "HEAD", "/v1/messages", "127.0.0.1:1234", 1234, "claude-headless", 0
-            ),
-            (200, None),
-        ),
-        (
-            ResponderRequest(
-                "HEAD", "/api/hello", "127.0.0.1:1234", 1234, "claude-interactive", 0
-            ),
-            (200, None),
-        ),
-        (
-            ResponderRequest("HEAD", "/", "127.0.0.1:1234", 1234, "claude-headless", 0),
-            (403, None),
-        ),
-        (
-            ResponderRequest(
-                "HEAD", "/v1/messages", "elsewhere:1234", 1234, "claude-headless", 0
-            ),
-            (403, None),
-        ),
-        (
-            ResponderRequest(
-                "GET", "/v1/responses", "127.0.0.1:1234", 1234, "codex-headless", 0
-            ),
-            (403, None),
-        ),
-        (
-            ResponderRequest(
-                "POST", "/v1/responses?x=1", "127.0.0.1:1234", 1234, "codex-headless", 0
-            ),
-            (403, None),
-        ),
-        (
-            ResponderRequest(
-                "POST", "/v1/responses", "elsewhere:1234", 1234, "codex-headless", 0
-            ),
-            (403, None),
-        ),
-        (
-            ResponderRequest(
-                "POST", "/v1/responses", "127.0.0.1:1234", 1234, "codex-headless", 2
-            ),
-            (409, None),
-        ),
-        (
-            ResponderRequest(
-                "POST", "/v1/responses", "127.0.0.1:1234", 1234, "codex-interactive", 2
-            ),
-            (200, "codex-interactive-final.sse"),
-        ),
-        (
-            ResponderRequest(
-                "POST", "/v1/responses", "127.0.0.1:1234", 1234, "wrong", 0
-            ),
-            (400, None),
-        ),
-        (
-            ResponderRequest(
-                "POST",
-                "/v1/responses",
-                "127.0.0.1:1234",
-                1234,
-                "codex-headless",
-                0,
-                "-1",
-            ),
-            (403, None),
-        ),
-        (
-            ResponderRequest(
-                "POST",
-                "/v1/responses",
-                "127.0.0.1:1234",
-                1234,
-                "codex-headless",
-                0,
-                "1",
-                "chunked",
-            ),
-            (403, None),
-        ),
+        None,
+        {},
+        {"input": [None, {"role": "assistant", "content": "probe.py client"}]},
+        {"input": [{"role": "user", "content": None}]},
+        {"input": [{"role": "user", "content": [None]}]},
     ],
 )
-def test_responder_reply(
-    req: ResponderRequest,
-    expected: tuple[int, str | None],
+def test_responder_does_not_route_unstructured_or_spoofed_input_to_tool(
+    body: object,
 ) -> None:
-    assert responder_reply(req) == expected
+    status, fixture, classification = responder_reply(
+        ResponderRequest(
+            "POST", "/v1/responses", "127.0.0.1:1234", 1234, "codex-headless", body
+        )
+    )
+    assert (status, fixture, classification) == (
+        200,
+        "codex-side.sse",
+        "side-request",
+    )
 
 
-@given(st.integers(min_value=1, max_value=65535), st.integers(min_value=2))
-def test_responder_reply_exhausted(port: int, completed: int) -> None:
+def test_responder_accepts_string_input_prompt() -> None:
+    prompt = (
+        "Run /Users/tony/.local/share/mise/installs/python/3.14.6/bin/python3 "
+        "experiments/02-host-socket-attribution/probe.py client "
+        "/private/tmp/bv01-228-codex-headless/gateway.sock codex-headless and then stop."
+    )
     assert responder_reply(
         ResponderRequest(
             "POST",
-            "/v1/messages",
-            f"127.0.0.1:{port}",
-            port,
-            "claude-headless",
-            completed,
+            "/v1/responses",
+            "127.0.0.1:1234",
+            1234,
+            "codex-headless",
+            {"input": prompt},
         )
-    ) == (409, None)
+    ) == (200, "codex-headless-tool.sse", "tool")
+
+
+def test_codex_ignores_claude_tool_result_shape() -> None:
+    body = {
+        "input": [
+            {
+                "role": "user",
+                "content": [{"type": "tool_result", "tool_use_id": "toolu_bv01"}],
+            }
+        ]
+    }
+    assert responder_reply(
+        ResponderRequest(
+            "POST",
+            "/v1/responses",
+            "127.0.0.1:1234",
+            1234,
+            "codex-headless",
+            body,
+            True,
+        )
+    ) == (200, "codex-side.sse", "follow-up")
 
 
 @pytest.mark.parametrize(
     ("profile", "path"),
-    [("codex-interactive", "/v1/responses"), ("claude-interactive", "/v1/messages")],
+    [("claude-headless", "/v1/messages"), ("claude-interactive", "/api/hello")],
 )
-@given(st.integers(min_value=1, max_value=65535), st.integers(min_value=2))
-def test_interactive_responder_repeats_final(
-    profile: str, path: str, port: int, completed: int
-) -> None:
+def test_claude_head_probe(profile: str, path: str) -> None:
     assert responder_reply(
-        ResponderRequest(
-            "POST",
-            path,
-            f"127.0.0.1:{port}",
-            port,
-            profile,
-            completed,
-        )
-    ) == (200, f"{profile}-final.sse")
+        ResponderRequest("HEAD", path, "127.0.0.1:1234", 1234, profile)
+    ) == (200, None, "probe")
+
+
+@pytest.mark.parametrize(
+    ("case", "status"),
+    [
+        (ResponderRequest("HEAD", "/", "127.0.0.1:1234", 1234, "claude-headless"), 403),
+        (
+            ResponderRequest(
+                "GET", "/v1/responses", "127.0.0.1:1234", 1234, "codex-headless"
+            ),
+            403,
+        ),
+        (
+            ResponderRequest(
+                "POST", "/v1/responses?x=1", "127.0.0.1:1234", 1234, "codex-headless"
+            ),
+            403,
+        ),
+        (
+            ResponderRequest(
+                "POST", "/v1/responses", "elsewhere:1234", 1234, "codex-headless"
+            ),
+            403,
+        ),
+        (
+            ResponderRequest("POST", "/v1/responses", "127.0.0.1:1234", 1234, "wrong"),
+            400,
+        ),
+        (
+            ResponderRequest(
+                "POST",
+                "/v1/responses",
+                "127.0.0.1:1234",
+                1234,
+                "codex-headless",
+                content_length="-1",
+            ),
+            403,
+        ),
+        (
+            ResponderRequest(
+                "POST",
+                "/v1/responses",
+                "127.0.0.1:1234",
+                1234,
+                "codex-headless",
+                content_length="1",
+                transfer_encoding="chunked",
+            ),
+            403,
+        ),
+    ],
+)
+def test_responder_rejects_invalid_request(case: ResponderRequest, status: int) -> None:
+    assert responder_reply(case) == (status, None, "invalid")
 
 
 @given(st.text(), st.text(), st.integers(min_value=100, max_value=599))
-def test_responder_log_preserves_request_line(
+def test_responder_log_redacts_unknown_path(
     method: str, path: str, status: int
 ) -> None:
-    assert responder_log(method, path, status) == {
-        "method": method,
-        "path": path,
+    row = responder_log(method, path, status)
+    assert row == {
+        "method": method if method in {"POST", "HEAD", "GET", "PUT"} else "<rejected>",
+        "path": path
+        if path
+        in {"/v1/responses", "/v1/messages", "/v1/messages?beta=true", "/api/hello"}
+        else "<rejected>",
         "status": status,
+        "classification": "invalid",
     }
-    assert responder_log(method, path, status, "tool.sse")["fixture"] == "tool.sse"
+    assert (
+        responder_log(method, path, status, "tool.sse", "tool")["fixture"] == "tool.sse"
+    )
 
 
 @pytest.mark.parametrize(
@@ -378,6 +451,32 @@ def test_committed_frames_request_one_profile_command(profile: str) -> None:
         assert len(deltas) == 1
         assert json.loads(deltas[0]["partial_json"])["command"] == command
     assert command.encode() not in final
+
+
+@pytest.mark.parametrize("harness", ["codex", "claude"])
+def test_side_frame_contains_text_and_no_tool_call(harness: str) -> None:
+    frame = (RESPONDER_FIXTURES / f"{harness}-side.sse").read_bytes()
+    events = [
+        json.loads(line[6:])
+        for line in frame.splitlines()
+        if line.startswith(b"data: ")
+    ]
+    assert frame.endswith(b"\n\n: end\n")
+    assert b"OK." in frame
+    if harness == "codex":
+        items = [
+            event["item"]
+            for event in events
+            if event["type"] == "response.output_item.done"
+        ]
+        assert [item["type"] for item in items] == ["message"]
+    else:
+        blocks = [
+            event["content_block"]
+            for event in events
+            if event["type"] == "content_block_start"
+        ]
+        assert [block["type"] for block in blocks] == ["text"]
 
 
 @pytest.mark.integration
@@ -499,88 +598,79 @@ def responder_process(
 
 
 @pytest.mark.integration
-def test_responder_loopback_and_fixed_frames(
+@pytest.mark.parametrize(
+    ("profile", "responder_process"),
+    [
+        (profile, profile)
+        for profile in (
+            "codex-interactive",
+            "codex-headless",
+            "claude-interactive",
+            "claude-headless",
+        )
+    ],
+    indirect=["responder_process"],
+)
+def test_responder_routes_full_conversation(
+    profile: str,
     responder_process: tuple[subprocess.Popen[str], Path, int],
 ) -> None:
     _process, log, port = responder_process
-    connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
-    fixture_dir = RESPONDER_FIXTURES
-    cases: list[tuple[str, dict[str, str], int, bytes]] = [
-        ("/v1/responses?query-marker", {}, 403, b""),
-        ("/v1/responses", {"Host": "outside.example"}, 403, b""),
-        (
-            "/v1/responses",
-            {},
-            200,
-            (fixture_dir / "codex-headless-tool.sse").read_bytes(),
-        ),
-        (
-            "/v1/responses",
-            {},
-            200,
-            (fixture_dir / "codex-headless-final.sse").read_bytes(),
-        ),
-        ("/v1/responses", {}, 409, b""),
+    path = "/v1/responses" if profile.startswith("codex-") else "/v1/messages?beta=true"
+    side = f"{'codex' if profile.startswith('codex-') else 'claude'}-side.sse"
+    cases = [
+        ("side", side, "side-request"),
+        ("prompt", f"{profile}-tool.sse", "tool"),
+        ("prompt", side, "retry"),
+        ("result", f"{profile}-final.sse", "final"),
+        ("result", side, "follow-up"),
+        ("side", side, "follow-up"),
     ]
-    try:
-        for path, headers, expected_status, expected_body in cases:
-            connection.request("POST", path, body=b"body-marker", headers=headers)
-            response = connection.getresponse()
-            assert response.status == expected_status
-            assert response.read() == expected_body
-        rows = [json.loads(line) for line in log.read_text().splitlines()]
-        assert [row["status"] for row in rows] == [403, 403, 200, 200, 409]
-        assert rows[0]["path"] == "/v1/responses?query-marker"
-        assert [row.get("fixture") for row in rows] == [
-            None,
-            None,
-            "codex-headless-tool.sse",
-            "codex-headless-final.sse",
-            None,
-        ]
-        assert all(set(row) <= {"method", "path", "status", "fixture"} for row in rows)
-        assert all(row["method"] == "POST" for row in rows)
-        assert "body-marker" not in log.read_text()
-        connection.request("PUT", "/v1/responses", body=b"body-marker")
-        rejected = connection.getresponse()
-        assert rejected.status == 501
-        rejected.read()
-        assert json.loads(log.read_text().splitlines()[-1]) == {
-            "method": "PUT",
-            "path": "/v1/responses",
-            "status": 501,
-        }
-    finally:
-        connection.close()
-
-
-@pytest.mark.integration
-@pytest.mark.parametrize("responder_process", ["codex-interactive"], indirect=True)
-def test_interactive_responder_repeats_final_frame(
-    responder_process: tuple[subprocess.Popen[str], Path, int],
-) -> None:
-    _process, log, port = responder_process
     connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
     try:
-        for expected_fixture in (
-            "codex-interactive-tool.sse",
-            "codex-interactive-final.sse",
-            "codex-interactive-final.sse",
-        ):
-            connection.request("POST", "/v1/responses", body=b"body-marker")
+        connection.request("POST", f"{path}?secret-marker", body=b"{}")
+        response = connection.getresponse()
+        assert response.status == 403
+        assert response.read() == b""
+        connection.request(
+            "POST", path, body=b"{}", headers={"Host": "outside.example"}
+        )
+        response = connection.getresponse()
+        assert response.status == 403
+        assert response.read() == b""
+        for phase, fixture, _classification in cases:
+            body = json.dumps(model_body(profile, phase))
+            connection.request("POST", path, body=body)
             response = connection.getresponse()
             assert response.status == 200
-            assert (
-                response.read() == (RESPONDER_FIXTURES / expected_fixture).read_bytes()
-            )
+            assert response.read() == (RESPONDER_FIXTURES / fixture).read_bytes()
+        connection.request("PUT", path, body=b"body-marker")
+        response = connection.getresponse()
+        assert response.status == 501
+        response.read()
     finally:
         connection.close()
     rows = [json.loads(line) for line in log.read_text().splitlines()]
-    assert [row["fixture"] for row in rows] == [
-        "codex-interactive-tool.sse",
-        "codex-interactive-final.sse",
-        "codex-interactive-final.sse",
+    assert [row["classification"] for row in rows] == [
+        "invalid",
+        "invalid",
+        *(item[2] for item in cases),
+        "invalid",
     ]
+    assert [row.get("fixture") for row in rows] == [
+        None,
+        None,
+        *(item[1] for item in cases),
+        None,
+    ]
+    assert rows[0]["path"] == "<rejected>"
+    assert all(
+        set(row) <= {"method", "path", "status", "fixture", "classification"}
+        for row in rows
+    )
+    assert "secret-marker" not in log.read_text()
+    assert "body-marker" not in log.read_text()
+    assert "Name this session" not in log.read_text()
 
 
 @pytest.mark.integration
@@ -603,7 +693,12 @@ def test_responder_claude_startup_requests(
             ("POST", "/v1/messages?beta=true", None, 200),
         ):
             headers = {"Host": host} if host else {}
-            connection.request(method, path, body=b"body-marker", headers=headers)
+            body = (
+                json.dumps(model_body("claude-headless", "prompt"))
+                if method == "POST"
+                else b"body-marker"
+            )
+            connection.request(method, path, body=body, headers=headers)
             response = connection.getresponse()
             assert response.status == expected_status
             body = response.read()
@@ -616,7 +711,7 @@ def test_responder_claude_startup_requests(
         assert [(row["method"], row["path"], row["status"]) for row in rows] == [
             ("HEAD", "/api/hello", 200),
             ("HEAD", "/v1/messages", 200),
-            ("HEAD", "/", 403),
+            ("HEAD", "<rejected>", 403),
             ("HEAD", "/v1/messages", 403),
             ("POST", "/v1/messages?beta=true", 200),
         ]

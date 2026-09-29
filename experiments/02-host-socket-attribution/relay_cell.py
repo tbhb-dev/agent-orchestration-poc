@@ -267,12 +267,12 @@ class Cell:
     @property
     def run(self) -> Path:
         """Return this attempt's private files."""
-        return self.home / "relay-run-r4"
+        return self.home / "relay-run-r5"
 
     @property
     def evidence(self) -> Path:
         """Return this attempt's commit-ready evidence path."""
-        return EXPERIMENT / "evidence/relay-run-r4" / self.profile
+        return EXPERIMENT / "evidence/relay-run-r5" / self.profile
 
     @property
     def python_env(self) -> dict[str, str]:

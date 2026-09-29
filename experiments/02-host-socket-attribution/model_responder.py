@@ -23,7 +23,8 @@ class Responder(HTTPServer):
         super().__init__(("127.0.0.1", port), RequestHandler)
         self.profile = profile
         self.log_path = log_path
-        self.completed = 0
+        self.tool_served = False
+        self.final_served = False
 
 
 class RequestHandler(BaseHTTPRequestHandler):
@@ -51,32 +52,56 @@ class RequestHandler(BaseHTTPRequestHandler):
         super().send_error(code, message, explain)
 
     def handle_request(self) -> None:
-        """Reject any request outside the fixed path, host, method, and sequence."""
+        """Read bounded input and serve a frame selected by conversation content."""
         server = cast("Responder", self.server)
         port = server.server_address[1]
-        status, fixture = responder_reply(
-            ResponderRequest(
-                self.command,
-                self.path,
-                self.headers.get("Host", ""),
-                port,
-                server.profile,
-                server.completed,
-                self.headers.get("Content-Length", ""),
-                self.headers.get("Transfer-Encoding", ""),
-            )
+        request = ResponderRequest(
+            self.command,
+            self.path,
+            self.headers.get("Host", ""),
+            port,
+            server.profile,
+            content_length=self.headers.get("Content-Length", ""),
+            transfer_encoding=self.headers.get("Transfer-Encoding", ""),
         )
-        if fixture:
-            remaining = int(self.headers["Content-Length"])
+        status, fixture, classification = responder_reply(request)
+        if fixture and self.command == "POST":
+            remaining = int(request.content_length)
+            chunks: list[bytes] = []
             while remaining:
                 received = self.rfile.read(min(remaining, 65536))
                 if not received:
-                    status, fixture = 400, None
+                    status, fixture, classification = 400, None, "invalid"
                     break
+                chunks.append(received)
                 remaining -= len(received)
+            if status == 200:
+                try:
+                    body = json.loads(b"".join(chunks))
+                except ValueError, UnicodeDecodeError:
+                    status, fixture, classification = 400, None, "invalid"
+                else:
+                    status, fixture, classification = responder_reply(
+                        ResponderRequest(
+                            request.method,
+                            request.path,
+                            request.host,
+                            request.port,
+                            request.profile,
+                            body,
+                            server.tool_served,
+                            server.final_served,
+                            request.content_length,
+                            request.transfer_encoding,
+                        )
+                    )
         with server.log_path.open("a", encoding="utf-8") as log:
             log.write(
-                json.dumps(responder_log(self.command, self.path, status, fixture))
+                json.dumps(
+                    responder_log(
+                        self.command, self.path, status, fixture, classification
+                    )
+                )
                 + "\n"
             )
         body = (FIXTURES / fixture).read_bytes() if fixture else b""
@@ -89,7 +114,10 @@ class RequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
         if body:
             self.wfile.write(body)
-            server.completed += 1
+            if classification == "tool":
+                server.tool_served = True
+            elif classification == "final":
+                server.final_served = True
 
     do_POST = handle_request  # noqa: N815 - HTTP handler dispatch requires this name.
     do_GET = handle_request  # noqa: N815 - HTTP handler dispatch requires this name.
