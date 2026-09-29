@@ -295,6 +295,7 @@ def test_capture_gate_requires_event_after_marker_open(
 
 
 @pytest.mark.socket
+@pytest.mark.skipif(sys.platform != "darwin", reason="macOS lsof path only")
 def test_stale_gateway_socket_is_removed() -> None:
     with tempfile.TemporaryDirectory(dir="/tmp") as directory:
         gateway = Path(directory) / "gateway.sock"
@@ -306,6 +307,7 @@ def test_stale_gateway_socket_is_removed() -> None:
 
 
 @pytest.mark.socket
+@pytest.mark.skipif(sys.platform != "darwin", reason="macOS lsof path only")
 def test_held_gateway_socket_is_refused() -> None:
     with tempfile.TemporaryDirectory(dir="/tmp") as directory:
         gateway = Path(directory) / "gateway.sock"
