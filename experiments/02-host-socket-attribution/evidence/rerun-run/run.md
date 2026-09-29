@@ -41,3 +41,9 @@ The corrected pass establishes startup and file-open observations only. It does 
 ## Repository checks
 
 `mise run fmt` completed, and the original bytes of raw startup and settings files were restored afterward under `.raw.txt` names. `mise run check:vale` passed. The final `mise run check` exited 1 after 697 coverage tests passed and the synthetic Quarto notebook test failed because this sandbox denied a write to `/Users/tony/Library/Application Support/quarto/logs/jupyter-kernel.log`. The other reported checks, including prose, secrets, and the regular pytest suite, passed. The complete [check output](check.raw.gz) and [exit code](check.exit) are retained. [Readiness](../rerun-ready/readiness.md) records a passing targeted run of that notebook test with a disposable `HOME`.
+
+## Review round 1
+
+Review 5346839372 identified missing PR labels as its only blocking finding. The PR API returned an empty label list, and the hosted `pr-body` check failed. The implementer added `area/security`, `type/experiment`, `phase/3`, and `harness/any`, matching issue #228. `mise run workflow:pr -- 267` then exited 0 with `#267 [enforce] valid`. This metadata change did not alter the experiment result.
+
+The review-round `mise run check` again exited 1 because the sandbox denied the synthetic Quarto notebook test's log write under `/Users/tony/Library/Application Support/quarto/logs/`. The other 697 coverage tests passed. The [full output](check-review-r1.raw.gz) and [exit code](check-review-r1.exit) are retained. `mise run check:mutation` exited 0 with Go core 97.32% and Python core 90.11%. Its [full output](mutation-review-r1.raw.gz) and [exit code](mutation-review-r1.exit) are retained. Hosted CI on the next pushed head is the required check for the label repair.
