@@ -130,7 +130,7 @@ def responder_log(method: str, path: str, status: int) -> dict[str, str | int]:
 def codex_config(home: Path, python: Path, port: int) -> str:
     """Build the disposable Codex profile and exact read grants."""
     workspace = home / "workspace"
-    denied = [home / "relay-run-r2", home / "codex"]
+    denied = [home / "relay-run-r2", home / "relay-run-r3", home / "codex"]
     denied.extend(
         home.parent / f"bv01-228-{profile}"
         for profile in (
@@ -174,6 +174,7 @@ enabled = true
 [permissions.bv01.network.unix_sockets]
 "{home}/gateway.sock" = "allow"
 [tui]
+disable_paste_burst = true
 screen_reader_detection_done = true
 '''
 
@@ -183,6 +184,7 @@ def claude_trust(workspace: Path) -> dict[str, object]:
     return {
         "hasCompletedOnboarding": True,
         "theme": "dark",
+        "customApiKeyResponses": {"approved": ["not-a-real-key"], "rejected": []},
         "projects": {str(workspace): {"hasTrustDialogAccepted": True}},
     }
 

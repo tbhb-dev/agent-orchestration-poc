@@ -267,12 +267,12 @@ class Cell:
     @property
     def run(self) -> Path:
         """Return this attempt's private files."""
-        return self.home / "relay-run-r2"
+        return self.home / "relay-run-r3"
 
     @property
     def evidence(self) -> Path:
         """Return this attempt's commit-ready evidence path."""
-        return EXPERIMENT / "evidence/relay-run" / self.profile
+        return EXPERIMENT / "evidence/relay-run-r3" / self.profile
 
     @property
     def python_env(self) -> dict[str, str]:
@@ -506,7 +506,9 @@ class Cell:
                     theme_answered = True
                 time.sleep(0.2)
                 continue
-            if empty_input_prompt(pane, marker):
+            if empty_input_prompt(pane, marker) and not (
+                self.profile == "codex-interactive" and "model: loading" in pane
+            ):
                 (self.run / "pane-before-prompt.txt").write_text(pane)
                 break
             time.sleep(0.2)
@@ -528,6 +530,7 @@ class Cell:
             "-l",
             prompt,
         )
+        time.sleep(0.5)
         checked(
             "tmux",
             "-S",
@@ -537,6 +540,33 @@ class Cell:
             f"bv01:{self.profile}",
             "Enter",
         )
+        self.require_submission(deadline, marker)
+
+    def require_submission(self, deadline: float, marker: str) -> None:
+        """Fail promptly if the interactive prompt stays in the composer."""
+        submitted_by = min(deadline, time.monotonic() + 30)
+        pane = ""
+
+        def submitted() -> bool:
+            nonlocal pane
+            if (self.run / "model.jsonl").exists():
+                return True
+            pane = checked(
+                "tmux",
+                "-S",
+                str(TMUX_SOCKET),
+                "capture-pane",
+                "-p",
+                "-t",
+                f"bv01:{self.profile}",
+            )
+            return empty_input_prompt(pane, marker)
+
+        try:
+            wait_for(submitted, submitted_by, "interactive prompt was not submitted")
+        except TimeoutError:
+            (self.run / "pane-submit-timeout.txt").write_text(pane)
+            raise
 
     def save_pane(self, name: str) -> None:
         """Retain the dedicated tmux pane before teardown."""
