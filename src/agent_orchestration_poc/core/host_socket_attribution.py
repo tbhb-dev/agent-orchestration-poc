@@ -206,7 +206,7 @@ def launch_command(
         "TMPDIR": str(home / "tmp"),
         "XDG_CONFIG_HOME": str(home / "xdg"),
         "PYTHONPATH": str(workspace),
-        "PATH": f"/Users/tony/.local/bin:{python.parent}:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+        "PATH": f"{python.parent}:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin",
         "TERM": "xterm-256color",
         "LANG": "C.UTF-8",
         "NO_COLOR": "1",

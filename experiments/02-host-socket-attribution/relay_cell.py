@@ -107,16 +107,30 @@ def capture_gate() -> None:
     if not all(path.is_file() for path in (capture, pid_file, error, marker)):
         raise RuntimeError("capture files are absent")
     capture_offset = capture.stat().st_size
-    marker.read_bytes()  # Make a fresh open event for this cell's bounded tail check.
+    marker.read_bytes()  # Make a fresh open event for this cell's bounded search.
+
+    needle = b"audit-positive-relay"
+    search_offset = capture_offset
+    overlap = b""
+    deadline = time.monotonic() + 5
 
     def marker_in_tail() -> bool:
+        nonlocal search_offset, overlap
         with capture.open("rb") as stream:
-            stream.seek(max(capture_offset, capture.stat().st_size - 1_048_576))
-            return b"audit-positive-relay" in stream.read()
+            stream.seek(search_offset)
+            while time.monotonic() < deadline:
+                chunk = stream.read(65_536)
+                if not chunk:
+                    break
+                search_offset += len(chunk)
+                if needle in overlap + chunk:
+                    return True
+                overlap = (overlap + chunk)[-(len(needle) - 1) :]
+            return False
 
     if error.stat().st_size:
         raise RuntimeError("capture positive control or error gate failed")
-    wait_for(marker_in_tail, time.monotonic() + 5, "capture positive control")
+    wait_for(marker_in_tail, deadline, "capture positive control")
     pid = int(pid_file.read_text().strip())
     if checked("/usr/bin/pgrep", "-x", "eslogger").strip() != str(pid):
         raise RuntimeError("recorded eslogger is not running")
@@ -359,6 +373,10 @@ class Cell:
                 "-f",
                 "/dev/null",
                 "new-session",
+                "-x",
+                "200",
+                "-y",
+                "50",
                 "-d",
                 "-s",
                 "bv01",

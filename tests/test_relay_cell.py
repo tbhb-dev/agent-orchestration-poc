@@ -3,6 +3,7 @@
 import runpy
 import socket
 import subprocess
+import sys
 import tempfile
 import tomllib
 from collections.abc import Callable
@@ -97,7 +98,7 @@ def test_launch_configuration(profile: str) -> None:
         "TMPDIR": str(home / "tmp"),
         "XDG_CONFIG_HOME": str(home / "xdg"),
         "PYTHONPATH": str(workspace),
-        "PATH": "/Users/tony/.local/bin:/python/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+        "PATH": "/python/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin",
         "TERM": "xterm-256color",
         "LANG": "C.UTF-8",
         "NO_COLOR": "1",
@@ -230,32 +231,38 @@ def test_claude_empty_prompt_hint_is_ready() -> None:
     "profile",
     ["codex-headless", "codex-interactive", "claude-headless", "claude-interactive"],
 )
+@pytest.mark.integration
 def test_wrapper_imports_core_outside_venv(profile: str, tmp_path: Path) -> None:
     wrapper = (EXPERIMENT / f"relay-{profile}.sh").read_text()
     setup, command = wrapper.rsplit("\nexec ", 1)
     python = command.split(" experiments/02-host-socket-attribution/relay_cell.py ")[0]
-    import_command = (
-        setup
-        + "\nexec "
-        + python
-        + ' -c \'import runpy; runpy.run_path("experiments/02-host-socket-attribution/relay_cell.py", run_name="bv01_import_test")\'\n'
-    )
-    result = subprocess.run(
-        [
-            "/usr/bin/env",
-            "-i",
-            "PATH=/usr/bin:/bin",
-            f"HOME={tmp_path}",
-            "/bin/sh",
-            "-c",
-            import_command,
-        ],
-        cwd=REPOSITORY,
-        capture_output=True,
-        text=True,
-        check=False,
-        timeout=30,
-    )
+    assert python == str(RELAY["PYTHON"])
+    base_python = Path(sys.base_prefix) / "bin/python3"
+    import_script = ' -c \'import runpy; runpy.run_path("experiments/02-host-socket-attribution/relay_cell.py", run_name="bv01_import_test")\'\n'
+    import_command = setup + "\nexec " + str(base_python) + import_script
+
+    def run_import(command_text: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [
+                "/usr/bin/env",
+                "-i",
+                "PATH=/usr/bin:/bin",
+                f"HOME={tmp_path}",
+                "/bin/sh",
+                "-c",
+                command_text,
+            ],
+            cwd=REPOSITORY,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+        )
+
+    negative = run_import("exec " + str(base_python) + import_script)
+    assert negative.returncode != 0
+    assert "No module named 'agent_orchestration_poc'" in negative.stderr
+    result = run_import(import_command)
     assert result.returncode == 0, result.stderr
 
 
@@ -275,7 +282,7 @@ def test_capture_gate_requires_event_after_marker_open(
     def wait_once(predicate: Callable[[], bool], _deadline: float, _label: str) -> None:
         if append_event:
             with capture.open("ab") as stream:
-                stream.write(b'{"path":"audit-positive-relay"}\n')
+                stream.write(b"x" * (1_048_576 + 65_530) + b"audit-positive-relay")
         if not predicate():
             raise TimeoutError("capture positive control")
 
