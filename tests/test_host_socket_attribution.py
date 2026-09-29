@@ -209,6 +209,12 @@ def test_request_record_preserves_values(pid: int, tag: str, version: int) -> No
             (200, None),
         ),
         (
+            ResponderRequest(
+                "HEAD", "/api/hello", "127.0.0.1:1234", 1234, "claude-interactive", 0
+            ),
+            (200, None),
+        ),
+        (
             ResponderRequest("HEAD", "/", "127.0.0.1:1234", 1234, "claude-headless", 0),
             (403, None),
         ),
@@ -522,6 +528,7 @@ def test_responder_claude_startup_requests(
     connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
     try:
         for method, path, host, expected_status in (
+            ("HEAD", "/api/hello", None, 200),
             ("HEAD", "/v1/messages", None, 200),
             ("HEAD", "/", None, 403),
             ("HEAD", "/v1/messages", "outside.example", 403),
@@ -539,6 +546,7 @@ def test_responder_claude_startup_requests(
             )
         rows = [json.loads(line) for line in log.read_text().splitlines()]
         assert [(row["method"], row["path"], row["status"]) for row in rows] == [
+            ("HEAD", "/api/hello", 200),
             ("HEAD", "/v1/messages", 200),
             ("HEAD", "/", 403),
             ("HEAD", "/v1/messages", 403),

@@ -92,7 +92,7 @@ def responder_reply(request: ResponderRequest) -> tuple[int, str | None]:
     if request.profile.startswith("claude-") and request.method == "HEAD":
         return (
             (200, None)
-            if request.path == "/v1/messages"
+            if request.path in {"/v1/messages", "/api/hello"}
             and request.host == f"127.0.0.1:{request.port}"
             else (403, None)
         )
