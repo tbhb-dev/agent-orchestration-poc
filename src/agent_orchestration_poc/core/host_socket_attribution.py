@@ -89,12 +89,21 @@ def responder_reply(request: ResponderRequest) -> tuple[int, str | None]:
         "claude-headless",
     }:
         return 400, None
-    expected = (
-        "/v1/responses" if request.profile.startswith("codex-") else "/v1/messages"
+    if request.profile.startswith("claude-") and request.method == "HEAD":
+        return (
+            (200, None)
+            if request.path == "/v1/messages"
+            and request.host == f"127.0.0.1:{request.port}"
+            else (403, None)
+        )
+    expected_paths = (
+        ("/v1/responses",)
+        if request.profile.startswith("codex-")
+        else ("/v1/messages", "/v1/messages?beta=true")
     )
     if (
         request.method != "POST"
-        or request.path != expected
+        or request.path not in expected_paths
         or request.host != f"127.0.0.1:{request.port}"
     ):
         return 403, None
@@ -111,6 +120,6 @@ def responder_reply(request: ResponderRequest) -> tuple[int, str | None]:
     return 200, f"{request.profile}-{'tool' if request.completed == 0 else 'final'}.sse"
 
 
-def logged_path(path: str) -> str:
-    """Retain only known endpoint names in a model request log."""
-    return path if path in ("/v1/responses", "/v1/messages") else "<unexpected-path>"
+def responder_log(method: str, path: str, status: int) -> dict[str, str | int]:
+    """Record the request line and result without headers or body values."""
+    return {"method": method, "path": path, "status": status}

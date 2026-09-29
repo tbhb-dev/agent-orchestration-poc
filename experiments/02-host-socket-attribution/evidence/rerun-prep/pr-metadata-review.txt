@@ -1,0 +1,14 @@
+PR #265 metadata review, 2026-09-28, implementer tbhb-agent.
+Review 5345818936 reported an unlisted title verb and missing Size justification and Gate justifications sections.
+Observed current PR body already contained both sections and ended with Refs: #228.
+Before: mise run workflow:pr -- 265
+Exit 1: #265 [enforce] subject needs a listed imperative verb and an object
+Changed title over REST from "exp(security): prepare the BV-01 stage two rerun" to "exp(security): update the BV-01 stage two rerun".
+After: mise run workflow:pr -- 265
+Exit 0: #265 [enforce] valid
+The local check:pr-body task passed on the old title and current body; workflow:pr detected the closed-verb violation.
+The pr-body check run 109181793684 completed successfully after the title edit.
+The review-turn aggregate rerun is retained as check-review.raw.gz with its exit code in check-review.exit.
+It again failed only at tests/test_analysis_notebooks.py::test_render_synthetic_notebook because Quarto could not write its host log under ~/Library/Application Support/quarto/; 609 other tests passed.
+The review-turn mutation rerun is retained as mutation-review.raw.gz with its exit code in mutation-review.exit.
+It passed: Python core 90.08% and Go core 97.32%.
