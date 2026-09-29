@@ -200,7 +200,7 @@ def model_body(profile: str, phase: str) -> dict[str, object]:
                 "content": [
                     {
                         "type": "input_text",
-                        "text": prompt if phase == "prompt" else "Name this session",
+                        "text": prompt if phase == "prompt" else "Session title",
                     }
                 ],
             }
@@ -223,12 +223,19 @@ def model_body(profile: str, phase: str) -> dict[str, object]:
             "content": [
                 {
                     "type": "text",
-                    "text": prompt if phase == "prompt" else "Name this session",
+                    "text": prompt
+                    if phase == "prompt"
+                    else f"<session>\n{prompt}\n</session>\nWrite the title",
                 }
             ],
         }
     )
-    return {"messages": [item]}
+    return {
+        "messages": [item],
+        "tools": [{"name": "Bash"}] if phase != "side" else [],
+        "model": "claude-sonnet-4-5",
+        **({"outputFormat": {"type": "json_schema"}} if phase == "side" else {}),
+    }
 
 
 @pytest.mark.parametrize(
@@ -262,6 +269,62 @@ def test_responder_routes_side_retry_and_follow_up(profile: str) -> None:
     assert reply("result") == (200, side, "follow-up")
     assert reply("result", tool=True, final=True) == (200, side, "follow-up")
     assert reply("side", tool=True, final=True) == (200, side, "follow-up")
+
+
+@pytest.mark.parametrize("order", [("side", "prompt"), ("prompt", "side")])
+def test_claude_title_request_never_consumes_tool_frame(
+    order: tuple[str, str],
+) -> None:
+    tool_served = False
+    routes = []
+    for phase in order:
+        status, _fixture, route = responder_reply(
+            ResponderRequest(
+                "POST",
+                "/v1/messages",
+                "127.0.0.1:1234",
+                1234,
+                "claude-interactive",
+                model_body("claude-interactive", phase),
+                tool_served,
+            )
+        )
+        assert status == 200
+        routes.append(route)
+        tool_served |= route == "tool"
+    assert routes == (
+        ["side-request", "tool"] if order[0] == "side" else ["tool", "follow-up"]
+    )
+    assert responder_reply(
+        ResponderRequest(
+            "POST",
+            "/v1/messages",
+            "127.0.0.1:1234",
+            1234,
+            "claude-interactive",
+            model_body("claude-interactive", "result"),
+            True,
+        )
+    ) == (200, "claude-interactive-final.sse", "final")
+
+
+@given(st.lists(st.text().filter(lambda name: name != "Bash"), max_size=5))
+def test_claude_without_bash_never_routes_tool(tool_names: list[str]) -> None:
+    body = model_body("claude-interactive", "prompt")
+    body["tools"] = [{"name": name} for name in tool_names]
+    assert (
+        responder_reply(
+            ResponderRequest(
+                "POST",
+                "/v1/messages",
+                "127.0.0.1:1234",
+                1234,
+                "claude-interactive",
+                body,
+            )
+        )[2]
+        != "tool"
+    )
 
 
 @pytest.mark.parametrize(
@@ -410,6 +473,26 @@ def test_responder_log_redacts_unknown_path(
     }
     assert (
         responder_log(method, path, status, "tool.sse", "tool")["fixture"] == "tool.sse"
+    )
+
+
+def test_responder_log_records_only_bounded_shape() -> None:
+    prompt = "private prompt marker"
+    body = {
+        "model": "claude-sonnet-4-5",
+        "tools": [{"name": "Bash"}],
+        "outputFormat": {"schema": {"description": prompt}},
+        "messages": [{"content": prompt}],
+    }
+    row = responder_log("POST", "/v1/messages", 200, "tool.sse", "tool", body=body)
+    assert row["tool_count"] == 1
+    assert row["has_bash"] is True
+    assert row["model"] == "claude-sonnet-4-5"
+    assert row["has_output_format"] is True
+    assert prompt not in json.dumps(row)
+    assert (
+        responder_log("POST", "/v1/messages", 200, body={"model": prompt})["model"]
+        == "<rejected>"
     )
 
 
@@ -665,12 +748,23 @@ def test_responder_routes_full_conversation(
     ]
     assert rows[0]["path"] == "<rejected>"
     assert all(
-        set(row) <= {"method", "path", "status", "fixture", "classification"}
+        set(row)
+        <= {
+            "method",
+            "path",
+            "status",
+            "fixture",
+            "classification",
+            "tool_count",
+            "has_bash",
+            "model",
+            "has_output_format",
+        }
         for row in rows
     )
     assert "secret-marker" not in log.read_text()
     assert "body-marker" not in log.read_text()
-    assert "Name this session" not in log.read_text()
+    assert "<session>" not in log.read_text()
 
 
 @pytest.mark.integration

@@ -65,6 +65,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             transfer_encoding=self.headers.get("Transfer-Encoding", ""),
         )
         status, fixture, classification = responder_reply(request)
+        body: object = None
         if fixture and self.command == "POST":
             remaining = int(request.content_length)
             chunks: list[bytes] = []
@@ -99,7 +100,12 @@ class RequestHandler(BaseHTTPRequestHandler):
             log.write(
                 json.dumps(
                     responder_log(
-                        self.command, self.path, status, fixture, classification
+                        self.command,
+                        self.path,
+                        status,
+                        fixture,
+                        classification,
+                        body=body,
                     )
                 )
                 + "\n"

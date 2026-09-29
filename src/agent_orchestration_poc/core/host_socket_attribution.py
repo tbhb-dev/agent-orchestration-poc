@@ -149,6 +149,12 @@ def responder_route(request: ResponderRequest) -> str:
         return (
             "final" if request.tool_served and not request.final_served else "follow-up"
         )
+    tools = body.get("tools")
+    if request.profile.startswith("claude-") and not any(
+        isinstance(tool, dict) and tool.get("name") == "Bash"
+        for tool in (tools if isinstance(tools, list) else [])
+    ):
+        return "follow-up" if request.tool_served else "side-request"
     if prompt:
         return "tool" if not request.tool_served else "retry"
     return "follow-up" if request.tool_served else "side-request"
@@ -198,13 +204,15 @@ def responder_reply(request: ResponderRequest) -> tuple[int, str | None, str]:
     return 200, fixture, route
 
 
-def responder_log(
+def responder_log(  # noqa: PLR0913 - response metadata plus optional parsed shape.
     method: str,
     path: str,
     status: int,
     fixture: str | None = None,
     classification: str = "invalid",
-) -> dict[str, str | int]:
+    *,
+    body: object = None,
+) -> dict[str, str | int | bool]:
     """Record bounded request metadata without headers or body values."""
     safe_path = (
         path
@@ -212,7 +220,7 @@ def responder_log(
         in {"/v1/responses", "/v1/messages", "/v1/messages?beta=true", "/api/hello"}
         else "<rejected>"
     )
-    row: dict[str, str | int] = {
+    row: dict[str, str | int | bool] = {
         "method": method if method in {"POST", "HEAD", "GET", "PUT"} else "<rejected>",
         "path": safe_path,
         "status": status,
@@ -220,6 +228,24 @@ def responder_log(
     }
     if fixture is not None:
         row["fixture"] = fixture
+    if isinstance(body, dict):
+        tools = body.get("tools")
+        tool_list: list[object] = tools if isinstance(tools, list) else []
+        model = body.get("model")
+        row.update(
+            tool_count=len(tool_list),
+            has_bash=any(
+                isinstance(tool, dict) and tool.get("name") == "Bash"
+                for tool in tool_list
+            ),
+            model=model
+            if isinstance(model, str)
+            and len(model) <= 100
+            and all(char.isalnum() or char in "-._" for char in model)
+            else "<rejected>",
+            has_output_format=body.get("outputFormat") is not None
+            or body.get("output_format") is not None,
+        )
     return row
 
 
@@ -231,6 +257,7 @@ def codex_config(home: Path, python: Path, port: int) -> str:
         home / "relay-run-r3",
         home / "relay-run-r4",
         home / "relay-run-r5",
+        home / "relay-run-r6",
         home / "codex",
     ]
     denied.extend(
@@ -251,6 +278,10 @@ def codex_config(home: Path, python: Path, port: int) -> str:
                 "file-opens-relay-r2.pid",
                 "file-opens-relay-r2.err",
                 "audit-positive-relay-r2",
+                "file-opens-relay-r6.json",
+                "file-opens-relay-r6.pid",
+                "file-opens-relay-r6.err",
+                "audit-positive-relay-r6",
             )
         )
     deny_entries = "\n".join(f'"{path}" = "deny"' for path in denied)
