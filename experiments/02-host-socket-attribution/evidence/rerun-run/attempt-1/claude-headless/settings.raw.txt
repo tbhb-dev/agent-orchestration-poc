@@ -1,0 +1,1 @@
+{"sandbox":{"enabled":true,"network":{"allowUnixSockets":["/private/tmp/bv01-228-claude-headless/gateway.sock"],"allowAllUnixSockets":false,"allowLocalBinding":false},"allowUnsandboxedCommands":false}}

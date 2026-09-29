@@ -1,0 +1,25 @@
+Error: Failed to start a fresh session through the app server: thread/start fail
+ed during TUI bootstrap: thread/start failed: error creating thread: failed to l
+oad AGENTS.md instructions for environment `local`: fs sandbox helper failed wit
+h status exit status: 71: sandbox-exec: sandbox_apply: Operation not permitted (
+code -32603)
+
+Startup warnings:
+Running without the shared background server: command-line configuration overrid
+es (-c, --enable, --disable, or --search) requires embedded mode.
+Permissions profile `bv01` does not define any recognized filesystem entries for
+ this version of Codex. Filesystem access will remain restricted. Upgrade Codex
+if this profile expects filesystem permissions.
+
+
+
+
+
+
+
+
+
+
+
+
+Pane is dead (status 1, Mon Sep 28 21:46:47 2026)

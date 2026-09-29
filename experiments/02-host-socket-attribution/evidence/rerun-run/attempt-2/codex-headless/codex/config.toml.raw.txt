@@ -1,0 +1,16 @@
+check_for_update_on_startup = false
+model_provider = "bv01"
+default_permissions = "bv01"
+[model_providers.bv01]
+name = "bv01"
+base_url = "http://127.0.0.1:61543/v1"
+wire_api = "responses"
+env_key = "BV01_FAKE_OPENAI_KEY"
+[permissions.bv01.network]
+enabled = true
+[permissions.bv01.network.unix_sockets]
+"/private/tmp/bv01-228-codex-headless/gateway.sock" = "allow"
+[features]
+plugins = false
+[projects."/private/tmp/bv01-228-codex-headless/workspace"]
+trust_level = "trusted"

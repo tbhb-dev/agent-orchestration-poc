@@ -1,0 +1,3 @@
+{"method": "HEAD", "path": "/api/hello", "status": 403}
+{"method": "POST", "path": "/v1/messages?beta=true", "status": 200}
+{"method": "POST", "path": "/v1/messages?beta=true", "status": 200}
