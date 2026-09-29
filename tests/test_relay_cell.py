@@ -5,6 +5,7 @@ import socket
 import subprocess
 import tempfile
 import tomllib
+from collections.abc import Callable
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -211,6 +212,40 @@ def test_relay_result_accepts_connector() -> None:
 def test_only_bare_input_prompt_is_ready(marker: str) -> None:
     assert empty_input_prompt(f"header\n {marker} \nfooter", marker)
     assert not empty_input_prompt(f"header\n {marker} No, exit\nfooter", marker)
+
+
+def test_codex_fresh_thread_placeholder_is_ready() -> None:
+    pane = (EXPERIMENT / "fixtures/codex-fresh-thread-header.snap").read_text()
+    assert empty_input_prompt(pane, "›")
+    assert not empty_input_prompt("Codex\n› No, exit\n", "›")
+
+
+@pytest.mark.parametrize("append_event", [False, True])
+def test_capture_gate_requires_event_after_marker_open(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, append_event: bool
+) -> None:
+    capture = tmp_path / "file-opens-relay.json"
+    capture.write_bytes(b'{"path":"audit-positive-relay"}\n')
+    (tmp_path / "file-opens-relay.pid").write_text("123\n")
+    (tmp_path / "file-opens-relay.err").touch()
+    (tmp_path / "audit-positive-relay").touch()
+    gate = RELAY["capture_gate"]
+    monkeypatch.setitem(gate.__globals__, "CAPTURE_HOME", tmp_path)
+    monkeypatch.setitem(gate.__globals__, "checked", lambda *_args: "123\n")
+
+    def wait_once(predicate: Callable[[], bool], _deadline: float, _label: str) -> None:
+        if append_event:
+            with capture.open("ab") as stream:
+                stream.write(b'{"path":"audit-positive-relay"}\n')
+        if not predicate():
+            raise TimeoutError("capture positive control")
+
+    monkeypatch.setitem(gate.__globals__, "wait_for", wait_once)
+    if append_event:
+        gate()
+    else:
+        with pytest.raises(TimeoutError, match="capture positive control"):
+            gate()
 
 
 @pytest.mark.socket

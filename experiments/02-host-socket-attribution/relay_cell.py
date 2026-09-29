@@ -106,11 +106,12 @@ def capture_gate() -> None:
     marker = CAPTURE_HOME / "audit-positive-relay"
     if not all(path.is_file() for path in (capture, pid_file, error, marker)):
         raise RuntimeError("capture files are absent")
+    capture_offset = capture.stat().st_size
     marker.read_bytes()  # Make a fresh open event for this cell's bounded tail check.
 
     def marker_in_tail() -> bool:
         with capture.open("rb") as stream:
-            stream.seek(max(0, capture.stat().st_size - 1_048_576))
+            stream.seek(max(capture_offset, capture.stat().st_size - 1_048_576))
             return b"audit-positive-relay" in stream.read()
 
     if error.stat().st_size:

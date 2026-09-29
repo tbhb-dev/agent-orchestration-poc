@@ -180,8 +180,11 @@ def claude_settings(home: Path) -> dict[str, object]:
 
 
 def empty_input_prompt(pane: str, marker: str) -> bool:
-    """Match a bare TUI input prompt, not a selected dialog option."""
-    return any(line.strip() == marker for line in pane.splitlines())
+    """Match an empty TUI composer, not a selected dialog option."""
+    ready = {marker}
+    if marker == "›":
+        ready.add("› Ask Codex to do anything")
+    return any(line.strip() in ready for line in pane.splitlines())
 
 
 def launch_command(
