@@ -1,0 +1,377 @@
+### 2026-09-28T20:27:35-0400
+$ mise exec -- sbx version
+sbx version: v0.45.1 9d79d90ee4c5d297fb3d36b75384e8cea7a4fbcb
+[exit 0]
+
+### 2026-09-28T20:27:36-0400
+$ mise exec -- sbx ls --quiet
+bv05-kit
+[exit 0]
+
+### 2026-09-28T20:27:36-0400
+$ mise exec -- sbx settings get kit.allowLocalKits
+true
+[exit 0]
+
+### 2026-09-28T20:27:36-0400
+$ cmp /private/tmp/bv05-kit/spec.yaml experiments/03-sbx-kit-trust/evidence/installed-sbx-run/kit/spec.yaml
+[exit 0]
+
+### 2026-09-28T20:27:36-0400
+$ mise exec -- openssl x509 -in /private/tmp/bv05-pki/ca.crt -noout -fingerprint -sha256
+sha256 Fingerprint=08:FE:84:2E:8D:C7:34:BD:79:D7:EA:9F:BE:0D:CD:5E:91:5E:E8:93:0A:80:42:D7:72:F2:31:AE:F4:6B:81:D4
+[exit 0]
+
+### 2026-09-28T20:27:53-0400
+$ bash -c nohup\ mise\ exec\ --\ python\ experiments/03-sbx-kit-trust/fixture.py\ serve\ --root\ /private/tmp/bv05-pki\ --leaf\ valid\ --port\ 18443\ --log\ /private/tmp/bv05-run-5-receiver.jsonl\ --deliveries\ /private/tmp/bv05-run-5-deliveries.jsonl\ \>\ /private/tmp/bv05-run-5-serve.out\ 2\>\&1\ \<\ /dev/null\ \&\ echo\ \$\!\ \>\ /private/tmp/bv05-run-5-receiver.pid\;\ sleep\ 2\;\ cat\ /private/tmp/bv05-run-5-serve.out\;\ lsof\ -nP\ -iTCP:18443\ -sTCP:LISTEN
+listening 127.0.0.1:18443 leaf=valid
+COMMAND     PID USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME
+python3.1 87102 tony    3u  IPv4 0x76912bd2600c8506      0t0  TCP 127.0.0.1:18443 (LISTEN)
+[exit 0]
+
+### 2026-09-28T20:28:05-0400
+$ mise exec -- sbx exec bv05-kit sh -c getent\ hosts\ host.docker.internal\;\ printf\ \"HTTPS_PROXY=%s\\n\"\ \"\$HTTPS_PROXY\"\;\ curl\ -sS\ --max-time\ 20\ -o\ /dev/null\ -w\ \"http_code=%\{http_code\}\ verify=%\{ssl_verify_result\}\ remote_ip=%\{remote_ip\}\\n\"\ https://host.docker.internal:18443/c3-injection\;\ printf\ \"curl_exit=%s\\n\"\ \"\$\?\"
+Sandbox bv05-kit started successfully
+fe80::1         host.docker.internal
+HTTPS_PROXY=http://gateway.docker.internal:3128
+curl: (7) CONNECT tunnel failed, response 502
+http_code=000 verify=0 remote_ip=
+curl_exit=7
+[exit 0]
+
+### 2026-09-28T20:28:22-0400
+$ mise exec -- sbx policy log bv05-kit --json --limit 5
+{
+  "blocked_hosts": [
+    {
+      "host": "ports.ubuntu.com:80",
+      "vm_name": "bv05-kit",
+      "proxy_type": "forward",
+      "rule": "no applicable policies for op(action=net:connect:tcp, resource=net:domain:ports.ubuntu.com:80)",
+      "last_seen": "2026-09-28T20:28:07.383225-04:00",
+      "since": "2026-09-28T17:19:01.19926-04:00",
+      "count_since": 20,
+      "reason": "No matching allow rule (default deny)"
+    },
+    {
+      "host": "download.docker.com:443",
+      "vm_name": "bv05-kit",
+      "proxy_type": "forward",
+      "rule": "no applicable policies for op(action=net:connect:tcp, resource=net:domain:download.docker.com:443)",
+      "last_seen": "2026-09-28T20:28:07.381406-04:00",
+      "since": "2026-09-28T17:19:01.199198-04:00",
+      "count_since": 5,
+      "reason": "No matching allow rule (default deny)"
+    }
+  ],
+  "allowed_hosts": [
+    {
+      "host": "localhost:18443",
+      "vm_name": "bv05-kit",
+      "proxy_type": "forward-bypass",
+      "rule": "<dial failed>",
+      "last_seen": "2026-09-28T20:28:07.382414-04:00",
+      "since": "2026-09-28T20:28:07.382414-04:00",
+      "count_since": 1
+    },
+    {
+      "host": "localhost:18443",
+      "vm_name": "bv05-kit",
+      "proxy_type": "forward-bypass",
+      "rule": "",
+      "last_seen": "2026-09-28T17:23:35.795476-04:00",
+      "since": "2026-09-28T17:19:50.841049-04:00",
+      "count_since": 18
+    },
+    {
+      "host": "localhost:18443",
+      "vm_name": "bv05-kit",
+      "proxy_type": "transparent",
+      "rule": "",
+      "last_seen": "2026-09-28T17:21:00.488323-04:00",
+      "since": "2026-09-28T17:21:00.488323-04:00",
+      "count_since": 1
+    }
+  ]
+}
+[exit 0]
+
+### 2026-09-28T20:28:36-0400
+$ lsof -nP -iTCP:18443 -sTCP:LISTEN
+COMMAND     PID USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME
+python3.1 94645 tony    3u  IPv4 0xa1f88331218c4619      0t0  TCP 127.0.0.1:18443 (LISTEN)
+[exit 0]
+
+### 2026-09-28T20:28:36-0400
+$ mise exec -- sbx exec bv05-kit sh -c curl\ -sS\ --max-time\ 20\ -o\ /dev/null\ -w\ \"http_code=%\{http_code\}\ verify=%\{ssl_verify_result\}\ remote_ip=%\{remote_ip\}\\n\"\ https://host.docker.internal:18443/c3-injection\;\ printf\ \"curl_exit=%s\\n\"\ \"\$\?\"
+http_code=200 verify=0 remote_ip=fd61:8f11:ddb2::
+curl_exit=0
+[exit 0]
+
+### 2026-09-28T20:28:56-0400
+$ mise exec -- sbx exec bv05-kit sh -c if\ \[\ \"\$\{BV05_TOKEN+x\}\"\ =\ x\ \]\;\ then\ echo\ BV05_TOKEN_present\;\ else\ echo\ BV05_TOKEN_absent\;\ fi
+BV05_TOKEN_present
+[exit 0]
+
+### 2026-09-28T20:28:57-0400
+$ mise exec -- sbx policy log bv05-kit --json --limit 3
+{
+  "blocked_hosts": [
+    {
+      "host": "ports.ubuntu.com:80",
+      "vm_name": "bv05-kit",
+      "proxy_type": "forward",
+      "rule": "no applicable policies for op(action=net:connect:tcp, resource=net:domain:ports.ubuntu.com:80)",
+      "last_seen": "2026-09-28T20:28:07.383225-04:00",
+      "since": "2026-09-28T17:19:01.19926-04:00",
+      "count_since": 20,
+      "reason": "No matching allow rule (default deny)"
+    },
+    {
+      "host": "download.docker.com:443",
+      "vm_name": "bv05-kit",
+      "proxy_type": "forward",
+      "rule": "no applicable policies for op(action=net:connect:tcp, resource=net:domain:download.docker.com:443)",
+      "last_seen": "2026-09-28T20:28:07.381406-04:00",
+      "since": "2026-09-28T17:19:01.199198-04:00",
+      "count_since": 5,
+      "reason": "No matching allow rule (default deny)"
+    }
+  ],
+  "allowed_hosts": [
+    {
+      "host": "localhost:18443",
+      "vm_name": "bv05-kit",
+      "proxy_type": "forward-bypass",
+      "rule": "",
+      "last_seen": "2026-09-28T20:28:37.300698-04:00",
+      "since": "2026-09-28T17:19:50.841049-04:00",
+      "count_since": 19
+    },
+    {
+      "host": "localhost:18443",
+      "vm_name": "bv05-kit",
+      "proxy_type": "forward-bypass",
+      "rule": "<dial failed>",
+      "last_seen": "2026-09-28T20:28:07.382414-04:00",
+      "since": "2026-09-28T20:28:07.382414-04:00",
+      "count_since": 1
+    },
+    {
+      "host": "localhost:18443",
+      "vm_name": "bv05-kit",
+      "proxy_type": "transparent",
+      "rule": "",
+      "last_seen": "2026-09-28T17:21:00.488323-04:00",
+      "since": "2026-09-28T17:21:00.488323-04:00",
+      "count_since": 1
+    }
+  ]
+}
+[exit 0]
+
+### 2026-09-28T20:28:57-0400
+$ mise exec -- sbx policy check network --verbose --sandbox bv05-kit host.docker.internal:18443
+Allowed: host.docker.internal:18443
+Governance: Local policy only
+Context: sandbox:bv05-kit
+Action: net:connect:tcp
+Resource: net:domain host.docker.internal:18443
+[exit 0]
+
+### 2026-09-28T20:29:30-0400
+$ mise exec -- sbx exec bv05-kit sh -c curl\ -sS\ --max-time\ 20\ -o\ /dev/null\ -w\ \"http_code=%\{http_code\}\ verify=%\{ssl_verify_result\}\ remote_ip=%\{remote_ip\}\\n\"\ -H\ \"Authorization:\ Bearer\ \$BV05_TOKEN\"\ https://host.docker.internal:18443/c3-placeholder\;\ printf\ \"curl_exit=%s\\n\"\ \"\$\?\"
+Sandbox bv05-kit started successfully
+http_code=200 verify=0 remote_ip=fd61:8f11:ddb2::
+curl_exit=0
+[exit 0]
+
+### 2026-09-28T20:30:23-0400
+$ experiments/03-sbx-kit-trust/evidence/sbx-run-5/compare-placeholder.sh /private/tmp/bv05-run-5-receiver.jsonl /c3-placeholder
+Sandbox bv05-kit started successfully
+receiver bearer matches guest placeholder
+[exit 0]
+
+### 2026-09-28T20:30:34-0400
+$ mise exec -- sbx exec bv05-kit sh -c curl\ -sS\ --noproxy\ \"\*\"\ --max-time\ 20\ -o\ /dev/null\ -w\ \"http_code=%\{http_code\}\ verify=%\{ssl_verify_result\}\ remote_ip=%\{remote_ip\}\\n\"\ -H\ \"Authorization:\ Bearer\ \$BV05_TOKEN\"\ https://host.docker.internal:18443/c3-transparent\;\ printf\ \"curl_exit=%s\\n\"\ \"\$\?\"
+http_code=200 verify=0 remote_ip=169.254.1.1
+curl_exit=0
+[exit 0]
+
+### 2026-09-28T20:30:34-0400
+$ experiments/03-sbx-kit-trust/evidence/sbx-run-5/compare-placeholder.sh /private/tmp/bv05-run-5-receiver.jsonl /c3-transparent
+receiver bearer matches guest placeholder
+[exit 0]
+
+### 2026-09-28T20:31:03-0400
+$ bash -c test\ \"\$\(sha256sum\ /private/tmp/bv05-credential-undo-229/bv05.sbxenv.yaml\ \|\ awk\ \"\{print\ \\\$1\}\"\)\"\ =\ \"\$\(cat\ /private/tmp/bv05-credential-undo-229/manifest.sha\)\"
+[exit 0]
+
+### 2026-09-28T20:31:03-0400
+$ mise exec -- sbx ls --quiet
+bv05-kit
+[exit 0]
+
+### 2026-09-28T20:31:03-0400
+$ mise exec -- sbx env rm --force /private/tmp/bv05-credential-undo-229/bv05.sbxenv.yaml
+── ENVIRONMENT PLAN
+   bv05-kit
+
+-  sandbox:
+-    name: bv05-kit
+-    agent: shell
+
+   Plan: + 0 to add, ~ 0 to change, - 1 to destroy.
+Deleting sandbox bv05-kit...
+Sandbox 'bv05-kit' removed
+error: the environment was removed, but the consent recorded for "bv05-kit" could not be cleared: remove /Users/tony/Library/Application Support/com.docker.sandboxes/sandboxes/env/bv05-kit-9da128bc504ef1410dd5a7ead6ef4da9410c2a7e3401993bc3ae36b6d01afd0b.yaml: remove /Users/tony/Library/Application Support/com.docker.sandboxes/sandboxes/env/bv05-kit-9da128bc504ef1410dd5a7ead6ef4da9410c2a7e3401993bc3ae36b6d01afd0b.yaml: operation not permitted; delete that state to revoke it, or a later create may not ask again
+[exit 1]
+
+### 2026-09-28T20:31:03-0400
+$ mise exec -- sbx ls --quiet
+[exit 0]
+
+### 2026-09-28T20:31:04-0400
+$ mise exec -- sbx env create --auto-approve /private/tmp/bv05-credential-undo-229/bv05.sbxenv.yaml
+── LOAD ENVIRONMENT
+   reading environment file…
+     /private/tmp/bv05-credential-undo-229/bv05.sbxenv.yaml
+   ✓ environment loaded
+── ENVIRONMENT PLAN
+   bv05-kit
+
+   kits:
++    - source: /private/tmp/bv05-kit  (recorded as applied, no longer present)
+
++  sandbox:  (recorded as applied, no longer present)
++    name: bv05-kit
++    agent: shell
+
+   bindings:
+     bv05-agentd:  (unchanged, needs your approval)
+       apiKey:
+         domains: host.docker.internal
+
+   Plan: + 2 to add, ~ 0 to change, - 0 to destroy.
+warning: could not record what this environment applied: create temp file in /Users/tony/Library/Application Support/com.docker.sandboxes/sandboxes/env: open /Users/tony/Library/Application Support/com.docker.sandboxes/sandboxes/env/.bv05-kit-9da128bc504ef1410dd5a7ead6ef4da9410c2a7e3401993bc3ae36b6d01afd0b.yaml.2882069418: operation not permitted
+── RESOLVE SETUP
+   resolving configuration…
+     sandbox    bv05-kit
+     agent      shell
+     kit        /private/tmp/bv05-kit
+     workspace  none · no workspace bind mount
+     image      docker/sandbox-templates:shell-docker
+     cpu        10
+     memory     16 GiB
+   ✓ configuration resolved
+── PREPARE IMAGE
+   → pull docker/sandbox-templates:shell-docker
+     1560168ac5fb already present
+     6a42a4149724 already present
+     fdc1c83df86c already present
+     b2c007bbb5dc already present
+     5bbe8539825f already present
+     cc5f104d36e3 already present
+     84e55b2a5e0b already present
+   ✓ image ready
+── CONFIGURE AGENT
+   → set 8 environment variable(s)
+   → copy 1 home file(s)
+   → run 1 install command(s)
+     $ install -m 0644 /home/agent/bv05/bv05-ca.crt /usr/local/sha… (kit=bv05-kit, user=0)
+     ✓ install -m 0644 /home/agent/bv05/bv05-ca.crt /usr/local/sha… (kit=bv05-kit, user=0, 498ms)
+   → register 1 startup command(s), run on every container start
+     + sh -c { command -v apt-get && apt-get update -qq -y || true… (kit=shell, user=root)
+     view startup log: cat /var/log/sbx-kit-startup.log
+── CREATE SANDBOX
+   ✓ Created sandbox bv05-kit
+
+To connect to this sandbox, run:
+  sbx run --name bv05-kit
+warning: could not record what this environment applied: create temp file in /Users/tony/Library/Application Support/com.docker.sandboxes/sandboxes/env: open /Users/tony/Library/Application Support/com.docker.sandboxes/sandboxes/env/.bv05-kit-9da128bc504ef1410dd5a7ead6ef4da9410c2a7e3401993bc3ae36b6d01afd0b.yaml.858273204: operation not permitted
+warning: could not clear this environment's prior sandbox identity: create temp file in /Users/tony/Library/Application Support/com.docker.sandboxes/sandboxes/env: open /Users/tony/Library/Application Support/com.docker.sandboxes/sandboxes/env/.bv05-kit-9da128bc504ef1410dd5a7ead6ef4da9410c2a7e3401993bc3ae36b6d01afd0b.yaml.2135707802: operation not permitted
+warning: could not record this environment's sandbox identity: create temp file in /Users/tony/Library/Application Support/com.docker.sandboxes/sandboxes/env: open /Users/tony/Library/Application Support/com.docker.sandboxes/sandboxes/env/.bv05-kit-9da128bc504ef1410dd5a7ead6ef4da9410c2a7e3401993bc3ae36b6d01afd0b.yaml.3783751856: operation not permitted
+[exit 0]
+
+### 2026-09-28T20:31:07-0400
+$ mise exec -- sbx ls --quiet
+bv05-kit
+[exit 0]
+
+### 2026-09-28T20:31:27-0400
+$ kill 94645
+experiments/03-sbx-kit-trust/evidence/sbx-run-5/rec.sh: line 9: kill: (94645) - Operation not permitted
+[exit 1]
+
+### 2026-09-28T20:31:27-0400
+$ bash -c if\ lsof\ -nP\ -iTCP:18443\ -sTCP:LISTEN\;\ then\ exit\ 1\;\ else\ echo\ no_listener_on_18443\;\ fi
+COMMAND     PID USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME
+python3.1 94645 tony    3u  IPv4 0xa1f88331218c4619      0t0  TCP 127.0.0.1:18443 (LISTEN)
+[exit 1]
+
+### 2026-09-28T20:31:27-0400
+$ mise exec -- sbx ls --quiet
+bv05-kit
+[exit 0]
+
+### 2026-09-28T20:31:37-0400
+$ bash -c if\ lsof\ -nP\ -iTCP:18443\ -sTCP:LISTEN\;\ then\ exit\ 1\;\ else\ echo\ no_listener_on_18443\;\ fi
+no_listener_on_18443
+[exit 0]
+
+### 2026-09-28T20:32:14-0400
+$ sw_vers
+ProductName:		macOS
+ProductVersion:		26.5.1
+BuildVersion:		25F80
+[exit 0]
+
+### 2026-09-28T20:32:14-0400
+$ uname -m
+arm64
+[exit 0]
+
+### 2026-09-28T20:32:14-0400
+$ mise exec -- python --version
+Python 3.14.6
+[exit 0]
+
+### 2026-09-28T20:32:14-0400
+$ mise exec -- codex --version
+WARNING: proceeding, even though we could not create PATH aliases: Operation not permitted (os error 1)
+codex-cli 0.157.1
+[exit 0]
+
+### 2026-09-28T20:32:14-0400
+$ git rev-parse HEAD
+5bc761c689aa9997cf0b97ea382a543bbc04ba45
+[exit 0]
+
+### 2026-09-28T20:32:14-0400
+$ rg --files /private/tmp/bv05-kit
+/private/tmp/bv05-kit/files/home/bv05/bv05-ca.crt
+/private/tmp/bv05-kit/spec.yaml
+[exit 0]
+
+### 2026-09-28T20:33:49-0400
+$ write_stdin session 22137 Ctrl-C
+Receiver exited 130 after KeyboardInterrupt.
+[exit 130]
+
+### 2026-09-28T20:42:16-0400
+$ rm /private/tmp/bv05-run-5-receiver.jsonl /private/tmp/bv05-run-5-deliveries.jsonl /private/tmp/bv05-run-5-serve.out /private/tmp/bv05-run-5-receiver.pid
+[exit 0]
+
+### 2026-09-28T20:42:16-0400
+$ mise run fmt
+[exit 0]
+$ mise run check
+[exit 1: Quarto log path denied]
+$ mise run check:mutation
+[exit 0]
+$ mise run build
+[exit 0]
+$ mise run check:vale
+[exit 0]
+$ mise run check:rumdl
+[exit 0]
