@@ -1,0 +1,9 @@
+2026-09-29 13:33:07 EDT
+ProductName:		macOS
+ProductVersion:		26.5.1
+BuildVersion:		25F80
+arm64
+codex-cli 0.157.1
+2.1.284 (Claude Code)
+Python 3.14.6
+tmux 3.7b

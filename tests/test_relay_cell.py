@@ -46,7 +46,7 @@ def set_cell_paths(
 
 def interactive_cell(monkeypatch: pytest.MonkeyPatch, home: Path) -> Any:  # noqa: ANN401 - runpy class
     """Create an interactive cell with an owned test run directory."""
-    (home / "relay-run-r3").mkdir()
+    (home / "relay-run-r4").mkdir()
     cell_type = RELAY["Cell"]
     set_cell_paths(monkeypatch, cell_type, home, home / "evidence")
     return cell_type("claude-interactive", tmux_started=True)
@@ -69,6 +69,7 @@ def test_codex_profile_reads_platform_defaults_workspace_and_python(
     denied = {
         str(home / "relay-run-r2"): "deny",
         str(home / "relay-run-r3"): "deny",
+        str(home / "relay-run-r4"): "deny",
         str(home / "codex"): "deny",
         **{
             f"/private/tmp/bv01-228-{other}": "deny"
@@ -184,6 +185,8 @@ def test_launch_configuration(profile: str) -> None:
                 "none",
                 prompt,
             ]
+        else:
+            expected_argv += ["--permission-mode", "manual"]
     if profile.startswith("codex-"):
         expected_env.update(
             {
@@ -226,9 +229,20 @@ def test_launch_configuration(profile: str) -> None:
             0,
             "responder refused",
         ),
-        ([{"status": 200}], [], 0, "exactly one"),
         (
-            [{"status": 200}],
+            [
+                {"status": 200, "fixture": "codex-interactive-tool.sse"},
+                {"status": 200, "fixture": "codex-interactive-final.sse"},
+            ],
+            [],
+            0,
+            "exactly one",
+        ),
+        (
+            [
+                {"status": 200, "fixture": "codex-interactive-tool.sse"},
+                {"status": 200, "fixture": "codex-interactive-final.sse"},
+            ],
             [{"peer": {"pid": 1}, "decision": "allowed"}],
             2,
             "exited 2",
@@ -242,16 +256,49 @@ def test_relay_result_rejects_bad_outcome(
     error: str,
 ) -> None:
     with pytest.raises(ValueError, match=error):
-        relay_result(rows, requests, exit_code)
+        relay_result(rows, requests, exit_code, "codex-interactive")
 
 
 def test_relay_result_accepts_connector() -> None:
     assert (
         relay_result(
-            [{"status": 200}], [{"peer": {"pid": 42}, "decision": "allowed"}], None
+            [
+                {"status": 200, "fixture": "codex-interactive-tool.sse"},
+                {"status": 200, "fixture": "codex-interactive-final.sse"},
+                {"status": 200, "fixture": "codex-interactive-final.sse"},
+            ],
+            [{"peer": {"pid": 42}, "decision": "allowed"}],
+            None,
+            "codex-interactive",
         )
-        == "peer=42 decision=allowed requests=1"
+        == "peer=42 decision=allowed requests=3 extra_model_requests=1"
     )
+
+
+def test_relay_result_requires_tool_before_final() -> None:
+    with pytest.raises(ValueError, match="tool and final"):
+        relay_result(
+            [
+                {"status": 200, "fixture": "codex-interactive-final.sse"},
+                {"status": 200, "fixture": "codex-interactive-final.sse"},
+            ],
+            [{"peer": {"pid": 42}, "decision": "allowed"}],
+            None,
+            "codex-interactive",
+        )
+
+
+def test_relay_result_rejects_blocked_connector() -> None:
+    with pytest.raises(ValueError, match="did not allow"):
+        relay_result(
+            [
+                {"status": 200, "fixture": "codex-interactive-tool.sse"},
+                {"status": 200, "fixture": "codex-interactive-final.sse"},
+            ],
+            [{"peer": {"pid": 42}, "decision": "blocked"}],
+            None,
+            "codex-interactive",
+        )
 
 
 @pytest.mark.parametrize("marker", ["❯", "›"])
@@ -319,7 +366,7 @@ def test_interactive_prompt_handling(
     screens: list[str],
 ) -> None:
     cell_type = RELAY["Cell"]
-    run = tmp_path / "relay-run-r3"
+    run = tmp_path / "relay-run-r4"
     run.mkdir()
     set_cell_paths(monkeypatch, cell_type, tmp_path, tmp_path / "evidence")
     cell = cell_type(profile, tmux_started=True)
@@ -356,8 +403,8 @@ def test_interactive_prompt_handling(
 
 def test_interactive_paths_use_r3() -> None:
     cell = RELAY["Cell"]("codex-interactive")
-    assert cell.run == Path("/private/tmp/bv01-228-codex-interactive/relay-run-r3")
-    assert cell.evidence == EXPERIMENT / "evidence/relay-run-r3/codex-interactive"
+    assert cell.run == Path("/private/tmp/bv01-228-codex-interactive/relay-run-r4")
+    assert cell.evidence == EXPERIMENT / "evidence/relay-run-r4/codex-interactive"
 
 
 @pytest.mark.parametrize("profile", ["codex-interactive", "claude-interactive"])
@@ -365,7 +412,7 @@ def test_prompt_waits_between_text_and_enter(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, profile: str
 ) -> None:
     cell_type = RELAY["Cell"]
-    (tmp_path / "relay-run-r3").mkdir()
+    (tmp_path / "relay-run-r4").mkdir()
     set_cell_paths(monkeypatch, cell_type, tmp_path, tmp_path / "evidence")
     cell = cell_type(profile, tmux_started=True)
     events: list[str] = []
@@ -414,7 +461,7 @@ def test_unsubmitted_prompt_saves_pane(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, profile: str
 ) -> None:
     cell_type = RELAY["Cell"]
-    run = tmp_path / "relay-run-r3"
+    run = tmp_path / "relay-run-r4"
     run.mkdir()
     set_cell_paths(monkeypatch, cell_type, tmp_path, tmp_path / "evidence")
     cell = cell_type(profile, tmux_started=True)
@@ -454,7 +501,7 @@ def test_persistent_theme_screen_gets_one_enter(
         cell.prompt_interactive(time.monotonic() + 0.25)
     assert [call[-1] for call in calls if "send-keys" in call] == ["Enter"]
     assert (
-        tmp_path / "relay-run-r3/pane-prompt-timeout.txt"
+        tmp_path / "relay-run-r4/pane-prompt-timeout.txt"
     ).read_text() == CLAUDE_THEME_PANE
 
 
@@ -479,7 +526,7 @@ def test_interactive_stop_saves_pane(
     )
     with pytest.raises(RuntimeError, match=message):
         cell.prompt_interactive(time.monotonic() + 5)
-    assert (tmp_path / "relay-run-r3" / name).read_text() == pane
+    assert (tmp_path / "relay-run-r4" / name).read_text() == pane
 
 
 def test_observe_timeout_saves_pane_before_cleanup(
@@ -502,7 +549,7 @@ def test_observe_timeout_saves_pane_before_cleanup(
     with pytest.raises(TimeoutError, match="cell completion"):
         cell.observe(time.monotonic() + 5)
     assert (
-        tmp_path / "relay-run-r3/pane-observe-timeout.txt"
+        tmp_path / "relay-run-r4/pane-observe-timeout.txt"
     ).read_text() == "Waiting for permission\n"
     assert calls == [
         (
@@ -531,7 +578,7 @@ def test_prompt_timeout_saves_last_pane(
     with pytest.raises(TimeoutError, match="input prompt did not appear"):
         cell.prompt_interactive(time.monotonic() + 0.1)
     assert (
-        tmp_path / "relay-run-r3/pane-prompt-timeout.txt"
+        tmp_path / "relay-run-r4/pane-prompt-timeout.txt"
     ).read_text() == "Waiting...\n"
 
 
@@ -708,7 +755,7 @@ def test_cleanup_continues_after_tmux_failure(monkeypatch: pytest.MonkeyPatch) -
     with tempfile.TemporaryDirectory(dir="/tmp") as directory:
         home = Path(directory)
         evidence = home / "evidence"
-        (home / "relay-run-r3").mkdir()
+        (home / "relay-run-r4").mkdir()
 
         set_cell_paths(monkeypatch, cell_type, home, evidence)
         cell = cell_type("claude-interactive", tmux_started=True, run_owned=True)
@@ -737,7 +784,7 @@ def test_cleanup_saves_pane_before_tmux_shutdown(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     cell_type = RELAY["Cell"]
-    run = tmp_path / "relay-run-r3"
+    run = tmp_path / "relay-run-r4"
     run.mkdir()
     evidence = tmp_path / "evidence"
     set_cell_paths(monkeypatch, cell_type, tmp_path, evidence)
@@ -776,7 +823,7 @@ def test_preflight_rejection_preserves_existing_socket_and_evidence(
     with tempfile.TemporaryDirectory(dir="/tmp") as directory:
         home = Path(directory)
         evidence = home / "evidence"
-        run = home / "relay-run-r3"
+        run = home / "relay-run-r4"
         run.mkdir()
         evidence.mkdir()
         prior = '{"status":"passed"}\n'

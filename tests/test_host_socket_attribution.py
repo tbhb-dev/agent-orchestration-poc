@@ -250,6 +250,12 @@ def test_request_record_preserves_values(pid: int, tag: str, version: int) -> No
         ),
         (
             ResponderRequest(
+                "POST", "/v1/responses", "127.0.0.1:1234", 1234, "codex-interactive", 2
+            ),
+            (200, "codex-interactive-final.sse"),
+        ),
+        (
+            ResponderRequest(
                 "POST", "/v1/responses", "127.0.0.1:1234", 1234, "wrong", 0
             ),
             (400, None),
@@ -302,6 +308,26 @@ def test_responder_reply_exhausted(port: int, completed: int) -> None:
     ) == (409, None)
 
 
+@pytest.mark.parametrize(
+    ("profile", "path"),
+    [("codex-interactive", "/v1/responses"), ("claude-interactive", "/v1/messages")],
+)
+@given(st.integers(min_value=1, max_value=65535), st.integers(min_value=2))
+def test_interactive_responder_repeats_final(
+    profile: str, path: str, port: int, completed: int
+) -> None:
+    assert responder_reply(
+        ResponderRequest(
+            "POST",
+            path,
+            f"127.0.0.1:{port}",
+            port,
+            profile,
+            completed,
+        )
+    ) == (200, f"{profile}-final.sse")
+
+
 @given(st.text(), st.text(), st.integers(min_value=100, max_value=599))
 def test_responder_log_preserves_request_line(
     method: str, path: str, status: int
@@ -311,6 +337,7 @@ def test_responder_log_preserves_request_line(
         "path": path,
         "status": status,
     }
+    assert responder_log(method, path, status, "tool.sse")["fixture"] == "tool.sse"
 
 
 @pytest.mark.parametrize(
@@ -504,7 +531,14 @@ def test_responder_loopback_and_fixed_frames(
         rows = [json.loads(line) for line in log.read_text().splitlines()]
         assert [row["status"] for row in rows] == [403, 403, 200, 200, 409]
         assert rows[0]["path"] == "/v1/responses?query-marker"
-        assert all(set(row) == {"method", "path", "status"} for row in rows)
+        assert [row.get("fixture") for row in rows] == [
+            None,
+            None,
+            "codex-headless-tool.sse",
+            "codex-headless-final.sse",
+            None,
+        ]
+        assert all(set(row) <= {"method", "path", "status", "fixture"} for row in rows)
         assert all(row["method"] == "POST" for row in rows)
         assert "body-marker" not in log.read_text()
         connection.request("PUT", "/v1/responses", body=b"body-marker")
@@ -518,6 +552,35 @@ def test_responder_loopback_and_fixed_frames(
         }
     finally:
         connection.close()
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("responder_process", ["codex-interactive"], indirect=True)
+def test_interactive_responder_repeats_final_frame(
+    responder_process: tuple[subprocess.Popen[str], Path, int],
+) -> None:
+    _process, log, port = responder_process
+    connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+    try:
+        for expected_fixture in (
+            "codex-interactive-tool.sse",
+            "codex-interactive-final.sse",
+            "codex-interactive-final.sse",
+        ):
+            connection.request("POST", "/v1/responses", body=b"body-marker")
+            response = connection.getresponse()
+            assert response.status == 200
+            assert (
+                response.read() == (RESPONDER_FIXTURES / expected_fixture).read_bytes()
+            )
+    finally:
+        connection.close()
+    rows = [json.loads(line) for line in log.read_text().splitlines()]
+    assert [row["fixture"] for row in rows] == [
+        "codex-interactive-tool.sse",
+        "codex-interactive-final.sse",
+        "codex-interactive-final.sse",
+    ]
 
 
 @pytest.mark.integration

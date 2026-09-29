@@ -267,12 +267,12 @@ class Cell:
     @property
     def run(self) -> Path:
         """Return this attempt's private files."""
-        return self.home / "relay-run-r3"
+        return self.home / "relay-run-r4"
 
     @property
     def evidence(self) -> Path:
         """Return this attempt's commit-ready evidence path."""
-        return EXPERIMENT / "evidence/relay-run-r3" / self.profile
+        return EXPERIMENT / "evidence/relay-run-r4" / self.profile
 
     @property
     def python_env(self) -> dict[str, str]:
@@ -644,7 +644,9 @@ class Cell:
             json.loads(line)
             for line in (self.run / "listener.jsonl").read_text().splitlines()
         ]
-        return relay_result(rows, requests, harness.returncode if harness else None)
+        return relay_result(
+            rows, requests, harness.returncode if harness else None, self.profile
+        )
 
     def cleanup(self, status: str, detail: str) -> bool:  # noqa: C901 - independent teardown steps
         """Stop owned processes, preserve evidence, and print one result."""

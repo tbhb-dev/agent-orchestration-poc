@@ -117,20 +117,32 @@ def responder_reply(request: ResponderRequest) -> tuple[int, str | None]:
         or int(request.content_length) > 2_000_000
     ):
         return 403, None
-    if request.completed not in (0, 1):
+    if request.completed < 0 or (
+        request.completed >= 2 and not request.profile.endswith("interactive")
+    ):
         return 409, None
     return 200, f"{request.profile}-{'tool' if request.completed == 0 else 'final'}.sse"
 
 
-def responder_log(method: str, path: str, status: int) -> dict[str, str | int]:
+def responder_log(
+    method: str, path: str, status: int, fixture: str | None = None
+) -> dict[str, str | int]:
     """Record the request line and result without headers or body values."""
-    return {"method": method, "path": path, "status": status}
+    row: dict[str, str | int] = {"method": method, "path": path, "status": status}
+    if fixture is not None:
+        row["fixture"] = fixture
+    return row
 
 
 def codex_config(home: Path, python: Path, port: int) -> str:
     """Build the disposable Codex profile and exact read grants."""
     workspace = home / "workspace"
-    denied = [home / "relay-run-r2", home / "relay-run-r3", home / "codex"]
+    denied = [
+        home / "relay-run-r2",
+        home / "relay-run-r3",
+        home / "relay-run-r4",
+        home / "codex",
+    ]
     denied.extend(
         home.parent / f"bv01-228-{profile}"
         for profile in (
@@ -295,6 +307,8 @@ def launch_command(
                 "none",
                 prompt,
             ]
+        else:
+            argv += ["--permission-mode", "manual"]
     return argv, env
 
 
@@ -302,14 +316,28 @@ def relay_result(
     rows: list[dict[str, object]],
     requests: list[dict[str, object]],
     harness_exit: int | None,
+    profile: str,
 ) -> str:
-    """Require an accepted model path and one connector request."""
+    """Require the tool and final frames and one connector request."""
     if any(row["status"] != 200 for row in rows):
         raise ValueError("responder refused a request")
+    frames = [row["fixture"] for row in rows if "fixture" in row]
+    expected = [f"{profile}-tool.sse", f"{profile}-final.sse"]
+    if (
+        frames[:2] != expected
+        or (profile.endswith("headless") and len(frames) != 2)
+        or any(frame != expected[1] for frame in frames[2:])
+    ):
+        raise ValueError("responder did not serve tool and final frames")
     if len(requests) != 1:
         raise ValueError("listener did not handle exactly one connector request")
     if harness_exit is not None and harness_exit != 0:
         raise ValueError(f"headless harness exited {harness_exit}")
     request = requests[0]
+    if request["decision"] != "allowed":
+        raise ValueError("listener did not allow connector request")
     peer = cast("dict[str, object]", request["peer"])
-    return f"peer={peer['pid']} decision={request['decision']} requests={len(rows)}"
+    return (
+        f"peer={peer['pid']} decision={request['decision']} requests={len(rows)} "
+        f"extra_model_requests={len(frames) - 2}"
+    )

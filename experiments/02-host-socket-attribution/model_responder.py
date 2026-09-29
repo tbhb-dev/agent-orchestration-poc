@@ -27,7 +27,7 @@ class Responder(HTTPServer):
 
 
 class RequestHandler(BaseHTTPRequestHandler):
-    """Serve at most one tool call and one final frame."""
+    """Serve fixed tool and final frames on the approved model path."""
 
     @override
     def log_message(self, format: str, *args: object) -> None:
@@ -75,7 +75,10 @@ class RequestHandler(BaseHTTPRequestHandler):
                     break
                 remaining -= len(received)
         with server.log_path.open("a", encoding="utf-8") as log:
-            log.write(json.dumps(responder_log(self.command, self.path, status)) + "\n")
+            log.write(
+                json.dumps(responder_log(self.command, self.path, status, fixture))
+                + "\n"
+            )
         body = (FIXTURES / fixture).read_bytes() if fixture else b""
         self.send_response(status)
         self.send_header(
