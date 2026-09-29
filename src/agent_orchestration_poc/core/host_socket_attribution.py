@@ -149,6 +149,8 @@ env_key = "BV01_FAKE_OPENAI_KEY"
 enabled = true
 [permissions.bv01.network.unix_sockets]
 "{home}/gateway.sock" = "allow"
+[tui]
+screen_reader_detection_done = true
 '''
 
 
@@ -166,6 +168,7 @@ def claude_settings(home: Path) -> dict[str, object]:
     return {
         "sandbox": {
             "enabled": True,
+            "failIfUnavailable": True,
             "network": {
                 "allowUnixSockets": [str(home / "gateway.sock")],
                 "allowAllUnixSockets": False,
@@ -176,10 +179,16 @@ def claude_settings(home: Path) -> dict[str, object]:
     }
 
 
+def empty_input_prompt(pane: str, marker: str) -> bool:
+    """Match a bare TUI input prompt, not a selected dialog option."""
+    return any(line.strip() == marker for line in pane.splitlines())
+
+
 def launch_command(
-    profile: str, port: int, home: Path, codex: Path, python: Path
+    profile: str, port: int, home: Path, binaries: tuple[Path, Path, Path]
 ) -> tuple[list[str], dict[str, str]]:
     """Return the pinned harness argv and empty-home environment."""
+    codex, claude, python = binaries
     workspace = home / "workspace"
     env = {
         "HOME": str(home),
@@ -191,6 +200,9 @@ def launch_command(
         "LANG": "C.UTF-8",
         "NO_COLOR": "1",
         "PYTHONUNBUFFERED": "1",
+        "HTTPS_PROXY": "http://127.0.0.1:9",
+        "HTTP_PROXY": "http://127.0.0.1:9",
+        "NO_PROXY": "127.0.0.1,localhost",
     }
     prompt = (
         "Run python3 experiments/02-host-socket-attribution/probe.py client "
@@ -211,9 +223,10 @@ def launch_command(
             CLAUDE_CONFIG_DIR=str(home / "claude"),
             ANTHROPIC_API_KEY="not-a-real-key",
             ANTHROPIC_BASE_URL=f"http://127.0.0.1:{port}",
+            CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC="1",
         )
         argv = [
-            "claude",
+            str(claude),
             "--bare",
             "--strict-mcp-config",
             "--setting-sources",
