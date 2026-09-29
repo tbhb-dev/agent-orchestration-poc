@@ -326,8 +326,13 @@ def test_committed_frames_request_one_profile_command(profile: str) -> None:
     events = [
         json.loads(line[6:]) for line in tool.splitlines() if line.startswith(b"data: ")
     ]
+    python = (
+        "/Users/tony/.local/share/mise/installs/python/3.14.6/bin/python3"
+        if profile.startswith("codex-")
+        else "python3"
+    )
     command = (
-        f"python3 experiments/02-host-socket-attribution/probe.py client "
+        f"{python} experiments/02-host-socket-attribution/probe.py client "
         f"/private/tmp/bv01-228-{profile}/gateway.sock {profile}"
     )
     if profile.startswith("codex-"):

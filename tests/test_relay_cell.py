@@ -5,6 +5,7 @@ import socket
 import subprocess
 import sys
 import tempfile
+import time
 import tomllib
 from collections.abc import Callable
 from pathlib import Path
@@ -14,6 +15,7 @@ import pytest
 
 from agent_orchestration_poc.core.host_socket_attribution import (
     claude_settings,
+    claude_theme_choice,
     claude_trust,
     codex_config,
     empty_input_prompt,
@@ -42,7 +44,9 @@ def set_cell_paths(
 
 
 @pytest.mark.parametrize("profile", ["codex-headless", "codex-interactive"])
-def test_codex_profile_reads_only_disposable_workspace_and_python(profile: str) -> None:
+def test_codex_profile_reads_platform_defaults_workspace_and_python(
+    profile: str,
+) -> None:
     home = Path(f"/private/tmp/bv01-228-{profile}")
     config = tomllib.loads(
         codex_config(
@@ -55,6 +59,7 @@ def test_codex_profile_reads_only_disposable_workspace_and_python(profile: str) 
     python = Path("/Users/tony/.local/share/mise/installs/python/3.14.6")
     assert config["default_permissions"] == "bv01"
     assert config["permissions"]["bv01"]["filesystem"] == {
+        ":minimal": "read",
         str(workspace): "read",
         str(python): "read",
     }
@@ -83,8 +88,9 @@ def test_claude_trust_is_scoped_to_cell_workspace(profile: str) -> None:
 def test_launch_configuration(profile: str) -> None:
     home = Path(f"/private/tmp/bv01-228-{profile}")
     workspace = home / "workspace"
+    prompt_python = "/python/bin/python3" if profile.startswith("codex-") else "python3"
     prompt = (
-        "Run python3 experiments/02-host-socket-attribution/probe.py client "
+        f"Run {prompt_python} experiments/02-host-socket-attribution/probe.py client "
         f"{home}/gateway.sock {profile} and then stop."
     )
     argv, env = launch_command(
@@ -227,6 +233,92 @@ def test_claude_empty_prompt_hint_is_ready() -> None:
     assert not empty_input_prompt("Claude\n❯ No, exit\n", "❯")
 
 
+CLAUDE_THEME_PANE = """Welcome to Claude Code v2.1.284
+ Let's get started.
+ Choose the text style that looks best with your terminal
+ To change this later, run /theme
+   1. Auto (match terminal)
+ ❯ 2. Dark mode ✔
+   3. Light mode
+"""
+
+
+def test_claude_theme_choice_requires_exact_dialog() -> None:
+    assert claude_theme_choice(CLAUDE_THEME_PANE)
+    assert not claude_theme_choice(
+        CLAUDE_THEME_PANE.replace("Dark mode ✔", "Light mode ✔")
+    )
+    assert not claude_theme_choice("❯ 2. Dark mode ✔\n")
+    assert not claude_theme_choice(CLAUDE_THEME_PANE + "❯ Yes, trust this folder\n")
+
+
+@pytest.mark.parametrize(
+    ("profile", "screens"),
+    [
+        (
+            "claude-interactive",
+            [CLAUDE_THEME_PANE, 'Claude\n❯ Try "write a unit test"\n'],
+        ),
+        ("codex-interactive", ["› Ask Codex to do anything\n"]),
+    ],
+)
+def test_interactive_prompt_handling(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    profile: str,
+    screens: list[str],
+) -> None:
+    cell_type = RELAY["Cell"]
+    run = tmp_path / "relay-run-r2"
+    run.mkdir()
+    set_cell_paths(monkeypatch, cell_type, tmp_path, tmp_path / "evidence")
+    cell = cell_type(profile, tmux_started=True)
+    panes = iter(screens)
+    calls: list[tuple[str, ...]] = []
+
+    def fake_checked(*args: str) -> str:
+        calls.append(args)
+        return next(panes) if "capture-pane" in args else ""
+
+    monkeypatch.setitem(
+        cell_type.prompt_interactive.__globals__, "checked", fake_checked
+    )
+    cell.prompt_interactive(time.monotonic() + 5)
+    assert (run / "pane-before-prompt.txt").is_file()
+    sent = [call for call in calls if "send-keys" in call]
+    if profile.startswith("claude-"):
+        assert (run / "pane-theme-choice.txt").read_text() == CLAUDE_THEME_PANE
+        assert [call[-1] for call in sent[::2]] == ["Enter", "Enter"]
+        prompt_call = sent[1]
+    else:
+        assert not (run / "pane-theme-choice.txt").exists()
+        assert sent[-1][-1] == "Enter"
+        prompt_call = sent[0]
+    python = str(RELAY["PYTHON"]) if profile.startswith("codex-") else "python3"
+    assert prompt_call[-1] == (
+        f"Run {python} experiments/02-host-socket-attribution/probe.py client "
+        f"{tmp_path}/gateway.sock {profile} and then stop."
+    )
+
+
+def test_prompt_timeout_saves_last_pane(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    cell_type = RELAY["Cell"]
+    run = tmp_path / "relay-run-r2"
+    run.mkdir()
+    set_cell_paths(monkeypatch, cell_type, tmp_path, tmp_path / "evidence")
+    cell = cell_type("claude-interactive", tmux_started=True)
+    monkeypatch.setitem(
+        cell_type.prompt_interactive.__globals__,
+        "checked",
+        lambda *_args: "Waiting...\n",
+    )
+    with pytest.raises(TimeoutError, match="input prompt did not appear"):
+        cell.prompt_interactive(time.monotonic() + 0.1)
+    assert (run / "pane-prompt-timeout.txt").read_text() == "Waiting...\n"
+
+
 @pytest.mark.parametrize(
     "profile",
     ["codex-headless", "codex-interactive", "claude-headless", "claude-interactive"],
@@ -270,11 +362,11 @@ def test_wrapper_imports_core_outside_venv(profile: str, tmp_path: Path) -> None
 def test_capture_gate_requires_event_after_marker_open(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, append_event: bool
 ) -> None:
-    capture = tmp_path / "file-opens-relay.json"
-    capture.write_bytes(b'{"path":"audit-positive-relay"}\n')
-    (tmp_path / "file-opens-relay.pid").write_text("123\n")
-    (tmp_path / "file-opens-relay.err").touch()
-    (tmp_path / "audit-positive-relay").touch()
+    capture = tmp_path / "file-opens-relay-r2.json"
+    capture.write_bytes(b'{"path":"audit-positive-relay-r2"}\n')
+    (tmp_path / "file-opens-relay-r2.pid").write_text("123\n")
+    (tmp_path / "file-opens-relay-r2.err").touch()
+    (tmp_path / "audit-positive-relay-r2").touch()
     gate = RELAY["capture_gate"]
     monkeypatch.setitem(gate.__globals__, "CAPTURE_HOME", tmp_path)
     monkeypatch.setitem(gate.__globals__, "checked", lambda *_args: "123\n")
@@ -282,7 +374,7 @@ def test_capture_gate_requires_event_after_marker_open(
     def wait_once(predicate: Callable[[], bool], _deadline: float, _label: str) -> None:
         if append_event:
             with capture.open("ab") as stream:
-                stream.write(b"x" * (1_048_576 + 65_530) + b"audit-positive-relay")
+                stream.write(b"x" * (1_048_576 + 65_530) + b"audit-positive-relay-r2")
         if not predicate():
             raise TimeoutError("capture positive control")
 
@@ -292,6 +384,22 @@ def test_capture_gate_requires_event_after_marker_open(
     else:
         with pytest.raises(TimeoutError, match="capture positive control"):
             gate()
+
+
+def test_capture_gate_refuses_previous_capture(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    for name in (
+        "file-opens-relay.json",
+        "file-opens-relay.pid",
+        "file-opens-relay.err",
+        "audit-positive-relay",
+    ):
+        (tmp_path / name).touch()
+    gate = RELAY["capture_gate"]
+    monkeypatch.setitem(gate.__globals__, "CAPTURE_HOME", tmp_path)
+    with pytest.raises(RuntimeError, match="capture files are absent"):
+        gate()
 
 
 @pytest.mark.socket
@@ -384,7 +492,7 @@ def test_cleanup_continues_after_tmux_failure(monkeypatch: pytest.MonkeyPatch) -
     with tempfile.TemporaryDirectory(dir="/tmp") as directory:
         home = Path(directory)
         evidence = home / "evidence"
-        (home / "relay-run").mkdir()
+        (home / "relay-run-r2").mkdir()
 
         set_cell_paths(monkeypatch, cell_type, home, evidence)
         cell = cell_type("claude-interactive", tmux_started=True, run_owned=True)
@@ -417,7 +525,7 @@ def test_preflight_rejection_preserves_existing_socket_and_evidence(
     with tempfile.TemporaryDirectory(dir="/tmp") as directory:
         home = Path(directory)
         evidence = home / "evidence"
-        run = home / "relay-run"
+        run = home / "relay-run-r2"
         run.mkdir()
         evidence.mkdir()
         prior = '{"status":"passed"}\n'

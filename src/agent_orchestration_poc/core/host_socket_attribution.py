@@ -143,6 +143,7 @@ base_url = "http://127.0.0.1:{port}/v1"
 wire_api = "responses"
 env_key = "BV01_FAKE_OPENAI_KEY"
 [permissions.bv01.filesystem]
+":minimal" = "read"
 "{workspace}" = "read"
 "{python.parent.parent}" = "read"
 [permissions.bv01.network]
@@ -195,6 +196,23 @@ def empty_input_prompt(pane: str, marker: str) -> bool:
     )
 
 
+def claude_theme_choice(pane: str) -> bool:
+    """Recognize only the pinned first-run theme dialog with dark selected."""
+    lines = [line.strip() for line in pane.splitlines()]
+    required = {
+        "Welcome to Claude Code v2.1.284",
+        "Let's get started.",
+        "Choose the text style that looks best with your terminal",
+        "To change this later, run /theme",
+        "1. Auto (match terminal)",
+        "❯ 2. Dark mode ✔",
+        "3. Light mode",
+    }
+    return required <= set(lines) and [
+        line for line in lines if line.startswith("❯")
+    ] == ["❯ 2. Dark mode ✔"]
+
+
 def launch_command(
     profile: str, port: int, home: Path, binaries: tuple[Path, Path, Path]
 ) -> tuple[list[str], dict[str, str]]:
@@ -215,8 +233,9 @@ def launch_command(
         "HTTP_PROXY": "http://127.0.0.1:9",
         "NO_PROXY": "127.0.0.1,localhost",
     }
+    prompt_python = str(python) if profile.startswith("codex-") else "python3"
     prompt = (
-        "Run python3 experiments/02-host-socket-attribution/probe.py client "
+        f"Run {prompt_python} experiments/02-host-socket-attribution/probe.py client "
         f"{home}/gateway.sock {profile} and then stop."
     )
     if profile.startswith("codex-"):

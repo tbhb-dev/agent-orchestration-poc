@@ -17,6 +17,7 @@ from pathlib import Path
 
 from agent_orchestration_poc.core.host_socket_attribution import (
     claude_settings,
+    claude_theme_choice,
     claude_trust,
     codex_config,
     empty_input_prompt,
@@ -100,16 +101,16 @@ def process_start(pid: int) -> str | None:
 
 def capture_gate() -> None:
     """Require the live, new capture and its positive control."""
-    capture = CAPTURE_HOME / "file-opens-relay.json"
-    pid_file = CAPTURE_HOME / "file-opens-relay.pid"
-    error = CAPTURE_HOME / "file-opens-relay.err"
-    marker = CAPTURE_HOME / "audit-positive-relay"
+    capture = CAPTURE_HOME / "file-opens-relay-r2.json"
+    pid_file = CAPTURE_HOME / "file-opens-relay-r2.pid"
+    error = CAPTURE_HOME / "file-opens-relay-r2.err"
+    marker = CAPTURE_HOME / "audit-positive-relay-r2"
     if not all(path.is_file() for path in (capture, pid_file, error, marker)):
         raise RuntimeError("capture files are absent")
     capture_offset = capture.stat().st_size
     marker.read_bytes()  # Make a fresh open event for this cell's bounded search.
 
-    needle = b"audit-positive-relay"
+    needle = b"audit-positive-relay-r2"
     search_offset = capture_offset
     overlap = b""
     deadline = time.monotonic() + 5
@@ -171,7 +172,11 @@ def prepare(profile: str, run: Path, port: int) -> dict[str, str]:
     if profile.startswith("codex-"):
         config = home / "codex/config.toml"
         config.write_text(codex_config(home, PYTHON, port))
-        if tomllib.loads(config.read_text())["default_permissions"] != "bv01":
+        parsed = tomllib.loads(config.read_text())
+        if (
+            parsed["default_permissions"] != "bv01"
+            or parsed["permissions"]["bv01"]["filesystem"].get(":minimal") != "read"
+        ):
             raise RuntimeError("Codex profile was not written")
         (run / "config.toml.raw.txt").write_text(config.read_text())
     else:
@@ -262,7 +267,7 @@ class Cell:
     @property
     def run(self) -> Path:
         """Return this attempt's private files."""
-        return self.home / "relay-run"
+        return self.home / "relay-run-r2"
 
     @property
     def evidence(self) -> Path:
@@ -464,7 +469,9 @@ class Cell:
         if not self.tmux_started:
             return
         marker = "›" if self.profile.startswith("codex-") else "❯"
-        ready_by = min(deadline, time.monotonic() + 30)
+        ready_by = min(deadline, time.monotonic() + 60)
+        theme_answered = False
+        pane = ""
         while time.monotonic() < ready_by:
             pane = checked(
                 "tmux",
@@ -481,14 +488,31 @@ class Cell:
                 raise RuntimeError("credential prompt appeared")
             if "Pane is dead" in pane:
                 raise RuntimeError("harness pane exited before its input prompt")
+            if self.profile == "claude-interactive" and claude_theme_choice(pane):
+                if not theme_answered:
+                    (self.run / "pane-theme-choice.txt").write_text(pane)
+                    checked(
+                        "tmux",
+                        "-S",
+                        str(TMUX_SOCKET),
+                        "send-keys",
+                        "-t",
+                        f"bv01:{self.profile}",
+                        "Enter",
+                    )
+                    theme_answered = True
+                time.sleep(0.2)
+                continue
             if empty_input_prompt(pane, marker):
                 (self.run / "pane-before-prompt.txt").write_text(pane)
                 break
             time.sleep(0.2)
         else:
+            (self.run / "pane-prompt-timeout.txt").write_text(pane)
             raise TimeoutError("interactive input prompt did not appear")
+        prompt_python = str(PYTHON) if self.profile.startswith("codex-") else "python3"
         prompt = (
-            "Run python3 experiments/02-host-socket-attribution/probe.py client "
+            f"Run {prompt_python} experiments/02-host-socket-attribution/probe.py client "
             f"{self.home}/gateway.sock {self.profile} and then stop."
         )
         checked(
