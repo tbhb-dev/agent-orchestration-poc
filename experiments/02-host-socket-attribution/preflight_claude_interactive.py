@@ -3,15 +3,17 @@
 import json
 import os
 import shlex
+import shutil
 import subprocess
 import sys
-import tempfile
 import time
 from collections.abc import Callable
+from datetime import UTC, datetime
 from pathlib import Path
 
 from agent_orchestration_poc.core.host_socket_attribution import (
     claude_settings,
+    claude_theme_choice,
     claude_trust,
     empty_input_prompt,
     launch_command,
@@ -23,6 +25,8 @@ PYTHON = Path("/Users/tony/.local/share/mise/installs/python/3.14.6/bin/python3"
 CLAUDE = Path("/Users/tony/.local/share/claude/versions/2.1.284")
 TMUX = Path("/opt/homebrew/bin/tmux")
 PROFILE = "claude-interactive"
+HOME = Path("/private/tmp/bv01-228-claude-interactive")
+RUNS = Path("/private/tmp/bv01-228-preflight")
 PROMPT = (
     "Run python3 experiments/02-host-socket-attribution/probe.py client "
     "/private/tmp/bv01-228-claude-interactive/gateway.sock claude-interactive and then stop."
@@ -36,13 +40,19 @@ def checked(*args: str) -> str:
     ).stdout
 
 
-def wait_for(predicate: Callable[[], bool], label: str) -> None:
+def wait_for(
+    predicate: Callable[[], bool],
+    label: str,
+    on_timeout: Callable[[], None] | None = None,
+) -> None:
     """Wait for a short interactive preflight condition."""
     deadline = time.monotonic() + 90
     while time.monotonic() < deadline:
         if predicate():
             return
         time.sleep(0.2)
+    if on_timeout is not None:
+        on_timeout()
     raise TimeoutError(label)
 
 
@@ -51,15 +61,86 @@ def prepare_home(home: Path) -> None:
     workspace = home / "workspace"
     config = home / "claude"
     for path in (workspace, config, home / "tmp", home / "xdg"):
-        path.mkdir()
+        path.mkdir(parents=True, exist_ok=True)
     (config / ".claude.json").write_text(json.dumps(claude_trust(workspace)))
-    settings = claude_settings(home)
-    sandbox = settings["sandbox"]
-    if isinstance(sandbox, dict):
-        network = sandbox.get("network")
-        if isinstance(network, dict):
-            network["allowUnixSockets"] = list[str]()
-    (home / "settings.json").write_text(json.dumps(settings))
+    (home / "settings.json").write_text(json.dumps(claude_settings(home)))
+
+
+def save_claude_artifacts(home: Path, run: Path, started_ns: int) -> None:
+    """Copy this invocation's Claude debug and transcript files for inspection."""
+    config = home / "claude"
+    for directory in ("debug", "projects"):
+        source = config / directory
+        if not source.is_dir():
+            continue
+        for path in source.rglob("*"):
+            if path.is_file() and path.stat().st_mtime_ns >= started_ns:
+                target = run / "claude" / path.relative_to(config)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(path, target)
+
+
+def save_pane(socket: Path, run: Path, name: str) -> None:
+    """Retain the dedicated pane while its tmux server is alive."""
+    try:
+        pane = checked(
+            str(TMUX),
+            "-S",
+            str(socket),
+            "capture-pane",
+            "-p",
+            "-S",
+            "-2000",
+            "-t",
+            "preflight",
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        pane = f"capture failed: {error}\n"
+    (run / name).write_text(pane)
+
+
+def wait_for_input(socket: Path, run: Path) -> None:
+    """Handle the same first-run screens and composer as the relay cell."""
+    theme_answered = False
+
+    def ready() -> bool:
+        nonlocal theme_answered
+        pane = checked(
+            str(TMUX), "-S", str(socket), "capture-pane", "-p", "-t", "preflight"
+        )
+        if "Accessing workspace:" in pane or "Quick safety check:" in pane:
+            (run / "pane-trust-prompt.txt").write_text(pane)
+            raise RuntimeError("workspace trust prompt appeared")
+        if "Sign in" in pane or "Enter your API key" in pane:
+            (run / "pane-credential-prompt.txt").write_text(pane)
+            raise RuntimeError("credential prompt appeared")
+        if "Pane is dead" in pane:
+            (run / "pane-dead.txt").write_text(pane)
+            raise RuntimeError("harness pane exited before its input prompt")
+        if claude_theme_choice(pane):
+            if not theme_answered:
+                (run / "pane-theme-choice.txt").write_text(pane)
+                checked(
+                    str(TMUX),
+                    "-S",
+                    str(socket),
+                    "send-keys",
+                    "-t",
+                    "preflight",
+                    "Enter",
+                )
+                theme_answered = True
+            return False
+        if empty_input_prompt(pane, "❯"):
+            (run / "pane-before-prompt.txt").write_text(pane)
+            return True
+        return False
+
+    wait_for(
+        ready,
+        "Claude interactive input",
+        lambda: save_pane(socket, run, "pane-prompt-timeout.txt"),
+    )
 
 
 def verify_frames(model_log: Path) -> None:
@@ -82,11 +163,11 @@ def verify_frames(model_log: Path) -> None:
         raise RuntimeError("final frame preceded Bash tool frame")
 
 
-def run_interactive(home: Path, port: int, model_log: Path) -> None:
+def run_interactive(home: Path, run: Path, port: int, model_log: Path) -> None:
     """Start pinned Claude on one dedicated tmux socket and submit the probe."""
-    socket = home / "tmux.sock"
+    socket = run / "tmux.sock"
     argv, env = launch_command(PROFILE, port, home, (CLAUDE, CLAUDE, PYTHON))
-    argv[-1] = "bypassPermissions"
+    (run / "launch-argv.json").write_text(json.dumps(argv) + "\n")
     assignments = [f"{key}={shlex.quote(value)}" for key, value in env.items()]
     command = (
         f"cd {shlex.quote(str(home / 'workspace'))} && exec /usr/bin/env -i "
@@ -110,15 +191,7 @@ def run_interactive(home: Path, port: int, model_log: Path) -> None:
             command,
         )
 
-        def ready() -> bool:
-            pane = checked(
-                str(TMUX), "-S", str(socket), "capture-pane", "-p", "-t", "preflight"
-            )
-            if "Accessing workspace:" in pane or "Sign in" in pane:
-                raise RuntimeError("unexpected Claude setup prompt")
-            return empty_input_prompt(pane, "❯")
-
-        wait_for(ready, "Claude interactive input")
+        wait_for_input(socket, run)
         checked(
             str(TMUX), "-S", str(socket), "send-keys", "-t", "preflight", "-l", PROMPT
         )
@@ -131,10 +204,15 @@ def run_interactive(home: Path, port: int, model_log: Path) -> None:
             rows = [json.loads(line) for line in model_log.read_text().splitlines()]
             return any(row.get("classification") == "final" for row in rows)
 
-        wait_for(completed, "Claude final frame")
+        wait_for(
+            completed,
+            "Claude final frame",
+            lambda: save_pane(socket, run, "pane-final-timeout.txt"),
+        )
         verify_frames(model_log)
     finally:
         if socket.exists():
+            save_pane(socket, run, "pane-at-teardown.txt")
             subprocess.run(
                 [str(TMUX), "-S", str(socket), "kill-server"],
                 check=False,
@@ -148,52 +226,62 @@ def main() -> None:
     os.umask(0o077)
     if not CLAUDE.is_file() or not TMUX.is_file() or not PYTHON.is_file():
         raise RuntimeError("pinned preflight binary is absent")
-    with tempfile.TemporaryDirectory(
-        prefix="bv01-r6-preflight-", dir="/private/tmp"
-    ) as directory:
-        home = Path(directory)
-        prepare_home(home)
-        model_log = home / "model.jsonl"
-        start = home / "model-start.json"
-        with start.open("w") as output, (home / "model.err").open("w") as stderr:
-            model = subprocess.Popen(
-                [
-                    str(PYTHON),
-                    str(EXPERIMENT / "model_responder.py"),
-                    "--host",
-                    "127.0.0.1",
-                    "--port",
-                    "0",
-                    "--profile",
-                    PROFILE,
-                    "--log",
-                    str(model_log),
-                ],
-                env={
-                    "PATH": "/usr/bin:/bin",
-                    "PYTHONPATH": str(ROOT / "src"),
-                    "PYTHONSAFEPATH": "1",
-                    "HOME": str(home),
-                },
-                stdout=output,
-                stderr=stderr,
-            )
+    RUNS.mkdir(mode=0o700, exist_ok=True)
+    run = RUNS / f"run-{datetime.now(tz=UTC).strftime('%Y%m%dT%H%M%S%fZ')}"
+    run.mkdir(mode=0o700)
+    print(f"BV-01 Claude interactive preflight artifacts: {run}")
+    prepare_home(HOME)
+    (run / "claude.json.raw.txt").write_text((HOME / "claude/.claude.json").read_text())
+    (run / "settings.json.raw.txt").write_text((HOME / "settings.json").read_text())
+    model_log = run / "model.jsonl"
+    model_log.touch()
+    start = run / "model-start.json"
+    with start.open("w") as output, (run / "model.err").open("w") as stderr:
+        model = subprocess.Popen(
+            [
+                str(PYTHON),
+                str(EXPERIMENT / "model_responder.py"),
+                "--host",
+                "127.0.0.1",
+                "--port",
+                "0",
+                "--profile",
+                PROFILE,
+                "--log",
+                str(model_log),
+            ],
+            env={
+                "PATH": "/usr/bin:/bin",
+                "PYTHONPATH": str(ROOT / "src"),
+                "PYTHONSAFEPATH": "1",
+                "HOME": str(HOME),
+            },
+            stdout=output,
+            stderr=stderr,
+        )
+    try:
+        wait_for(
+            lambda: start.stat().st_size > 0 or model.poll() is not None,
+            "loopback responder start",
+            lambda: save_pane(run / "tmux.sock", run, "pane-model-start-timeout.txt"),
+        )
+        if model.poll() is not None:
+            raise RuntimeError("loopback responder exited")
+        started_ns = time.time_ns()
         try:
-            wait_for(
-                lambda: start.stat().st_size > 0 or model.poll() is not None,
-                "loopback responder start",
+            run_interactive(
+                HOME, run, int(json.loads(start.read_text())["port"]), model_log
             )
-            if model.poll() is not None:
-                raise RuntimeError("loopback responder exited")
-            run_interactive(home, int(json.loads(start.read_text())["port"]), model_log)
-            print("BV-01 Claude interactive preflight: passed; title, Bash tool, final")
         finally:
-            model.terminate()
-            try:
-                model.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                model.kill()
-                model.wait(timeout=5)
+            save_claude_artifacts(HOME, run, started_ns)
+        print("BV-01 Claude interactive preflight: passed; title, Bash tool, final")
+    finally:
+        model.terminate()
+        try:
+            model.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            model.kill()
+            model.wait(timeout=5)
 
 
 if __name__ == "__main__":
