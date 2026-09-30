@@ -144,23 +144,25 @@ def wait_for_input(socket: Path, run: Path) -> None:
 
 
 def verify_frames(model_log: Path) -> None:
-    """Require one title side request and Bash tool before the final frame."""
+    """Require one Bash tool frame and its tool-result final frame."""
     rows = [json.loads(line) for line in model_log.read_text().splitlines()]
-    title = [
-        row
-        for row in rows
-        if row.get("tool_count") == 0
-        and row.get("has_output_format") is True
-        and row.get("classification") in {"side-request", "follow-up"}
-    ]
     tool = [row for row in rows if row.get("classification") == "tool"]
     final = [row for row in rows if row.get("classification") == "final"]
-    if len(title) != 1 or len(tool) != 1 or len(final) != 1:
-        raise RuntimeError("expected one title, Bash tool, and final frame")
-    if title[0].get("has_bash") or not tool[0].get("has_bash"):
+    if len(tool) != 1 or len(final) != 1:
+        raise RuntimeError("expected one Bash tool and final frame")
+    if not tool[0].get("has_bash") or not final[0].get("has_bash"):
         raise RuntimeError("Bash frame was not served to the Bash request")
     if rows.index(final[0]) < rows.index(tool[0]):
         raise RuntimeError("final frame preceded Bash tool frame")
+    if any(
+        row.get("classification") not in {"tool", "final", "side-request", "follow-up"}
+        or (
+            row.get("classification") in {"side-request", "follow-up"}
+            and row.get("has_bash")
+        )
+        for row in rows
+    ):
+        raise RuntimeError("unexpected request or Bash side request")
 
 
 def run_interactive(home: Path, run: Path, port: int, model_log: Path) -> None:
@@ -274,7 +276,7 @@ def main() -> None:
             )
         finally:
             save_claude_artifacts(HOME, run, started_ns)
-        print("BV-01 Claude interactive preflight: passed; title, Bash tool, final")
+        print("BV-01 Claude interactive preflight: passed; Bash tool, final")
     finally:
         model.terminate()
         try:

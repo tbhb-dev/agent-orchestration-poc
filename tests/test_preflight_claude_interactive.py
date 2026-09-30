@@ -10,9 +10,10 @@ import pytest
 
 from agent_orchestration_poc.core.host_socket_attribution import launch_command
 
-EXPERIMENT = (
-    Path(__file__).resolve().parents[1] / "experiments/02-host-socket-attribution"
-)
+ROOT = Path(__file__).resolve().parents[1]
+if ROOT.name == "mutants":
+    ROOT = ROOT.parent
+EXPERIMENT = ROOT / "experiments/02-host-socket-attribution"
 PREFLIGHT = runpy.run_path(str(EXPERIMENT / "preflight_claude_interactive.py"))
 THEME = """Choose the text style that looks best with your terminal
 To change this later, run /theme
@@ -163,3 +164,21 @@ def test_run_artifacts_copy_debug_and_transcript(tmp_path: Path) -> None:
     PREFLIGHT["save_claude_artifacts"](home, run, 0)
     assert (run / "claude/debug/session.txt").read_text() == "debug"
     assert (run / "claude/projects/workspace/session.jsonl").read_text() == "transcript"
+
+
+def test_r7_observed_routing_passes() -> None:
+    model_log = EXPERIMENT / "evidence/relay-preflight-r7/model.jsonl"
+    PREFLIGHT["verify_frames"](model_log)
+
+
+@pytest.mark.parametrize("classification", ["retry", "invalid"])
+def test_preflight_rejects_unexpected_request(
+    tmp_path: Path, classification: str
+) -> None:
+    source = EXPERIMENT / "evidence/relay-preflight-r7/model.jsonl"
+    rows = [json.loads(line) for line in source.read_text().splitlines()]
+    rows.append({"classification": classification, "has_bash": True})
+    log = tmp_path / "model.jsonl"
+    log.write_text("\n".join(json.dumps(row) for row in rows))
+    with pytest.raises(RuntimeError, match="unexpected request"):
+        PREFLIGHT["verify_frames"](log)

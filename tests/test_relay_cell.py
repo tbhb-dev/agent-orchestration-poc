@@ -46,7 +46,7 @@ def set_cell_paths(
 
 def interactive_cell(monkeypatch: pytest.MonkeyPatch, home: Path) -> Any:  # noqa: ANN401 - runpy class
     """Create an interactive cell with an owned test run directory."""
-    (home / "relay-run-r6").mkdir()
+    (home / "relay-run-r8").mkdir()
     cell_type = RELAY["Cell"]
     set_cell_paths(monkeypatch, cell_type, home, home / "evidence")
     return cell_type("claude-interactive", tmux_started=True)
@@ -373,7 +373,7 @@ def test_interactive_prompt_handling(
     screens: list[str],
 ) -> None:
     cell_type = RELAY["Cell"]
-    run = tmp_path / "relay-run-r6"
+    run = tmp_path / "relay-run-r8"
     run.mkdir()
     set_cell_paths(monkeypatch, cell_type, tmp_path, tmp_path / "evidence")
     cell = cell_type(profile, tmux_started=True)
@@ -408,10 +408,10 @@ def test_interactive_prompt_handling(
     )
 
 
-def test_interactive_paths_use_r5() -> None:
+def test_interactive_paths_use_r8() -> None:
     cell = RELAY["Cell"]("codex-interactive")
-    assert cell.run == Path("/private/tmp/bv01-228-codex-interactive/relay-run-r6")
-    assert cell.evidence == EXPERIMENT / "evidence/relay-run-r6/codex-interactive"
+    assert cell.run == Path("/private/tmp/bv01-228-codex-interactive/relay-run-r8")
+    assert cell.evidence == EXPERIMENT / "evidence/relay-run-r8/codex-interactive"
 
 
 @pytest.mark.parametrize("profile", ["codex-interactive", "claude-interactive"])
@@ -419,7 +419,7 @@ def test_prompt_waits_between_text_and_enter(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, profile: str
 ) -> None:
     cell_type = RELAY["Cell"]
-    (tmp_path / "relay-run-r6").mkdir()
+    (tmp_path / "relay-run-r8").mkdir()
     set_cell_paths(monkeypatch, cell_type, tmp_path, tmp_path / "evidence")
     cell = cell_type(profile, tmux_started=True)
     events: list[str] = []
@@ -468,7 +468,7 @@ def test_unsubmitted_prompt_saves_pane(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, profile: str
 ) -> None:
     cell_type = RELAY["Cell"]
-    run = tmp_path / "relay-run-r6"
+    run = tmp_path / "relay-run-r8"
     run.mkdir()
     set_cell_paths(monkeypatch, cell_type, tmp_path, tmp_path / "evidence")
     cell = cell_type(profile, tmux_started=True)
@@ -508,7 +508,7 @@ def test_persistent_theme_screen_gets_one_enter(
         cell.prompt_interactive(time.monotonic() + 0.25)
     assert [call[-1] for call in calls if "send-keys" in call] == ["Enter"]
     assert (
-        tmp_path / "relay-run-r6/pane-prompt-timeout.txt"
+        tmp_path / "relay-run-r8/pane-prompt-timeout.txt"
     ).read_text() == CLAUDE_THEME_PANE
 
 
@@ -533,7 +533,7 @@ def test_interactive_stop_saves_pane(
     )
     with pytest.raises(RuntimeError, match=message):
         cell.prompt_interactive(time.monotonic() + 5)
-    assert (tmp_path / "relay-run-r6" / name).read_text() == pane
+    assert (tmp_path / "relay-run-r8" / name).read_text() == pane
 
 
 def test_observe_timeout_saves_pane_before_cleanup(
@@ -556,7 +556,7 @@ def test_observe_timeout_saves_pane_before_cleanup(
     with pytest.raises(TimeoutError, match="cell completion"):
         cell.observe(time.monotonic() + 5)
     assert (
-        tmp_path / "relay-run-r6/pane-observe-timeout.txt"
+        tmp_path / "relay-run-r8/pane-observe-timeout.txt"
     ).read_text() == "Waiting for permission\n"
     assert calls == [
         (
@@ -585,7 +585,7 @@ def test_prompt_timeout_saves_last_pane(
     with pytest.raises(TimeoutError, match="input prompt did not appear"):
         cell.prompt_interactive(time.monotonic() + 0.1)
     assert (
-        tmp_path / "relay-run-r6/pane-prompt-timeout.txt"
+        tmp_path / "relay-run-r8/pane-prompt-timeout.txt"
     ).read_text() == "Waiting...\n"
 
 
@@ -632,11 +632,11 @@ def test_wrapper_imports_core_outside_venv(profile: str, tmp_path: Path) -> None
 def test_capture_gate_requires_event_after_marker_open(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, append_event: bool
 ) -> None:
-    capture = tmp_path / "file-opens-relay-r6.json"
-    capture.write_bytes(b'{"path":"audit-positive-relay-r6"}\n')
-    (tmp_path / "file-opens-relay-r6.pid").write_text("123\n")
-    (tmp_path / "file-opens-relay-r6.err").touch()
-    (tmp_path / "audit-positive-relay-r6").touch()
+    capture = tmp_path / "file-opens-relay-r8.json"
+    capture.write_bytes(b'{"path":"audit-positive-relay-r8"}\n')
+    (tmp_path / "file-opens-relay-r8.pid").write_text("123\n")
+    (tmp_path / "file-opens-relay-r8.err").touch()
+    (tmp_path / "audit-positive-relay-r8").touch()
     gate = RELAY["capture_gate"]
     monkeypatch.setitem(gate.__globals__, "CAPTURE_HOME", tmp_path)
     monkeypatch.setitem(gate.__globals__, "checked", lambda *_args: "123\n")
@@ -644,7 +644,7 @@ def test_capture_gate_requires_event_after_marker_open(
     def wait_once(predicate: Callable[[], bool], _deadline: float, _label: str) -> None:
         if append_event:
             with capture.open("ab") as stream:
-                stream.write(b"x" * (1_048_576 + 65_530) + b"audit-positive-relay-r6")
+                stream.write(b"x" * (1_048_576 + 65_530) + b"audit-positive-relay-r8")
         if not predicate():
             raise TimeoutError("capture positive control")
 
@@ -762,7 +762,7 @@ def test_cleanup_continues_after_tmux_failure(monkeypatch: pytest.MonkeyPatch) -
     with tempfile.TemporaryDirectory(dir="/tmp") as directory:
         home = Path(directory)
         evidence = home / "evidence"
-        (home / "relay-run-r6").mkdir()
+        (home / "relay-run-r8").mkdir()
 
         set_cell_paths(monkeypatch, cell_type, home, evidence)
         cell = cell_type("claude-interactive", tmux_started=True, run_owned=True)
@@ -791,7 +791,7 @@ def test_cleanup_saves_pane_before_tmux_shutdown(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     cell_type = RELAY["Cell"]
-    run = tmp_path / "relay-run-r6"
+    run = tmp_path / "relay-run-r8"
     run.mkdir()
     evidence = tmp_path / "evidence"
     set_cell_paths(monkeypatch, cell_type, tmp_path, evidence)
@@ -830,7 +830,7 @@ def test_preflight_rejection_preserves_existing_socket_and_evidence(
     with tempfile.TemporaryDirectory(dir="/tmp") as directory:
         home = Path(directory)
         evidence = home / "evidence"
-        run = home / "relay-run-r6"
+        run = home / "relay-run-r8"
         run.mkdir()
         evidence.mkdir()
         prior = '{"status":"passed"}\n'
