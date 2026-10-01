@@ -1,0 +1,11 @@
+[
+  "/Users/tony/.local/share/claude/versions/2.1.284",
+  "--bare",
+  "--strict-mcp-config",
+  "--setting-sources",
+  "",
+  "--settings",
+  "/private/tmp/bv01-228-claude-interactive/settings.json",
+  "--permission-mode",
+  "manual"
+]
