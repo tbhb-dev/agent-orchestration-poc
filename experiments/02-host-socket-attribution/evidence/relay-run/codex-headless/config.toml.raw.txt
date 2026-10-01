@@ -1,0 +1,31 @@
+model_provider = "bv01"
+default_permissions = "bv01"
+check_for_update_on_startup = false
+[features]
+plugins = false
+[projects."/private/tmp/bv01-228-codex-headless/workspace"]
+trust_level = "trusted"
+[model_providers.bv01]
+name = "bv01"
+base_url = "http://127.0.0.1:50781/v1"
+wire_api = "responses"
+env_key = "BV01_FAKE_OPENAI_KEY"
+[permissions.bv01.filesystem]
+":minimal" = "read"
+"/private/tmp/bv01-228-codex-headless/workspace" = "read"
+"/Users/tony/.local/share/mise/installs/python/3.14.6" = "read"
+"/private/tmp/bv01-228-codex-headless/relay-run-r2" = "deny"
+"/private/tmp/bv01-228-codex-headless/codex" = "deny"
+"/private/tmp/bv01-228-codex-interactive" = "deny"
+"/private/tmp/bv01-228-claude-headless" = "deny"
+"/private/tmp/bv01-228-claude-interactive" = "deny"
+"/private/tmp/bv01-228-codex-headless/file-opens-relay-r2.json" = "deny"
+"/private/tmp/bv01-228-codex-headless/file-opens-relay-r2.pid" = "deny"
+"/private/tmp/bv01-228-codex-headless/file-opens-relay-r2.err" = "deny"
+"/private/tmp/bv01-228-codex-headless/audit-positive-relay-r2" = "deny"
+[permissions.bv01.network]
+enabled = true
+[permissions.bv01.network.unix_sockets]
+"/private/tmp/bv01-228-codex-headless/gateway.sock" = "allow"
+[tui]
+screen_reader_detection_done = true
