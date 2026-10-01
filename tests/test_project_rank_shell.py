@@ -29,7 +29,7 @@ def _invoke(tmp_path: Path, *args: str) -> subprocess.CompletedProcess[str]:
         [sys.executable, "-m", "agent_orchestration_poc.shell.project_rank", *args],
         capture_output=True,
         text=True,
-        env={**os.environ, "PATH": f"{tmp_path}:{os.environ['PATH']}"},
+        env={**os.environ, "AOP_GH_AS_AGENT": str(tmp_path / "gh")},
         timeout=10,
         check=False,
     )
@@ -37,6 +37,7 @@ def _invoke(tmp_path: Path, *args: str) -> subprocess.CompletedProcess[str]:
 
 @pytest.mark.integration
 def test_fixture_dry_run_and_missing_item(tmp_path: Path) -> None:
+    assert "order-items ID..." in _invoke(tmp_path, "--help").stdout
     fixture = tmp_path / "snapshot.json"
     fixture.write_text(
         json.dumps({"project_id": "P1", "items": _items(), "remaining": 500, "cost": 2})
@@ -57,6 +58,36 @@ def test_fixture_dry_run_and_missing_item(tmp_path: Path) -> None:
     ordered = _invoke(tmp_path, "--fixture", str(fixture), "order", "3", "1", "2")
     assert ordered.returncode == 0
     assert "planned mutations: 1" in ordered.stderr
+
+
+@pytest.mark.integration
+def test_complete_item_order_fixture_includes_draft(tmp_path: Path) -> None:
+    fixture = tmp_path / "snapshot.json"
+    draft: dict[str, str | int | None] = {
+        "id": "D4",
+        "issue": None,
+        "kind": "DRAFT_ISSUE",
+        "priority": "Standard",
+        "state": "OPEN",
+        "work_type": "",
+        "database_id": "4",
+    }
+    items = _items()
+    for index, item in enumerate(items, 1):
+        item["database_id"] = str(index)
+    fixture.write_text(
+        json.dumps(
+            {"project_id": "P1", "items": [*items, draft], "remaining": 500, "cost": 2}
+        )
+    )
+    result = _invoke(
+        tmp_path, "--fixture", str(fixture), "order-items", "4", "3", "1", "2"
+    )
+    assert result.returncode == 0
+    assert "itemId=D4 afterId=None" in result.stderr
+    missing = _invoke(tmp_path, "--fixture", str(fixture), "order-items", "3", "1", "2")
+    assert missing.returncode == 2
+    assert "every open Standard item" in missing.stderr
 
 
 @pytest.mark.integration
@@ -91,6 +122,7 @@ def _response(items: list[dict[str, str | int | None]], remaining: int) -> str:
         nodes.append(
             {
                 "id": item["id"],
+                "fullDatabaseId": int(str(item["id"])[1:]),
                 "type": item["kind"],
                 "content": {"number": item["issue"], "state": item["state"]},
                 "priority": {"name": item["priority"]},
@@ -99,7 +131,7 @@ def _response(items: list[dict[str, str | int | None]], remaining: int) -> str:
         )
     body = {
         "data": {
-            "user": {
+            "organization": {
                 "projectV2": {
                     "id": "P1",
                     "items": {
@@ -127,7 +159,7 @@ def _mutation_response() -> str:
 def _first_page() -> str:
     raw = _response(_items()[:2], 500)
     body: dict[str, Any] = json.loads(raw.partition("\n\n")[2])
-    connection = body["data"]["user"]["projectV2"]["items"]
+    connection = body["data"]["organization"]["projectV2"]["items"]
     connection["totalCount"] = 3
     connection["pageInfo"] = {"hasNextPage": True, "endCursor": "cursor"}
     return f"HTTP/2 200 OK\nx-ratelimit-remaining: 500\n\n{json.dumps(body)}\n"
@@ -136,7 +168,7 @@ def _first_page() -> str:
 def _last_page() -> str:
     raw = _response(_items()[2:], 498)
     body: dict[str, Any] = json.loads(raw.partition("\n\n")[2])
-    body["data"]["user"]["projectV2"]["items"]["totalCount"] = 3
+    body["data"]["organization"]["projectV2"]["items"]["totalCount"] = 3
     return f"HTTP/2 200 OK\nx-ratelimit-remaining: 498\n\n{json.dumps(body)}\n"
 
 
@@ -151,7 +183,11 @@ def _fake_gh(
     gh = tmp_path / "gh"
     gh.write_text(
         "#!/bin/sh\n"
-        'if [ "$2" = user ]; then printf "%s\\n" tbhbagent; exit 0; fi\n'
+        'if [ "$2" = user ]; then printf "%s\\n" tbhb-agent; exit 0; fi\n'
+        + 'if [ "$1" = query ] && [ "$2" = graphql ]; then\n'
+        + '  case "$*" in *"organization(login:"*"owner=tbhb-dev"*"number=1"*) ;; *) exit 1 ;; esac\n'
+        + "fi\n"
+        + 'case "$*" in *"mutation("*) [ "$1" = api ] || exit 1 ;; esac\n'
         + (
             'case "$*" in *"mutation("*"rateLimit"*) exit 1 ;; esac\n'
             if validate
@@ -223,5 +259,8 @@ def test_apply_with_local_fake_reads_back_and_records_cost(tmp_path: Path) -> No
     )
     result = _invoke(tmp_path, "--apply", "move", "3", "above", "1")
     assert result.returncode == 0
-    assert "position mutation cost=1 remaining=497" in result.stderr
+    assert (
+        "position mutation 1/1 itemId=I3 afterId=None cost=1 remaining=497"
+        in result.stderr
+    )
     assert "read-back confirmed; observed total points=7" in result.stderr
