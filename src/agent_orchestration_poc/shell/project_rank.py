@@ -4,6 +4,7 @@ import argparse
 import fcntl
 import json
 import logging
+import os
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -14,6 +15,7 @@ from agent_orchestration_poc.core.project_rank import (
     Item,
     Mutation,
     apply_mutations,
+    plan_item_order,
     plan_move,
     plan_order,
     plan_replace,
@@ -25,13 +27,13 @@ from agent_orchestration_poc.core.project_rank import (
 
 LOGGER = logging.getLogger(__name__)
 LOCK = Path("/tmp/agent-orchestration-project-rank.lock")  # noqa: S108 fixed host-wide lock
-OWNER = "tbhb"
-PROJECT_NUMBER = 9
-COORDINATOR = "tbhbagent"
+OWNER = "tbhb-dev"
+PROJECT_NUMBER = 1
+COORDINATOR = "tbhb-agent"
 QUERY = """query($owner:String!,$number:Int!,$after:String){
-  user(login:$owner){projectV2(number:$number){id items(first:100,after:$after,
+  organization(login:$owner){projectV2(number:$number){id items(first:100,after:$after,
     orderBy:{field:POSITION,direction:ASC}){totalCount
-    pageInfo{hasNextPage endCursor} nodes{id type
+    pageInfo{hasNextPage endCursor} nodes{id fullDatabaseId type
     content{... on Issue{number state}}
     priority:fieldValueByName(name:"Priority"){
       ... on ProjectV2ItemFieldSingleSelectValue{name}}
@@ -57,8 +59,19 @@ class Snapshot:
 
 
 def _gh(*args: str) -> str:
+    wrapper = os.environ.get("AOP_GH_AS_AGENT")
+    if wrapper is None:
+        root = Path(__file__).resolve().parents[3]
+        common = subprocess.run(
+            ("git", "rev-parse", "--git-common-dir"),
+            cwd=root,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+        wrapper = str((root / common).resolve().parent / ".holding/bin/gh-as-agent")
     result = subprocess.run(
-        ("gh", "api", *args), capture_output=True, text=True, check=False
+        (wrapper, *args), capture_output=True, text=True, check=False
     )
     if result.returncode:
         raise ValueError(f"GitHub read or write failed (exit {result.returncode})")
@@ -66,7 +79,8 @@ def _gh(*args: str) -> str:
 
 
 def _graphql(query: str, variables: dict[str, str]) -> tuple[dict[str, Any], int]:
-    arguments = ["graphql", "-i", "-f", f"query={query}"]
+    command = "api" if query.startswith("mutation") else "query"
+    arguments = [command, "graphql", "-i", "-f", f"query={query}"]
     for key, value in variables.items():
         arguments.extend(("-F" if key == "number" else "-f", f"{key}={value}"))
     raw = _gh(*arguments).replace("\r\n", "\n")
@@ -98,6 +112,7 @@ def _item(node: dict[str, Any]) -> Item:
         priority=(node.get("priority") or {}).get("name") or "",
         state=content.get("state") or ("OPEN" if node["type"] == "DRAFT_ISSUE" else ""),
         work_type=(node.get("workType") or {}).get("name") or "",
+        database_id=str(node["fullDatabaseId"]),
     )
 
 
@@ -115,7 +130,7 @@ def read_project() -> Snapshot:
             variables["after"] = cursor
         data, header_remaining = _graphql(QUERY, variables)
         try:
-            project = data["user"]["projectV2"]
+            project = data["organization"]["projectV2"]
             connection = project["items"]
             rate = data["rateLimit"]
             if project_id and project_id != project["id"]:
@@ -164,11 +179,13 @@ def _plan(items: tuple[Item, ...], words: tuple[str, ...]) -> tuple[Mutation, ..
             return plan_move(items, int(issue), relation, int(anchor))
         case ("order", *issues) if issues:
             return plan_order(items, tuple(int(issue) for issue in issues))
+        case ("order-items", *identifiers) if identifiers:
+            return plan_item_order(items, tuple(identifiers))
         case ("replace", draft, "with", issue):
             return plan_replace(items, draft, int(issue))
         case _:
             raise ValueError(
-                "use move N above|below N, order N..., or replace ID with N"
+                "use move N above|below N, order N..., order-items ID..., or replace ID with N"
             )
 
 
@@ -206,7 +223,7 @@ def run(words: tuple[str, ...], fixture: Path | None, apply: bool) -> int:
             LOGGER.info("itemId=%s afterId=%s", mutation.item_id, mutation.after_id)
         if not apply or not mutations:
             return 0
-        if _gh("user", "--jq", ".login").strip() != COORDINATOR:
+        if _gh("query", "user", "--jq", ".login").strip() != COORDINATOR:
             raise ValueError("apply requires the coordinator account")
         second = read_project()
         estimate = planned_cost(first.cost, second.cost, len(mutations))
@@ -221,7 +238,15 @@ def run(words: tuple[str, ...], fixture: Path | None, apply: bool) -> int:
         for index, mutation in enumerate(mutations):
             remaining, cost = _write(first.project_id, mutation, remaining)
             spent += cost
-            LOGGER.info("position mutation cost=%s remaining=%s", cost, remaining)
+            LOGGER.info(
+                "position mutation %s/%s itemId=%s afterId=%s cost=%s remaining=%s",
+                index + 1,
+                len(mutations),
+                mutation.item_id,
+                mutation.after_id,
+                cost,
+                remaining,
+            )
             if not safe_to_continue(
                 remaining, first.cost, second.cost, len(mutations), index + 1
             ):
@@ -239,7 +264,11 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--fixture", type=Path)
     parser.add_argument("--apply", action="store_true")
-    parser.add_argument("words", nargs="+")
+    parser.add_argument(
+        "words",
+        nargs="+",
+        help="move N above|below N, order N..., order-items ID..., or replace ID with N",
+    )
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     try:
