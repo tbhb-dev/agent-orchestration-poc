@@ -28,4 +28,4 @@ Observed: A single REST list of open PRs and fetched head refs was compared agai
 
 ## PR body edit trigger
 
-The live PR body edit result will be added after the pull request exists.
+Observed: PR #287 at head `61e9e0d92063af2e89b66103a06953e8a4a55456` first had a [successful `check` run](https://github.com/tbhb-dev/agent-orchestration-poc/actions/runs/37691180358). Removing the `gate:selector:mise.toml:file:changed` reason from its body triggered a new [failed `check` run](https://github.com/tbhb-dev/agent-orchestration-poc/actions/runs/37691615473). Restoring the body with both reasons triggered a [successful `check` run](https://github.com/tbhb-dev/agent-orchestration-poc/actions/runs/37691857251). The local missing-reason fixture exits 1 with the corresponding diagnostic. The GitHub log download was denied at `~/.cache/gh`, so the live failure cause is an inference from the controlled single-line edit and the check conclusion. The [PR mutation check](https://github.com/tbhb-dev/agent-orchestration-poc/actions/runs/37691180343) also concluded success.
