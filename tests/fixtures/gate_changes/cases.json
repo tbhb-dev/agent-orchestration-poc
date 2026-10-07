@@ -1,0 +1,51 @@
+[
+  {
+    "name": "lowered-floor",
+    "path": ".gremlins.yaml",
+    "before": "efficacy: 90\nmutant-coverage: 90\n",
+    "after": "efficacy: 80\nmutant-coverage: 90\n",
+    "kind": "threshold"
+  },
+  {
+    "name": "raised-ceiling",
+    "path": ".jscpd.json",
+    "before": "{\"minLines\": 5, \"minTokens\": 50}",
+    "after": "{\"minLines\": 6, \"minTokens\": 50}",
+    "kind": "threshold"
+  },
+  {
+    "name": "removed-gate",
+    "path": ".gremlins.yaml",
+    "before": "efficacy: 90\nmutant-coverage: 90\n",
+    "after": "mutant-coverage: 90\n",
+    "kind": "threshold"
+  },
+  {
+    "name": "workflow-selector",
+    "path": ".github/workflows/check.yml",
+    "before": "on: pull_request\n",
+    "after": "on: push\n",
+    "kind": "selector"
+  },
+  {
+    "name": "hook-selector",
+    "path": "prek.toml",
+    "before": "files = 'a'\n",
+    "after": "files = 'b'\n",
+    "kind": "selector"
+  },
+  {
+    "name": "unknown-syntax",
+    "path": ".jscpd.json",
+    "before": "{\"minLines\": 5, \"minTokens\": 50}",
+    "after": "{\"minLines\": \"auto\", \"minTokens\": 50}",
+    "kind": "syntax"
+  },
+  {
+    "name": "unknown-key",
+    "path": ".jscpd.json",
+    "before": "{\"minLines\": 5, \"minTokens\": 50}",
+    "after": "{\"minLines\": 5, \"minTokens\": 50, \"maxNew\": 3}",
+    "kind": "syntax"
+  }
+]

@@ -72,6 +72,7 @@ Python development dependencies are locked in `uv.lock` and declared in `pyproje
 | guard-markdown | Markdown file list from `scripts/markdown-files.sh` |
 | Mermaid | `scripts/mermaid-check/package.json` and its lockfile |
 | Hooks | `prek.toml` |
+| Gate change registry | `config/gate-registry.toml` records supported paths, numeric directions, required selectors, and suppression syntax |
 
 `GOTOOLCHAIN=local` prevents an implicit Go download. `UV_PYTHON_PREFERENCE=only-system` selects mise's Python. Go checks include module tidiness and verification, then lint, build, and race-enabled shuffled tests. `check:pyrefly` runs in the `check` aggregate and CI.
 
@@ -80,6 +81,8 @@ Property tests run in `check` with ordinary Go and Python tests. Required CI fix
 `check:coverage` runs in `check` on every pull request. It requires 95 percent Go core statements, 90 percent Go core branches, and 70 percent Go shell statements. Python requires 95 percent core lines, 90 percent core branches, and 70 percent shell lines when shell code exists. The coverage pytest run includes integration tests. Coverage.py 7.16.1 JSON supplies separate line and branch counts because pytest-cov 7.0.0 `--cov-fail-under` checks a combined total. The pure decisions and failure probes are in `scripts/check-coverage.py`, `agent_orchestration_poc.core.coverage_floors`, and `reports/inputs/coverage-floors-87-evidence-2026-09-26.md`.
 
 The `check` aggregate also runs `check:imports`, `check:dupl`, and `check:deadcode`. Go and Python complexity checks run in their existing linter tasks. Biome checks the TypeScript complexity rules at error level. Recalibrate thresholds at the first retro with phase 2 code.
+
+`check:gate-changes` compares the head SHA with its merge base and reads the current PR body. Run `mise run check:gate-changes -- --base <sha> --head <sha> --body-file <path>` locally. The task runs inside `check` when the CI job supplies `GATE_BASE_SHA`, `GATE_HEAD_SHA`, and `GATE_BODY_FILE`, and skips outside a PR when those values are absent. It reports floor decreases, ceiling increases, removed or disabled registered gates, added exclusions and suppression markers, and any workflow or hook selector edit. The PR body must explain each stable finding ID. Unsupported changed gate syntax fails closed. The registry describes the supported subset and does not claim coverage of every tool or language syntax.
 
 ## Mise tasks
 
@@ -98,6 +101,7 @@ The `check` aggregate also runs `check:imports`, `check:dupl`, and `check:deadco
 | `check:deadcode` | Fail on unreachable Go functions and unused Python names |
 | `fmt:ruff` | Fix and format Python with ruff |
 | `check:pytest` | Run the Python tests |
+| `check:gate-changes` | Compare supported gate changes with the PR merge base and match reasons |
 | `check:coverage` | Gate Go core and shell statements, Go core branches, and Python core and shell lines and core branches |
 | `check:pyrefly` | Type check Python with pyrefly in strict mode |
 | `check:mutation` | Enforce both core mutation gates outside `check` |

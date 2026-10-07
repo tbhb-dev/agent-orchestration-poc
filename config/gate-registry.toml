@@ -1,0 +1,244 @@
+# Supported numeric gates. A missing match is a removed gate. Patterns capture
+# the value and are intentionally limited to the pinned configuration layout.
+review_paths = [".github/workflows/", "prek.toml", "mise.toml"]
+
+[[thresholds]]
+path = ".gremlins.yaml"
+key = "unleash.threshold.efficacy"
+pattern = '(?m)^\s*efficacy:\s*(?P<value>\d+)\s*$'
+direction = "floor"
+enabled = true
+
+[[thresholds]]
+path = ".gremlins.yaml"
+key = "unleash.threshold.mutant-coverage"
+pattern = '(?m)^\s*mutant-coverage:\s*(?P<value>\d+)\s*$'
+direction = "floor"
+enabled = true
+
+[[thresholds]]
+path = ".jscpd.json"
+key = "minLines"
+pattern = '"minLines":\s*(?P<value>\d+)'
+direction = "ceiling"
+enabled = true
+
+[[thresholds]]
+path = ".jscpd.json"
+key = "minTokens"
+pattern = '"minTokens":\s*(?P<value>\d+)'
+direction = "ceiling"
+enabled = true
+
+[[thresholds]]
+path = ".golangci.yml"
+key = "funlen.lines"
+pattern = '(?m)^\s*lines:\s*(?P<value>\d+)\s*$'
+direction = "ceiling"
+enabled = true
+
+[[thresholds]]
+path = ".golangci.yml"
+key = "funlen.statements"
+pattern = '(?m)^\s*statements:\s*(?P<value>\d+)\s*$'
+direction = "ceiling"
+enabled = true
+
+[[thresholds]]
+path = ".golangci.yml"
+key = "gocognit.min-complexity"
+pattern = 'gocognit:\s*\n\s*min-complexity:\s*(?P<value>\d+)'
+direction = "ceiling"
+enabled = true
+
+[[thresholds]]
+path = ".golangci.yml"
+key = "gocyclo.min-complexity"
+pattern = 'gocyclo:\s*\n\s*min-complexity:\s*(?P<value>\d+)'
+direction = "ceiling"
+enabled = true
+
+[[thresholds]]
+path = ".golangci.yml"
+key = "nestif.min-complexity"
+pattern = 'nestif:\s*\n\s*min-complexity:\s*(?P<value>\d+)'
+direction = "ceiling"
+enabled = true
+
+[[thresholds]]
+path = "pyproject.toml"
+key = "ruff.mccabe.max-complexity"
+pattern = '(?m)^max-complexity = (?P<value>\d+)$'
+direction = "ceiling"
+enabled = true
+
+[[thresholds]]
+path = "pyproject.toml"
+key = "ruff.pylint.max-args"
+pattern = '(?m)^max-args = (?P<value>\d+)$'
+direction = "ceiling"
+enabled = true
+
+[[thresholds]]
+path = "pyproject.toml"
+key = "ruff.pylint.max-branches"
+pattern = '(?m)^max-branches = (?P<value>\d+)$'
+direction = "ceiling"
+enabled = true
+
+[[thresholds]]
+path = "pyproject.toml"
+key = "ruff.pylint.max-positional-args"
+pattern = '(?m)^max-positional-args = (?P<value>\d+)$'
+direction = "ceiling"
+enabled = true
+
+[[thresholds]]
+path = "pyproject.toml"
+key = "ruff.pylint.max-returns"
+pattern = '(?m)^max-returns = (?P<value>\d+)$'
+direction = "ceiling"
+enabled = true
+
+[[thresholds]]
+path = "pyproject.toml"
+key = "ruff.pylint.max-statements"
+pattern = '(?m)^max-statements = (?P<value>\d+)$'
+direction = "ceiling"
+enabled = true
+
+[[thresholds]]
+path = "biome.json"
+key = "noExcessiveCognitiveComplexity.maxAllowedComplexity"
+pattern = '"maxAllowedComplexity":\s*(?P<value>\d+)'
+direction = "ceiling"
+enabled = true
+
+[[thresholds]]
+path = "biome.json"
+key = "noExcessiveLinesPerFunction.maxLines"
+pattern = '"maxLines":\s*(?P<value>\d+)'
+direction = "ceiling"
+enabled = true
+
+[[thresholds]]
+path = "biome.json"
+key = "useMaxParams.max"
+pattern = '"max":\s*(?P<value>\d+)'
+direction = "ceiling"
+enabled = true
+
+[[thresholds]]
+path = "src/agent_orchestration_poc/core/coverage_floors.py"
+key = "coverage.numeric-floors"
+pattern = 'covered \* 100 >= (?:core_total|branch_total|shell_total) \* (?P<value>\d+)'
+direction = "floor"
+enabled = true
+
+[[thresholds]]
+path = "src/agent_orchestration_poc/core/mutation_score.py"
+key = "mutation.python-floor"
+pattern = 'score >= (?P<value>\d+)'
+direction = "floor"
+enabled = true
+
+# Required selectors and enabled states in pinned gate configurations.
+[[required]]
+path = "pyproject.toml"
+key = "coverage.branch"
+pattern = "(?m)^branch = true$"
+enabled = true
+
+[[required]]
+path = "pyproject.toml"
+key = "pyrefly.strict"
+pattern = '(?m)^preset = "strict"$'
+enabled = true
+
+[[required]]
+path = "pyproject.toml"
+key = "pyrefly.warning-floor"
+pattern = '(?m)^min-severity = "warn"$'
+enabled = true
+
+[[required]]
+path = "pyproject.toml"
+key = "ruff.complexity"
+pattern = '"C901"'
+enabled = true
+
+[[required]]
+path = "pyproject.toml"
+key = "ruff.branch-limit"
+pattern = '"PLR0912"'
+enabled = true
+
+[[required]]
+path = "biome.json"
+key = "linter.enabled"
+pattern = '"linter":\s*\{\s*"enabled": true'
+enabled = true
+
+[[required]]
+path = ".golangci.yml"
+key = "funlen.enabled"
+pattern = '(?m)^\s*- funlen$'
+enabled = true
+
+[[required]]
+path = ".golangci.yml"
+key = "standard-linters.enabled"
+pattern = '(?m)^\s*default: standard$'
+enabled = true
+
+[[required]]
+path = ".golangci.yml"
+key = "gocognit.enabled"
+pattern = '(?m)^\s*- gocognit$'
+enabled = true
+
+[[required]]
+path = ".golangci.yml"
+key = "gocyclo.enabled"
+pattern = '(?m)^\s*- gocyclo$'
+enabled = true
+
+[[required]]
+path = ".jscpd.json"
+key = "duplication.formats"
+pattern = '"format":\s*\['
+enabled = true
+
+# Every change to these selectors needs a review reason, even when a parser
+# cannot prove whether the edit weakens the gate.
+[[suppressions]]
+kind = "nolint"
+pattern = '//\s*nolint(?::[\w,]+)?'
+
+[[suppressions]]
+kind = "noqa"
+pattern = '#\s*noqa(?::\s*[\w, ]+)?'
+
+[[suppressions]]
+kind = "type-ignore"
+pattern = '#\s*type:\s*ignore(?:\[[^]]+\])?'
+
+[[suppressions]]
+kind = "pyrefly-ignore"
+pattern = '#\s*pyrefly:\s*ignore(?:\[[^]]+\])?'
+
+[[suppressions]]
+kind = "biome-ignore"
+pattern = '//\s*biome-ignore(?:\s+[^:]+)?'
+
+[[suppressions]]
+kind = "shellcheck-disable"
+pattern = '#\s*shellcheck\s+disable=[\w,]+'
+
+[[suppressions]]
+kind = "pytest-skip"
+pattern = '(?:pytest\.mark\.(?:skip|skipif|xfail)|pytest\.(?:skip|xfail))\b'
+
+[[suppressions]]
+kind = "go-skip"
+pattern = '\b(?:t|b)\.Skip(?:f|Now)?\('
