@@ -132,6 +132,28 @@ def _exclusions(path: str, before: str, after: str) -> tuple[Finding, ...]:
         findings.append(Finding(_identifier("exclusion", path, digest, "added"), value))
     if path == "biome.json":
         findings.extend(_biome_changes(old, new, before, after))
+    findings.extend(_gate_selectors(path, old, new))
+    return tuple(findings)
+
+
+def _gate_selectors(
+    path: str, old: dict[str, Any], new: dict[str, Any]
+) -> tuple[Finding, ...]:
+    findings = []
+    if path == "biome.json":
+        previous = set(old.get("files", {}).get("includes", []))
+        current = set(new.get("files", {}).get("includes", []))
+        weakened = {item for item in current - previous if item.startswith("!")}
+        weakened.update(item for item in previous - current if not item.startswith("!"))
+    elif path == ".jscpd.json":
+        weakened = set(old.get("format", [])) - set(new.get("format", []))
+    else:
+        return ()
+    for item in sorted(weakened):
+        digest = hashlib.sha256(item.encode()).hexdigest()[:12]
+        findings.append(
+            Finding(_identifier("selector", path, digest, "weakened"), item)
+        )
     return tuple(findings)
 
 
@@ -201,6 +223,28 @@ def _required(
         for entry in _active_entries(path, entries)
         if len(re.findall(entry["pattern"], before))
         > len(re.findall(entry["pattern"], after))
+    )
+
+
+def _golangci_selectors(before: str, after: str) -> tuple[Finding, ...]:
+    pattern = r"(?m)^  enable:\n(?P<items>(?:    - [^\n]+\n)+)"
+    old = re.search(pattern, before)
+    new = re.search(pattern, after)
+    if old is None or new is None:
+        return (
+            Finding(
+                _identifier("syntax", ".golangci.yml", "linters.enable", "unknown"),
+                "linter enable list changed syntax",
+            ),
+        )
+    removed = set(old.group("items").splitlines()) - set(
+        new.group("items").splitlines()
+    )
+    return tuple(
+        Finding(
+            _identifier("gate", ".golangci.yml", line.strip(), "removed"), line.strip()
+        )
+        for line in sorted(removed)
     )
 
 
@@ -286,13 +330,22 @@ def _suppressions(
     for entry in entries:
         if not path.endswith(tuple(entry["suffixes"])):
             continue
-        old, new = before, after
         if entry["kind"] in comment_kinds:
-            old = "\n".join(_python_comments(before))
-            new = "\n".join(_python_comments(after))
-        for line in _added_lines(old, new):
+            old_lines = set(_python_comments(before))
+            candidates = tuple(
+                item for item in _python_comments(after) if item not in old_lines
+            )
+        else:
+            candidates = tuple(
+                (index, line)
+                for index, line in enumerate(after.splitlines(), 1)
+                if line in _added_lines(before, after)
+            )
+        for location, line in candidates:
             if re.search(entry["pattern"], line):
-                digest = hashlib.sha256(line.strip().encode()).hexdigest()[:12]
+                digest = hashlib.sha256(
+                    f"{location}:{line.strip()}".encode()
+                ).hexdigest()[:12]
                 kind = str(entry["kind"])
                 findings.append(
                     Finding(
@@ -303,9 +356,57 @@ def _suppressions(
     return tuple(findings)
 
 
-def _python_comments(source: str) -> tuple[str, ...]:
+def _python_comments(source: str) -> tuple[tuple[int, str], ...]:
     tokens = tokenize.generate_tokens(StringIO(source).readline)
-    return tuple(token.string for token in tokens if token.type == tokenize.COMMENT)
+    lines = source.splitlines()
+    return tuple(
+        (token.start[0], lines[token.start[0] - 1])
+        for token in tokens
+        if token.type == tokenize.COMMENT
+    )
+
+
+def compare_registries(before: str, after: str) -> tuple[Finding, ...]:
+    """Find baseline registrations removed or changed by the head tree."""
+    if not before:
+        return ()
+    try:
+        old, new = tomllib.loads(before), tomllib.loads(after)
+    except tomllib.TOMLDecodeError:
+        return (
+            Finding(
+                _identifier(
+                    "syntax", "config/gate-registry.toml", "registry", "unknown"
+                ),
+                "registry cannot be parsed",
+            ),
+        )
+    findings = []
+    for section in ("thresholds", "required", "suppressions"):
+        keys = {"thresholds": "key", "required": "key", "suppressions": "kind"}
+        current = {entry[keys[section]]: entry for entry in new.get(section, [])}
+        for entry in old.get(section, []):
+            key = str(entry[keys[section]])
+            if current.get(key) != entry:
+                findings.append(
+                    Finding(
+                        _identifier(
+                            "registry",
+                            "config/gate-registry.toml",
+                            f"{section}.{key}",
+                            "changed",
+                        ),
+                        f"{section}.{key} removed or altered",
+                    )
+                )
+    for path in set(old.get("review_paths", [])) - set(new.get("review_paths", [])):
+        findings.append(
+            Finding(
+                _identifier("registry", "config/gate-registry.toml", path, "removed"),
+                f"review path {path} removed",
+            )
+        )
+    return tuple(findings)
 
 
 def compare(
@@ -333,6 +434,8 @@ def compare(
             findings.extend(_thresholds(path, before, after, thresholds))
             findings.extend(_exclusions(path, before, after))
             findings.extend(_unknown_syntax(path, before, after, thresholds))
+            if path == ".golangci.yml":
+                findings.extend(_golangci_selectors(before, after))
         if before:
             findings.extend(_required(path, before, after, required))
         findings.extend(_suppressions(path, before, after, suppressions))

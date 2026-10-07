@@ -9,6 +9,7 @@ from pathlib import Path
 
 from agent_orchestration_poc.core.gate_changes import (
     compare,
+    compare_registries,
     match_justifications,
     monitored_path,
 )
@@ -42,18 +43,24 @@ def _content(revision: str, path: str) -> str:
 
 def run(base: str, head: str, body_file: Path) -> int:
     """Collect both revisions and report gate findings and missing reasons."""
-    registry = tomllib.loads(Path("config/gate-registry.toml").read_text())
     merge_base = _git("merge-base", base, head).strip()
+    baseline_text = _content(merge_base, "config/gate-registry.toml")
+    head_text = _content(head, "config/gate-registry.toml")
+    registry = tomllib.loads(baseline_text or head_text)
+    head_registry = tomllib.loads(head_text) if head_text else registry
     paths = tuple(
         path
         for path in _git(
             "diff", "--no-renames", "--name-only", merge_base, head
         ).splitlines()
-        if monitored_path(path, registry)
+        if monitored_path(path, registry) or monitored_path(path, head_registry)
     )
     before = {path: _content(merge_base, path) for path in paths}
     after = {path: _content(head, path) for path in paths}
-    findings = compare(before, after, registry)
+    findings = (
+        *compare(before, after, registry),
+        *compare_registries(baseline_text, head_text),
+    )
     problems = match_justifications(findings, body_file.read_text())
     LOGGER.info("Gate comparison: merge base %s, head %s", merge_base, head)
     for finding in findings:

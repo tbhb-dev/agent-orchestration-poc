@@ -29,3 +29,15 @@ Observed: A single REST list of open PRs and fetched head refs was compared agai
 ## PR body edit trigger
 
 Observed: PR #287 at head `61e9e0d92063af2e89b66103a06953e8a4a55456` first had a [successful `check` run](https://github.com/tbhb-dev/agent-orchestration-poc/actions/runs/37691180358). Removing the `gate:selector:mise.toml:file:changed` reason from its body triggered a new [failed `check` run](https://github.com/tbhb-dev/agent-orchestration-poc/actions/runs/37691615473). Restoring the body with both reasons triggered a [successful `check` run](https://github.com/tbhb-dev/agent-orchestration-poc/actions/runs/37691857251). The local missing-reason fixture exits 1 with the corresponding diagnostic. The GitHub log download was denied at `~/.cache/gh`, so the live failure cause is an inference from the controlled single-line edit and the check conclusion. The [PR mutation check](https://github.com/tbhb-dev/agent-orchestration-poc/actions/runs/37691180343) also concluded success.
+
+## Review round 1
+
+Verified: `git fetch origin && git merge origin/main` fetched the current main. The merge needed `git merge --no-ff origin/main` because this checkout has fast-forward-only merge configuration. The merge had no content conflicts and was committed as `69be445` after directing the hook cache to `/private/tmp/prek-task650`.
+
+Verified: `mise run check:pytest -- tests/test_gate_changes.py --run-integration -q` exited 0 with 81 passed cases. New tests use the actual Biome, jscpd, and golangci configurations to probe selector weakenings, compare a disabled registry entry against the baseline, and distinguish repeated and moved Python suppressions.
+
+Verified: `mise run check` exited 0 after review fixes. It reported Python core lines 97.24%, branches 93.92%, shell lines 74.21%, Go core statements 96.43%, branches 94.74%, and shell statements 74.58%.
+
+Observed: The first review-round `mise run check:mutation` exited 1. Go passed at 145/149 killed (97.32%), while Python scored 9368/10511 (89.13%), below the 90% floor. Exact identity and stronger-setting assertions were added for the surviving registry and selector branches before the retry.
+
+Observed: After those assertions, a `mise run check` retry failed strict pyrefly on an untyped empty list in a new test. `mise run check:pyrefly` exited 0 after the test fixture received an explicit `list[str]` annotation. Two later `mise run check` attempts reached 800 passed tests and failed only when Quarto attempted to write `/Users/tony/Library/Application Support/quarto/logs/jupyter-kernel.log`, outside the sandbox writable roots. A previous full check in this review round had exited 0. The sandbox settings and host files were not changed.

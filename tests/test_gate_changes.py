@@ -16,9 +16,12 @@ from agent_orchestration_poc.core.gate_changes import (
     Finding,
     _biome_changes,
     _flatten_exclusions,
+    _gate_selectors,
+    _golangci_selectors,
     _identifier,
     _yaml_exclusions,
     compare,
+    compare_registries,
     match_justifications,
     monitored_path,
 )
@@ -40,6 +43,147 @@ def test_registered_config_cases(case: dict[str, str]) -> None:
         {case["path"]: case["before"]}, {case["path"]: case["after"]}, REGISTRY
     )
     assert any(finding.id.startswith(f"gate:{case['kind']}:") for finding in findings)
+
+
+@pytest.mark.parametrize(
+    ("path", "old", "new"),
+    [
+        ("biome.json", "**", "!src"),
+        (".jscpd.json", "python", ""),
+        (".golangci.yml", "    - nestif", ""),
+    ],
+)
+def test_existing_selector_weakenings(path: str, old: str, new: str) -> None:
+    before = (CONFIG_ROOT / path).read_text()
+    after = before.replace(old, new, 1)
+    findings = compare({path: before}, {path: after}, REGISTRY)
+    assert findings
+    assert match_justifications(findings, "")
+
+
+def test_selector_findings_have_exact_identity() -> None:
+    empty: list[str] = []
+    for path, old, new, item in (
+        (
+            "biome.json",
+            {"files": {"includes": ["**"]}},
+            {"files": {"includes": ["**", "!src"]}},
+            "!src",
+        ),
+        (
+            "biome.json",
+            {"files": {"includes": ["**"]}},
+            {"files": {"includes": empty}},
+            "**",
+        ),
+        (".jscpd.json", {"format": ["go", "python"]}, {"format": ["go"]}, "python"),
+    ):
+        digest = hashlib.sha256(item.encode()).hexdigest()[:12]
+        assert _gate_selectors(path, old, new) == (
+            Finding(f"gate:selector:{path}:{digest}:weakened", item),
+        )
+    assert (
+        _gate_selectors(
+            "biome.json", {"files": {"includes": ["!src"]}}, {"files": {"includes": []}}
+        )
+        == ()
+    )
+    assert (
+        _gate_selectors(".jscpd.json", {"format": ["go"]}, {"format": ["go", "python"]})
+        == ()
+    )
+    assert _gate_selectors("pyproject.toml", {}, {}) == ()
+
+
+def test_golangci_selector_findings_have_exact_identity() -> None:
+    before = "linters:\n  enable:\n    - funlen\n    - nestif\n  settings:\n"
+    after = before.replace("    - nestif\n", "")
+    assert _golangci_selectors(before, after) == (
+        Finding("gate:gate:.golangci.yml:- nestif:removed", "- nestif"),
+    )
+    assert _golangci_selectors(before, before + "    - new\n") == ()
+    assert _golangci_selectors(before, "linters:\n") == (
+        Finding(
+            "gate:syntax:.golangci.yml:linters.enable:unknown",
+            "linter enable list changed syntax",
+        ),
+    )
+
+
+def test_registry_change_keeps_baseline_gate_coverage() -> None:
+    before = (CONFIG_ROOT / "config/gate-registry.toml").read_text()
+    after = before.replace(
+        'direction = "floor", enabled = true', 'direction = "floor", enabled = false', 1
+    )
+    findings = compare_registries(before, after)
+    assert findings
+    assert match_justifications(findings, "")
+    baseline = tomllib.loads(before)
+    config = (CONFIG_ROOT / ".gremlins.yaml").read_text()
+    lowered = config.replace("efficacy: 90", "efficacy: 80")
+    assert any(
+        f.id.startswith("gate:threshold:")
+        for f in compare(
+            {".gremlins.yaml": config}, {".gremlins.yaml": lowered}, baseline
+        )
+    )
+
+
+@pytest.mark.parametrize(
+    ("section", "key"),
+    [
+        ("thresholds", "unleash.threshold.efficacy"),
+        ("required", "coverage.branch"),
+        ("suppressions", "noqa"),
+    ],
+)
+def test_registry_entry_changes_have_exact_identity(section: str, key: str) -> None:
+    before = (CONFIG_ROOT / "config/gate-registry.toml").read_text()
+    # Remove the exact line from the text so the remaining entries stay valid TOML.
+    line = next(
+        line
+        for line in before.splitlines(keepends=True)
+        if f'key = "{key}"' in line or f'kind = "{key}"' in line
+    )
+    altered = before.replace(line, "")
+    assert compare_registries(before, altered) == (
+        Finding(
+            f"gate:registry:config/gate-registry.toml:{section}.{key}:changed",
+            f"{section}.{key} removed or altered",
+        ),
+    )
+
+
+def test_registry_review_path_and_bootstrap() -> None:
+    before = (CONFIG_ROOT / "config/gate-registry.toml").read_text()
+    after = before.replace('"prek.toml", ', "")
+    assert compare_registries(before, after) == (
+        Finding(
+            "gate:registry:config/gate-registry.toml:prek.toml:removed",
+            "review path prek.toml removed",
+        ),
+    )
+    assert compare_registries(before, before) == ()
+    assert compare_registries("", before) == ()
+    assert compare_registries(before, "[broken") == (
+        Finding(
+            "gate:syntax:config/gate-registry.toml:registry:unknown",
+            "registry cannot be parsed",
+        ),
+    )
+
+
+def test_identical_suppressions_have_separate_locations() -> None:
+    before = "first = unknown  # noqa: F821\nsecond = unknown\n"
+    after = "first = unknown  # noqa: F821\nsecond = unknown  # noqa: F821\nthird = unknown  # noqa: F821\n"
+    findings = compare({"sample.py": before}, {"sample.py": after}, REGISTRY)
+    assert len([f for f in findings if f.id.startswith("gate:suppression:")]) == 2
+    moved = compare(
+        {"sample.py": before},
+        {"sample.py": "first = unknown\nsecond = unknown  # noqa: F821\n"},
+        REGISTRY,
+    )
+    assert any(f.id.startswith("gate:suppression:") for f in moved)
 
 
 @pytest.mark.parametrize(
@@ -97,7 +241,7 @@ def test_each_supported_suppression(case: dict[str, str]) -> None:
     line = case["line"]
     assert re.search(entry["pattern"], line)
     findings = compare({case["path"]: ""}, {case["path"]: line}, REGISTRY)
-    digest = hashlib.sha256(line.strip().encode()).hexdigest()[:12]
+    digest = hashlib.sha256(f"1:{line.strip()}".encode()).hexdigest()[:12]
     assert any(
         f.id == f"gate:suppression:{case['path']}:{case['kind']}.{digest}:added"
         and f.detail == line.strip()
