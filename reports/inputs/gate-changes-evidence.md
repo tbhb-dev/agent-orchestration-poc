@@ -12,14 +12,20 @@ Verified: `mise run check:pytest -- tests/test_gate_changes.py --run-integration
 
 Verified: `mise run check:gate-changes -- --base d32e4f4052323d10d25a354a5e0e9a13fc4c4d44 --head 91e5c52 --body-file tests/fixtures/gate_changes/pr-body-pass.txt` exited 0 and reported the workflow and `mise.toml` selector IDs. The same command with `pr-body-fail.txt` exited 1, reporting a missing reason for `mise.toml` and a partial reason for the workflow.
 
+Verified: `mise run check:gate-changes -- --base d32e4f4052323d10d25a354a5e0e9a13fc4c4d44 --head 78d2943 --body-file tests/fixtures/gate_changes/pr-body-pass.txt` exited 0 with those two IDs. The same command with `pr-body-fail.txt` exited 1 with the expected missing and partial diagnostics after the final code commit.
+
 Observed: An earlier `mise run check:coverage` could not write `~/Library/Application Support/quarto/logs/jupyter-kernel.log` under the sandbox. A full `mise run check` retry exited 0 without a change to the sandbox. It reported Python core lines 97.25%, branches 93.86%, shell lines 74.20%, Go core statements 96.43%, branches 94.74%, and shell statements 74.58%. The final post-change runs are recorded below.
 
+Observed: The post-change `mise run check` exited 1 because Quarto 1.10.18 again attempted to write that log outside the writable roots during `tests/test_analysis_notebooks.py::test_render_synthetic_notebook`. The coverage run recorded 787 passes and one failure. No sandbox escape or system setting was changed. The PR CI run provides the complete check result in its runner environment.
+
 Observed: An intermediate `mise run check:mutation` exited 1 with Go 145/149 killed (97.32%) and Python 9123/10175 killed (89.66%). The Python score was 35 kills below its 90% floor. Focused tests were added for the surviving gate comparison branches before the final run.
+
+Verified: The final `mise run check:mutation` exited 0 with Go 145/149 killed (97.32%) and Python 9175/10176 killed (90.16%). The Python run had one timed out mutant, which is counted in the exported total.
 
 ## Open PR audit
 
 Observed: A single REST list of open PRs and fetched head refs was compared against the base on 2026-10-07 UTC. The sanitized IDs and diagnostic labels are in `tests/fixtures/gate_changes/open-pr-audit.txt`. Nine open PR heads were inspected. Three had missing gate reasons and six had no findings or justification diagnostics. No PR body or credential was retained in the fixture.
 
-## Final verification
+## PR body edit trigger
 
-To be completed after the final commit and PR body edit probe.
+The live PR body edit result will be added after the pull request exists.

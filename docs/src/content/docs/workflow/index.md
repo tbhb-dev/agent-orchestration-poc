@@ -95,7 +95,7 @@ The active [main ruleset](https://github.com/tbhb/agent-orchestration-poc/rules/
 
 | Job | Trigger | Checks |
 | --- | --- | --- |
-| `check` | PRs, including body edits, and pushes to `main` | `mise run check`, including registered gate comparison on PRs, Go build, vet, tests and lint, Ruff and pytest, formatting, prose, secrets, experiment layout, Mermaid, and workflow syntax |
+| `check` | PRs and pushes to `main` | `mise run check`, including Go build, vet, tests and lint, Ruff and pytest, formatting, prose, secrets, experiment layout, Mermaid, and workflow syntax |
 | `handoff` | Pushes to `main` | Verify that PRs described as open in the handoff are open on GitHub |
 | `mutation` | PRs and pushes to `main` | Always reports a result. Runs `mise run check:mutation` when Go or Python core code or their tests change, and succeeds without running the tools otherwise. |
 | `property-nightly` | Nightly schedule and manual dispatch | Runs Go and Python tests with random seeds and files an issue containing the seeds and output on failure. |
