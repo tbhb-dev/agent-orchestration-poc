@@ -13,6 +13,7 @@ class Item:
     priority: str
     state: str
     work_type: str
+    database_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -44,7 +45,13 @@ def validate_items(items: tuple[Item, ...]) -> None:
     """Refuse incomplete or ambiguous Project snapshots."""
     ids = [item.id for item in items]
     issues = [item.issue for item in items if item.issue is not None]
-    if not items or len(ids) != len(set(ids)) or len(issues) != len(set(issues)):
+    database_ids = [item.database_id for item in items if item.database_id]
+    if (
+        not items
+        or len(ids) != len(set(ids))
+        or len(issues) != len(set(issues))
+        or len(database_ids) != len(set(database_ids))
+    ):
         raise ValueError("incomplete or duplicate Project items")
     if any(
         not item.id
@@ -123,6 +130,40 @@ def plan_order(
         item = _issue(working, number)
         predecessor = _issue(working, issues[index - 1]).id if index else None
         mutation = Mutation(item.id, predecessor)
+        working = _position(working, mutation)
+        mutations.append(mutation)
+    return tuple(mutations)
+
+
+def plan_item_order(
+    items: tuple[Item, ...], identifiers: tuple[str, ...]
+) -> tuple[Mutation, ...]:
+    """Plan a complete order of open Standard issues and drafts by Project item ID."""
+    validate_items(items)
+    eligible_items = tuple(item for item in items if eligible(item))
+    by_identifier = {
+        identifier: item
+        for item in eligible_items
+        for identifier in (item.id, item.database_id)
+        if identifier
+    }
+    if (
+        len(identifiers) != len(eligible_items)
+        or len(set(identifiers)) != len(identifiers)
+        or any(identifier not in by_identifier for identifier in identifiers)
+        or len({by_identifier[identifier].id for identifier in identifiers})
+        != len(eligible_items)
+    ):
+        raise ValueError(
+            "order-items must contain every open Standard item exactly once"
+        )
+    desired = tuple(by_identifier[identifier].id for identifier in identifiers)
+    working = items
+    mutations: list[Mutation] = []
+    for index, item_id in enumerate(desired):
+        if tuple(item.id for item in working if eligible(item))[index] == item_id:
+            continue
+        mutation = Mutation(item_id, desired[index - 1] if index else None)
         working = _position(working, mutation)
         mutations.append(mutation)
     return tuple(mutations)

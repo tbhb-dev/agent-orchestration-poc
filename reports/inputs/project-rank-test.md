@@ -10,7 +10,7 @@ Documented: Python 3.14.6, uv 0.12.10, ruff 0.16.9, pytest 9.1.1, Hypothesis 6.1
 
 ## Request and response shapes
 
-Untested runtime query shape: `query($owner:String!,$number:Int!,$after:String){user(login:$owner){projectV2(number:$number){id items(first:100,after:$after,orderBy:{field:POSITION,direction:ASC}){totalCount pageInfo{hasNextPage endCursor} nodes{id type content{... on Issue{number state}} priority:fieldValueByName(name:"Priority"){... on ProjectV2ItemFieldSingleSelectValue{name}} workType:fieldValueByName(name:"Type"){... on ProjectV2ItemFieldSingleSelectValue{name}}}}}} rateLimit{remaining cost}}`. The response supplies `data.user.projectV2.items`, `data.rateLimit`, and the `x-ratelimit-remaining` header. The shell refuses missing pages, fields, cursors, header budget, and GraphQL errors.
+[Observed] The current query uses `organization(login:$owner)` for `tbhb-dev` Project 1 and requests each item's node `id`, `fullDatabaseId`, type, issue content, Priority, and Type, plus position ordering, pagination, and `rateLimit`. A read-only live call returned Project data, but local validation refused blank Priority fields before a plan. The shell requires `data.organization.projectV2.items`, `data.rateLimit`, and the `x-ratelimit-remaining` header and refuses missing pages, fields, cursors, header budget, and GraphQL errors.
 
 Untested runtime mutation shape: `mutation($project:ID!,$item:ID!,$after:ID){updateProjectV2ItemPosition(input:{projectId:$project,itemId:$item,afterId:$after}){clientMutationId}}`. The response supplies `data.updateProjectV2ItemPosition` and the `x-ratelimit-remaining` header. The shell records the decrease from the preceding query or mutation response header as observed interval cost; concurrent use of the same rate-limit bucket can make this value an upper bound, and a nonpositive difference is refused. The coordinator alone supplies the GitHub account and runs `--apply` under the host lock. The default command only prints a plan.
 
@@ -32,7 +32,15 @@ Untested board columns: the coordinator must check that the native order holds w
 
 Untested view reach: the coordinator must compare at least two Project views to determine whether they share one native order.
 
-Untested REST read: the coordinator must compare `GET users/tbhb/projectsV2/9/items` with the position order after the move and restoration.
+Untested REST read: the coordinator must compare `GET orgs/tbhb-dev/projectsV2/1/items` with the position order after the move and restoration.
+
+## Project 1 and draft-order correction
+
+[Verified from source] The 2026-10-01 target is organization Project 1 (`tbhb-dev`), and the effective agent login is `tbhb-agent`. The command now routes GitHub reads and writes through the repository's `.holding/bin/gh-as-agent` wrapper, uses `gh query` for read-only requests, and reserves `gh api` for a requested position mutation. The [GitHub Projects GraphQL schema](https://docs.github.com/en/graphql/reference/projects) defines `ProjectV2Item.fullDatabaseId` and `updateProjectV2ItemPosition` with item node IDs. `order-items ID...` accepts each open Standard issue or draft exactly once, with either its REST numeric Project item ID or GraphQL node ID, and resolves each planned mutation to a node ID. The existing numbered `order N...` command remains for issue-only use.
+
+[Verified] `mise exec -- uv run pytest -q tests/test_project_rank.py tests/test_project_rank_shell.py --run-integration` passed 34 tests. The fixtures cover a mixed issue-and-draft order, duplicate or missing identifiers, the organization response shape, account check, re-read, budget refusal, and mutation read-back. `mise run check` and `mise run build` exited 0. A read-only live invocation, `scripts/project-rank order-items x`, reached the current Project and exited 2 with `item field read is incomplete`, as expected before native Priority values are populated; it made no mutation. No step 7 move or restoration has run, so native position behavior remains untested.
+
+[Verified] `mise run check:mutation:python` exited 0 with a 90.25 percent Python core score (8,427 killed of 9,337 mutants). The first `mise run check` exited 0 with 715 integration-coverage tests. Two later aggregate retries stopped at the unrelated synthetic Quarto notebook test because this sandbox denied a log write under `/Users/tony/Library/Application Support/quarto/logs/`; the remaining rank fixtures passed after the process-test correction. No host permission change was made.
 
 Untested point cost: the coordinator must record each query's `rateLimit.cost`, each mutation's before-and-after `x-ratelimit-remaining` headers, remaining points, and sanitized response headers during the move and restoration. No live cost is inferred from schema support or the fixture values.
 
