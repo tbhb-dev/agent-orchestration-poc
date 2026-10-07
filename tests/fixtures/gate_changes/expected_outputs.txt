@@ -1,0 +1,5 @@
+Passing PR body: exit 0, two selector findings, zero justification diagnostics.
+Failing PR body: exit 1, two selector findings, one missing and one partial justification.
+Removing a reason from the passing body produces the failing result.
+Adding both reasons to the failing body produces the passing result.
+An unregistered numeric key produces a syntax finding and exit 1 even with a reason.

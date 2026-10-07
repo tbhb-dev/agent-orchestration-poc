@@ -342,6 +342,24 @@ def compare(
     return tuple(dict.fromkeys(findings))
 
 
+def monitored_path(path: str, registry: Mapping[str, Any]) -> bool:
+    """Select only paths whose content the registry can inspect."""
+    return (
+        any(
+            path == prefix or path.startswith(prefix)
+            for prefix in registry["review_paths"]
+        )
+        or any(
+            entry["path"] == path
+            for entry in (*registry["thresholds"], *registry["required"])
+        )
+        or any(
+            path.endswith(tuple(entry["suffixes"]))
+            for entry in registry["suppressions"]
+        )
+    )
+
+
 def match_justifications(findings: tuple[Finding, ...], body: str) -> tuple[str, ...]:
     """Report missing, partial, duplicate, and orphan PR reasons."""
     section = re.search(r"(?ms)^## Gate justifications\s*\n(.*?)(?=^## |\Z)", body)

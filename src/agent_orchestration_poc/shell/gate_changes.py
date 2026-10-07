@@ -7,7 +7,11 @@ import subprocess
 import tomllib
 from pathlib import Path
 
-from agent_orchestration_poc.core.gate_changes import compare, match_justifications
+from agent_orchestration_poc.core.gate_changes import (
+    compare,
+    match_justifications,
+    monitored_path,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -40,7 +44,11 @@ def run(base: str, head: str, body_file: Path) -> int:
     """Collect both revisions and report gate findings and missing reasons."""
     registry = tomllib.loads(Path("config/gate-registry.toml").read_text())
     merge_base = _git("merge-base", base, head).strip()
-    paths = tuple(_git("diff", "--name-only", merge_base, head).splitlines())
+    paths = tuple(
+        path
+        for path in _git("diff", "--name-only", merge_base, head).splitlines()
+        if monitored_path(path, registry)
+    )
     before = {path: _content(merge_base, path) for path in paths}
     after = {path: _content(head, path) for path in paths}
     findings = compare(before, after, registry)
