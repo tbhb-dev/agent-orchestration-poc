@@ -10,6 +10,7 @@
     "includes": [
       "**",
       "!research/imported",
+      "!experiments/02-host-socket-attribution/evidence/relay-run-r3",
       "!.worktrees",
       "!**/.venv",
       "!!**/node_modules",

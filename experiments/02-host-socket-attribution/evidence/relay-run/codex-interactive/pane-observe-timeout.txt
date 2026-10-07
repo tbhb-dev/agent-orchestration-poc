@@ -1,0 +1,50 @@
+╭───────────────────────────────────────────╮
+│ >_ OpenAI Codex (v0.157.1)                │
+│                                           │
+│ model:     GPT-6-Astra   /model to change │
+│ directory: ~/workspace                    │
+╰───────────────────────────────────────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+› Run /Users/tony/.local/share/mise/installs/python/3.14.6/bin/python3 experiments/02-host-socket-attribution/probe.py client /private/tmp/bv01-228-codex-interactive/gateway.sock codex-interactive
+  and then stop.
+
+
+  GPT-6-Astra default · ~/workspace
+                                                                                                                                                                               ⚠ 1 warning · f2 to view

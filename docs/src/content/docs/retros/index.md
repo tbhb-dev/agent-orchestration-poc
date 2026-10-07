@@ -12,3 +12,5 @@ Each retrospective proposes at least one mechanical check or explains why none a
 - [Phase 0 retrospective, 2026-09-26](/retros/2026-09-26-phase-0/).
 
 - [Phase 1 retrospective and ten-PR review, 2026-09-26](/retros/2026-09-26-phase-1/).
+
+- [Second phase 2 pull request retrospective, 2026-09-27](/retros/2026-09-27-pr-cohort/).

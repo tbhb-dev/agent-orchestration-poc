@@ -1,12 +1,12 @@
 # Second retro evidence notes
 
-These are source notes for the fixed cohort in [issue #165](https://github.com/tbhb-dev/agent-orchestration-poc/issues/165). They support a partial evidence delivery and state no quantitative conclusion. The [claim table](../../research/gates/retro-2026-09-27/claims.csv), [source table](../../research/gates/retro-2026-09-27/sources.csv), and [query transcript](../../research/gates/retro-2026-09-27/evidence/query-transcript.md) record IDs, limits, and source time.
+These are source notes for the fixed cohort in [issue #165](https://github.com/tbhb-dev/agent-orchestration-poc/issues/165). The [claim table](../../research/gates/retro-2026-09-27/claims.csv), [source table](../../research/gates/retro-2026-09-27/sources.csv), [query transcript](../../research/gates/retro-2026-09-27/evidence/query-transcript.md), [notebook](../../research/gates/retro-2026-09-27/cohort.qmd), and [dated report](../../docs/src/content/docs/retros/2026-09-27-pr-cohort.md) record IDs, limits, calculations, and source time.
 
 ## Cohort and missingness
 
 Observed, C01 and C02: two successful REST requests returned 49 closed PR rows and an empty completion page. Filtering `merged_at > 2026-09-26T22:22:57Z` and `merged_at <= 2026-09-27T04:30:06Z` selects the 17 PR URLs in `pr-metrics.csv`. The repository API owner changed from `tbhb` in the issue to `tbhb-dev` in the live path, while the timestamp bounds and selected population stayed fixed.
 
-Observed, C03: `pr-metrics.csv` has a row for every selected PR with the fields in #90's per-PR contract. `pr-files.csv`, `pr-review-rows.csv`, and `pr-ci-rows.csv` retain supporting rows. A submitted `CHANGES_REQUESTED` review is one verdict round, including reviews by either historical or renamed reviewer account. Duration is the UTC difference between PR open and merge times. A named main merge in the PR commits is a lower bound on updates, and no named merge leaves that field `unknown`.
+Verified, N01 to N07: the notebook's DuckDB query and independent Python reconstruction agree on 17 selected PRs, 12 `CHANGES_REQUESTED` verdict rounds, ten PRs with at least one such round, 51,635 elapsed open-to-merge seconds, a 3,203-second median, 279 changed files, and 2,196 raw lines in explicitly excluded paths. The last value is a lower bound on exclusion. Observed, C03: `pr-metrics.csv` has a row for every selected PR with the fields in #90's per-PR contract. `pr-files.csv`, `pr-review-rows.csv`, and `pr-ci-rows.csv` retain supporting rows. Duration is the UTC difference between PR open and merge times. A named main merge in the PR commits is a lower bound on updates, and no named merge leaves that field `unknown`.
 
 Inference, C04: #84's [size research](../../reports/inputs/pr-size-research.md) did not settle and implement the changed-fragment classifier. [#142](https://github.com/tbhb-dev/agent-orchestration-poc/issues/142) owns it. The row's full measured #84 size and excluded raw-line count are `unknown`. The explicit excluded-path sum is retained separately and must not be reported as the complete excluded total. Project Size values were read after the PRs merged and do not prove the field at dispatch. Several are absent. Worker provenance uses the PR body or recorded Project Worker value and leaves broad `GPT-6` variants, model, or effort `unknown` when not identified.
 
@@ -16,7 +16,9 @@ Observed, C05: [PR #137](https://github.com/tbhb-dev/agent-orchestration-poc/pul
 
 Observed, C06: [PR #121's review record](https://github.com/tbhb-dev/agent-orchestration-poc/pull/121) contains three `CHANGES_REQUESTED` verdicts by the reviewer account. The [coordinator arbitration](https://github.com/tbhb-dev/agent-orchestration-poc/pull/121#issuecomment-5852465388) held that PR for #107's notebook gate. [#158](https://github.com/tbhb-dev/agent-orchestration-poc/issues/158) uses this as a dependency example. PR #121 is open and outside the fixed merged cohort. Its rounds do not enter cohort denominators.
 
-Inference: the issue's `Refs:` ambiguity for partial delivery is illustrated by [PR #137](https://github.com/tbhb-dev/agent-orchestration-poc/pull/137), which documents deferred #142/#141 work while retaining `Refs: #84`. The current partial delivery must leave #165 open. The exact impact of a closing keyword is stated in the coordinator direction for this delivery and was not experimentally retested here.
+Inference: the issue's `Refs:` ambiguity for partial delivery is illustrated by [PR #137](https://github.com/tbhb-dev/agent-orchestration-poc/pull/137), which documents deferred #142/#141 work while retaining `Refs: #84`. A reference records relationship but leaves completion status to the surrounding text. The exact impact of a closing keyword was not experimentally retested here.
+
+Observed, C15: the later contextual [PR #196](https://github.com/tbhb-dev/agent-orchestration-poc/pull/196) contained a closing keyword immediately before the issue number inside a sentence explaining its omission. The operator reported that its squash merge closed the linked issue. This incident is outside the fixed cohort and supports a bounded PR-body check proposal.
 
 ## Worker and coordination leads
 
@@ -40,6 +42,6 @@ Documented, C11: a [later #164 update](https://github.com/tbhb-dev/agent-orchest
 
 Documented, C12: the [resolution update](https://github.com/tbhb-dev/agent-orchestration-poc/issues/164#issuecomment-5852895053) reports successful REST Project edits, a read-back, and a lifted pause at about 05:14 UTC. It attributes seven forbidden watch invocations from worker logs and treats old Project retry loops as a likely large but unmeasured consumer. This delivery did not inspect those private logs or independently read back the historical board state. The earlier no-error lead must not extend across either reported incident window.
 
-## Deferred verification
+## Verification boundary
 
-Untested, C14: [PR #156](https://github.com/tbhb-dev/agent-orchestration-poc/pull/156) for #107 remains open with changes requested. Its notebook tasks are unavailable on this branch. `cohort.qmd`, independent recomputation, different-model review, the dated retro page, and the retros index belong to the second delivery. Costs, failures, useful deviations, decisions, automated-check proposal, and action items await that verified synthesis. The issue stays open after this partial delivery.
+Observed, C14: [PR #156](https://github.com/tbhb-dev/agent-orchestration-poc/pull/156) merged and the notebook tasks are present. The local Quarto render stopped at a sandbox-denied log write before kernel execution. Direct pinned-Python execution of both notebook cells passed. The review record at `research/gates/retro-2026-09-27/review.md` preserves the different-model recomputation and exact command results. The dated report states costs, failures, useful deviations, decisions, and a proposed automated check without extending the fixed cohort.
