@@ -1,0 +1,1 @@
+{"hasCompletedOnboarding": true, "theme": "dark", "customApiKeyResponses": {"approved": ["not-a-real-key"], "rejected": []}, "projects": {"/private/tmp/bv01-228-claude-interactive/workspace": {"hasTrustDialogAccepted": true}}}

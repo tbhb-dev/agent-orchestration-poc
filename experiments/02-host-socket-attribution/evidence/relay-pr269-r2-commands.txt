@@ -1,0 +1,26 @@
+PR #269 review round 2, 2026-10-07 UTC
+
+git fetch origin && git merge origin/main
+Exit 128: the local configuration permits fast-forward merges only.
+git merge --no-ff origin/main
+Merge staged; commit hook could not write /Users/tony/.cache/prek/prek.log.
+PREK_HOME=/private/tmp/agent-orchestration-poc-prek git commit -m 'chore(security): merge current main into relay cells' -m 'Merge origin/main before addressing the latest review of the relay cell branch.\n\nRefs: #228'
+Exit 0; merge commit aeb7a97. The first message attempt failed Vale; this final message passed hooks.
+
+mise exec -- uv run pytest tests/test_relay_cell.py tests/test_host_socket_attribution.py -q -k 'active_relay_paths or preflight_frames_error'
+Exit 2 before the implementation: collection failed because preflight_frames_error was not exported.
+
+mise exec -- uv run pytest tests/test_preflight_claude_interactive.py tests/test_relay_cell.py tests/test_host_socket_attribution.py -q --run-integration -p no:cacheprovider
+Exit 0 after the final test changes: 133 passed in 10.35 seconds.
+
+mise run check
+Exit 1: 786 passed in coverage, and host_socket_attribution.py had 100 percent line and branch coverage. The synthetic notebook test failed because Quarto could not write /Users/tony/Library/Application Support/quarto/logs/jupyter-kernel.log (Operation not permitted). Exact output: relay-pr269-r2-check.raw.gz.
+
+mise run check:vale
+The first two runs exited 123 on prose in the new README paragraphs. After the sentence edits, the final run exited 0 with zero errors and warnings in 207 files.
+
+mise run check:ruff
+Exit 0: Ruff check passed and 107 files were already formatted.
+
+mise run check:mutation
+Exit 0: Go core scored 97.32 percent (145 killed of 149). Python core scored 90.33 percent (8,915 killed of 9,869). Exact output: relay-pr269-r2-mutation.raw.gz.

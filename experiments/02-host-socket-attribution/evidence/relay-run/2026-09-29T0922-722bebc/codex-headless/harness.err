@@ -1,0 +1,19 @@
+Reading additional input from stdin...
+OpenAI Codex v0.157.1
+--------
+workdir: /private/tmp/bv01-228-codex-headless/workspace
+model: gpt-6-astra
+provider: bv01
+approval: never
+sandbox: read-only (network access enabled)
+reasoning effort: none
+reasoning summaries: none
+session id: 01a0ed55-7147-79d2-b121-31b717226cfe
+--------
+user
+Run python3 experiments/02-host-socket-attribution/probe.py client /private/tmp/bv01-228-codex-headless/gateway.sock codex-headless and then stop.
+exec
+/bin/zsh -lc 'python3 experiments/02-host-socket-attribution/probe.py client /private/tmp/bv01-228-codex-headless/gateway.sock codex-headless' in /private/tmp/bv01-228-codex-headless/workspace
+ exited 134 in 0ms:
+tokens used
+0

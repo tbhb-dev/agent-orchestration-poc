@@ -1,0 +1,2 @@
+  PID  PPID STARTED                      COMMAND
+49021 48878 Tue Sep 29 09:24:04 2026     /Users/tony/.local/share/mise/installs/python/3.14.6/bin/python3 /Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.worktrees/exp-228-relay-cells/experiments/02-host-socket-attribution/model_responder.py --host 127.0.0.1 --port 0 --profile claude-headless --log /private/tmp/bv01-228-claude-headless/relay-run/model.jsonl

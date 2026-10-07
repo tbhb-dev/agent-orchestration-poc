@@ -1,0 +1,50 @@
+
+╭───────────────────────────────────────╮
+│ >_ OpenAI Codex (v0.157.1)            │
+│                                       │
+│ model:     loading   /model to change │
+│ directory: ~/workspace                │
+╰───────────────────────────────────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                                                Tip: Press ctrl+r to search previously entered prompts.
+
+› Ask Codex to do anything
+
+  GPT-6-Astra default · ~/workspace
+  ? for shortcuts                                                                                                                                                              ⚠ 1 warning · f2 to view
