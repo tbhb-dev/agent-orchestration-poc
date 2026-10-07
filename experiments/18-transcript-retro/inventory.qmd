@@ -30,8 +30,10 @@ from hashlib import sha256
 from pathlib import Path
 
 from agent_orchestration_poc.core.analysis import transcript_retro
+from agent_orchestration_poc.core.analysis.notebooks import privacy_findings
 from agent_orchestration_poc.shell.analysis.transcript_retro import (
     private_map_destination,
+    scan_compressed_evidence,
 )
 
 rules = vars(transcript_retro)
@@ -90,12 +92,17 @@ def write_csv(path, rows, fields):
     writer.writeheader()
     writer.writerows(rows)
     if path.suffix == ".gz":
-        path.write_bytes(gzip.compress(output.getvalue().encode(), compresslevel=9, mtime=0))
+        content = output.getvalue()
+        findings = privacy_findings(content)
+        if findings:
+            raise ValueError(f"{path}: {', '.join(findings)}")
+        path.write_bytes(gzip.compress(content.encode(), compresslevel=9, mtime=0))
     else:
         path.write_text(output.getvalue())
 
 write_csv(evidence / "inventory.csv.gz", inventory, tuple(inventory[0]))
 write_csv(evidence / "events.csv.gz", events, rules["EVENT_FIELDS"])
+scan_compressed_evidence(evidence)
 with map_path.open("w", newline="") as output:
     writer = csv.writer(output)
     writer.writerow(("source_id", "private_path"))

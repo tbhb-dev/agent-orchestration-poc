@@ -16,7 +16,7 @@ This PR normalizes native Codex calls, outputs, explicit turn aborts, response u
 
 `events.csv.gz` has one row per retained native Codex event. `event_id` and `turn_id` are truncated HMACs of native IDs. `source_id` joins the inventory and the private source map. `position` is the native JSONL line. `timestamp_utc`, `actor`, `harness`, `kind`, `tool`, `status`, `output_bytes`, `duration_ms`, `input_tokens`, `output_tokens`, `total_tokens`, `model`, and `effort` contain only extracted metadata. Blank numeric and model fields mean unknown. The parser never exports a native session ID, call ID, raw argument, prompt, or tool output.
 
-The two CSV tables use deterministic gzip compression so each artifact passes the repository's added-file limit. Use `gzip -cd` to inspect an authorized copy.
+The two CSV tables use deterministic gzip compression so each artifact passes the repository's added-file limit. The notebook checks table text before compression and rescans both decompressed files during render and verify. Use `gzip -cd` to inspect an authorized copy.
 
 The key construction uses native thread ID, current turn ID, call or response ID, and event kind. If a native ID is absent, the parser keys the event from timestamp, actor, tool, and an HMAC of the canonical payload. Such a call cannot be matched to an output without a shared ID. `claims.csv` records the native Codex count queries. Issue #103 will use a separate findings ledger to avoid overwriting these rows.
 

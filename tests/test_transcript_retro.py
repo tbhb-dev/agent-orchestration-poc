@@ -1,5 +1,6 @@
 """Synthetic contracts for session normalization and privacy."""
 
+import gzip
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -508,6 +509,39 @@ def test_secret_signature_is_rejected() -> None:
     row["tool"] = "ghp_" + "X" * 36
     with pytest.raises(ValueError, match="private content"):
         rules["validate_export"]([row])
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    ("name", "content", "finding"),
+    [
+        (
+            "inventory.csv.gz",
+            "source_id,model\nS1,ghp_" + "X" * 36 + "\n",
+            "GitHub token signature",
+        ),
+        (
+            "events.csv.gz",
+            "source_id,prompt\nS1,private text\n",
+            "private raw record field",
+        ),
+    ],
+)
+def test_compressed_evidence_privacy_gate(
+    tmp_path: Path, name: str, content: str, finding: str
+) -> None:
+    """Scan the exact generated evidence layout after decompression."""
+    from agent_orchestration_poc.shell.analysis.transcript_retro import (  # noqa: PLC0415 - shell integration
+        scan_compressed_evidence,
+    )
+
+    evidence = tmp_path / "evidence"
+    evidence.mkdir()
+    (evidence / name).write_bytes(gzip.compress(content.encode()))
+    other = "events.csv.gz" if name == "inventory.csv.gz" else "inventory.csv.gz"
+    (evidence / other).write_bytes(gzip.compress(b"source_id\nS1\n"))
+    with pytest.raises(ValueError, match=finding):
+        scan_compressed_evidence(evidence)
 
 
 @given(st.text(max_size=40), st.text(max_size=40))
