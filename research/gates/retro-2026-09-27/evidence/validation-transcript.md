@@ -84,3 +84,13 @@ The reviewer also executed both notebook Python cells through the pinned analysi
 Conservative size measurement over the current edit uses `git diff --unified=0` for modified files and nonblank line counts for new files. It counts 357 added and deleted nonblank lines including evidence. Eleven lines in `reports/inputs/` are explicitly excluded by the #84 contract, giving 346 conservative units for this change. The unsettled `scc` fragment classifier prevents an exact #84 code-unit result. The report, notebook, review, and claim/source tables remain under the 400-unit target even with this conservative count.
 
 `git add` failed while creating this worktree's `.git/worktrees/docs-165-retro-audit-two/index.lock` with `Operation not permitted`. The sandbox boundary was not bypassed. No commit, push, pull request, or hosted check was possible in this delivery.
+
+## Review repair on 2026-10-07
+
+PR #289's first review found four missing label classes and two missing form sections, with no inline findings. The branch merged current `origin/main` at `2906075` before repair. The merge was clean; the first commit attempt failed because prek could not write its default cache, so the successful hook run used `/private/tmp/prek-docs-165-retro-audit-two` and retained `Refs: #165`.
+
+The implementer REST account check returned `tbhb-agent`. PR #289 now has `area/docs`, `type/chore`, `phase/2`, and `harness/codex`; its body includes `Size justification` and `Gate justifications`. The pre-repair PR diff had 422 raw changed lines, including 109 in explicitly excluded evidence and input paths. The exact #84 classified size remains unavailable under #142.
+
+`mise run vale:sync` and `mise run fmt` exited 0. The local `mise run check` completed 620 standard tests with 94 integration skips and 714 coverage tests; Python and Go line and statement floors passed. It stalled inside `gobco -branch` after the statement floors, and the implementer interrupted it after 668 seconds, so this local aggregate run did not complete. Hosted CI remains the full gate for the pushed head. The format task's unrelated generated analysis artifacts were discarded.
+
+`mise run check:mutation` exited 0. Go classified 149 mutants, killing 145 (97.32% efficacy); Python killed 8,427 of 9,337 mutants (90.25% score).
