@@ -1,0 +1,4 @@
+  PID  PPID STARTED                      COMMAND
+13449 13321 Thu Oct  1 12:17:32 2026     /Users/tony/.local/share/mise/installs/python/3.14.6/bin/python3 /Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.worktrees/exp-228-relay-cells/experiments/02-host-socket-attribution/model_responder.py --host 127.0.0.1 --port 0 --profile claude-interactive --log /private/tmp/bv01-228-claude-interactive/relay-run-r8/model.jsonl
+13462 13458 Thu Oct  1 12:17:33 2026     /Users/tony/.local/share/claude/versions/2.1.284 --bare --strict-mcp-config --setting-sources  --settings /private/tmp/bv01-228-claude-interactive/settings.json --permission-mode manual
+13877 13462 Thu Oct  1 12:17:34 2026     caffeinate -i -t 300

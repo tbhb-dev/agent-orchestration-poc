@@ -1,0 +1,2 @@
+COMMAND    PID USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME
+python3.1 5490 tony    3u  IPv4 0x911fe864b0bf0abc      0t0  TCP 127.0.0.1:54036 (LISTEN)

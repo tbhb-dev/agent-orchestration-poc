@@ -2,7 +2,7 @@ event: response.created
 data: {"type":"response.created","response":{"id":"resp-bv01"}}
 
 event: response.output_item.done
-data: {"type":"response.output_item.done","item":{"type":"function_call","call_id":"call-bv01","name":"exec_command","arguments":"{\"cmd\":\"python3 experiments/02-host-socket-attribution/probe.py client /private/tmp/bv01-228-codex-interactive/gateway.sock codex-interactive\"}"}}
+data: {"type":"response.output_item.done","item":{"type":"function_call","call_id":"call-bv01","name":"exec_command","arguments":"{\"cmd\":\"/Users/tony/.local/share/mise/installs/python/3.14.6/bin/python3 experiments/02-host-socket-attribution/probe.py client /private/tmp/bv01-228-codex-interactive/gateway.sock codex-interactive\"}"}}
 
 event: response.completed
 data: {"type":"response.completed","response":{"id":"resp-bv01","usage":{"input_tokens":0,"input_tokens_details":null,"output_tokens":0,"output_tokens_details":null,"total_tokens":0}}}
