@@ -1,0 +1,30 @@
+[
+  { "kind": "nolint", "path": "sample.go", "line": "//nolint:errcheck" },
+  { "kind": "noqa", "path": "sample.py", "line": "# noqa: F401" },
+  {
+    "kind": "type-ignore",
+    "path": "sample.py",
+    "line": "# type: ignore[attr-defined]"
+  },
+  {
+    "kind": "pyrefly-ignore",
+    "path": "sample.py",
+    "line": "# pyrefly: ignore[missing-attribute]"
+  },
+  {
+    "kind": "biome-ignore",
+    "path": "sample.ts",
+    "line": "// biome-ignore lint/suspicious/noExplicitAny: reason"
+  },
+  {
+    "kind": "shellcheck-disable",
+    "path": "sample.sh",
+    "line": "# shellcheck disable=SC2086"
+  },
+  {
+    "kind": "pytest-skip",
+    "path": "sample.py",
+    "line": "@pytest.mark.skip(reason='broken')"
+  },
+  { "kind": "go-skip", "path": "sample.go", "line": "t.Skip()" }
+]

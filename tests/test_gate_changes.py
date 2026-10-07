@@ -18,6 +18,10 @@ ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests/fixtures/gate_changes"
 REGISTRY = tomllib.loads((ROOT / "config/gate-registry.toml").read_text())
 CASES = cast("list[dict[str, str]]", json.loads((FIXTURES / "cases.json").read_text()))
+SUPPRESSIONS = cast(
+    "list[dict[str, str]]",
+    json.loads((FIXTURES / "suppression_cases.json").read_text()),
+)
 
 
 @pytest.mark.parametrize("case", CASES, ids=[case["name"] for case in CASES])
@@ -55,24 +59,15 @@ def test_each_required_gate_removal(entry: dict[str, Any]) -> None:
     assert any(f.id == f"gate:gate:{path}:{entry['key']}:removed" for f in findings)
 
 
-@pytest.mark.parametrize(
-    "entry", REGISTRY["suppressions"], ids=lambda entry: entry["kind"]
-)
-def test_each_supported_suppression(entry: dict[str, str]) -> None:
-    samples = {
-        "nolint": "//nolint:errcheck",
-        "noqa": "# noqa: F401",
-        "type-ignore": "# type: ignore[attr-defined]",
-        "pyrefly-ignore": "# pyrefly: ignore[missing-attribute]",
-        "biome-ignore": "// biome-ignore lint/suspicious/noExplicitAny: reason",
-        "shellcheck-disable": "# shellcheck disable=SC2086",
-        "pytest-skip": "@pytest.mark.skip(reason='broken')",
-        "go-skip": "t.Skip()",
-    }
-    line = samples[entry["kind"]]
+@pytest.mark.parametrize("case", SUPPRESSIONS, ids=lambda case: case["kind"])
+def test_each_supported_suppression(case: dict[str, str]) -> None:
+    entry = next(
+        entry for entry in REGISTRY["suppressions"] if entry["kind"] == case["kind"]
+    )
+    line = case["line"]
     assert re.search(entry["pattern"], line)
-    findings = compare({"sample.txt": ""}, {"sample.txt": line}, REGISTRY)
-    assert any(entry["kind"] in f.id for f in findings)
+    findings = compare({case["path"]: ""}, {case["path"]: line}, REGISTRY)
+    assert any(case["kind"] in f.id for f in findings)
 
 
 def test_added_exclusion_and_disabled_gate() -> None:
@@ -100,6 +95,11 @@ def test_lint_exclusion_and_rule_disable() -> None:
         {"biome.json": before_biome}, {"biome.json": after_biome}, REGISTRY
     )
     assert any(f.id == "gate:gate:biome.json:rule-level:disabled" for f in findings)
+
+
+def test_python_literal_is_not_a_suppression() -> None:
+    value = (FIXTURES / "python_literal.txt").read_text()
+    assert compare({"sample.py": ""}, {"sample.py": value}, REGISTRY) == ()
 
 
 def test_partial_duplicate_and_orphan_reasons() -> None:

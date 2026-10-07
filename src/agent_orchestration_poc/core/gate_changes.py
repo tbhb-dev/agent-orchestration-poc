@@ -4,9 +4,11 @@ import difflib
 import hashlib
 import json
 import re
+import tokenize
 import tomllib
 from collections.abc import Mapping
 from dataclasses import dataclass
+from io import StringIO
 from typing import Any
 
 
@@ -280,8 +282,15 @@ def _suppressions(
     path: str, before: str, after: str, entries: tuple[dict[str, Any], ...]
 ) -> tuple[Finding, ...]:
     findings = []
-    for line in _added_lines(before, after):
-        for entry in entries:
+    comment_kinds = {"noqa", "type-ignore", "pyrefly-ignore"}
+    for entry in entries:
+        if not path.endswith(tuple(entry["suffixes"])):
+            continue
+        old, new = before, after
+        if entry["kind"] in comment_kinds:
+            old = "\n".join(_python_comments(before))
+            new = "\n".join(_python_comments(after))
+        for line in _added_lines(old, new):
             if re.search(entry["pattern"], line):
                 digest = hashlib.sha256(line.strip().encode()).hexdigest()[:12]
                 kind = str(entry["kind"])
@@ -292,6 +301,14 @@ def _suppressions(
                     )
                 )
     return tuple(findings)
+
+
+def _python_comments(source: str) -> tuple[str, ...]:
+    return tuple(
+        token.string
+        for token in tokenize.generate_tokens(StringIO(source).readline)
+        if token.type == tokenize.COMMENT
+    )
 
 
 def compare(

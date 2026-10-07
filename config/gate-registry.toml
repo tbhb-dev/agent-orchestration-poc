@@ -1,6 +1,19 @@
 # Supported numeric gates. A missing match is a removed gate. Patterns capture
 # the value and are intentionally limited to the pinned configuration layout.
 review_paths = [".github/workflows/", "prek.toml", "mise.toml"]
+required = [
+  { path = "pyproject.toml", key = "coverage.branch", pattern = "(?m)^branch = true$", enabled = true },
+  { path = "pyproject.toml", key = "pyrefly.strict", pattern = '(?m)^preset = "strict"$', enabled = true },
+  { path = "pyproject.toml", key = "pyrefly.warning-floor", pattern = '(?m)^min-severity = "warn"$', enabled = true },
+  { path = "pyproject.toml", key = "ruff.complexity", pattern = '"C901"', enabled = true },
+  { path = "pyproject.toml", key = "ruff.branch-limit", pattern = '"PLR0912"', enabled = true },
+  { path = "biome.json", key = "linter.enabled", pattern = '"linter":\s*\{\s*"enabled": true', enabled = true },
+  { path = ".golangci.yml", key = "funlen.enabled", pattern = '(?m)^\s*- funlen$', enabled = true },
+  { path = ".golangci.yml", key = "standard-linters.enabled", pattern = '(?m)^\s*default: standard$', enabled = true },
+  { path = ".golangci.yml", key = "gocognit.enabled", pattern = '(?m)^\s*- gocognit$', enabled = true },
+  { path = ".golangci.yml", key = "gocyclo.enabled", pattern = '(?m)^\s*- gocyclo$', enabled = true },
+  { path = ".jscpd.json", key = "duplication.formats", pattern = '"format":\s*\[', enabled = true },
+]
 
 [[thresholds]]
 path = ".gremlins.yaml"
@@ -142,103 +155,43 @@ pattern = 'score >= (?P<value>\d+)'
 direction = "floor"
 enabled = true
 
-# Required selectors and enabled states in pinned gate configurations.
-[[required]]
-path = "pyproject.toml"
-key = "coverage.branch"
-pattern = "(?m)^branch = true$"
-enabled = true
-
-[[required]]
-path = "pyproject.toml"
-key = "pyrefly.strict"
-pattern = '(?m)^preset = "strict"$'
-enabled = true
-
-[[required]]
-path = "pyproject.toml"
-key = "pyrefly.warning-floor"
-pattern = '(?m)^min-severity = "warn"$'
-enabled = true
-
-[[required]]
-path = "pyproject.toml"
-key = "ruff.complexity"
-pattern = '"C901"'
-enabled = true
-
-[[required]]
-path = "pyproject.toml"
-key = "ruff.branch-limit"
-pattern = '"PLR0912"'
-enabled = true
-
-[[required]]
-path = "biome.json"
-key = "linter.enabled"
-pattern = '"linter":\s*\{\s*"enabled": true'
-enabled = true
-
-[[required]]
-path = ".golangci.yml"
-key = "funlen.enabled"
-pattern = '(?m)^\s*- funlen$'
-enabled = true
-
-[[required]]
-path = ".golangci.yml"
-key = "standard-linters.enabled"
-pattern = '(?m)^\s*default: standard$'
-enabled = true
-
-[[required]]
-path = ".golangci.yml"
-key = "gocognit.enabled"
-pattern = '(?m)^\s*- gocognit$'
-enabled = true
-
-[[required]]
-path = ".golangci.yml"
-key = "gocyclo.enabled"
-pattern = '(?m)^\s*- gocyclo$'
-enabled = true
-
-[[required]]
-path = ".jscpd.json"
-key = "duplication.formats"
-pattern = '"format":\s*\['
-enabled = true
-
-# Every change to these selectors needs a review reason, even when a parser
-# cannot prove whether the edit weakens the gate.
+# Supported suppression and skip syntax.
 [[suppressions]]
 kind = "nolint"
 pattern = '//\s*nolint(?::[\w,]+)?'
+suffixes = [".go"]
 
 [[suppressions]]
 kind = "noqa"
 pattern = '#\s*noqa(?::\s*[\w, ]+)?'
+suffixes = [".py"]
 
 [[suppressions]]
 kind = "type-ignore"
 pattern = '#\s*type:\s*ignore(?:\[[^]]+\])?'
+suffixes = [".py"]
 
 [[suppressions]]
 kind = "pyrefly-ignore"
 pattern = '#\s*pyrefly:\s*ignore(?:\[[^]]+\])?'
+suffixes = [".py"]
 
 [[suppressions]]
 kind = "biome-ignore"
 pattern = '//\s*biome-ignore(?:\s+[^:]+)?'
+suffixes = [".js", ".jsx", ".ts", ".tsx"]
 
 [[suppressions]]
 kind = "shellcheck-disable"
 pattern = '#\s*shellcheck\s+disable=[\w,]+'
+suffixes = [".sh", ".bash"]
 
 [[suppressions]]
 kind = "pytest-skip"
 pattern = '(?:pytest\.mark\.(?:skip|skipif|xfail)|pytest\.(?:skip|xfail))\b'
+suffixes = [".py"]
 
 [[suppressions]]
 kind = "go-skip"
 pattern = '\b(?:t|b)\.Skip(?:f|Now)?\('
+suffixes = [".go"]
