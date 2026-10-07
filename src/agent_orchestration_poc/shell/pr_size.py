@@ -54,17 +54,20 @@ def _blob(revision: str, path: str) -> bytes:
 
 
 def _scc(
-    content: bytes, suffix: str, language: str | None = None
+    content: bytes,
+    suffix: str,
+    language: str | None = None,
+    filename: str | None = None,
 ) -> tuple[int, bool, bool, str]:
     if not content:
         return 0, False, False, ""
     with tempfile.TemporaryDirectory(prefix="pr-size-") as directory:
-        sample = Path(directory) / f"sample{suffix}"
+        sample = Path(directory) / (filename or f"sample{suffix}")
         sample.write_bytes(content)
         language_option = (
             ("--count-as-pattern", f"*:{language}:{language}") if language else ()
         )
-        output = _run("scc", *SCC_OPTIONS, *language_option, str(sample))
+        output = _run("scc", *SCC_OPTIONS, *language_option, directory)
     rows = cast("list[dict[str, Any]]", json.loads(output))
     if not rows:
         raise ValueError(f"scc did not classify {suffix or 'extensionless'} content")
@@ -104,8 +107,11 @@ def count(base_ref: str, head: str = "HEAD") -> tuple[FileResult, ...]:
             old_suffix = Path(old_path or path).suffix
             new_suffix = Path(path).suffix
             full = tuple(
-                _scc(blob, suffix)
-                for blob, suffix in ((before, old_suffix), (after, new_suffix))
+                _scc(blob, suffix, filename=Path(name).name)
+                for blob, suffix, name in (
+                    (before, old_suffix, old_path or path),
+                    (after, new_suffix, path),
+                )
                 if blob
             )
             removed_language = full[0][3] if before and not old_suffix else None

@@ -319,6 +319,26 @@ def test_shell_counts_git_changes(
 
 
 @pytest.mark.integration
+def test_shell_counts_makefile_edit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from agent_orchestration_poc.shell import (  # noqa: PLC0415 - mutmut copies only the core package
+        pr_size as pr_size_shell,
+    )
+
+    _init_pr_size_repo(tmp_path, "[]")
+    (tmp_path / "Makefile").write_text("all:\n\techo old\n")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-qm", "base")
+    _git(tmp_path, "branch", "base")
+    (tmp_path / "Makefile").write_text("all:\n\techo new\n")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-qm", "head")
+    monkeypatch.setattr(pr_size_shell, "ROOT", tmp_path)
+    assert pr_size_shell.count("base")[0].counted_units == 2
+
+
+@pytest.mark.integration
 def test_shell_counts_extensionless_script_edit(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
