@@ -1,0 +1,1 @@
+["/Users/tony/.codex/packages/standalone/releases/0.157.1-aarch64-apple-darwin/bin/codex", "exec", "--ephemeral", "--skip-git-repo-check", "-C", "/private/tmp/bv01-228-codex-headless/workspace", "-c", "approval_policy=never", "Run python3 experiments/02-host-socket-attribution/probe.py client /private/tmp/bv01-228-codex-headless/gateway.sock codex-headless and then stop."]

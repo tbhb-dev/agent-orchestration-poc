@@ -1,0 +1,11 @@
+Review fix for PR #269, issue #228, branch exp/228-relay-cells.
+
+Before the fix, `mise exec -- uv run pytest tests/test_relay_cell.py -q -k 'fresh_thread_placeholder or capture_gate_requires_event' -p no:cacheprovider` exited 1: the pinned Codex ready screen failed and the stale-only capture passed. The newly appended event case passed.
+
+After the fix, `mise exec -- uv run pytest tests/test_relay_cell.py tests/test_host_socket_attribution.py -q --run-integration -p no:cacheprovider` exited 0 with 68 passed.
+
+`mise run fmt` exited 0. The copied `fixtures/codex-fresh-thread-header.snap` matches `codex-rs/tui/src/app/snapshots/codex_tui__app__owned_transcript__empty_state_animation_tests__fresh_thread_header.snap` in the local OpenAI Codex checkout at a6bd19261c30ce0a0225fe90e646822d29916f11.
+
+`mise run check` exited 1; exact output is in relay-pr269-r1-check.raw.gz and the adjacent exit file. Its coverage stage reported 722 passed, one unrelated synthetic notebook failure, and 100 percent line and branch coverage for the changed core module. Quarto could not write `/Users/tony/Library/Application Support/quarto/logs/jupyter-kernel.log` under this worker's sandbox.
+
+`mise run check:mutation` exited 0; exact output is in relay-pr269-r1-mutation.raw.gz and the adjacent exit file. Go core scored 145 of 149 killed (97.32 percent); Python core scored 8415 of 9320 killed (90.29 percent).

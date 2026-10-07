@@ -1,0 +1,27 @@
+model_provider = "bv01"
+default_permissions = "bv01"
+check_for_update_on_startup = false
+[features]
+plugins = false
+[projects."/private/tmp/bv01-228-codex-interactive/workspace"]
+trust_level = "trusted"
+[model_providers.bv01]
+name = "bv01"
+base_url = "http://127.0.0.1:50859/v1"
+wire_api = "responses"
+env_key = "BV01_FAKE_OPENAI_KEY"
+[permissions.bv01.filesystem]
+":minimal" = "read"
+"/private/tmp/bv01-228-codex-interactive/workspace" = "read"
+"/Users/tony/.local/share/mise/installs/python/3.14.6" = "read"
+"/private/tmp/bv01-228-codex-interactive/relay-run-r2" = "deny"
+"/private/tmp/bv01-228-codex-interactive/codex" = "deny"
+"/private/tmp/bv01-228-codex-headless" = "deny"
+"/private/tmp/bv01-228-claude-headless" = "deny"
+"/private/tmp/bv01-228-claude-interactive" = "deny"
+[permissions.bv01.network]
+enabled = true
+[permissions.bv01.network.unix_sockets]
+"/private/tmp/bv01-228-codex-interactive/gateway.sock" = "allow"
+[tui]
+screen_reader_detection_done = true
