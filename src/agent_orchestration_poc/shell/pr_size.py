@@ -14,8 +14,10 @@ from agent_orchestration_poc.core.pr_size import (
     Classification,
     FileResult,
     changed_fragments,
+    classify_samples,
     measure_file,
     needs_scc,
+    parse_name_status,
     total_units,
 )
 
@@ -67,19 +69,9 @@ def _scc(content: bytes, suffix: str) -> tuple[int, bool, bool]:
 
 
 def _names(base: str, head: str) -> tuple[tuple[str, str | None, str], ...]:
-    fields = _run("git", "diff", "--name-status", "-z", "-M", base, head).split(b"\0")
-    entries: list[tuple[str, str | None, str]] = []
-    cursor = 0
-    while cursor < len(fields) - 1:
-        status = fields[cursor].decode()
-        path = fields[cursor + 1].decode()
-        if status.startswith("R"):
-            entries.append((fields[cursor + 2].decode(), path, status))
-            cursor += 3
-        else:
-            entries.append((path, None, status))
-            cursor += 2
-    return tuple(entries)
+    return parse_name_status(
+        _run("git", "diff", "--name-status", "-z", "-M", base, head)
+    )
 
 
 def count(base_ref: str, head: str = "HEAD") -> tuple[FileResult, ...]:
@@ -105,13 +97,9 @@ def count(base_ref: str, head: str = "HEAD") -> tuple[FileResult, ...]:
                 for blob, suffix in ((before, old_suffix), (after, new_suffix))
                 if blob
             )
-            generated = any(item[1] for item in full)
-            minified = any(item[2] for item in full)
             removed_code = _scc("".join(fragments.removed).encode(), old_suffix)[0]
             added_code = _scc("".join(fragments.added).encode(), new_suffix)[0]
-            classification = Classification(
-                removed_code, added_code, generated, minified
-            )
+            classification = classify_samples(full, removed_code, added_code)
         results.append(
             measure_file(path, old_path, fragments, classification, patterns)
         )

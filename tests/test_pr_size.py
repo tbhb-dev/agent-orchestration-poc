@@ -16,9 +16,11 @@ from agent_orchestration_poc.core.pr_size import (
     FileResult,
     _git_lines,
     changed_fragments,
+    classify_samples,
     exclusion_reason,
     measure_file,
     needs_scc,
+    parse_name_status,
     total_units,
 )
 
@@ -110,6 +112,47 @@ def test_needs_scc(path: str, old: str | None, binary: bool, expected: bool) -> 
 @given(st.text(min_size=1))
 def test_binary_never_needs_scc(path: str) -> None:
     assert not needs_scc(path, None, (), True)
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        (b"", ()),
+        (b"M\0a.py\0", (("a.py", None, "M"),)),
+        (b"A\0a.py\0D\0b.py\0", (("a.py", None, "A"), ("b.py", None, "D"))),
+        (b"R075\0old.py\0new.py\0", (("new.py", "old.py", "R075"),)),
+    ],
+)
+def test_parse_name_status(
+    raw: bytes, expected: tuple[tuple[str, str | None, str], ...]
+) -> None:
+    assert parse_name_status(raw) == expected
+
+
+@given(st.text(alphabet="abc._/", min_size=1))
+def test_parse_modified_name(path: str) -> None:
+    assert parse_name_status(b"M\0" + path.encode() + b"\0") == ((path, None, "M"),)
+
+
+@pytest.mark.parametrize(
+    ("full", "generated", "minified"),
+    [
+        ((), False, False),
+        (((1, False, False),), False, False),
+        (((1, True, False),), True, False),
+        (((1, False, False), (1, False, True)), False, True),
+    ],
+)
+def test_classify_samples(
+    full: tuple[tuple[int, bool, bool], ...], generated: bool, minified: bool
+) -> None:
+    assert classify_samples(full, 2, 3) == Classification(2, 3, generated, minified)
+
+
+@given(st.integers(min_value=0), st.integers(min_value=0))
+def test_classify_samples_keeps_fragment_counts(removed: int, added: int) -> None:
+    result = classify_samples(((4, False, False),), removed, added)
+    assert (result.removed_code, result.added_code) == (removed, added)
 
 
 @pytest.mark.parametrize(

@@ -82,6 +82,37 @@ def needs_scc(
     return not binary and exclusion_reason(path, old_path, patterns) is None
 
 
+def parse_name_status(output: bytes) -> tuple[tuple[str, str | None, str], ...]:
+    """Turn NUL-delimited git status output into path records."""
+    fields = output.split(b"\0")
+    entries: list[tuple[str, str | None, str]] = []
+    cursor = 0
+    while cursor < len(fields) - 1:
+        status = fields[cursor].decode()
+        path = fields[cursor + 1].decode()
+        if status.startswith("R"):
+            entries.append((fields[cursor + 2].decode(), path, status))
+            cursor += 3
+        else:
+            entries.append((path, None, status))
+            cursor += 2
+    return tuple(entries)
+
+
+def classify_samples(
+    full: tuple[tuple[int, bool, bool], ...],
+    removed_code: int,
+    added_code: int,
+) -> Classification:
+    """Combine recorded scc values from both complete sides and fragments."""
+    return Classification(
+        removed_code,
+        added_code,
+        any(sample[1] for sample in full),
+        any(sample[2] for sample in full),
+    )
+
+
 def measure_file(
     path: str,
     old_path: str | None,
