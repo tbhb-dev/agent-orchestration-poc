@@ -41,3 +41,17 @@ Verified: `mise run check` exited 0 after review fixes. It reported Python core 
 Observed: The first review-round `mise run check:mutation` exited 1. Go passed at 145/149 killed (97.32%), while Python scored 9368/10511 (89.13%), below the 90% floor. Exact identity and stronger-setting assertions were added for the surviving registry and selector branches before the retry.
 
 Observed: After those assertions, a `mise run check` retry failed strict pyrefly on an untyped empty list in a new test. `mise run check:pyrefly` exited 0 after the test fixture received an explicit `list[str]` annotation. Two later `mise run check` attempts reached 800 passed tests and failed only when Quarto attempted to write `/Users/tony/Library/Application Support/quarto/logs/jupyter-kernel.log`, outside the sandbox writable roots. A previous full check in this review round had exited 0. The sandbox settings and host files were not changed.
+
+## Review round 2
+
+Verified: `git fetch origin && git merge origin/main` fetched current main, then the fast-forward-only setting required `git merge --no-ff origin/main`. The merge had no content conflicts and was committed as `bb86f1d` with `PREK_HOME=/private/tmp/prek-issue-88` so the hooks could use a writable cache.
+
+Verified: Before the fixes, `mise exec -- uv run pytest -q tests/test_gate_changes.py -k 'golangci_selector_findings_have_exact_identity or existing_unclassified_gate_controls_fail_closed'` exited 1 with both tests failing. The actual configuration probes produced no finding for Biome `error` to `warn` and golangci `generated: lax`; the removed `nestif` finding ID contained a space. After the fixes and additional registry integration coverage, `mise exec -- uv run pytest -q tests/test_gate_changes.py --run-integration` exited 0 with 94 passed cases.
+
+Observed: The first `mise run check` attempt reached 803 passing coverage tests and passed Python core line 97.33%, core branch 93.88%, shell line 74.23%, Go core statement 96.43%, and Go shell statement 74.58% floors. It exited 1 when the `gobco -branch internal/core/relay` subprocess returned 1 without stderr in the wrapper. A direct `mise exec -- gobco -branch internal/core/relay` retry exited 0 with 34/38 branches. The mutation task was running concurrently with the failed aggregate attempt.
+
+Observed: `mise run check:mutation` exited 1 with Go 145/149 killed (97.32%) and Python 9591/10662 killed (89.95%). Exact Biome severity transition tests were added for the surviving branches before the next Python mutation run.
+
+Verified: `mise run check:mutation:python` then exited 0 with 9627/10662 killed (90.29%). The earlier full mutation task's Go result remained 145/149 (97.32%).
+
+Observed: A full `mise run check` retry after formatting exited 1 in the unrelated notebook integration test because Quarto tried to write `/Users/tony/Library/Application Support/quarto/logs/jupyter-kernel.log` outside this sandbox. It ran 807 passing tests and one failing notebook test before stopping coverage. No sandbox escape or host setting was changed. The focused gate suite passed all 94 tests, including its shell integration case.

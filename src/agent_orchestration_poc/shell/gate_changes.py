@@ -12,6 +12,7 @@ from agent_orchestration_poc.core.gate_changes import (
     compare_registries,
     match_justifications,
     monitored_path,
+    reconcile_registries,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -46,8 +47,9 @@ def run(base: str, head: str, body_file: Path) -> int:
     merge_base = _git("merge-base", base, head).strip()
     baseline_text = _content(merge_base, "config/gate-registry.toml")
     head_text = _content(head, "config/gate-registry.toml")
-    registry = tomllib.loads(baseline_text or head_text)
-    head_registry = tomllib.loads(head_text) if head_text else registry
+    baseline_registry = tomllib.loads(baseline_text or head_text)
+    head_registry = tomllib.loads(head_text) if head_text else baseline_registry
+    registry = reconcile_registries(baseline_registry, head_registry)
     paths = tuple(
         path
         for path in _git(

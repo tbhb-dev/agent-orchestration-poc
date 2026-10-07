@@ -24,6 +24,7 @@ from agent_orchestration_poc.core.gate_changes import (
     compare_registries,
     match_justifications,
     monitored_path,
+    reconcile_registries,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -99,7 +100,7 @@ def test_golangci_selector_findings_have_exact_identity() -> None:
     before = "linters:\n  enable:\n    - funlen\n    - nestif\n  settings:\n"
     after = before.replace("    - nestif\n", "")
     assert _golangci_selectors(before, after) == (
-        Finding("gate:gate:.golangci.yml:- nestif:removed", "- nestif"),
+        Finding("gate:gate:.golangci.yml:nestif:removed", "nestif"),
     )
     assert _golangci_selectors(before, before + "    - new\n") == ()
     assert _golangci_selectors(before, "linters:\n") == (
@@ -108,6 +109,54 @@ def test_golangci_selector_findings_have_exact_identity() -> None:
             "linter enable list changed syntax",
         ),
     )
+    finding = _golangci_selectors(before, after)
+    assert (
+        match_justifications(
+            finding, f"## Gate justifications\n\n- {finding[0].id}: Reviewed removal.\n"
+        )
+        == ()
+    )
+
+
+def test_existing_unclassified_gate_controls_fail_closed() -> None:
+    biome = (CONFIG_ROOT / "biome.json").read_text()
+    warning = biome.replace('"level": "error"', '"level": "warn"', 1)
+    go = (CONFIG_ROOT / ".golangci.yml").read_text()
+    lax = go.replace("  exclusions:\n", "  exclusions:\n    generated: lax\n", 1)
+    for path, before, after in (
+        ("biome.json", biome, warning),
+        (".golangci.yml", go, lax),
+    ):
+        findings = compare({path: before}, {path: after}, REGISTRY)
+        assert findings
+        assert match_justifications(findings, "")
+
+
+@pytest.mark.parametrize(
+    ("previous", "current", "change"),
+    [
+        ("error", "warn", "weakened"),
+        ("warn", "off", "weakened"),
+        ("off", "warn", None),
+        ("warn", "error", None),
+        ("error", "unsupported", "unknown"),
+    ],
+)
+def test_biome_rule_level_changes(
+    previous: str, current: str, change: str | None
+) -> None:
+    def document(level: str) -> dict[str, Any]:
+        return {"linter": {"rules": {"complexity": {"rule": {"level": level}}}}}
+
+    findings = _biome_changes(document(previous), document(current), "", "")
+    if change is None:
+        assert findings == ()
+    else:
+        kind = "gate" if change == "weakened" else "syntax"
+        assert len(findings) == 1
+        assert (
+            findings[0].id == f"gate:{kind}:biome.json:complexity.rule.level:{change}"
+        )
 
 
 def test_registry_change_keeps_baseline_gate_coverage() -> None:
@@ -127,6 +176,23 @@ def test_registry_change_keeps_baseline_gate_coverage() -> None:
             {".gremlins.yaml": config}, {".gremlins.yaml": lowered}, baseline
         )
     )
+
+
+def test_registry_extension_parses_changed_config() -> None:
+    before = (CONFIG_ROOT / "config/gate-registry.toml").read_text()
+    old_pattern = "max-complexity = (?P<value>\\d+)"
+    new_pattern = "max-complexity\\s*=\\s*(?P<value>\\d+)"
+    assert old_pattern in before
+    after = before.replace(old_pattern, new_pattern, 1)
+    baseline = tomllib.loads(before)
+    registry = reconcile_registries(baseline, tomllib.loads(after))
+    config = (CONFIG_ROOT / "pyproject.toml").read_text()
+    changed = config.replace("max-complexity = 10", "max-complexity=10", 1)
+    findings = compare(
+        {"pyproject.toml": config}, {"pyproject.toml": changed}, registry
+    )
+    assert not any(f.id.startswith("gate:syntax:") for f in findings)
+    assert compare_registries(before, after)
 
 
 @pytest.mark.parametrize(
@@ -485,6 +551,8 @@ def test_shell_collects_merge_base_and_current_body(
     (tmp_path / ".github/workflows").mkdir(parents=True)
     workflow = tmp_path / ".github/workflows/check.yml"
     workflow.write_text("on: pull_request\n")
+    config = tmp_path / "pyproject.toml"
+    config.write_text((CONFIG_ROOT / "pyproject.toml").read_text())
     subprocess.run(["git", "init", "-q"], check=True)
     subprocess.run(["git", "add", "."], check=True)
     identity = ["-c", "user.name=Test", "-c", "user.email=test@example.invalid"]
@@ -499,3 +567,28 @@ def test_shell_collects_merge_base_and_current_body(
     assert shell.run(base, head, body) == 1
     body.write_text((FIXTURES / "reasons.txt").read_text())
     assert shell.run(base, head, body) == 0
+    registry_path = tmp_path / "config/gate-registry.toml"
+    old_registry = registry_path.read_text()
+    registry_path.write_text(
+        old_registry.replace(
+            "max-complexity = (?P<value>\\d+)",
+            "max-complexity\\s*=\\s*(?P<value>\\d+)",
+            1,
+        )
+    )
+    config.write_text(
+        config.read_text().replace("max-complexity = 10", "max-complexity=10", 1)
+    )
+    subprocess.run(["git", "add", "."], check=True)
+    subprocess.run(
+        ["git", *identity, "commit", "-qm", "registry extension"], check=True
+    )
+    extended_head = subprocess.check_output(
+        ["git", "rev-parse", "HEAD"], text=True
+    ).strip()
+    registry_finding = compare_registries(old_registry, registry_path.read_text())[0]
+    body.write_text(
+        (FIXTURES / "reasons.txt").read_text()
+        + f"- {registry_finding.id}: Extend parser for equivalent spacing.\n"
+    )
+    assert shell.run(base, extended_head, body) == 0

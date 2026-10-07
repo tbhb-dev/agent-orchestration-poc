@@ -165,19 +165,20 @@ def _yaml_exclusions(path: str, before: str, after: str) -> tuple[Finding, ...]:
     lines = _added_lines(
         old[1].split("formatters:", 1)[0], new[1].split("formatters:", 1)[0]
     )
-    return tuple(
-        Finding(
-            _identifier(
-                "exclusion",
-                path,
-                hashlib.sha256(line.strip().encode()).hexdigest()[:12],
-                "added",
-            ),
-            line.strip(),
-        )
-        for line in lines
-        if line.strip().startswith("-")
-    )
+    findings = []
+    for line in lines:
+        value = line.strip()
+        if not value or value.startswith("#"):
+            continue
+        if value.startswith("-"):
+            kind, change = "exclusion", "added"
+        elif value.endswith(":"):
+            continue
+        else:
+            kind, change = "syntax", "unknown"
+        digest = hashlib.sha256(value.encode()).hexdigest()[:12]
+        findings.append(Finding(_identifier(kind, path, digest, change), value))
+    return tuple(findings)
 
 
 def _biome_changes(
@@ -209,6 +210,42 @@ def _biome_changes(
                 "Biome rule set to off",
             )
         )
+    for category in old_rules.keys() & new_rules.keys():
+        old_category = old_rules[category]
+        new_category = new_rules[category]
+        if not isinstance(old_category, dict) or not isinstance(new_category, dict):
+            continue
+        for name in old_category.keys() & new_category.keys():
+            old_rule = old_category[name]
+            new_rule = new_category[name]
+            if not isinstance(old_rule, dict) or not isinstance(new_rule, dict):
+                continue
+            previous = old_rule.get("level")
+            current = new_rule.get("level")
+            levels = {"off": 0, "warn": 1, "error": 2}
+            if previous != current:
+                if (
+                    previous in levels
+                    and current in levels
+                    and levels[current] < levels[previous]
+                ):
+                    findings.append(
+                        Finding(
+                            _identifier(
+                                "gate", path, f"{category}.{name}.level", "weakened"
+                            ),
+                            f"{category}.{name} level: {previous} to {current}",
+                        )
+                    )
+                elif previous not in levels or current not in levels:
+                    findings.append(
+                        Finding(
+                            _identifier(
+                                "syntax", path, f"{category}.{name}.level", "unknown"
+                            ),
+                            f"{category}.{name} level changed to unsupported value",
+                        )
+                    )
     return tuple(findings)
 
 
@@ -242,7 +279,10 @@ def _golangci_selectors(before: str, after: str) -> tuple[Finding, ...]:
     )
     return tuple(
         Finding(
-            _identifier("gate", ".golangci.yml", line.strip(), "removed"), line.strip()
+            _identifier(
+                "gate", ".golangci.yml", line.strip().removeprefix("- "), "removed"
+            ),
+            line.strip().removeprefix("- "),
         )
         for line in sorted(removed)
     )
@@ -407,6 +447,43 @@ def compare_registries(before: str, after: str) -> tuple[Finding, ...]:
             )
         )
     return tuple(findings)
+
+
+def reconcile_registries(
+    baseline: Mapping[str, Any], head: Mapping[str, Any]
+) -> dict[str, Any]:
+    """Use head parsing patterns while retaining every baseline registration."""
+    result: dict[str, Any] = {
+        "review_paths": tuple(
+            dict.fromkeys((*baseline["review_paths"], *head["review_paths"]))
+        ),
+    }
+    for section, key_field in (
+        ("thresholds", "key"),
+        ("required", "key"),
+        ("suppressions", "kind"),
+    ):
+        old = tuple(baseline[section])
+        new = tuple(head[section])
+        current = {(entry.get("path"), entry[key_field]): entry for entry in new}
+        retained = []
+        for entry in old:
+            replacement = current.get((entry.get("path"), entry[key_field]))
+            retained.append(
+                {**entry, "pattern": replacement["pattern"]}
+                if replacement is not None
+                else entry
+            )
+        known = {(entry.get("path"), entry[key_field]) for entry in old}
+        result[section] = (
+            *retained,
+            *(
+                entry
+                for entry in new
+                if (entry.get("path"), entry[key_field]) not in known
+            ),
+        )
+    return result
 
 
 def compare(
