@@ -19,21 +19,29 @@ Native Codex session records have precedence over repeated native copies and cap
 ```{python}
 #| label: inventory-and-events
 import csv
+import gzip
 import hmac
+import io
 import json
 import os
-import runpy
 from collections import Counter, defaultdict
 from datetime import UTC, datetime
 from hashlib import sha256
 from pathlib import Path
 
-rules = runpy.run_path("normalize.py")
+from agent_orchestration_poc.core.analysis import transcript_retro
+from agent_orchestration_poc.shell.analysis.transcript_retro import (
+    private_map_destination,
+)
+
+rules = vars(transcript_retro)
 root = Path(os.environ["TRANSCRIPT_SNAPSHOT_ROOT"])
 key = Path(os.environ["TRANSCRIPT_HMAC_KEY_FILE"]).read_bytes()
 assert len(key) >= 32
-map_path = Path(os.environ.get("TRANSCRIPT_PRIVATE_MAP", "/private/tmp/transcript-108-source-map.csv"))
-assert not map_path.is_relative_to(Path.cwd())
+repository_root = Path.cwd().parents[1].resolve()
+source_root = Path(os.environ["TRANSCRIPT_REPOSITORY_ROOT"]).resolve()
+roots = (str(source_root),)
+map_path = private_map_destination(Path(os.environ.get("TRANSCRIPT_PRIVATE_MAP", "/private/tmp/transcript-108-source-map.csv")), repository_root, source_root)
 evidence = Path("evidence")
 evidence.mkdir(exist_ok=True)
 inventory = []
@@ -60,29 +68,13 @@ for path in sorted(p for p in root.rglob("*") if p.is_file()):
             row["records"] = str(len(records))
             row["first_utc"], row["last_utc"], unknown = rules["record_range"](records)
             row["unknown_times"] = str(unknown + bad)
-            row["harness"] = "codex" if kind == "codex-native" else "claude"
+            row.update(rules["source_metadata"](kind, records, roots))
             if kind == "codex-native":
-                _, member, row["model"], row["effort"] = rules["session_details"](records)
-                row["role"] = rules["session_actor"](records)
-                row["state"] = "included" if member else "excluded"
-                row["reason"] = "" if member else "no repository cwd marker"
-                if member:
+                if row["state"] == "included":
                     native_paths.append(path)
-                    native.extend(rules["normalize_codex"](records, key, source_id))
-            else:
-                member = any("agent-orchestration-poc" in str(record.get("cwd", "")) for _, record in records)
-                models = {record.get("message", {}).get("model") for _, record in records if record.get("type") == "assistant" and isinstance(record.get("message"), dict)}
-                efforts = {record.get("effort") for _, record in records if record.get("type") == "assistant"}
-                row["model"] = ",".join(sorted(value for value in models if isinstance(value, str)))
-                row["effort"] = ",".join(sorted(value for value in efforts if isinstance(value, str)))
-                row["role"] = "child agent" if any(record.get("isSidechain") is True for _, record in records) else "coordinator"
-                row["state"] = "deferred" if member else "excluded"
-                row["reason"] = "Claude normalization deferred" if member else "no repository cwd marker"
+                    native.extend(rules["normalize_codex"](records, key, source_id, roots))
         else:
-            row["harness"] = "codex" if kind == "captured-run" else "github" if kind == "webhook" else ""
-            row["role"] = "captured run log" if kind == "captured-run" else "external delivery"
-            row["state"] = "deferred" if kind == "captured-run" else "excluded"
-            row["reason"] = "alternate capture pending matching, metadata unparsed" if kind == "captured-run" else "outside session-event population, metadata unparsed"
+            row.update(rules["source_metadata"](kind, [], roots))
     except (OSError, UnicodeError, ValueError) as error:
         row["state"] = "unreadable"
         row["reason"] = type(error).__name__
@@ -93,13 +85,17 @@ rules["validate_export"](events)
 events.sort(key=lambda row: (row["timestamp_utc"], row["event_id"]))
 
 def write_csv(path, rows, fields):
-    with path.open("w", newline="") as output:
-        writer = csv.DictWriter(output, fieldnames=fields, lineterminator="\n")
-        writer.writeheader()
-        writer.writerows(rows)
+    output = io.StringIO(newline="")
+    writer = csv.DictWriter(output, fieldnames=fields, lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(rows)
+    if path.suffix == ".gz":
+        path.write_bytes(gzip.compress(output.getvalue().encode(), compresslevel=9, mtime=0))
+    else:
+        path.write_text(output.getvalue())
 
-write_csv(evidence / "inventory.csv", inventory, tuple(inventory[0]))
-write_csv(evidence / "events.csv", events, rules["EVENT_FIELDS"])
+write_csv(evidence / "inventory.csv.gz", inventory, tuple(inventory[0]))
+write_csv(evidence / "events.csv.gz", events, rules["EVENT_FIELDS"])
 with map_path.open("w", newline="") as output:
     writer = csv.writer(output)
     writer.writerow(("source_id", "private_path"))

@@ -1,6 +1,5 @@
 """Synthetic contracts for session normalization and privacy."""
 
-import runpy
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -9,15 +8,12 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
-MODULE = (
-    Path(__file__).resolve().parents[1] / "experiments/18-transcript-retro/normalize.py"
-)
-if not MODULE.is_file():
-    # Mutmut copies tests under mutants/ without experiment scripts.
-    MODULE = MODULE.parents[3] / MODULE.relative_to(MODULE.parents[2])
+from agent_orchestration_poc.core.analysis import transcript_retro
+
 FIXTURES = Path(__file__).parent / "fixtures/transcript_retro"
-rules: dict[str, Any] = runpy.run_path(str(MODULE))
+rules: dict[str, Any] = vars(transcript_retro)
 KEY = b"synthetic-test-key-with-at-least-32-bytes"
+ROOTS = ("/tmp/agent-orchestration-poc", "/synthetic/agent-orchestration-poc")  # noqa: S108 - fixture cwd
 
 
 @pytest.mark.parametrize(
@@ -63,13 +59,13 @@ def test_native_fixture_preserves_unknowns_and_deduplicates() -> None:
         "2026-09-27T04:00:00+00:00",
         0,
     )
-    assert rules["session_details"](records) == (
+    assert rules["session_details"](records, ROOTS) == (
         "synthetic-session",
         True,
         "synthetic-model",
         "",
     )
-    rows = rules["normalize_codex"](records, KEY, "S1")
+    rows = rules["normalize_codex"](records, KEY, "S1", ROOTS)
     assert [row["kind"] for row in rows] == ["call", "output", "wait", "token"]
     assert rows[3]["input_tokens"] == "12"
     assert rows[3]["output_tokens"] == ""
@@ -78,7 +74,7 @@ def test_native_fixture_preserves_unknowns_and_deduplicates() -> None:
         (FIXTURES / "repeated-capture.jsonl").read_text().splitlines()
     )
     replay = records[:2] + repeated
-    other = rules["normalize_codex"](replay, KEY, "S2")
+    other = rules["normalize_codex"](replay, KEY, "S2", ROOTS)
     unique, duplicate, ambiguous = rules["deduplicate"](rows + other)
     assert len(unique) == 4
     assert duplicate == 3
@@ -178,7 +174,61 @@ def test_child_actor_and_foreign_session() -> None:
             },
         )
     ]
-    assert rules["normalize_codex"](foreign, KEY, "S1") == []
+    assert rules["normalize_codex"](foreign, KEY, "S1", ROOTS) == []
+
+
+def test_similarly_named_directory_is_not_repository_member() -> None:
+    """A matching repository name prefix does not grant membership."""
+    records, _ = rules["parse_jsonl"](
+        (FIXTURES / "codex-native.jsonl").read_text().splitlines()
+    )
+    foreign = list(records)
+    first = dict(foreign[0][1])
+    first["payload"] = dict(
+        first["payload"], cwd="/synthetic/agent-orchestration-poc-unrelated"
+    )
+    foreign[0] = (1, first)
+    assert rules["normalize_codex"](foreign, KEY, "S1", ROOTS) == []
+
+
+def test_claude_similarly_named_directory_is_excluded() -> None:
+    """Claude inventory uses the same exact root policy as Codex."""
+    records = [(1, {"cwd": "/synthetic/agent-orchestration-poc-unrelated"})]
+    assert (
+        rules["source_metadata"]("claude-native", records, ROOTS)["state"] == "excluded"
+    )
+    records = [(1, {"cwd": "/synthetic/agent-orchestration-poc/.worktrees/child"})]
+    assert (
+        rules["source_metadata"]("claude-native", records, ROOTS)["state"] == "deferred"
+    )
+
+
+@pytest.mark.integration
+def test_private_map_cannot_resolve_inside_repository(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Reject relative, root-level, and symlink paths before writing."""
+    from agent_orchestration_poc.shell.analysis.transcript_retro import (  # noqa: PLC0415 - mutmut copies only core source
+        private_map_destination,
+    )
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    original = tmp_path / "original"
+    original.mkdir()
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    target = repo / "private-map.csv"
+    link = outside / "linked-map.csv"
+    link.symlink_to(target)
+    monkeypatch.chdir(repo)
+    for candidate in (Path("private-map.csv"), target, link, original / "map.csv"):
+        with pytest.raises(ValueError, match="outside the repository"):
+            private_map_destination(candidate, repo, original)
+    assert (
+        private_map_destination(outside / "safe.csv", repo, original)
+        == outside / "safe.csv"
+    )
 
 
 def test_cross_midnight_wait_uses_prior_call() -> None:
@@ -190,7 +240,7 @@ def test_cross_midnight_wait_uses_prior_call() -> None:
             '{"timestamp":"2026-09-26T04:00:01Z","type":"response_item","payload":{"type":"function_call_output","call_id":"cid","output":"ok"}}',
         ]
     )
-    rows = rules["normalize_codex"](records, KEY, "S1")
+    rows = rules["normalize_codex"](records, KEY, "S1", ROOTS)
     assert [row["kind"] for row in rows] == ["output", "wait"]
     assert rows[1]["duration_ms"] == "3000"
 

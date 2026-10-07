@@ -2,6 +2,7 @@
 
 import hmac
 import json
+import posixpath
 import re
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
@@ -17,13 +18,13 @@ __all__ = [
     "record_range",
     "session_actor",
     "session_details",
+    "source_metadata",
     "source_type",
     "validate_export",
 ]
 
 DAY_START = datetime(2026, 9, 26, 4, tzinfo=UTC)
 DAY_END = datetime(2026, 9, 27, 4, tzinfo=UTC)
-REPO = "agent-orchestration-poc"
 EVENT_FIELDS = (
     "event_id",
     "source_id",
@@ -110,8 +111,19 @@ def parse_jsonl(lines: list[str]) -> tuple[list[tuple[int, dict[str, Any]]], int
     return records, bad
 
 
+def repository_member(cwd: object, roots: tuple[str, ...]) -> bool:
+    """Match a repository root or a path below it on a component boundary."""
+    if not isinstance(cwd, str) or not cwd.startswith("/"):
+        return False
+    path = posixpath.normpath(cwd)
+    return any(
+        path == root or path.startswith(root.rstrip("/") + "/") for root in roots
+    )
+
+
 def session_details(
     records: list[tuple[int, dict[str, Any]]],
+    roots: tuple[str, ...],
 ) -> tuple[str | None, bool, str, str]:
     """Extract Codex session identity, repository membership, model, and effort."""
     session_id = None
@@ -126,7 +138,7 @@ def session_details(
             session_id = payload.get("id") or payload.get("session_id")
         if record.get("type") in {"session_meta", "turn_context"}:
             cwd = payload.get("cwd")
-            member |= isinstance(cwd, str) and REPO in cwd
+            member |= repository_member(cwd, roots)
         if record.get("type") == "turn_context":
             if isinstance(payload.get("model"), str):
                 models.add(payload["model"])
@@ -145,6 +157,70 @@ def session_actor(records: list[tuple[int, dict[str, Any]]]) -> str:
             ):
                 return "child agent"
     return "worker"
+
+
+def source_metadata(
+    kind: str, records: list[tuple[int, dict[str, Any]]], roots: tuple[str, ...]
+) -> dict[str, str]:
+    """Classify source membership and recorded harness metadata from values."""
+    if kind == "codex-native":
+        _, member, model, effort = session_details(records, roots)
+        return {
+            "harness": "codex",
+            "model": model,
+            "effort": effort,
+            "role": session_actor(records),
+            "state": "included" if member else "excluded",
+            "reason": "" if member else "no repository cwd marker",
+        }
+    if kind == "claude-native":
+        member = any(
+            repository_member(record.get("cwd"), roots) for _, record in records
+        )
+        models = {
+            record.get("message", {}).get("model")
+            for _, record in records
+            if record.get("type") == "assistant"
+            and isinstance(record.get("message"), dict)
+        }
+        efforts = {
+            record.get("effort")
+            for _, record in records
+            if record.get("type") == "assistant"
+        }
+        return {
+            "harness": "claude",
+            "model": ",".join(
+                sorted(value for value in models if isinstance(value, str))
+            ),
+            "effort": ",".join(
+                sorted(value for value in efforts if isinstance(value, str))
+            ),
+            "role": "child agent"
+            if any(record.get("isSidechain") is True for _, record in records)
+            else "coordinator",
+            "state": "deferred" if member else "excluded",
+            "reason": "Claude normalization deferred"
+            if member
+            else "no repository cwd marker",
+        }
+    if kind == "captured-run":
+        return {
+            "harness": "codex",
+            "model": "",
+            "effort": "",
+            "role": "captured run log",
+            "state": "deferred",
+            "reason": "alternate capture pending matching, metadata unparsed",
+        }
+    return {
+        "harness": "github" if kind == "webhook" else "",
+        "model": "",
+        "effort": "",
+        "role": "external delivery",
+        "state": "excluded",
+        "reason": "outside session-event population, metadata unparsed",
+    }
 
 
 def record_range(records: list[tuple[int, dict[str, Any]]]) -> tuple[str, str, int]:
@@ -311,10 +387,13 @@ def other_event(
 
 
 def normalize_codex(
-    records: list[tuple[int, dict[str, Any]]], key: bytes, source_id: str
+    records: list[tuple[int, dict[str, Any]]],
+    key: bytes,
+    source_id: str,
+    roots: tuple[str, ...],
 ) -> list[dict[str, str]]:
     """Extract Codex calls, outputs, explicit failures, usage, and tool waits."""
-    session_id, member, _, _ = session_details(records)
+    session_id, member, _, _ = session_details(records, roots)
     if not member or not isinstance(session_id, str):
         return []
     rows: list[dict[str, str]] = []
