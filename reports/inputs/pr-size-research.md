@@ -28,6 +28,8 @@ Verified: `mise run check:pr-size-contract` exited 0 with all 52 fixture, table,
 
 Verified: `mise run pr:size -- origin/main` at commit `093c9d3` exited 0 and measured 463 units across the implementation commit. The report keeps the generated workflow reference page and test fixtures at zero with their exclusion reasons. The research note and fixture-results file are under `reports/inputs/` and will also contribute zero to the final branch total.
 
+Verified: the same command at commit `b434768` exited 0 and measured 511 units for the full branch against `origin/main`. The final evidence-only note edit stays under the excluded `reports/inputs/` path, so it does not change that unit total.
+
 Verified: `mise run check:mutation` exited 0 after moving the shell import into the integration test. The Go subtask killed 145 of 149 mutants, with 97.32% test efficacy and 100% coverage. A final `mise run check:mutation:python` on the added pure parsing functions exited 0 with 8,514 of 9,430 mutants killed, a 90.29% score. The first aggregate mutation run exited 1 because the test module imported the shell at collection time inside mutmut's core-only test copy.
 
 Verified: `mise exec -- uv run pytest tests/test_pr_size.py --run-integration --cov=agent_orchestration_poc.core.pr_size --cov=agent_orchestration_poc.shell.pr_size --cov-report=term` exited 0 on the final source with 52 tests passing, 100% core line and branch coverage, and 55 of 71 shell statements covered. The combined shell line and branch display was 76%. This targeted check does not render the unrelated notebook.
