@@ -94,3 +94,5 @@ The implementer REST account check returned `tbhb-agent`. PR #289 now has `area/
 `mise run vale:sync` and `mise run fmt` exited 0. The local `mise run check` completed 620 standard tests with 94 integration skips and 714 coverage tests; Python and Go line and statement floors passed. It stalled inside `gobco -branch` after the statement floors, and the implementer interrupted it after 668 seconds, so this local aggregate run did not complete. Hosted CI remains the full gate for the pushed head. The format task's unrelated generated analysis artifacts were discarded.
 
 `mise run check:mutation` exited 0. Go classified 149 mutants, killing 145 (97.32% efficacy); Python killed 8,427 of 9,337 mutants (90.25% score).
+
+After the latest `main` merge, a second `mise run check` exited 1 in 48 seconds: 713 coverage tests passed and `test_render_synthetic_notebook` failed because Quarto could not write `/Users/tony/Library/Application Support/quarto/logs/jupyter-kernel.log` under this sandbox. This was the same local render boundary recorded above, before the retrospective notebook's kernel execution. Hosted CI is required to verify the complete suite.
