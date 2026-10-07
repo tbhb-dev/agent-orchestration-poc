@@ -46,7 +46,9 @@ def run(base: str, head: str, body_file: Path) -> int:
     merge_base = _git("merge-base", base, head).strip()
     paths = tuple(
         path
-        for path in _git("diff", "--name-only", merge_base, head).splitlines()
+        for path in _git(
+            "diff", "--no-renames", "--name-only", merge_base, head
+        ).splitlines()
         if monitored_path(path, registry)
     )
     before = {path: _content(merge_base, path) for path in paths}

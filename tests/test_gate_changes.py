@@ -13,6 +13,11 @@ from hypothesis import given
 from hypothesis import strategies as st
 
 from agent_orchestration_poc.core.gate_changes import (
+    Finding,
+    _biome_changes,
+    _flatten_exclusions,
+    _identifier,
+    _yaml_exclusions,
     compare,
     match_justifications,
     monitored_path,
@@ -61,6 +66,10 @@ def test_each_threshold_direction(entry: dict[str, Any]) -> None:
     )
     assert not any(
         f.id.startswith("gate:threshold:")
+        for f in compare({path: before}, {path: after}, REGISTRY)
+    )
+    assert not any(
+        f.id.startswith("gate:syntax:")
         for f in compare({path: before}, {path: after}, REGISTRY)
     )
 
@@ -159,7 +168,85 @@ def test_unknown_numeric_gate_fails_closed(path: str, addition: str) -> None:
     else:
         after = before + "\n" + addition + "\n"
     findings = compare({path: before}, {path: after}, REGISTRY)
-    assert any(f.id.startswith(f"gate:syntax:{path}:") and f.detail for f in findings)
+    if path.endswith(".json"):
+        expected = Finding(
+            f"gate:syntax:{path}:maxFuture:unknown",
+            "unregistered numeric gate: maxFuture",
+        )
+    else:
+        digest = hashlib.sha256(addition.encode()).hexdigest()[:12]
+        expected = Finding(f"gate:syntax:{path}:{digest}:unknown", addition)
+    assert expected in findings
+
+
+@given(st.text(alphabet="abc", min_size=1, max_size=12))
+def test_biome_rule_removal_property(name: str) -> None:
+    old = {"linter": {"rules": {name: {"level": "error"}}}}
+    new: dict[str, Any] = {"linter": {"rules": {}}}
+    assert _biome_changes(old, new, "", "") == (
+        Finding(f"gate:gate:biome.json:{name}:removed", f"linter rule {name} removed"),
+    )
+
+
+@pytest.mark.parametrize(
+    ("old", "new"),
+    [
+        ({}, {}),
+        ({"linter": {}}, {"linter": {}}),
+        ({"linter": {"rules": {}}}, {"linter": {"rules": {}}}),
+    ],
+)
+def test_biome_missing_optional_sections(
+    old: dict[str, Any], new: dict[str, Any]
+) -> None:
+    assert _biome_changes(old, new, "", "") == ()
+
+
+def test_biome_retained_rule_and_existing_disabled_level() -> None:
+    rules = {"linter": {"rules": {"kept": {"level": "error"}}}}
+    assert _biome_changes(rules, rules, "", "") == ()
+    off = '"level": "off"'
+    assert _biome_changes({}, {}, off, off) == ()
+
+
+@pytest.mark.parametrize("key", ["ignore", "exclude", "skip", "filterwarnings"])
+def test_nested_exclusion_keys(key: str) -> None:
+    value = {"tool": {"nested": {key: ["a", "b"]}}}
+    assert _flatten_exclusions(value) == frozenset(
+        {f'tool.nested.{key}="a"', f'tool.nested.{key}="b"'}
+    )
+
+
+def test_normalized_finding_id() -> None:
+    assert (
+        _identifier("gate", "./path\\to/file", "key", "removed")
+        == "gate:gate:path/to/file:key:removed"
+    )
+
+
+def test_yaml_exclusions_only_in_linter_section() -> None:
+    before = "linters:\n  exclusions:\n    rules:\n      - path: old\nformatters:\n"
+    after = before.replace("      - path: old", "      - path: old\n      - path: new")
+    digest = hashlib.sha256(b"- path: new").hexdigest()[:12]
+    assert _yaml_exclusions(".golangci.yml", before, after) == (
+        Finding(f"gate:exclusion:.golangci.yml:{digest}:added", "- path: new"),
+    )
+    assert (
+        _yaml_exclusions(".golangci.yml", before, before + "  enable:\n    - new\n")
+        == ()
+    )
+    assert _yaml_exclusions(".golangci.yml", "linters:\n", after) == ()
+
+
+def test_malformed_and_missing_baseline_configs_fail_closed() -> None:
+    valid = (CONFIG_ROOT / "pyproject.toml").read_text()
+    broken = valid + "\n[invalid\n"
+    findings = compare({"pyproject.toml": valid}, {"pyproject.toml": broken}, REGISTRY)
+    assert any(f.id == "gate:syntax:pyproject.toml:config:unknown" for f in findings)
+    before = '{"minLines": "auto", "minTokens": 50}'
+    after = '{"minLines": 5, "minTokens": 50}'
+    findings = compare({".jscpd.json": before}, {".jscpd.json": after}, REGISTRY)
+    assert any(f.id == "gate:syntax:.jscpd.json:minLines:unknown" for f in findings)
 
 
 def test_python_literal_is_not_a_suppression() -> None:
@@ -256,40 +343,13 @@ def test_shell_collects_merge_base_and_current_body(
     workflow.write_text("on: pull_request\n")
     subprocess.run(["git", "init", "-q"], check=True)
     subprocess.run(["git", "add", "."], check=True)
-    subprocess.run(
-        [
-            "git",
-            "-c",
-            "user.name=Test",
-            "-c",
-            "user.email=test@example.invalid",
-            "commit",
-            "-qm",
-            "base",
-        ],
-        check=True,
-    )
-    base = subprocess.run(
-        ["git", "rev-parse", "HEAD"], check=True, capture_output=True, text=True
-    ).stdout.strip()
+    identity = ["-c", "user.name=Test", "-c", "user.email=test@example.invalid"]
+    subprocess.run(["git", *identity, "commit", "-qm", "base"], check=True)
+    base = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
     workflow.write_text("on: push\n")
     subprocess.run(["git", "add", "."], check=True)
-    subprocess.run(
-        [
-            "git",
-            "-c",
-            "user.name=Test",
-            "-c",
-            "user.email=test@example.invalid",
-            "commit",
-            "-qm",
-            "head",
-        ],
-        check=True,
-    )
-    head = subprocess.run(
-        ["git", "rev-parse", "HEAD"], check=True, capture_output=True, text=True
-    ).stdout.strip()
+    subprocess.run(["git", *identity, "commit", "-qm", "head"], check=True)
+    head = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
     body = tmp_path / "body.txt"
     body.write_text("## Gate justifications\n\nNone.\n")
     assert shell.run(base, head, body) == 1

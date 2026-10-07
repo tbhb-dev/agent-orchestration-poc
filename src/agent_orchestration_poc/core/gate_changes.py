@@ -304,11 +304,8 @@ def _suppressions(
 
 
 def _python_comments(source: str) -> tuple[str, ...]:
-    return tuple(
-        token.string
-        for token in tokenize.generate_tokens(StringIO(source).readline)
-        if token.type == tokenize.COMMENT
-    )
+    tokens = tokenize.generate_tokens(StringIO(source).readline)
+    return tuple(token.string for token in tokens if token.type == tokenize.COMMENT)
 
 
 def compare(
