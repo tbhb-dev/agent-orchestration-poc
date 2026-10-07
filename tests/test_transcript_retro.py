@@ -203,6 +203,254 @@ def test_claude_similarly_named_directory_is_excluded() -> None:
     )
 
 
+def test_source_metadata_exports_exact_decisions() -> None:
+    """Keep every inventory decision in the value-only core."""
+    codex = [
+        (1, {"type": "session_meta", "payload": {"id": "sid", "cwd": ROOTS[0]}}),
+        (
+            2,
+            {"type": "turn_context", "payload": {"model": "model-b", "effort": "high"}},
+        ),
+        (3, {"type": "turn_context", "payload": {"model": "model-a", "effort": "low"}}),
+    ]
+    assert rules["source_metadata"]("codex-native", codex, ROOTS) == {
+        "harness": "codex",
+        "model": "model-a,model-b",
+        "effort": "high,low",
+        "role": "worker",
+        "state": "included",
+        "reason": "",
+    }
+    claude = [
+        (1, {"cwd": ROOTS[0], "isSidechain": True}),
+        (2, {"type": "assistant", "message": {"model": "opus"}, "effort": "medium"}),
+    ]
+    assert rules["source_metadata"]("claude-native", claude, ROOTS) == {
+        "harness": "claude",
+        "model": "opus",
+        "effort": "medium",
+        "role": "child agent",
+        "state": "deferred",
+        "reason": "Claude normalization deferred",
+    }
+    assert rules["source_metadata"]("captured-run", [], ROOTS) == {
+        "harness": "codex",
+        "model": "",
+        "effort": "",
+        "role": "captured run log",
+        "state": "deferred",
+        "reason": "alternate capture pending matching, metadata unparsed",
+    }
+    assert rules["source_metadata"]("webhook", [], ROOTS) == {
+        "harness": "github",
+        "model": "",
+        "effort": "",
+        "role": "external delivery",
+        "state": "excluded",
+        "reason": "outside session-event population, metadata unparsed",
+    }
+
+
+def test_event_fields_and_stable_ids() -> None:
+    """Assert the complete safe event schema and keyed identity."""
+    context = rules["Context"](KEY, "S1", "sid", "child agent", "turn", "model", "high")
+    row = rules["event"](
+        context,
+        7,
+        datetime(2026, 9, 26, 4, tzinfo=UTC),
+        "call",
+        "cid",
+        tool="tool",
+        status="failed",
+    )
+    assert row == {
+        "event_id": "6478b475df92af7fc10cbf7c",
+        "source_id": "S1",
+        "position": "7",
+        "timestamp_utc": "2026-09-26T04:00:00+00:00",
+        "actor": "child agent",
+        "harness": "codex",
+        "kind": "call",
+        "turn_id": "da10fecab82841cab63279f5",
+        "tool": "tool",
+        "status": "failed",
+        "output_bytes": "",
+        "duration_ms": "",
+        "input_tokens": "",
+        "output_tokens": "",
+        "total_tokens": "",
+        "model": "model",
+        "effort": "high",
+    }
+    assert rules["opaque"](KEY, "abc", "def") == "2490b9840bb4cb375ae1790b"
+
+
+def test_usage_and_abort_export_all_numeric_fields() -> None:
+    """Usage and abort rows preserve native status and numeric metadata."""
+    context = rules["Context"](KEY, "S1", "sid", "worker", "turn", "model", "medium")
+    stamp = datetime(2026, 9, 26, 4, tzinfo=UTC)
+    usage = rules["usage_event"](
+        context,
+        2,
+        stamp,
+        {
+            "response_id": "rid",
+            "usage": {"input_tokens": 11, "output_tokens": 3, "total_tokens": 14},
+        },
+    )
+    assert usage is not None
+    assert (
+        usage["kind"],
+        usage["input_tokens"],
+        usage["output_tokens"],
+        usage["total_tokens"],
+    ) == ("token", "11", "3", "14")
+    assert (usage["position"], usage["model"], usage["effort"]) == (
+        "2",
+        "model",
+        "medium",
+    )
+    aborted = rules["abort_event"](context, 3, stamp, {"turn_id": "aborted-turn"})
+    assert aborted is not None
+    assert (aborted["kind"], aborted["status"], aborted["position"]) == (
+        "failure",
+        "aborted",
+        "3",
+    )
+    assert aborted["turn_id"] == rules["opaque"](KEY, "sid", "aborted-turn")
+
+
+def test_response_events_retain_call_output_and_wait_metadata() -> None:
+    """A tool pair keeps its native identity, byte count, status, and elapsed time."""
+    context = rules["Context"](KEY, "S1", "sid", "child agent", "turn", "model", "high")
+    start = datetime(2026, 9, 26, 4, tzinfo=UTC)
+    called, pending = rules["response_events"](
+        context,
+        1,
+        start,
+        {
+            "type": "function_call",
+            "call_id": "cid",
+            "name": "tool",
+            "status": "running",
+        },
+        {},
+    )
+    assert pending == {"cid": (start, context)}
+    assert called[0]["event_id"] == "6478b475df92af7fc10cbf7c"
+    assert (called[0]["tool"], called[0]["status"], called[0]["position"]) == (
+        "tool",
+        "running",
+        "1",
+    )
+    completed, pending = rules["response_events"](
+        context,
+        2,
+        start.replace(microsecond=500000),
+        {
+            "type": "function_call_output",
+            "call_id": "cid",
+            "name": "tool",
+            "output": "é",
+        },
+        pending,
+    )
+    assert pending == {}
+    assert [row["event_id"] for row in completed] == [
+        "9a008f3f59441fb7688028e6",
+        "878cf023a27bbf693544d9b3",
+    ]
+    assert (
+        completed[0]["tool"],
+        completed[0]["output_bytes"],
+        completed[0]["position"],
+    ) == ("tool", "2", "2")
+    assert (
+        completed[1]["kind"],
+        completed[1]["duration_ms"],
+        completed[1]["position"],
+    ) == ("wait", "500", "2")
+
+
+def test_fallback_key_has_fixed_value() -> None:
+    """Canonical payload and call context define a stable missing-ID key."""
+    context = rules["Context"](KEY, "S1", "sid", "child agent", "turn", "model", "high")
+    stamp = datetime(2026, 9, 26, 4, tzinfo=UTC)
+    assert (
+        rules["fallback_id"](context, stamp, "tool", {"b": 2, "a": 1})
+        == "da1f535f255b82fb64120d39"
+    )
+
+
+def test_normalize_codex_exports_context_and_explicit_abort() -> None:
+    """A session keeps the recorded actor, model, effort, and abort status."""
+    records = [
+        (
+            1,
+            {
+                "type": "session_meta",
+                "payload": {"id": "sid", "cwd": ROOTS[0], "parent_thread_id": "parent"},
+            },
+        ),
+        (
+            2,
+            {
+                "type": "turn_context",
+                "payload": {"turn_id": "turn", "model": "model", "effort": "high"},
+            },
+        ),
+        (
+            3,
+            {
+                "timestamp": "2026-09-26T04:00:00Z",
+                "type": "response_item",
+                "payload": {
+                    "type": "function_call",
+                    "call_id": "cid",
+                    "name": "tool",
+                    "status": "running",
+                },
+            },
+        ),
+        (
+            4,
+            {
+                "timestamp": "2026-09-26T04:00:01Z",
+                "type": "response_item",
+                "payload": {
+                    "type": "function_call_output",
+                    "call_id": "cid",
+                    "output": "ok",
+                },
+            },
+        ),
+        (
+            5,
+            {
+                "timestamp": "2026-09-26T04:00:02Z",
+                "type": "event_msg",
+                "payload": {"type": "turn_aborted", "turn_id": "turn"},
+            },
+        ),
+    ]
+    rows = rules["normalize_codex"](records, KEY, "S1", ROOTS)
+    assert [row["kind"] for row in rows] == ["call", "output", "wait", "failure"]
+    assert [row["position"] for row in rows] == ["3", "4", "4", "5"]
+    assert all(
+        row["actor"] == "child agent"
+        and row["model"] == "model"
+        and row["effort"] == "high"
+        for row in rows
+    )
+    assert (
+        rows[0]["tool"],
+        rows[0]["status"],
+        rows[1]["output_bytes"],
+        rows[2]["duration_ms"],
+        rows[3]["status"],
+    ) == ("tool", "running", "2", "1000", "aborted")
+
+
 @pytest.mark.integration
 def test_private_map_cannot_resolve_inside_repository(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
