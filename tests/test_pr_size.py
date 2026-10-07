@@ -31,6 +31,20 @@ CASES = cast(
 PATTERNS = ("uv.lock", "**/vendor/**", "tests/fixtures/**")
 
 
+def _git(tmp_path: Path, *args: str) -> None:
+    subprocess.run(("git", *args), cwd=tmp_path, capture_output=True, check=True)
+
+
+def _init_pr_size_repo(tmp_path: Path, exclusions: str) -> None:
+    _git(tmp_path, "init", "-q")
+    _git(tmp_path, "config", "user.name", "Fixture")
+    _git(tmp_path, "config", "user.email", "fixture@example.invalid")
+    (tmp_path / "config").mkdir()
+    (tmp_path / "config/workflow-reference.toml").write_text(
+        f"[size]\nexcluded = {exclusions}\n"
+    )
+
+
 @pytest.mark.parametrize(
     ("before", "after", "removed", "added"),
     [
@@ -284,25 +298,16 @@ def test_shell_counts_git_changes(
         pr_size as pr_size_shell,
     )
 
-    def git(*args: str) -> None:
-        subprocess.run(("git", *args), cwd=tmp_path, capture_output=True, check=True)
-
-    git("init", "-q")
-    git("config", "user.name", "Fixture")
-    git("config", "user.email", "fixture@example.invalid")
-    (tmp_path / "config").mkdir()
-    (tmp_path / "config/workflow-reference.toml").write_text(
-        '[size]\nexcluded = ["uv.lock"]\n'
-    )
+    _init_pr_size_repo(tmp_path, '["uv.lock"]')
     (tmp_path / "old.py").write_text("value = 1\nkeep = 1\nkeep = 2\n")
-    git("add", ".")
-    git("commit", "-qm", "base")
-    git("branch", "base")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-qm", "base")
+    _git(tmp_path, "branch", "base")
     (tmp_path / "old.py").rename(tmp_path / "new.py")
     (tmp_path / "new.py").write_text("value = 2\nkeep = 1\nkeep = 2\n")
     (tmp_path / "uv.lock").write_text("lock\n")
-    git("add", "-A")
-    git("commit", "-qm", "head")
+    _git(tmp_path, "add", "-A")
+    _git(tmp_path, "commit", "-qm", "head")
     monkeypatch.setattr(pr_size_shell, "ROOT", tmp_path)
     results = pr_size_shell.count("base")
     assert [
@@ -311,3 +316,56 @@ def test_shell_counts_git_changes(
         ("new.py", 1, 1, 2),
         ("uv.lock", 1, 0, 0),
     ]
+
+
+@pytest.mark.integration
+def test_shell_counts_extensionless_script_edit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from agent_orchestration_poc.shell import (  # noqa: PLC0415 - mutmut copies only the core package
+        pr_size as pr_size_shell,
+    )
+
+    _init_pr_size_repo(tmp_path, "[]")
+    (tmp_path / "script").write_text("#!/bin/sh\necho old\n")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-qm", "base")
+    _git(tmp_path, "branch", "base")
+    (tmp_path / "script").write_text("#!/bin/sh\necho new\n")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-qm", "head")
+    monkeypatch.setattr(pr_size_shell, "ROOT", tmp_path)
+    assert pr_size_shell.count("base")[0].counted_units == 2
+    _git(tmp_path, "branch", "code-head")
+    (tmp_path / "script").write_text("#!/bin/sh\n# new comment\necho new\n")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-qm", "comment")
+    assert pr_size_shell.count("code-head")[0].counted_units == 0
+
+
+@pytest.mark.integration
+def test_cli_json_channels() -> None:
+    script = (
+        "import logging, sys; "
+        "from agent_orchestration_poc.shell import pr_size; "
+        "from agent_orchestration_poc.core.pr_size import FileResult; "
+        "logging.basicConfig(level=logging.INFO, format='%(message)s'); "
+        "pr_size.count = lambda base, head: (FileResult('a.py', None, 1, 0, 1, None),); "
+        "sys.argv = ['pr_size', 'base']; "
+        "raise SystemExit(pr_size.main())"
+    )
+    result = subprocess.run(
+        (sys.executable, "-c", script), capture_output=True, text=True, check=True
+    )
+    assert json.loads(result.stdout)["total_units"] == 1
+    assert result.stderr == ""
+    failure = script.replace(
+        "(FileResult('a.py', None, 1, 0, 1, None),)",
+        "(_ for _ in ()).throw(RuntimeError('fixture error'))",
+    )
+    result = subprocess.run(
+        (sys.executable, "-c", failure), capture_output=True, text=True, check=False
+    )
+    assert result.returncode == 1
+    assert result.stdout == ""
+    assert "PR size unavailable" in result.stderr

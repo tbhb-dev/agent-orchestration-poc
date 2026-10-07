@@ -4,6 +4,7 @@ import argparse
 import json
 import logging
 import subprocess
+import sys
 import tempfile
 import tomllib
 from dataclasses import asdict
@@ -52,20 +53,30 @@ def _blob(revision: str, path: str) -> bytes:
     return _run("git", "show", f"{revision}:{path}")
 
 
-def _scc(content: bytes, suffix: str) -> tuple[int, bool, bool]:
+def _scc(
+    content: bytes, suffix: str, language: str | None = None
+) -> tuple[int, bool, bool, str]:
     if not content:
-        return 0, False, False
+        return 0, False, False, ""
     with tempfile.TemporaryDirectory(prefix="pr-size-") as directory:
         sample = Path(directory) / f"sample{suffix}"
         sample.write_bytes(content)
-        output = _run("scc", *SCC_OPTIONS, str(sample))
+        language_option = (
+            ("--count-as-pattern", f"*:{language}:{language}") if language else ()
+        )
+        output = _run("scc", *SCC_OPTIONS, *language_option, str(sample))
     rows = cast("list[dict[str, Any]]", json.loads(output))
     if not rows:
         raise ValueError(f"scc did not classify {suffix or 'extensionless'} content")
     files = cast("list[dict[str, Any]]", rows[0]["Files"])
     if len(files) != 1:
         raise ValueError("scc returned an unexpected per-file result")
-    return int(rows[0]["Code"]), bool(files[0]["Generated"]), bool(files[0]["Minified"])
+    return (
+        int(rows[0]["Code"]),
+        bool(files[0]["Generated"]),
+        bool(files[0]["Minified"]),
+        str(rows[0]["Name"]),
+    )
 
 
 def _names(base: str, head: str) -> tuple[tuple[str, str | None, str], ...]:
@@ -97,9 +108,21 @@ def count(base_ref: str, head: str = "HEAD") -> tuple[FileResult, ...]:
                 for blob, suffix in ((before, old_suffix), (after, new_suffix))
                 if blob
             )
-            removed_code = _scc("".join(fragments.removed).encode(), old_suffix)[0]
-            added_code = _scc("".join(fragments.added).encode(), new_suffix)[0]
-            classification = classify_samples(full, removed_code, added_code)
+            removed_language = full[0][3] if before and not old_suffix else None
+            added_language = full[-1][3] if after and not new_suffix else None
+            removed_code = _scc(
+                "".join(fragments.removed).encode(), old_suffix, removed_language
+            )[0]
+            added_code = _scc(
+                "".join(fragments.added).encode(), new_suffix, added_language
+            )[0]
+            classification = classify_samples(
+                tuple(
+                    (code, generated, minified) for code, generated, minified, _ in full
+                ),
+                removed_code,
+                added_code,
+            )
         results.append(
             measure_file(path, old_path, fragments, classification, patterns)
         )
@@ -117,15 +140,15 @@ def main() -> int:
     except RuntimeError, ValueError:
         LOGGER.exception("PR size unavailable")
         return 1
-    LOGGER.info(
-        "%s",
+    sys.stdout.write(
         json.dumps(
             {
                 "total_units": total_units(results),
                 "files": [asdict(result) for result in results],
             },
             sort_keys=True,
-        ),
+        )
+        + "\n"
     )
     return 0
 
