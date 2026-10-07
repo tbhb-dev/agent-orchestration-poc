@@ -1,5 +1,11 @@
 # Host socket attribution fixture
 
+## Round 8 review repair
+
+**Verified in configuration tests:** both generated Codex profiles deny their active round 8 run directory, and the headless profile denies the round 8 capture, PID, error, and positive-control files. The runner and configuration builder now use the same round identifier. The Claude interactive preflight reads the model log in the experiment shell and checks routing acceptance in the value-only core. These checks establish the generated policy and decision behavior. Live harness confinement remains untested.
+
+**Review-fix checks:** the [round 2 command record](evidence/relay-pr269-r2-commands.txt) shows 133 focused tests passed and 786 coverage tests passed before the known Quarto sandbox failure. Go core mutation scored 97.32%, and Python core mutation scored 90.33%. The [aggregate output](evidence/relay-pr269-r2-check.raw.gz) and [mutation output](evidence/relay-pr269-r2-mutation.raw.gz) retain the exact results.
+
 ## Round 8 Claude interactive observation
 
 **Observed on 2026-10-01:** the [Claude interactive cell](evidence/relay-run-r8/claude-interactive/summary.json) passed with exit 0 on macOS 26.5.1 build 25F80 and Claude Code 2.1.284. The [listener record](evidence/relay-run-r8/claude-interactive/listener.jsonl) allowed exactly one request from peer PID 13892. Its recorded ancestry is probe Python PID 13892, Bash PID 13885, and Claude launch root PID 13462, with matching process start times. The [model log](evidence/relay-run-r8/claude-interactive/model.jsonl) records one tool-free side request followed by the tool and final requests. All three received 200. The [pane](evidence/relay-run-r8/claude-interactive/harness-pane.txt) shows one shell command and `Done.`. The earlier [routing preflight](evidence/relay-preflight-r8/model.jsonl) shows the same three request classifications without a gateway listener. Its [pane](evidence/relay-preflight-r8/pane-at-teardown.txt) shows one command. The preflight is routing evidence, while the cell is the integrated attribution observation.

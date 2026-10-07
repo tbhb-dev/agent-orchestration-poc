@@ -25,10 +25,81 @@ from agent_orchestration_poc.core.host_socket_attribution import (
     ResponderRequest,
     membership,
     peer_stable,
+    preflight_frames_error,
     request_record,
     responder_log,
     responder_reply,
 )
+
+
+@pytest.mark.parametrize(
+    ("rows", "error"),
+    [
+        (
+            [
+                {"classification": "tool", "has_bash": True},
+                {"classification": "final", "has_bash": True},
+            ],
+            None,
+        ),
+        (
+            [
+                {"classification": "side-request", "has_bash": False},
+                {"classification": "tool", "has_bash": True},
+                {"classification": "follow-up", "has_bash": False},
+                {"classification": "final", "has_bash": True},
+            ],
+            None,
+        ),
+        (
+            [{"classification": "tool", "has_bash": True}],
+            "expected one Bash tool and final frame",
+        ),
+        (
+            [
+                {"classification": "tool", "has_bash": True},
+                {"classification": "tool", "has_bash": True},
+                {"classification": "final", "has_bash": True},
+            ],
+            "expected one Bash tool and final frame",
+        ),
+        (
+            [
+                {"classification": "tool", "has_bash": False},
+                {"classification": "final", "has_bash": True},
+            ],
+            "Bash frame was not served to the Bash request",
+        ),
+        (
+            [
+                {"classification": "final", "has_bash": True},
+                {"classification": "tool", "has_bash": True},
+            ],
+            "final frame preceded Bash tool frame",
+        ),
+        (
+            [
+                {"classification": "tool", "has_bash": True},
+                {"classification": "side-request", "has_bash": True},
+                {"classification": "final", "has_bash": True},
+            ],
+            "unexpected request or Bash side request",
+        ),
+        (
+            [
+                {"classification": "tool", "has_bash": True},
+                {"classification": "retry", "has_bash": False},
+                {"classification": "final", "has_bash": True},
+            ],
+            "unexpected request or Bash side request",
+        ),
+    ],
+)
+def test_preflight_frames_error(
+    rows: list[dict[str, object]], error: str | None
+) -> None:
+    assert preflight_frames_error(rows) == error
+
 
 REPOSITORY = Path(__file__).resolve().parents[1]
 if REPOSITORY.name == "mutants":

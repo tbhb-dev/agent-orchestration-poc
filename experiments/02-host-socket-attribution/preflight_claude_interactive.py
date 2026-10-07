@@ -17,6 +17,7 @@ from agent_orchestration_poc.core.host_socket_attribution import (
     claude_trust,
     empty_input_prompt,
     launch_command,
+    preflight_frames_error,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -146,23 +147,9 @@ def wait_for_input(socket: Path, run: Path) -> None:
 def verify_frames(model_log: Path) -> None:
     """Require one Bash tool frame and its tool-result final frame."""
     rows = [json.loads(line) for line in model_log.read_text().splitlines()]
-    tool = [row for row in rows if row.get("classification") == "tool"]
-    final = [row for row in rows if row.get("classification") == "final"]
-    if len(tool) != 1 or len(final) != 1:
-        raise RuntimeError("expected one Bash tool and final frame")
-    if not tool[0].get("has_bash") or not final[0].get("has_bash"):
-        raise RuntimeError("Bash frame was not served to the Bash request")
-    if rows.index(final[0]) < rows.index(tool[0]):
-        raise RuntimeError("final frame preceded Bash tool frame")
-    if any(
-        row.get("classification") not in {"tool", "final", "side-request", "follow-up"}
-        or (
-            row.get("classification") in {"side-request", "follow-up"}
-            and row.get("has_bash")
-        )
-        for row in rows
-    ):
-        raise RuntimeError("unexpected request or Bash side request")
+    error = preflight_frames_error(rows)
+    if error is not None:
+        raise RuntimeError(error)
 
 
 def run_interactive(home: Path, run: Path, port: int, model_log: Path) -> None:

@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from agent_orchestration_poc.core.host_socket_attribution import (
+    RELAY_ROUND,
     claude_settings,
     claude_theme_choice,
     claude_trust,
@@ -101,16 +102,16 @@ def process_start(pid: int) -> str | None:
 
 def capture_gate() -> None:
     """Require the live, new capture and its positive control."""
-    capture = CAPTURE_HOME / "file-opens-relay-r8.json"
-    pid_file = CAPTURE_HOME / "file-opens-relay-r8.pid"
-    error = CAPTURE_HOME / "file-opens-relay-r8.err"
-    marker = CAPTURE_HOME / "audit-positive-relay-r8"
+    capture = CAPTURE_HOME / f"file-opens-relay-{RELAY_ROUND}.json"
+    pid_file = CAPTURE_HOME / f"file-opens-relay-{RELAY_ROUND}.pid"
+    error = CAPTURE_HOME / f"file-opens-relay-{RELAY_ROUND}.err"
+    marker = CAPTURE_HOME / f"audit-positive-relay-{RELAY_ROUND}"
     if not all(path.is_file() for path in (capture, pid_file, error, marker)):
         raise RuntimeError("capture files are absent")
     capture_offset = capture.stat().st_size
     marker.read_bytes()  # Make a fresh open event for this cell's bounded search.
 
-    needle = b"audit-positive-relay-r8"
+    needle = f"audit-positive-relay-{RELAY_ROUND}".encode()
     search_offset = capture_offset
     overlap = b""
     deadline = time.monotonic() + 5
@@ -267,12 +268,12 @@ class Cell:
     @property
     def run(self) -> Path:
         """Return this attempt's private files."""
-        return self.home / "relay-run-r8"
+        return self.home / f"relay-run-{RELAY_ROUND}"
 
     @property
     def evidence(self) -> Path:
         """Return this attempt's commit-ready evidence path."""
-        return EXPERIMENT / "evidence/relay-run-r8" / self.profile
+        return EXPERIMENT / "evidence" / f"relay-run-{RELAY_ROUND}" / self.profile
 
     @property
     def python_env(self) -> dict[str, str]:

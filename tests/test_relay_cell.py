@@ -72,6 +72,7 @@ def test_codex_profile_reads_platform_defaults_workspace_and_python(
         str(home / "relay-run-r4"): "deny",
         str(home / "relay-run-r5"): "deny",
         str(home / "relay-run-r6"): "deny",
+        str(home / "relay-run-r8"): "deny",
         str(home / "codex"): "deny",
         **{
             f"/private/tmp/bv01-228-{other}": "deny"
@@ -97,6 +98,10 @@ def test_codex_profile_reads_platform_defaults_workspace_and_python(
                     "file-opens-relay-r6.pid",
                     "file-opens-relay-r6.err",
                     "audit-positive-relay-r6",
+                    "file-opens-relay-r8.json",
+                    "file-opens-relay-r8.pid",
+                    "file-opens-relay-r8.err",
+                    "audit-positive-relay-r8",
                 )
             }
         )
@@ -113,6 +118,24 @@ def test_codex_profile_reads_platform_defaults_workspace_and_python(
     assert config["projects"][str(workspace)]["trust_level"] == "trusted"
     assert config["tui"]["screen_reader_detection_done"] is True
     assert config["tui"]["disable_paste_burst"] is True
+
+
+@pytest.mark.parametrize("profile", ["codex-headless", "codex-interactive"])
+def test_active_relay_paths_are_denied(profile: str) -> None:
+    cell = RELAY["Cell"](profile)
+    filesystem = tomllib.loads(codex_config(cell.home, RELAY["PYTHON"], 43210))[
+        "permissions"
+    ]["bv01"]["filesystem"]
+    assert filesystem[str(cell.run)] == "deny"
+    if profile == "codex-headless":
+        round_id = RELAY["RELAY_ROUND"]
+        for name in (
+            f"file-opens-relay-{round_id}.json",
+            f"file-opens-relay-{round_id}.pid",
+            f"file-opens-relay-{round_id}.err",
+            f"audit-positive-relay-{round_id}",
+        ):
+            assert filesystem[str(RELAY["CAPTURE_HOME"] / name)] == "deny"
 
 
 @pytest.mark.parametrize("profile", ["claude-headless", "claude-interactive"])

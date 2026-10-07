@@ -4,6 +4,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import cast
 
+RELAY_ROUND = "r8"
+
 
 @dataclass(frozen=True)
 class Process:
@@ -258,6 +260,7 @@ def codex_config(home: Path, python: Path, port: int) -> str:
         home / "relay-run-r4",
         home / "relay-run-r5",
         home / "relay-run-r6",
+        home / f"relay-run-{RELAY_ROUND}",
         home / "codex",
     ]
     denied.extend(
@@ -282,6 +285,10 @@ def codex_config(home: Path, python: Path, port: int) -> str:
                 "file-opens-relay-r6.pid",
                 "file-opens-relay-r6.err",
                 "audit-positive-relay-r6",
+                f"file-opens-relay-{RELAY_ROUND}.json",
+                f"file-opens-relay-{RELAY_ROUND}.pid",
+                f"file-opens-relay-{RELAY_ROUND}.err",
+                f"audit-positive-relay-{RELAY_ROUND}",
             )
         )
     deny_entries = "\n".join(f'"{path}" = "deny"' for path in denied)
@@ -310,6 +317,28 @@ enabled = true
 disable_paste_burst = true
 screen_reader_detection_done = true
 '''
+
+
+def preflight_frames_error(rows: list[dict[str, object]]) -> str | None:
+    """Validate the Claude preflight's routing records without I/O."""
+    tool = [row for row in rows if row.get("classification") == "tool"]
+    final = [row for row in rows if row.get("classification") == "final"]
+    if len(tool) != 1 or len(final) != 1:
+        return "expected one Bash tool and final frame"
+    if not tool[0].get("has_bash") or not final[0].get("has_bash"):
+        return "Bash frame was not served to the Bash request"
+    if rows.index(final[0]) < rows.index(tool[0]):
+        return "final frame preceded Bash tool frame"
+    if any(
+        row.get("classification") not in {"tool", "final", "side-request", "follow-up"}
+        or (
+            row.get("classification") in {"side-request", "follow-up"}
+            and row.get("has_bash")
+        )
+        for row in rows
+    ):
+        return "unexpected request or Bash side request"
+    return None
 
 
 def claude_trust(workspace: Path) -> dict[str, object]:
