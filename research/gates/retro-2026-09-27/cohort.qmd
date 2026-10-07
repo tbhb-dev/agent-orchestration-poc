@@ -1,0 +1,102 @@
+---
+title: Fixed merged pull request cohort
+format: html
+engine: jupyter
+execute:
+  echo: false
+  warning: false
+---
+
+## Population and source
+
+The retained REST query was `GET repos/tbhb/agent-orchestration-poc/pulls?state=closed&per_page=100&page=<n>`, with the live owner redirected to `tbhb-dev`. The lower bound is `merged_at > 2026-09-26T22:22:57Z` and the upper bound is `merged_at <= 2026-09-27T04:30:06Z`. The query transcript at `research/gates/retro-2026-09-27/evidence/query-transcript.md` records the source time, both requests, projection, and missing fields. `pr-metrics.csv` is the retained sanitized transformation of the per-PR REST details, reviews, files, commits, and Project field snapshot. No later merge enters this population.
+
+## Primary query
+
+DuckDB 1.5.5 reads the committed per-PR table and applies the fixed bounds again. Numeric fields are typed explicitly. The table deliberately leaves the unsettled #84 size and full excluded raw-line fields as `unknown`.
+
+```{python}
+#| label: primary-query
+import csv
+import hashlib
+import json
+from datetime import datetime
+from pathlib import Path
+
+import duckdb
+
+evidence = Path("evidence")
+lower = "2026-09-26T22:22:57Z"
+upper = "2026-09-27T04:30:06Z"
+metric_path = evidence / "pr-metrics.csv"
+rows = duckdb.sql(
+    """SELECT pr::INTEGER, url, merged_at, declared_size, measured_84_size,
+       excluded_raw_lines, excluded_raw_lines_explicit::INTEGER AS excluded_explicit,
+       files_changed::INTEGER AS files, changes_requested_rounds::INTEGER AS rounds,
+       open_to_merge_seconds::INTEGER AS seconds, updates_from_main, harness, model, effort
+       FROM read_csv(?, header=true, all_varchar=true)
+       WHERE merged_at > ? AND merged_at <= ? ORDER BY pr::INTEGER""",
+    params=[str(metric_path), lower, upper],
+).fetchall()
+assert len(rows) == 17
+assert all(row[4] == row[5] == "unknown" for row in rows)
+totals = duckdb.sql(
+    """SELECT COUNT(*) AS prs, SUM(rounds) AS rounds, SUM(seconds) AS seconds,
+       MEDIAN(seconds) AS median_seconds, SUM(files) AS files,
+       SUM(excluded_explicit) AS excluded_explicit,
+       SUM(CASE WHEN rounds > 0 THEN 1 ELSE 0 END) AS reviewed_changes
+       FROM (SELECT changes_requested_rounds::INTEGER AS rounds,
+       open_to_merge_seconds::INTEGER AS seconds, files_changed::INTEGER AS files,
+       excluded_raw_lines_explicit::INTEGER AS excluded_explicit
+       FROM read_csv(?, header=true, all_varchar=true)
+       WHERE merged_at > ? AND merged_at <= ?)""",
+    params=[str(metric_path), lower, upper],
+).fetchone()
+assert totals == (17, 12, 51635, 3203.0, 279, 2196, 10)
+result_path = evidence / "cohort-results.csv"
+with result_path.open("w", newline="") as target:
+    writer = csv.writer(target, lineterminator="\n")
+    writer.writerow(("row_id", "kind", "pr", "rounds", "seconds", "files", "excluded_explicit", "prs", "median_seconds", "reviewed_changes"))
+    writer.writerows((f"PR-{row[0]}", "supporting", row[0], row[8], row[9], row[7], row[6], "", "", "") for row in rows)
+    writer.writerow(("TOTAL", "headline", "all", totals[1], totals[2], totals[4], totals[5], totals[0], totals[3], totals[6]))
+print("Cohort PRs, rounds, seconds, median seconds, files, explicit excluded lines, PRs with changes requested:", totals)
+```
+
+## Independent recomputation
+
+Python reads the retained REST listing and each original projected PR, review, and file response separately. This path neither reads the primary result table nor copies its aggregation. It compares every headline and the deterministic ten-row sample selected by SHA-256 of `165|<row_id>`.
+
+```{python}
+#| label: independent-check
+pages = [json.loads((evidence / f"pulls-page-{page}.json").read_text()) for page in (1, 2)]
+assert len(pages[0]) == 49 and pages[1] == []
+selected = sorted(
+    (item for page in pages for item in page if item["merged_at"] and lower < item["merged_at"] <= upper),
+    key=lambda item: item["number"],
+)
+assert len(selected) == 17
+independent = {}
+for item in selected:
+    number = item["number"]
+    detail = json.loads((evidence / f"pr-{number}.json").read_text())
+    reviews = json.loads((evidence / f"pr-{number}-reviews.json").read_text())
+    files = json.loads((evidence / f"pr-{number}-files.json").read_text())
+    seconds = int((datetime.fromisoformat(detail["merged_at"].replace("Z", "+00:00")) - datetime.fromisoformat(detail["created_at"].replace("Z", "+00:00"))).total_seconds())
+    excluded = sum(file["additions"] + file["deletions"] for file in files if file["filename"].startswith(("reports/inputs/", "research/imported/", "tests/fixtures/", "vendor/")) or (file["filename"].startswith("experiments/") and "/evidence/" in file["filename"]) or "/vendor/" in file["filename"] or "-checksum" in file["filename"].split("/")[-1] or file["filename"].endswith(("go.sum", "uv.lock", "pnpm-lock.yaml", ".svg", ".excalidraw")))
+    independent[f"PR-{number}"] = (sum(review["state"] == "CHANGES_REQUESTED" and bool(review["submitted_at"]) for review in reviews), seconds, len(files), excluded)
+assert [item["number"] for item in selected] == [row[0] for row in rows]
+assert sum(value[0] for value in independent.values()) == totals[1]
+assert sum(value[1] for value in independent.values()) == totals[2]
+assert sorted(value[1] for value in independent.values())[8] == totals[3]
+assert sum(value[2] for value in independent.values()) == totals[4]
+assert sum(value[3] for value in independent.values()) == totals[5]
+assert sum(value[0] > 0 for value in independent.values()) == totals[6]
+sample = sorted(independent, key=lambda row_id: (hashlib.sha256(f"165|{row_id}".encode()).hexdigest(), row_id))[:10]
+primary = {f"PR-{row[0]}": (row[8], row[9], row[7], row[6]) for row in rows}
+for row_id in sample:
+    assert independent[row_id] == primary[row_id]
+print("Sample row IDs:", ", ".join(sample))
+print("Independent headline:", len(selected), *(sum(value[index] for value in independent.values()) for index in range(4)))
+```
+
+The independent exclusion expression checks only explicit excluded paths. The complete #84 count would require the unsettled classifier for generated, minified, vendored, fixture, and comment-only changes. These missing fields have no aggregate estimate.
