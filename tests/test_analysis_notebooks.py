@@ -1,5 +1,6 @@
 """Table and property checks for analysis notebook gates."""
 
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -298,15 +299,18 @@ def test_notebook_command_rejects_invalid_path(
 
 
 @pytest.mark.integration
-def test_render_synthetic_notebook() -> None:
+def test_render_synthetic_notebook(tmp_path: Path) -> None:
     """Execute the synthetic notebook through Quarto and retain its result table."""
     from agent_orchestration_poc.shell.analysis.notebooks import (  # noqa: PLC0415 - mutmut copies only core source
         notebooks,
         render,
     )
 
-    path = Path("research/gates/data-analysis/example.qmd")
-    assert path in notebooks()
+    source = Path("research/gates/data-analysis/example.qmd")
+    assert source in notebooks()
+    for name in ("example.qmd", "example-data.csv", "example-claims.csv"):
+        shutil.copyfile(source.with_name(name), tmp_path / name)
+    path = tmp_path / source.name
     render(path)
     assert path.with_name("example-results.csv").read_text().splitlines()[-1] == (
         "TOTAL,headline,all,48"
