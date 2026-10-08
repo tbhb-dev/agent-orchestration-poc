@@ -20,7 +20,7 @@ jobs:
     if: >-
       ${{ github.event_name != 'issue_comment' ||
       github.event.issue.pull_request != null }}
-    name: rescan skip indicators
+    name: rescan skip indicators  # Refs: #300
     runs-on: ubuntu-latest
     steps:
       # v7.0.1
