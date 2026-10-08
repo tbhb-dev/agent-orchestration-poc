@@ -61,6 +61,7 @@ depends = [
   "check:actions",
   "notebooks:lint",
   "check:workflow-forms",
+  "check:gate-changes",
   "check:pr-size-contract",
 ]
 
@@ -129,6 +130,10 @@ run = ["uv run ruff check --fix .", "uv run ruff format ."]
 [tasks."check:pytest"]
 description = "Run the Python tests"
 run = "uv run pytest"
+
+[tasks."check:gate-changes"]
+description = "Compare registered gates with the PR merge base and check reasons"
+run = "uv run python -m agent_orchestration_poc.shell.gate_changes"
 
 [tasks."monitor:project-probe"]
 description = "Read-only Project 9 source and event feasibility probe"

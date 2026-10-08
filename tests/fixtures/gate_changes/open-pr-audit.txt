@@ -1,0 +1,30 @@
+Observed 2026-10-07 UTC from one REST list of open PRs and fetched head refs.
+This output contains finding IDs and diagnostic labels only. PR bodies were not retained.
+PR #86 head 8832433602e9: 0 findings, 0 justification diagnostics
+PR #121 head 11f51d664ac8: 0 findings, 0 justification diagnostics
+PR #148 head 2dd8ac782eb1: 2 findings, 1 justification diagnostics
+  gate:selector:mise.toml:file:changed
+  gate:selector:prek.toml:file:changed
+  missing Gate justifications section
+PR #263 head 56abc6dde641: 0 findings, 0 justification diagnostics
+PR #269 head e103a191057a: 6 findings, 6 justification diagnostics
+  gate:suppression:experiments/02-host-socket-attribution/relay_cell.py:noqa.7e589a4a4066:added
+  gate:selector:prek.toml:file:changed
+  gate:suppression:src/agent_orchestration_poc/core/host_socket_attribution.py:noqa.8ce0116776c5:added
+  gate:suppression:tests/test_preflight_claude_interactive.py:noqa.222219881bc3:added
+  gate:suppression:tests/test_relay_cell.py:noqa.507e70891bcd:added
+  gate:suppression:tests/test_relay_cell.py:pytest-skip.9fb6d1c0d291:added
+  missing justification: gate:selector:prek.toml:file:changed
+  missing justification: gate:suppression:experiments/02-host-socket-attribution/relay_cell.py:noqa.7e589a4a4066:added
+  missing justification: gate:suppression:src/agent_orchestration_poc/core/host_socket_attribution.py:noqa.8ce0116776c5:added
+  missing justification: gate:suppression:tests/test_preflight_claude_interactive.py:noqa.222219881bc3:added
+  missing justification: gate:suppression:tests/test_relay_cell.py:noqa.507e70891bcd:added
+  missing justification: gate:suppression:tests/test_relay_cell.py:pytest-skip.9fb6d1c0d291:added
+PR #283 head e8c8734f8df3: 0 findings, 0 justification diagnostics
+PR #284 head 02b794b738f0: 0 findings, 0 justification diagnostics
+PR #285 head 6309b8cd416e: 0 findings, 0 justification diagnostics
+PR #286 head bd38035e95d5: 2 findings, 2 justification diagnostics
+  gate:selector:mise.toml:file:changed
+  gate:suppression:tests/test_pr_size.py:noqa.ca87935e3046:added
+  missing justification: gate:selector:mise.toml:file:changed
+  missing justification: gate:suppression:tests/test_pr_size.py:noqa.ca87935e3046:added

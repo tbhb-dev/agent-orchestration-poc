@@ -5,6 +5,7 @@ name: check
 
 "on":
   pull_request:
+    types: [opened, edited, synchronize, reopened]
   push:
     branches: [main]
 
@@ -40,4 +41,15 @@ jobs:
           version: 2026.8.6
           install: true
           cache: true
+      - name: Capture pull request body
+        if: github.event_name == 'pull_request'
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: printf '%s\n' "$PR_BODY" > "$RUNNER_TEMP/gate-body.md"
       - run: mise run check
+        env:
+          GATE_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          GATE_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          GATE_BODY_FILE: >-
+            ${{ github.event_name == 'pull_request' &&
+                format('{0}/gate-body.md', runner.temp) || '' }}

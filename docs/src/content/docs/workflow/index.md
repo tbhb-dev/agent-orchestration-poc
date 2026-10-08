@@ -79,6 +79,8 @@ Open one small PR per issue. Its conventional title and body become the squash c
 
 The PR template also has Size justification and Gate justifications sections. Several final `Refs:` trailers may name open issues when one PR edits shared files. The [workflow reference](/guides/workflow-reference/) defines the 400-unit target, 800-unit limit, exclusions, and Project Size bands.
 
+The `check` job compares registered quality gates with the PR merge base on pushes and body edits. Each finding has an ID built from its kind, path, key or location, and change type. Put `- <finding-id>: <reason>` on its own line under `Gate justifications`. Missing, empty, duplicate, and orphan reasons fail. Reviewers judge the reasons. A changed workflow or `prek.toml` needs a reason even when semantic weakening is uncertain. Unknown gate syntax blocks until the supported registry is updated.
+
 The PR form check uses the PR's `created_at` and the validator PR's retained merge time. It reports pre-cutoff PRs for coordinator repair and blocks newer PRs, including those from older branches. Missing creation metadata fails closed. Local-only refs appear in a separate report and do not block CI.
 
 Before review, the coordinator runs `mise run review:preflight -- <pr>` to verify that workflow revisions added on `main` are present at the PR head. Before merge or a completion report, run `mise run pr:wait-check -- <pr> <check-name> <timeout-seconds>`. The waiter succeeds only when the requested check concludes success on the head SHA recorded when waiting began. Its timeout includes GitHub calls, and zero seconds expires immediately. Both tasks address failures in the [phase 1 retrospective](/retros/2026-09-26-phase-1/).

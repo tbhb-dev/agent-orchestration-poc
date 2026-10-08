@@ -1,0 +1,4 @@
+## Gate justifications
+
+- gate:selector:.github/workflows/check.yml:file:changed: The workflow runs the check again after a PR body edit and retains its push trigger.
+- gate:selector:mise.toml:file:changed: The check aggregate adds the gate task and keeps its existing tasks.
