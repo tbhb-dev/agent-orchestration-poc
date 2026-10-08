@@ -231,6 +231,78 @@ def test_python_skip_outside_triple_quoted_reason() -> None:
     ]
 
 
+@pytest.mark.parametrize(
+    "first_line",
+    ['# A triple-quoted reason starts with """', 'delimiter = \'"""\''],
+)
+def test_python_skip_after_inert_triple_marker(first_line: str) -> None:
+    diff = (
+        "diff --git a/test_a.py b/test_a.py\n@@ -0,0 +1,2 @@\n"
+        f"+{first_line}\n"
+        '+pytest.skip("unsupported")\n'
+    )
+    assert [
+        (hit["line"], hit["phrase"], hit["tracked"])
+        for hit in scan_diff(diff, "PR #300")
+    ] == [(2, "pytest.skip", False)]
+
+
+def test_python_skip_after_distant_inert_triple_marker() -> None:
+    diff = (
+        "diff --git a/test_a.py b/test_a.py\n@@ -0,0 +1,21 @@\n"
+        '+# A comment contains """\n'
+        + "+ordinary = 1\n" * 19
+        + '+pytest.skip("unsupported")\n'
+    )
+    assert [(hit["line"], hit["phrase"]) for hit in scan_diff(diff, "PR #300")] == [
+        (21, "pytest.skip")
+    ]
+
+
+def test_python_skip_after_uncertain_quote_state() -> None:
+    diff = (
+        "diff --git a/test_a.py b/test_a.py\n@@ -0,0 +1,2 @@\n"
+        '+value = \'unfinished """\n'
+        '+pytest.skip("unsupported")\n'
+    )
+    assert [(hit["line"], hit["phrase"]) for hit in scan_diff(diff, "PR #300")] == [
+        (2, "pytest.skip")
+    ]
+
+
+@pytest.mark.parametrize(
+    ("path", "content", "phrases"),
+    [
+        (
+            "worker.py",
+            'pattern = "pytest.skip" # Deferred until tomorrow',
+            ["Deferred"],
+        ),
+        ("worker.py", 'pattern = "skipped" # skipped deployment', ["skipped"]),
+        ("build.sh", "echo ready || true # skipped deployment", ["skipped"]),
+        ("worker.py", "queue.skip(TODO)", ["TODO"]),
+    ],
+)
+def test_prose_survives_rejected_code_match(
+    path: str, content: str, phrases: list[str]
+) -> None:
+    diff = f"diff --git a/{path} b/{path}\n@@ -0,0 +1 @@\n+{content}\n"
+    assert [hit["phrase"] for hit in scan_diff(diff, "PR #300")] == phrases
+
+
+@pytest.mark.parametrize(
+    ("text", "phrase"),
+    [
+        ("No test was skipped; deployment was skipped.", "skipped"),
+        ("No request was denied; deployment was denied.", "denied"),
+        ("No work was blocked; deployment was blocked.", "blocked"),
+    ],
+)
+def test_negation_applies_to_current_clause(text: str, phrase: str) -> None:
+    hits = scan_text(text, "body", "body")
+    assert [(hit["phrase"], hit["tracked"]) for hit in hits] == [(phrase, False)]
+
+
 @given(st.text(alphabet="abc", min_size=1, max_size=30))
 def test_redaction_preserves_plain_lines(value: str) -> None:
     assert redacted_lines(value + "\n" + value) == [value, value]

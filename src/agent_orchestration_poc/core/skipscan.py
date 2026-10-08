@@ -211,9 +211,30 @@ def _python_string(line: str, position: int) -> bool:
         return False
 
 
+def _inert_triple_markers(line: str) -> list[tuple[int, int]]:
+    """Locate comments, ordinary strings, and uncertain lexical tails."""
+    inert: list[tuple[int, int]] = []
+    try:
+        for token in tokenize.generate_tokens(io.StringIO(line + "\n").readline):
+            if token.start[0] != 1:
+                continue
+            if token.type == tokenize.ERRORTOKEN and token.string.strip():
+                inert.append((token.start[1], len(line)))
+            elif token.type == tokenize.COMMENT or (
+                token.type == tokenize.STRING
+                and not re.match(r"(?i)^[rubf]*(?:'''|\"\"\")", token.string)
+            ):
+                inert.append((token.start[1], token.end[1]))
+    except tokenize.TokenError as error:
+        if "multi-line string" not in str(error.args[0]):
+            return [(0, len(line))]
+    return inert
+
+
 def _triple_spans(line: str, opening: str) -> tuple[list[tuple[int, int]], str]:
     """Return Python triple-quoted spans and the delimiter left open."""
     spans: list[tuple[int, int]] = []
+    inert: list[tuple[int, int]] = _inert_triple_markers(line) if not opening else []
     start = 0
     for marker in re.finditer(r"(?<!\\)(?:'''|\"\"\")", line):
         if opening:
@@ -221,6 +242,8 @@ def _triple_spans(line: str, opening: str) -> tuple[list[tuple[int, int]], str]:
                 spans.append((start, marker.end()))
                 opening = ""
         else:
+            if any(left <= marker.start() < right for left, right in inert):
+                continue
             opening = marker.group()
             start = marker.start()
     if opening:
@@ -267,7 +290,12 @@ def _tracked(block: str, pending_runs: set[str]) -> bool:
 
 
 def scan_text(  # noqa: C901, PLR0912  Refs: #300
-    text: str, kind: str, source: str, pending_runs: set[str] | None = None
+    text: str,
+    kind: str,
+    source: str,
+    pending_runs: set[str] | None = None,
+    *,
+    with_positions: bool = False,
 ) -> list[dict[str, Any]]:
     """Find prose indicators with local tracking and redacted context."""
     lines = text.splitlines()
@@ -300,17 +328,21 @@ def scan_text(  # noqa: C901, PLR0912  Refs: #300
                 continue
             phrase = match.group()
             tail = line[match.end() :]
+            clause = line[
+                max(line.rfind(mark, 0, match.start()) for mark in ";.!?")
+                + 1 : match.end()
+            ]
             if phrase.lower() in {"skip", "skipped"} and re.search(
-                r"\bno\s+(?:planned\s+)?(?:cell|test|check|work|task)s?\s+was\s+skipped\b",
-                line,
+                r"\bno\s+(?:planned\s+)?(?:cell|test|check|work|task)s?\s+was\s+skipped$",
+                clause,
                 re.IGNORECASE,
             ):
                 continue
             if phrase.lower() in {"denied", "refused", "blocked"} and re.search(
                 r"\b(?:nothing|none|no\s+(?:command|step|request|cell|work))\b.{0,35}\b"
                 + re.escape(phrase)
-                + r"\b",
-                line[: match.end()],
+                + r"$",
+                clause,
                 re.IGNORECASE,
             ):
                 continue
@@ -341,17 +373,20 @@ def scan_text(  # noqa: C901, PLR0912  Refs: #300
                 )
                 if timing or not deferral:
                     continue
-            hits.append(
-                {
-                    "id": flag_id(source, index + 1, phrase),
-                    "kind": kind,
-                    "source": source,
-                    "line": index + 1,
-                    "phrase": phrase,
-                    "excerpt": excerpt(safe_lines[index], match.start(), match.end()),
-                    "tracked": _tracked(blocks[index] or line, pending_runs or set()),
-                }
-            )
+            hit = {
+                "id": flag_id(source, index + 1, phrase),
+                "kind": kind,
+                "source": source,
+                "line": index + 1,
+                "phrase": phrase,
+                "excerpt": excerpt(safe_lines[index], match.start(), match.end()),
+                "tracked": _tracked(blocks[index] or line, pending_runs or set()),
+            }
+            if with_positions:
+                hit["position"] = match.start()
+            hits.append(hit)
+    if with_positions:
+        return list({(hit["id"], hit["position"]): hit for hit in hits}.values())
     return _unique(hits)
 
 
@@ -453,24 +488,32 @@ def scan_diff(  # noqa: C901, PLR0912, PLR0915  Refs: #300
             if path.endswith(".py"):
                 spans, triple = _triple_spans(content, triple)
             if not path.endswith(".md"):
-                if not CODE_RE.search(content):
-                    prose = (
-                        content.lstrip("#/ *")
-                        if content.lstrip().startswith(("# ", "//", "* "))
-                        else content
-                    )
-                    for hit in scan_text(
-                        prose, "diff", f"{source}:{path}", pending_runs
+                prose = (
+                    content.lstrip("#/ *")
+                    if content.lstrip().startswith(("# ", "//", "* "))
+                    else content
+                )
+                for hit in scan_text(
+                    prose,
+                    "diff",
+                    f"{source}:{path}",
+                    pending_runs,
+                    with_positions=True,
+                ):
+                    position = hit.pop("position") + len(content) - len(prose)
+                    if path.endswith(".py") and (
+                        any(start <= position < end for start, end in spans)
+                        or _python_string(content, position)
                     ):
-                        position = content.lower().find(hit["phrase"].lower())
-                        if path.endswith(".py") and (
-                            any(start <= position < end for start, end in spans)
-                            or _python_string(content, position)
-                        ):
-                            continue
-                        hit["line"] = line
-                        hit["id"] = flag_id(hit["source"], line, hit["phrase"])
-                        hits.append(hit)
+                        continue
+                    if any(
+                        match.start() <= position < match.end()
+                        for match in CODE_RE.finditer(content)
+                    ):
+                        continue
+                    hit["line"] = line
+                    hit["id"] = flag_id(hit["source"], line, hit["phrase"])
+                    hits.append(hit)
                 for match in CODE_RE.finditer(content):
                     if path.endswith(".py") and (
                         any(start <= match.start() < end for start, end in spans)
