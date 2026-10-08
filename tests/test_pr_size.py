@@ -19,6 +19,7 @@ from agent_orchestration_poc.core.pr_size import (
     classify_samples,
     exclusion_reason,
     measure_file,
+    needs_plain_text_retry,
     needs_scc,
     parse_name_status,
     total_units,
@@ -126,6 +127,31 @@ def test_needs_scc(path: str, old: str | None, binary: bool, expected: bool) -> 
 @given(st.text(min_size=1))
 def test_binary_never_needs_scc(path: str) -> None:
     assert not needs_scc(path, None, (), True)
+
+
+@pytest.mark.parametrize(
+    ("suffix", "language", "classified", "expected"),
+    [
+        ("", None, False, True),
+        (".py", None, False, False),
+        ("", "Plain Text", False, False),
+        ("", "", False, False),
+        ("", None, True, False),
+    ],
+)
+def test_needs_plain_text_retry(
+    suffix: str, language: str | None, classified: bool, expected: bool
+) -> None:
+    assert needs_plain_text_retry(suffix, language, classified) is expected
+
+
+@given(st.text(), st.one_of(st.none(), st.text()), st.booleans())
+def test_plain_text_retry_is_only_for_unclassified_extensionless_files(
+    suffix: str, language: str | None, classified: bool
+) -> None:
+    assert needs_plain_text_retry(suffix, language, classified) == (
+        suffix == "" and language is None and classified is False
+    )
 
 
 @pytest.mark.parametrize(
@@ -361,6 +387,47 @@ def test_shell_counts_extensionless_script_edit(
     _git(tmp_path, "add", ".")
     _git(tmp_path, "commit", "-qm", "comment")
     assert pr_size_shell.count("code-head")[0].counted_units == 0
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("name", [".gitleaksignore", "settings"])
+@pytest.mark.parametrize(
+    "case",
+    [
+        ("", "entry\n\n", 2, 0, 1),
+        ("old\n\n", "new\n\n", 1, 1, 2),
+        ("entry\n\n", "", 0, 2, 1),
+        ("entry\n", "entry\n\n", 1, 0, 0),
+    ],
+)
+def test_shell_counts_extensionless_text(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    name: str,
+    case: tuple[str, str, int, int, int],
+) -> None:
+    from agent_orchestration_poc.shell import (  # noqa: PLC0415 - mutmut copies only the core package
+        pr_size as pr_size_shell,
+    )
+
+    before, after, added, deleted, units = case
+    _init_pr_size_repo(tmp_path, "[]")
+    sample = tmp_path / name
+    if before:
+        sample.write_text(before)
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-qm", "base")
+    _git(tmp_path, "branch", "base")
+    if after:
+        sample.write_text(after)
+    else:
+        sample.unlink()
+    _git(tmp_path, "add", "-A")
+    _git(tmp_path, "commit", "-qm", "head")
+    monkeypatch.setattr(pr_size_shell, "ROOT", tmp_path)
+    assert pr_size_shell.count("base") == (
+        FileResult(name, None, added, deleted, units, None),
+    )
 
 
 @pytest.mark.integration

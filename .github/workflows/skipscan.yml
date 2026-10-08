@@ -5,13 +5,24 @@ name: skipscan
   pull_request:
     types: [opened, edited, synchronize, reopened]
 
+  pull_request_review:
+    types: [submitted, edited, dismissed]
+  pull_request_review_comment:
+    types: [created, edited, deleted]
+
 permissions:
   contents: read
   issues: read
   pull-requests: read
 
 jobs:
+  review-signal:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Request trusted review rescan for issue 300"
   skipscan:
+    if: github.event_name == 'pull_request'
     name: skipscan
     runs-on: ubuntu-latest
     steps:

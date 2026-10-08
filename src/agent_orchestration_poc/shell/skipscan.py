@@ -13,9 +13,12 @@ from agent_orchestration_poc.core.skipscan import (
     check_run_result,
     event_pr_number,
     head_result,
+    rescan_result,
+    review_pr_numbers,
     scan_diff,
     scan_outcome,
     scan_text,
+    validate_commit_count,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -70,7 +73,9 @@ def run(api: str, token: str, repo: str, number: int) -> int:
     for row in _pages(api, token, f"{prefix}/reviews"):
         if row.get("body"):
             hits.extend(scan_text(row["body"], "review-verdict", row["html_url"]))
-    for row in _pages(api, token, f"{prefix}/commits"):
+    commits = _pages(api, token, f"{prefix}/commits")
+    validate_commit_count(pr["commits"], len(commits))
+    for row in commits:
         hits.extend(
             scan_text(
                 row["commit"]["message"], "commit-message", f"commit {row['sha']}"
@@ -89,6 +94,20 @@ def run_event(
     api: str, token: str, repo: str, event_name: str, payload: dict[str, Any]
 ) -> int:
     """Scan an event's PR and attach comment-triggered results to its head."""
+    if event_name == "workflow_run":
+        prs = _pages(api, token, f"repos/{repo}/pulls")
+        numbers = review_pr_numbers(payload, [dict(pr) for pr in prs])
+        results = [
+            run_event(
+                api,
+                token,
+                repo,
+                "pull_request_review",
+                {"pull_request": {"number": number}},
+            )
+            for number in numbers
+        ]
+        return rescan_result(results)
     number = event_pr_number(event_name, payload)
     if number is None:
         return 0

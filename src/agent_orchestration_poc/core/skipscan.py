@@ -106,6 +106,31 @@ SECRET_RE = re.compile(
 PEM_RE = re.compile(r"-----(?:BEGIN|END) [A-Z ]*(?:PRIVATE KEY|CERTIFICATE)-----")
 
 
+def validate_commit_count(expected: int, collected: int) -> None:
+    """Reject a partial collection, including the PR endpoint's 250-commit cap."""
+    if expected != collected:
+        raise ValueError(
+            f"Incomplete commit scan: expected {expected}, collected {collected}"
+        )
+
+
+def rescan_result(results: list[int]) -> int:
+    """Preserve the most severe result across matching pull requests."""
+    return max(results, default=0)
+
+
+def review_pr_numbers(payload: dict[str, Any], prs: list[dict[str, Any]]) -> list[int]:
+    """Select open PRs from the review run's repository and branch, even after a push."""
+    run = payload["workflow_run"]
+    return [
+        pr["number"]
+        for pr in prs
+        if pr["head"]["repo"] is not None
+        and pr["head"]["repo"]["full_name"] == run["head_repository"]["full_name"]
+        and pr["head"]["ref"] == run["head_branch"]
+    ]
+
+
 def event_pr_number(event_name: str, payload: dict[str, Any]) -> int | None:
     """Resolve a pull request from a supported GitHub workflow event."""
     if event_name == "issue_comment":
