@@ -372,7 +372,7 @@ def scan_text(  # noqa: C901, PLR0912  Refs: #300
                 )
                 or (
                     re.search(r"\bno\s+$", line[: match.start()], re.IGNORECASE)
-                    and re.match(r"\s+findings\b", tail, re.IGNORECASE)
+                    and re.match(r"\s+findings(?=\s*(?:[.!?;]|$))", tail, re.IGNORECASE)
                 )
             ):
                 # Exempt only this occurrence, never other indicators in the line.
