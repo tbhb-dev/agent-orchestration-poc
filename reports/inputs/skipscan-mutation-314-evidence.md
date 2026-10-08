@@ -8,7 +8,7 @@ Source read for #314: `src/agent_orchestration_poc/core/skipscan.py`, `scripts/c
 
 Tools: CPython 3.14.6, pytest 9.1.1, Hypothesis 6.168.1, mutmut 3.8.0, and uv 0.12.10. Mutmut source and `README.rst` were read at `14a7230049a5c8abd90c2bb0f7438e30da6471f5` in `/Users/tony/Code/github.com/boxed/mutmut`. Harness: Codex CLI 0.157.1, model `gpt-6-astra`, medium effort.
 
-The shared CPython checkout denied lazy-fetch writes to its `.git/objects/pack` directory under the sandbox for #314. The brief explicitly permits a temporary source clone in this situation. The replacement clone is `/tmp/skipscan-314-cpython`, tag `v3.14.6`, commit `c63aec69bd59c55314c06c23f4c22c03de76fe45`. Read `Lib/tokenize.py` and `Python/Python-tokenize.c`, especially the ERRORTOKEN branch at lines 252 to 258, for the tokenizer equivalence proof below. No host permissions or installations changed.
+The shared CPython checkout denied lazy-fetch writes to its `.git/objects/pack` directory under the sandbox for #314. The brief explicitly permits a temporary source clone in this situation. The replacement clone is `/var/folders/ns/cc4x7s5j5271ltrw1t08w7p40000gn/T/skipscan-314-cpython`, tag `v3.14.6`, commit `c63aec69bd59c55314c06c23f4c22c03de76fe45`. Read `Lib/tokenize.py` and `Python/Python-tokenize.c`, especially the ERRORTOKEN branch at lines 252 to 258, for the tokenizer equivalence proof below. No host permissions or installations changed.
 
 ## Baseline
 
@@ -158,7 +158,69 @@ agent_orchestration_poc.core.skipscan.x_scan_diff__mutmut_408: survived
 
 Verified for #314 in the focused mutation pass: `mise exec -- uv run mutmut run 'agent_orchestration_poc.core.skipscan.*'` reduced the scanner's 128 survivors to 46. All 82 additional outcomes are killed, and every remaining scanner mutant has an equivalence reason below. The focused scanner and event suite passes 236 tests with `mise run check:pytest -- tests/test_skipscan.py tests/test_skipscan_events.py -q`.
 
-Verified for #314: `mise run check` passed 1,126 standard tests and 1,267 tests in the coverage run, including integration tests. Python core line coverage is 97.75 percent and branch coverage is 94.59 percent. `mise run fmt`, `mise run build`, and the report's historical reproduction command passed. The fresh full mutation run is being recorded before publication.
+Verified for #314: `mise run check` passed 1,126 standard tests and 1,267 tests in the coverage run, including integration tests. Python core line coverage is 97.75 percent and branch coverage is 94.59 percent. `mise run fmt`, `mise run build`, and the report's historical reproduction command passed. The final `mise run check:mutation` exited 0 and ran both mutation tasks. Go test efficacy is 97.32 percent, with 145 killed of 149 mutants. The Python task removed the cache, regenerated all 13,155 mutants, and scored 90.73 percent, with 11,935 killed. This is an 82-kill increase over the baseline, with the same denominator and two timeout outcomes.
+
+The fresh `check:mutation:python` task output within `mise run check:mutation` for #314 ended with:
+
+```text
+13155/13155  killed 11935  no tests 0  timeout 2  suspicious 0  survived 1218  skipped 0  type-check killed 0
+35.12 mutations/second
+Saved CI/CD stats to mutants/mutmut-cicd-stats.json
+Python core mutation score: 90.73% (11935 killed of 13155)
+```
+
+The final `mise exec -- uv run mutmut results` scanner output for #314 is:
+
+```text
+agent_orchestration_poc.core.skipscan.x_redacted_lines__mutmut_2: survived
+agent_orchestration_poc.core.skipscan.x_redacted_lines__mutmut_23: survived
+agent_orchestration_poc.core.skipscan.x_excerpt__mutmut_1: survived
+agent_orchestration_poc.core.skipscan.x_excerpt__mutmut_2: survived
+agent_orchestration_poc.core.skipscan.x__python_string__mutmut_5: survived
+agent_orchestration_poc.core.skipscan.x__inert_triple_markers__mutmut_9: survived
+agent_orchestration_poc.core.skipscan.x__inert_triple_markers__mutmut_12: survived
+agent_orchestration_poc.core.skipscan.x__inert_triple_markers__mutmut_13: survived
+agent_orchestration_poc.core.skipscan.x__tracked__mutmut_20: survived
+agent_orchestration_poc.core.skipscan.x__tracked__mutmut_37: survived
+agent_orchestration_poc.core.skipscan.x_scan_text__mutmut_8: survived
+agent_orchestration_poc.core.skipscan.x_scan_text__mutmut_10: survived
+agent_orchestration_poc.core.skipscan.x_scan_text__mutmut_11: survived
+agent_orchestration_poc.core.skipscan.x_scan_text__mutmut_18: survived
+agent_orchestration_poc.core.skipscan.x_scan_text__mutmut_38: survived
+agent_orchestration_poc.core.skipscan.x_scan_text__mutmut_40: survived
+agent_orchestration_poc.core.skipscan.x_scan_text__mutmut_57: survived
+agent_orchestration_poc.core.skipscan.x_scan_text__mutmut_63: survived
+agent_orchestration_poc.core.skipscan.x_scan_text__mutmut_69: survived
+agent_orchestration_poc.core.skipscan.x_scan_text__mutmut_70: survived
+agent_orchestration_poc.core.skipscan.x_scan_text__mutmut_80: survived
+agent_orchestration_poc.core.skipscan.x_scan_text__mutmut_100: survived
+agent_orchestration_poc.core.skipscan.x_scan_text__mutmut_116: survived
+agent_orchestration_poc.core.skipscan.x_scan_text__mutmut_130: survived
+agent_orchestration_poc.core.skipscan.x_scan_text__mutmut_144: survived
+agent_orchestration_poc.core.skipscan.x_scan_text__mutmut_158: survived
+agent_orchestration_poc.core.skipscan.x_scan_text__mutmut_167: survived
+agent_orchestration_poc.core.skipscan.x_scan_text__mutmut_199: survived
+agent_orchestration_poc.core.skipscan.x_scan_diff__mutmut_2: survived
+agent_orchestration_poc.core.skipscan.x_scan_diff__mutmut_3: survived
+agent_orchestration_poc.core.skipscan.x_scan_diff__mutmut_4: survived
+agent_orchestration_poc.core.skipscan.x_scan_diff__mutmut_5: survived
+agent_orchestration_poc.core.skipscan.x_scan_diff__mutmut_6: survived
+agent_orchestration_poc.core.skipscan.x_scan_diff__mutmut_7: survived
+agent_orchestration_poc.core.skipscan.x_scan_diff__mutmut_11: survived
+agent_orchestration_poc.core.skipscan.x_scan_diff__mutmut_12: survived
+agent_orchestration_poc.core.skipscan.x_scan_diff__mutmut_169: survived
+agent_orchestration_poc.core.skipscan.x_scan_diff__mutmut_171: survived
+agent_orchestration_poc.core.skipscan.x_scan_diff__mutmut_183: survived
+agent_orchestration_poc.core.skipscan.x_scan_diff__mutmut_186: survived
+agent_orchestration_poc.core.skipscan.x_scan_diff__mutmut_195: survived
+agent_orchestration_poc.core.skipscan.x_scan_diff__mutmut_198: survived
+agent_orchestration_poc.core.skipscan.x_scan_diff__mutmut_210: survived
+agent_orchestration_poc.core.skipscan.x_scan_diff__mutmut_314: survived
+agent_orchestration_poc.core.skipscan.x_scan_diff__mutmut_338: survived
+agent_orchestration_poc.core.skipscan.x_scan_diff__mutmut_383: survived
+```
+
+Verified for #314: `mise run pr:size -- origin/main` reports 139 counted units. The evidence and fixture paths are excluded by that contract. `mise run check:gate-changes -- --base 0e579b756195fefd1ff6bd24af477463ed001db3 --head 2d87cde --body-file /tmp/skipscan-314-pr-body.md` passed with no registered gate findings. The final evidence-only update does not alter those gate inputs.
 
 ## Original 67-mutant audit
 
@@ -244,10 +306,10 @@ These are source-level equivalence arguments under the scanner's input domain fo
 | --- | --- |
 | `x_redacted_lines__mutmut_2` | The PEM state is read for truthiness only. Both `None` and `False` mean outside a PEM block, and the next opening marker replaces the state. |
 | `x_redacted_lines__mutmut_23` | The PEM state is read for truthiness only. Both `None` and `False` mean outside a PEM block, and the next opening marker replaces the state. |
-| `x_excerpt__mutmut_1` | The omitted start becomes 1 instead of 0. Both yield `left = 0`, so the same right endpoint and excerpt result follow. |
-| `x_excerpt__mutmut_2` | The omitted end becomes 1 instead of 0. Both `end + 100` values are below `left + 240`, so neither changes the right endpoint. |
+| `x_excerpt__mutmut_1` | The omitted start changes from 0 to 1. Both yield `left = 0`, so the same right endpoint and excerpt result follow. |
+| `x_excerpt__mutmut_2` | The omitted end changes from 0 to 1. Both `end + 100` values are below `left + 240`, so neither changes the right endpoint. |
 | `x__python_string__mutmut_5` | For the single physical line supplied by the scanner, appending `XX` before and after the synthetic newline cannot introduce a closing quote. Every complete first-line STRING token and its columns stay the same. An incomplete string still raises, and a suffix without a string still returns false. |
-| `x__inert_triple_markers__mutmut_9` | The scanner supplies one physical line. Once the tokenizer emits a token on a subsequent line, no later token starts on line 1. Ending iteration instead of continuing cannot add a first-line span. |
+| `x__inert_triple_markers__mutmut_9` | The scanner supplies one physical line. Once the tokenizer emits a token on a subsequent line, no later token starts on line 1. Ending iteration at that point cannot add a first-line span. |
 | `x__inert_triple_markers__mutmut_12` | Unreachable with pinned CPython 3.14.6. `Python/Python-tokenize.c` handles ERRORTOKEN by setting an exception and exiting before constructing a yielded token. `Lib/tokenize.py` converts SyntaxError into TokenError, so this ERRORTOKEN body never executes. No synthetic tokenizer or mock is used to reach it. |
 | `x__inert_triple_markers__mutmut_13` | Unreachable with pinned CPython 3.14.6. `Python/Python-tokenize.c` handles ERRORTOKEN by setting an exception and exiting before constructing a yielded token. `Lib/tokenize.py` converts SyntaxError into TokenError, so this ERRORTOKEN body never executes. No synthetic tokenizer or mock is used to reach it. |
 | `x__tracked__mutmut_20` | Only letters in the regular expression change case. `re.IGNORECASE` remains active, so the matching language is unchanged. |
