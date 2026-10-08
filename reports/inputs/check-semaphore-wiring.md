@@ -10,7 +10,7 @@ Documented: the lease contract comes from `.internal/scaffolding/check-semaphore
 
 Documented: mise task arrays run in order, dependency-only aggregates are supported, and `hide = true` hides a task from listings. Source and versioned documentation read: mise tag `v2026.8.6`, commit `71212d424cd07189b22027f496c01ccad76e8b6d`, `docs/tasks/toml-tasks.md` and dependency resolution in `src/cli/run.rs`.
 
-The existing mise clone could not fetch a missing blob because the sandbox denied writing its Git object directory. The brief authorized cloning dependency sources into temporary storage. The pinned checkout used here is `/tmp/check-semaphore-332-mise-source`, created with:
+Fetching a missing blob into the existing mise clone failed in the Codex sandbox, which forbids writes to that clone's Git object directory. The brief authorized cloning dependency sources into temporary storage. The pinned checkout used here is `/tmp/check-semaphore-332-mise-source`, created with:
 
 ```sh
 git clone --depth 1 --branch v2026.8.6 https://github.com/jdx/mise.git /tmp/check-semaphore-332-mise-source
@@ -89,7 +89,7 @@ Run B queue reports:
 
 ## Check output
 
-Verified: the initial standalone `mise run check` and both trial runs passed. The integration-enabled run passed all 1,224 tests, including 20 wrapper fixtures. The default test task separately passed 1,063 tests and omitted 161 integration tests by its existing configuration. The coverage task ran those integration tests. Wrapper fixtures cover all five tasks with installed and absent executables and status 0 or 75, including exact fallback notices. With a stub semaphore installed, a nonzero status from the wrapped command propagates with no second, unwrapped invocation. The fixtures do not make the stub semaphore itself fail; no fallback after a real semaphore error is an inference from the wrappers' `exec` structure.
+Verified: the initial standalone `mise run check` and both trial runs passed. The integration-enabled run passed all 1,224 tests, including 20 wrapper fixtures. The default test task separately passed 1,063 tests and omitted 161 integration tests by its existing configuration. The coverage task ran those integration tests. Wrapper fixtures cover all five tasks with installed and absent executables and status 0 or 75, including exact fallback notices. With a fake semaphore script installed, a nonzero status from the wrapped command propagates with no second, unwrapped invocation. The fixtures never make the fake semaphore itself fail; no fallback after a real semaphore error is an inference from the wrappers' `exec` structure.
 
 Full timestamped output from trial run A:
 
@@ -548,27 +548,27 @@ Verified: gate comparison requires `gate:selector:mise.toml:file:changed`. The P
 mise run check:gate-changes -- --base 0e579b7 --head HEAD --body-file /tmp/check-semaphore-332-pr.md
 ```
 
-## Blocking sandbox result
+## Codex sandbox result
 
-Observed: `CHECK_LINKS=1 mise run docs:build` acquired the semaphore and ran dependency installation and Astro. It exited 1 because Chromium could not register its Mach rendezvous server inside the sandbox:
+Observed: `CHECK_LINKS=1 mise run docs:build` acquired the semaphore and ran dependency installation and Astro. It exited 1 because Chromium failed to register its Mach rendezvous server inside the sandbox:
 
 ```text
 FATAL:base/apple/mach_port_rendezvous_mac.cc:159
 bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.46196: Permission denied (1100)
 ```
 
-The missing rendered pages then caused seven link-validation errors. Rendering and link validation were not disabled. The repository's no-arbitrary-skipping rule requires stopping at this blocked check. The operator must run the same command outside this worker sandbox, then resume the worker with the result:
+The missing rendered pages then caused seven link-validation errors. Rendering and link validation were not disabled. Codex stopped at this check, as the repository's rules require. The same command was then run outside the Codex sandbox, with the result in the next section:
 
 ```sh
 cd /Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.worktrees/tooling-332-check-semaphore
 CHECK_LINKS=1 mise run docs:build
 ```
 
-Observed: `mise run check:mutation` acquired a lease and entered the nested Go mutation task without a descriptor-inheritance error. It was interrupted with Ctrl-C, exit 130, when work stopped at the docs sandbox block. Mutation scores and nested Python execution remain unverified. A fresh full mutation run is required after resumption.
+Observed: `mise run check:mutation` acquired a lease and entered the nested Go mutation task without a descriptor-inheritance error. It was interrupted with Ctrl-C, exit 130, when work stopped at the docs sandbox block. This run produced no mutation scores and did not reach the Python task. The full mutation run in the next section supplies both.
 
-The sandbox also denied `ps` during cleanup. Sending Ctrl-C through the existing command session succeeded. No process-inspection workaround was used.
+The sandbox also rejected `ps` during cleanup. Sending Ctrl-C through the existing command session stopped the run, so no other process inspection was attempted.
 
-No PR was opened during this blocked run. The implementation commit `03808c84a2b2ef59aaed48ab528a134653d6d1ea` was already pushed before this run began.
+Codex opened no PR during this run. The implementation commit `03808c84a2b2ef59aaed48ab528a134653d6d1ea` was already pushed before this run began.
 
 ## Checks completed outside the Codex sandbox
 
@@ -576,7 +576,7 @@ Harness: Claude Code, model `claude-opus-5-5`. Same worktree at `03808c8`, run o
 
 | Command | Start | End | Exit | Result |
 | --- | --- | --- | --- | --- |
-| `mise run check` | 2026-10-08T23:14:39Z | 2026-10-08T23:15:59Z | 0 | `check:pytest` 1,063 passed, 161 skipped; `check:coverage` 1,224 passed, including the 20 wrapper fixtures; all coverage floors met |
+| `mise run check` | 2026-10-08T23:14:39Z | 2026-10-08T23:15:59Z | 0 | `check:pytest` 1,063 passed, with the 161 integration tests left to `check:coverage` by the default configuration; `check:coverage` 1,224 passed, including the 20 wrapper fixtures; all coverage floors met |
 | `CHECK_LINKS=1 mise run docs:build` | 2026-10-08T23:16:20Z | 2026-10-08T23:16:36Z | 0 | 62 pages built; "All internal links are valid." |
 | `mise run check:mutation` | 2026-10-08T23:17:37Z | 2026-10-08T23:25:09Z | 0 | Go: 149 mutants classified, test efficacy 97.32%, mutator coverage 100.00%; Python core mutation score 90.11% (11,854 killed of 13,155) |
 
