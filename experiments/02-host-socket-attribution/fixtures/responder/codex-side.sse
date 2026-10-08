@@ -1,0 +1,10 @@
+event: response.created
+data: {"type":"response.created","response":{"id":"resp-bv01-side"}}
+
+event: response.output_item.done
+data: {"type":"response.output_item.done","item":{"type":"message","id":"msg-bv01-side","role":"assistant","content":[{"type":"output_text","text":"OK."}]}}
+
+event: response.completed
+data: {"type":"response.completed","response":{"id":"resp-bv01-side","usage":{"input_tokens":0,"input_tokens_details":null,"output_tokens":1,"output_tokens_details":null,"total_tokens":1}}}
+
+: end

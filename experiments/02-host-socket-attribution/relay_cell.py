@@ -7,6 +7,7 @@ import os
 import shlex
 import shutil
 import signal
+import socket
 import subprocess
 import time
 import tomllib
@@ -15,9 +16,12 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from agent_orchestration_poc.core.host_socket_attribution import (
+    RELAY_ROUND,
     claude_settings,
+    claude_theme_choice,
     claude_trust,
     codex_config,
+    empty_input_prompt,
     launch_command,
     relay_result,
 )
@@ -27,6 +31,7 @@ EXPERIMENT = Path(__file__).resolve().parent
 CODEX = Path(
     "/Users/tony/.codex/packages/standalone/releases/0.157.1-aarch64-apple-darwin/bin/codex"
 )
+CLAUDE = Path("/Users/tony/.local/share/claude/versions/2.1.284")
 PYTHON = Path("/Users/tony/.local/share/mise/installs/python/3.14.6/bin/python3")
 TMUX_SOCKET = Path("/private/tmp/bv01-228-probe.tmux")
 CAPTURE_HOME = Path("/private/tmp/bv01-228-codex-headless")
@@ -49,18 +54,85 @@ def wait_for(predicate: Callable[[], bool], deadline: float, label: str) -> None
 
 def checked(*args: str) -> str:
     """Return output from a required, read-only check."""
-    return subprocess.run(args, check=True, capture_output=True, text=True).stdout
+    return subprocess.run(
+        args, check=True, capture_output=True, text=True, timeout=30
+    ).stdout
+
+
+def version(binary: Path, home: Path, *args: str) -> str:
+    """Check the launched binary without the operator's environment."""
+    return checked(
+        "/usr/bin/env",
+        "-i",
+        f"HOME={home}",
+        f"CODEX_HOME={home / 'codex'}",
+        f"CLAUDE_CONFIG_DIR={home / 'claude'}",
+        "PATH=/usr/bin:/bin",
+        str(binary),
+        *args,
+    )
+
+
+def clear_stale_gateway(path: Path) -> None:
+    """Remove only an unheld socket in this cell's disposable home."""
+    if not path.exists():
+        return
+    if not path.is_socket():
+        raise RuntimeError("gateway path is not a socket")
+    result = subprocess.run(
+        ["/usr/sbin/lsof", "-nP", str(path)],
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+    if result.returncode == 0:
+        raise RuntimeError("gateway socket is held by a process")
+    if result.returncode != 1:
+        raise RuntimeError(f"gateway lsof failed: {result.returncode}")
+    path.unlink()
+
+
+def process_start(pid: int) -> str | None:
+    """Read the launch root's start time before signalling its process tree."""
+    try:
+        return checked("/bin/ps", "-p", str(pid), "-o", "lstart=").strip()
+    except subprocess.CalledProcessError:
+        return None
 
 
 def capture_gate() -> None:
     """Require the live, new capture and its positive control."""
-    capture = CAPTURE_HOME / "file-opens-relay.json"
-    pid_file = CAPTURE_HOME / "file-opens-relay.pid"
-    error = CAPTURE_HOME / "file-opens-relay.err"
-    if not capture.is_file() or not pid_file.is_file() or not error.is_file():
+    capture = CAPTURE_HOME / f"file-opens-relay-{RELAY_ROUND}.json"
+    pid_file = CAPTURE_HOME / f"file-opens-relay-{RELAY_ROUND}.pid"
+    error = CAPTURE_HOME / f"file-opens-relay-{RELAY_ROUND}.err"
+    marker = CAPTURE_HOME / f"audit-positive-relay-{RELAY_ROUND}"
+    if not all(path.is_file() for path in (capture, pid_file, error, marker)):
         raise RuntimeError("capture files are absent")
-    if error.stat().st_size or b"audit-positive-relay" not in capture.read_bytes():
+    capture_offset = capture.stat().st_size
+    marker.read_bytes()  # Make a fresh open event for this cell's bounded search.
+
+    needle = f"audit-positive-relay-{RELAY_ROUND}".encode()
+    search_offset = capture_offset
+    overlap = b""
+    deadline = time.monotonic() + 5
+
+    def marker_in_tail() -> bool:
+        nonlocal search_offset, overlap
+        with capture.open("rb") as stream:
+            stream.seek(search_offset)
+            while time.monotonic() < deadline:
+                chunk = stream.read(65_536)
+                if not chunk:
+                    break
+                search_offset += len(chunk)
+                if needle in overlap + chunk:
+                    return True
+                overlap = (overlap + chunk)[-(len(needle) - 1) :]
+            return False
+
+    if error.stat().st_size:
         raise RuntimeError("capture positive control or error gate failed")
+    wait_for(marker_in_tail, deadline, "capture positive control")
     pid = int(pid_file.read_text().strip())
     if checked("/usr/bin/pgrep", "-x", "eslogger").strip() != str(pid):
         raise RuntimeError("recorded eslogger is not running")
@@ -101,7 +173,11 @@ def prepare(profile: str, run: Path, port: int) -> dict[str, str]:
     if profile.startswith("codex-"):
         config = home / "codex/config.toml"
         config.write_text(codex_config(home, PYTHON, port))
-        if tomllib.loads(config.read_text())["default_permissions"] != "bv01":
+        parsed = tomllib.loads(config.read_text())
+        if (
+            parsed["default_permissions"] != "bv01"
+            or parsed["permissions"]["bv01"]["filesystem"].get(":minimal") != "read"
+        ):
             raise RuntimeError("Codex profile was not written")
         (run / "config.toml.raw.txt").write_text(config.read_text())
     else:
@@ -141,9 +217,13 @@ def descendants(root: int) -> list[int]:
         found = newer
 
 
-def terminate(process: subprocess.Popen[bytes] | None, root: int | None) -> None:
+def terminate(
+    process: subprocess.Popen[bytes] | None, root: int | None, start: str | None = None
+) -> None:
     """Stop only recorded cell descendants and reap the direct child."""
-    pids = descendants(root) if root else []
+    alive_child = process is not None and process.poll() is None
+    same_root = start is not None and root is not None and process_start(root) == start
+    pids = descendants(root) if root and (alive_child or same_root) else []
     for pid in pids:
         try:
             os.kill(pid, signal.SIGTERM)
@@ -175,6 +255,7 @@ class Cell:
     listener: subprocess.Popen[bytes] | None = None
     harness: subprocess.Popen[bytes] | None = None
     root: int | None = None
+    root_start: str | None = None
     tmux_started: bool = False
     run_owned: bool = False
     socket_inode: int | None = None
@@ -187,12 +268,12 @@ class Cell:
     @property
     def run(self) -> Path:
         """Return this attempt's private files."""
-        return self.home / "relay-run"
+        return self.home / f"relay-run-{RELAY_ROUND}"
 
     @property
     def evidence(self) -> Path:
         """Return this attempt's commit-ready evidence path."""
-        return EXPERIMENT / "evidence/relay-run" / self.profile
+        return EXPERIMENT / "evidence" / f"relay-run-{RELAY_ROUND}" / self.profile
 
     @property
     def python_env(self) -> dict[str, str]:
@@ -213,30 +294,32 @@ class Cell:
         capture_gate()
         if not self.home.is_dir() or not (self.home / "workspace").is_dir():
             raise RuntimeError("disposable home or workspace is absent")
-        if (
-            self.run.exists()
-            or self.evidence.exists()
-            or (self.home / "gateway.sock").exists()
-        ):
-            raise RuntimeError("cell output or gateway path already exists")
+        if self.run.exists() or self.evidence.exists():
+            raise RuntimeError("cell output already exists")
+        clear_stale_gateway(self.home / "gateway.sock")
         if self.profile.endswith("interactive") and TMUX_SOCKET.exists():
             raise RuntimeError("dedicated tmux socket already exists")
-        if checked(str(CODEX), "--version").strip() != "codex-cli 0.157.1":
+        if not CODEX.is_file() or not CLAUDE.is_file() or not PYTHON.is_file():
+            raise RuntimeError("pinned harness or Python is absent")
+        try:
+            with socket.create_connection(("127.0.0.1", 9), timeout=1):
+                raise RuntimeError("dead loopback proxy port is in use")
+        except ConnectionRefusedError:
+            pass
+        if version(CODEX, self.home, "--version").strip() != "codex-cli 0.157.1":
             raise RuntimeError("Codex version gate failed")
-        if checked("claude", "--version").strip() != "2.1.284 (Claude Code)":
+        if version(CLAUDE, self.home, "--version").strip() != "2.1.284 (Claude Code)":
             raise RuntimeError("Claude version gate failed")
-        if not PYTHON.is_file():
-            raise RuntimeError("pinned Python is absent")
         self.run.mkdir(mode=0o700)
         self.run_owned = True
         (self.run / "versions.txt").write_text(
             checked("date", "+%Y-%m-%d %H:%M:%S %Z")
             + checked("sw_vers")
             + checked("uname", "-m")
-            + checked(str(CODEX), "--version")
-            + checked("claude", "--version")
-            + checked(str(PYTHON), "--version")
-            + checked("tmux", "-V")
+            + version(CODEX, self.home, "--version")
+            + version(CLAUDE, self.home, "--version")
+            + version(PYTHON, self.home, "--version")
+            + version(Path("/opt/homebrew/bin/tmux"), self.home, "-V")
         )
 
     def start_model(self, deadline: float) -> int:
@@ -283,7 +366,9 @@ class Cell:
     def start_harness(self, port: int, deadline: float) -> None:
         """Launch behind a root-PID barrier in a shell or dedicated tmux."""
         prepare(self.profile, self.run, port)
-        argv, env = launch_command(self.profile, port, self.home, CODEX, PYTHON)
+        argv, env = launch_command(
+            self.profile, port, self.home, (CODEX, CLAUDE, PYTHON)
+        )
         (self.run / "launch-argv.json").write_text(json.dumps(argv) + "\n")
         script = launcher(self.run, self.home / "workspace", argv, env)
         if self.profile.endswith("interactive"):
@@ -294,6 +379,10 @@ class Cell:
                 "-f",
                 "/dev/null",
                 "new-session",
+                "-x",
+                "200",
+                "-y",
+                "50",
                 "-d",
                 "-s",
                 "bv01",
@@ -336,6 +425,9 @@ class Cell:
             "launch root",
         )
         self.root = int((self.run / "root.pid").read_text())
+        self.root_start = process_start(self.root)
+        if self.root_start is None:
+            raise RuntimeError("launch root exited before start-time check")
 
     def start_listener(self, deadline: float) -> None:
         """Bind the exact per-workload socket before releasing the root."""
@@ -378,7 +470,9 @@ class Cell:
         if not self.tmux_started:
             return
         marker = "›" if self.profile.startswith("codex-") else "❯"
-        ready_by = min(deadline, time.monotonic() + 30)
+        ready_by = min(deadline, time.monotonic() + 60)
+        theme_answered = False
+        pane = ""
         while time.monotonic() < ready_by:
             pane = checked(
                 "tmux",
@@ -390,19 +484,41 @@ class Cell:
                 f"bv01:{self.profile}",
             )
             if "Accessing workspace:" in pane or "Quick safety check:" in pane:
+                (self.run / "pane-trust-prompt.txt").write_text(pane)
                 raise RuntimeError("workspace trust prompt appeared")
             if "Sign in" in pane or "Enter your API key" in pane:
+                (self.run / "pane-credential-prompt.txt").write_text(pane)
                 raise RuntimeError("credential prompt appeared")
             if "Pane is dead" in pane:
+                (self.run / "pane-dead.txt").write_text(pane)
                 raise RuntimeError("harness pane exited before its input prompt")
-            if marker in pane:
+            if self.profile == "claude-interactive" and claude_theme_choice(pane):
+                if not theme_answered:
+                    (self.run / "pane-theme-choice.txt").write_text(pane)
+                    checked(
+                        "tmux",
+                        "-S",
+                        str(TMUX_SOCKET),
+                        "send-keys",
+                        "-t",
+                        f"bv01:{self.profile}",
+                        "Enter",
+                    )
+                    theme_answered = True
+                time.sleep(0.2)
+                continue
+            if empty_input_prompt(pane, marker) and not (
+                self.profile == "codex-interactive" and "model: loading" in pane
+            ):
                 (self.run / "pane-before-prompt.txt").write_text(pane)
                 break
             time.sleep(0.2)
         else:
+            (self.run / "pane-prompt-timeout.txt").write_text(pane)
             raise TimeoutError("interactive input prompt did not appear")
+        prompt_python = str(PYTHON) if self.profile.startswith("codex-") else "python3"
         prompt = (
-            "Run python3 experiments/02-host-socket-attribution/probe.py client "
+            f"Run {prompt_python} experiments/02-host-socket-attribution/probe.py client "
             f"{self.home}/gateway.sock {self.profile} and then stop."
         )
         checked(
@@ -415,6 +531,7 @@ class Cell:
             "-l",
             prompt,
         )
+        time.sleep(0.5)
         checked(
             "tmux",
             "-S",
@@ -424,6 +541,49 @@ class Cell:
             f"bv01:{self.profile}",
             "Enter",
         )
+        self.require_submission(deadline, marker)
+
+    def require_submission(self, deadline: float, marker: str) -> None:
+        """Fail promptly if the interactive prompt stays in the composer."""
+        submitted_by = min(deadline, time.monotonic() + 30)
+        pane = ""
+
+        def submitted() -> bool:
+            nonlocal pane
+            if (self.run / "model.jsonl").exists():
+                return True
+            pane = checked(
+                "tmux",
+                "-S",
+                str(TMUX_SOCKET),
+                "capture-pane",
+                "-p",
+                "-t",
+                f"bv01:{self.profile}",
+            )
+            return empty_input_prompt(pane, marker)
+
+        try:
+            wait_for(submitted, submitted_by, "interactive prompt was not submitted")
+        except TimeoutError:
+            (self.run / "pane-submit-timeout.txt").write_text(pane)
+            raise
+
+    def save_pane(self, name: str) -> None:
+        """Retain the dedicated tmux pane before teardown."""
+        (self.run / name).write_text(
+            checked(
+                "tmux",
+                "-S",
+                str(TMUX_SOCKET),
+                "capture-pane",
+                "-p",
+                "-S",
+                "-2000",
+                "-t",
+                f"bv01:{self.profile}",
+            )
+        )
 
     def observe(self, deadline: float) -> str:
         """Wait for a connector request and retain only cell process evidence."""
@@ -431,31 +591,24 @@ class Cell:
         harness = self.harness
         if listener is None:
             raise RuntimeError("listener absent")
-        wait_for(
-            lambda: (
-                listener.poll() is not None
-                or (harness is not None and harness.poll() is not None)
-            ),
-            deadline,
-            "cell completion before 540 seconds",
-        )
+        try:
+            wait_for(
+                lambda: (
+                    listener.poll() is not None
+                    or (harness is not None and harness.poll() is not None)
+                ),
+                deadline,
+                "cell completion before 540 seconds",
+            )
+        except TimeoutError:
+            if self.tmux_started:
+                self.save_pane("pane-observe-timeout.txt")
+            raise
         if harness is not None:
             harness.wait(timeout=max(1, deadline - time.monotonic()))
         time.sleep(1)
         if self.tmux_started:
-            (self.run / "harness-pane.txt").write_text(
-                checked(
-                    "tmux",
-                    "-S",
-                    str(TMUX_SOCKET),
-                    "capture-pane",
-                    "-p",
-                    "-S",
-                    "-2000",
-                    "-t",
-                    f"bv01:{self.profile}",
-                )
-            )
+            self.save_pane("harness-pane.txt")
             exit_status = checked(
                 "tmux",
                 "-S",
@@ -492,34 +645,63 @@ class Cell:
             json.loads(line)
             for line in (self.run / "listener.jsonl").read_text().splitlines()
         ]
-        return relay_result(rows, requests, harness.returncode if harness else None)
+        return relay_result(
+            rows, requests, harness.returncode if harness else None, self.profile
+        )
 
-    def cleanup(self, status: str, detail: str) -> None:
+    def cleanup(self, status: str, detail: str) -> bool:  # noqa: C901 - independent teardown steps
         """Stop owned processes, preserve evidence, and print one result."""
-        terminate(
-            self.harness, self.root or (self.harness.pid if self.harness else None)
+        errors: list[str] = []
+
+        def attempt(action: Callable[[], object]) -> None:
+            try:
+                action()
+            except (OSError, RuntimeError, subprocess.SubprocessError) as error:
+                errors.append(str(error))
+
+        if self.tmux_started:
+            attempt(lambda: self.save_pane("pane-at-cleanup.txt"))
+        attempt(
+            lambda: terminate(
+                self.harness,
+                self.root or (self.harness.pid if self.harness else None),
+                self.root_start,
+            )
         )
         if self.tmux_started:
-            checked("tmux", "-S", str(TMUX_SOCKET), "kill-server")
-            if TMUX_SOCKET.exists():
-                TMUX_SOCKET.unlink()
-        terminate(self.listener, self.listener.pid if self.listener else None)
-        terminate(self.model, self.model.pid if self.model else None)
+            prior_errors = len(errors)
+            attempt(lambda: checked("tmux", "-S", str(TMUX_SOCKET), "kill-server"))
+            if len(errors) == prior_errors and TMUX_SOCKET.exists():
+                attempt(TMUX_SOCKET.unlink)
+        attempt(
+            lambda: terminate(
+                self.listener, self.listener.pid if self.listener else None
+            )
+        )
+        attempt(lambda: terminate(self.model, self.model.pid if self.model else None))
         socket = self.home / "gateway.sock"
         if socket.is_socket() and self.socket_inode == socket.stat().st_ino:
-            socket.unlink()
+            attempt(socket.unlink)
+        if errors:
+            status = "failed"
+            detail = f"{detail}; cleanup: {'; '.join(errors)}"[:300]
         if self.run_owned:
-            (self.run / "summary.json").write_text(
-                json.dumps(
-                    {"profile": self.profile, "status": status, "detail": detail}
+            try:
+                (self.run / "summary.json").write_text(
+                    json.dumps(
+                        {"profile": self.profile, "status": status, "detail": detail}
+                    )
+                    + "\n"
                 )
-                + "\n"
-            )
-            self.evidence.mkdir(parents=True, mode=0o700, exist_ok=False)
-            for item in self.run.iterdir():
-                if item.is_file() and item.name not in {"go", "launch.sh"}:
-                    shutil.copyfile(item, self.evidence / item.name)
+                self.evidence.mkdir(parents=True, mode=0o700, exist_ok=False)
+                for item in self.run.iterdir():
+                    if item.is_file() and item.name not in {"go", "launch.sh"}:
+                        shutil.copyfile(item, self.evidence / item.name)
+            except (OSError, RuntimeError) as error:
+                status = "failed"
+                detail = f"{detail}; evidence: {error}"[:300]
         print(f"BV-01 {self.profile}: {status}; {detail}", flush=True)
+        return status == "passed"
 
 
 def run_cell(profile: str) -> None:
@@ -544,12 +726,14 @@ def run_cell(profile: str) -> None:
         RuntimeError,
         TimeoutError,
         subprocess.CalledProcessError,
+        subprocess.TimeoutExpired,
     ) as error:
         detail = str(error).replace("\n", " ")[:300]
     finally:
         try:
-            cell.cleanup(status, detail)
-        except (OSError, RuntimeError, subprocess.CalledProcessError) as error:
+            if not cell.cleanup(status, detail):
+                status = "failed"
+        except (OSError, RuntimeError, subprocess.SubprocessError) as error:
             status = "failed"
             print(f"BV-01 {profile}: failed; cleanup: {error}", flush=True)
     if status != "passed":

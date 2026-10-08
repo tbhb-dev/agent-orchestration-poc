@@ -1,0 +1,10 @@
+{"counted_units": 0, "exclusion_reason": "path:uv.lock", "fixture": "lockfile-only", "old_path": null, "path": "uv.lock", "raw_added": 2, "raw_deleted": 0, "verdict": "pass"}
+{"counted_units": 0, "exclusion_reason": "scc:generated", "fixture": "generated", "old_path": null, "path": "src/generated.py", "raw_added": 2, "raw_deleted": 0, "verdict": "pass"}
+{"counted_units": 2, "exclusion_reason": null, "fixture": "rename", "old_path": "src/old.py", "path": "src/new.py", "raw_added": 1, "raw_deleted": 1, "verdict": "pass"}
+{"counted_units": 1, "exclusion_reason": null, "fixture": "deletion", "old_path": null, "path": "src/gone.py", "raw_added": 0, "raw_deleted": 2, "verdict": "pass"}
+{"counted_units": 0, "exclusion_reason": null, "fixture": "comment-only", "old_path": null, "path": "src/note.py", "raw_added": 1, "raw_deleted": 1, "verdict": "pass"}
+{"counted_units": 2, "exclusion_reason": null, "fixture": "multiline-comment-fragment", "old_path": null, "path": "src/note.js", "raw_added": 1, "raw_deleted": 1, "verdict": "pass"}
+{"counted_units": 3, "exclusion_reason": null, "fixture": "documentation-only", "old_path": null, "path": "docs/page.md", "raw_added": 2, "raw_deleted": 1, "verdict": "pass"}
+{"counted_units": 2, "exclusion_reason": null, "fixture": "mixed", "old_path": null, "path": "src/mixed.py", "raw_added": 3, "raw_deleted": 2, "verdict": "pass"}
+{"counted_units": 0, "exclusion_reason": "scc:minified", "fixture": "minified", "old_path": null, "path": "web/bundle.js", "raw_added": 1, "raw_deleted": 0, "verdict": "pass"}
+{"counted_units": 801, "exclusion_reason": null, "fixture": "over-limit", "old_path": null, "path": "src/large.py", "raw_added": 801, "raw_deleted": 0, "verdict": "fail"}

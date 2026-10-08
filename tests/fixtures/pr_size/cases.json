@@ -1,0 +1,104 @@
+[
+  {
+    "name": "lockfile-only",
+    "path": "uv.lock",
+    "before": "",
+    "after": "one\ntwo\n",
+    "added": 2,
+    "deleted": 0,
+    "units": 0,
+    "reason": "path:uv.lock"
+  },
+  {
+    "name": "generated",
+    "path": "src/generated.py",
+    "before": "",
+    "after": "# do not edit\nvalue = 1\n",
+    "added": 2,
+    "deleted": 0,
+    "units": 0,
+    "reason": "scc:generated"
+  },
+  {
+    "name": "rename",
+    "path": "src/new.py",
+    "old_path": "src/old.py",
+    "before": "value = 1\n",
+    "after": "value = 2\n",
+    "added": 1,
+    "deleted": 1,
+    "units": 2,
+    "reason": null
+  },
+  {
+    "name": "deletion",
+    "path": "src/gone.py",
+    "before": "value = 1\n# note\n",
+    "after": "",
+    "added": 0,
+    "deleted": 2,
+    "units": 1,
+    "reason": null
+  },
+  {
+    "name": "comment-only",
+    "path": "src/note.py",
+    "before": "# old\n",
+    "after": "# new\n",
+    "added": 1,
+    "deleted": 1,
+    "units": 0,
+    "reason": null
+  },
+  {
+    "name": "multiline-comment-fragment",
+    "path": "src/note.js",
+    "before": "/* begin\nold text\n*/\n",
+    "after": "/* begin\nnew text\n*/\n",
+    "added": 1,
+    "deleted": 1,
+    "units": 2,
+    "reason": null
+  },
+  {
+    "name": "documentation-only",
+    "path": "docs/page.md",
+    "before": "old\n",
+    "after": "new\n<!-- note -->\n",
+    "added": 2,
+    "deleted": 1,
+    "units": 3,
+    "reason": null
+  },
+  {
+    "name": "mixed",
+    "path": "src/mixed.py",
+    "before": "value = 1\n# old\n",
+    "after": "value = 2\n# new\n\n",
+    "added": 3,
+    "deleted": 2,
+    "units": 2,
+    "reason": null
+  },
+  {
+    "name": "minified",
+    "path": "web/bundle.js",
+    "before": "",
+    "after": "const x = 1; const y = 2; const z = 3; const a = 4; const b = 5; const c = 6; const d = 7; const e = 8; const f = 9; const g = 10; const h = 11; const i = 12; const j = 13; const k = 14; const l = 15; const m = 16; const n = 17; const o = 18; const p = 19; const q = 20; const r = 21; const s = 22; const t = 23; const u = 24; const v = 25; const w = 26; const aa = 27; const bb = 28; const cc = 29; const dd = 30;\n",
+    "added": 1,
+    "deleted": 0,
+    "units": 0,
+    "reason": "scc:minified"
+  },
+  {
+    "name": "over-limit",
+    "path": "src/large.py",
+    "before": "",
+    "after": "value = 1\n",
+    "repeat": 801,
+    "added": 801,
+    "deleted": 0,
+    "units": 801,
+    "reason": null
+  }
+]

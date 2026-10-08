@@ -1,0 +1,5 @@
+{
+  "profile": "claude-interactive",
+  "status": "passed",
+  "detail": "peer=13892 decision=allowed requests=3 side_requests=1"
+}

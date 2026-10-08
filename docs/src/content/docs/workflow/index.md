@@ -5,6 +5,8 @@ description: Issues, Project fields, review, merge policy, and CI.
 
 Work starts with an issue in [Project 9](https://github.com/users/tbhb/projects/9). The coordinator dispatches a worker into its own branch and worktree. Review and green CI precede a squash merge.
 
+Use [process incident management](/workflow/process-incidents/) to declare, contain, and review coordination failures. The [first tracking incident](/workflow/incidents/2026-09-27-001/) retains its historical evidence gaps.
+
 ```mermaid
 flowchart LR
     I[Issue] --> W[Branch and worktree]
@@ -88,6 +90,12 @@ The operator completed reviewer login on 2026-09-26 after the coordinator stoppe
 Reviewer identity records the project review process. It does not protect credentials from workers on the same machine. The coordinator merges ordinary product code, including code that handles credentials, after review and green CI. The operator merges changes to project credential issuance, storage, grants, or repository secrets, security policy, egress rules, and host setup or installations.
 
 The active [main ruleset](https://github.com/tbhb/agent-orchestration-poc/rules/24053242), read through REST on 2026-09-27, requires a PR, one approving review, stale approval dismissal on push, resolved conversations, and approval of the latest push by someone other than its pusher. It also requires an up-to-date branch and successful `check`, `docs`, `pr-body`, `imported-research`, and `mutation` checks. Extra approval is required for unattributed changes. Only squash merges are permitted. Deletion and force pushes are blocked, and the bypass list is empty. The active [all-branches ruleset](https://github.com/tbhb/agent-orchestration-poc/rules/24056095) blocks force pushes on every branch. Repository settings disable merge commits and rebase merges for PRs, while feature branches may receive merge commits from `main`. GitHub enforces the rulesets. Review by `tbhbbot` and the round limit are project policy. The provisioner will remove matching worktrees once implemented.
+
+## Dependency proposals
+
+[Decision 0011](/decisions/0011-dependency-update-proposals/) proposes Renovate as an advisory source after operator-owned setup and the #92 and #93 workflow gates. The coordinator selects or creates an open issue with compliant labels and allowed paths, then dispatches a worker on an issue-number branch. The worker reads versioned release notes and source. The worker records exact pins and lockfiles, updates the owning stack rules and conventions, then opens a coordinator-owned PR whose Evidence section links the committed research note. A generated service PR remains advisory under the current author and branch rules. A different-model `tbhbbot` review and all five required checks remain necessary. The [research comparison](https://github.com/tbhb/agent-orchestration-poc/blob/research/91-dependency-updates/reports/inputs/dependency-update-research.md) records the manual owner and procedure where a manager cannot handle a pin.
+
+The proposed service budget is two routine proposals and one security proposal open at a time. Routine patch and minor updates group by ecosystem and update class. Security fixes use their own group, and a major migration does not share a proposal with unrelated updates. The coordinator counts proposals from other sources before dispatch. Configuration, a live proposal, and a full worker PR gate remain untested, so dependency automation is inactive.
 
 ## CI jobs
 

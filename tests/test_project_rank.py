@@ -8,6 +8,7 @@ from agent_orchestration_poc.core.project_rank import (
     Item,
     apply_mutations,
     eligible,
+    plan_item_order,
     plan_move,
     plan_order,
     plan_replace,
@@ -90,6 +91,23 @@ def test_order_and_replace() -> None:
         plan_replace(items, "missing", 3)
     with pytest.raises(ValueError, match="missing"):
         plan_replace(items, "D1", 99)
+
+
+def test_complete_item_order_includes_drafts_and_rest_ids() -> None:
+    draft = Item("D1", None, "DRAFT_ISSUE", "Standard", "OPEN", "", "101")
+    first = Item("I1", 1, "ISSUE", "Standard", "OPEN", "Chore", "102")
+    second = Item("I2", 2, "ISSUE", "Standard", "OPEN", "Chore", "103")
+    items = (first, draft, second)
+    mutations = plan_item_order(items, ("103", "101", "102"))
+    assert tuple(item.id for item in apply_mutations(items, mutations)) == (
+        "I2",
+        "D1",
+        "I1",
+    )
+    assert plan_item_order(items, ("102", "D1", "103")) == ()
+    for incomplete in (("103", "102"), ("103", "103", "102"), ("103", "999", "102")):
+        with pytest.raises(ValueError, match="every open Standard item"):
+            plan_item_order(items, incomplete)
 
 
 @pytest.mark.parametrize(

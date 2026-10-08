@@ -1,0 +1,5 @@
+{"method": "POST", "path": "/v1/responses", "status": 200}
+{"method": "POST", "path": "/v1/responses", "status": 200}
+{"method": "POST", "path": "/v1/responses", "status": 409}
+{"method": "POST", "path": "/v1/responses", "status": 409}
+{"method": "POST", "path": "/v1/responses", "status": 409}
