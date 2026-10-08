@@ -83,6 +83,7 @@ run = "shfmt -w -i 4 -ci scripts/*.sh"
 description = "Format check, vet, module checks, lint, build, and test the Go module"
 run = [
   "scripts/check-gofumpt.sh",
+  "scripts/test-go-format.sh",
   "go vet ./...",
   "go mod tidy -diff",
   "go mod verify",
@@ -97,7 +98,7 @@ run = "go test -race -v ./internal/bus ./internal/core/relay ./internal/core/per
 
 [tasks."fmt:go"]
 description = "Format Go with gofumpt"
-run = "gofumpt -w ."
+run = "scripts/format-go.sh"
 
 [tasks.build]
 description = "Build bin/agentd and bin/agentctl, stamping VERSION (default dev) into the binaries"

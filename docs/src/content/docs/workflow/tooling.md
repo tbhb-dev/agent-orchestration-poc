@@ -76,7 +76,7 @@ Python development dependencies are locked in `uv.lock` and declared in `pyproje
 | Hooks | `prek.toml` |
 | Gate change registry | `config/gate-registry.toml` records supported paths, numeric directions, required selectors, and suppression syntax |
 
-`GOTOOLCHAIN=local` prevents an implicit Go download. `UV_PYTHON_PREFERENCE=only-system` selects mise's Python. Go checks include module tidiness and verification, then lint, build, and race-enabled shuffled tests. `check:pyrefly` runs in the `check` aggregate and CI.
+`GOTOOLCHAIN=local` prevents an implicit Go download. `UV_PYTHON_PREFERENCE=only-system` selects mise's Python. Go formatting and its check use existing tracked and untracked, nonignored Go files, so changing `node_modules` directories and unstaged source deletions are outside their input set. Go checks include module tidiness and verification, then lint, build, and race-enabled shuffled tests. `check:pyrefly` runs in the `check` aggregate and CI.
 
 Property tests run in `check` with ordinary Go and Python tests. Required CI fixes the rapid seed at 20260926 and uses Hypothesis's built-in `ci` profile. Nightly tasks use random seeds and file an issue with their output on failure. Mutation tests run separately through `check:mutation`, and its CI job succeeds without running the tools when no core code or test changed.
 
@@ -168,7 +168,9 @@ The `commit-trailers` hook rejects attribution and missing `Refs:` trailers exce
 | --- | --- |
 | `scripts/markdown-files.sh` | Enumerates tracked and unignored Markdown, excluding imported research |
 | `scripts/check-vale.sh` | Synchronizes missing styles and checks supplied files or the Markdown inventory |
-| `scripts/check-gofumpt.sh` | Fails on Go files needing formatting |
+| `scripts/check-gofumpt.sh` | Fails on nonignored Go files needing formatting |
+| `scripts/go-source-files.sh`, `scripts/format-go.sh` | Select and format nonignored Go files |
+| `scripts/test-go-format.sh` | Checks ignored dependency files and untracked source handling |
 | `scripts/check-deadcode.sh` | Fails when deadcode prints an unreachable function |
 | `scripts/check-mermaid.sh` | Installs the locked parser package and checks supplied files or the inventory |
 | `scripts/mermaid-check/check.mjs` | Extracts fenced Mermaid and parses it with Mermaid |
