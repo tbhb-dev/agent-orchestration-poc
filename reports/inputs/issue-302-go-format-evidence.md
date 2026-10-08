@@ -13,7 +13,7 @@ The regression script `scripts/test-go-format.sh` checks that an untracked, noni
 | Environment | Before | After |
 | --- | --- | --- |
 | Local formatter probe | Old directory walk 1.74 seconds, exit 2 | New check 0.90 seconds and format 0.80 seconds, both exit 0 |
-| CI `check` job | [Main run 37730050520](https://github.com/tbhb-dev/agent-orchestration-poc/actions/runs/37730050520) on `e34c9ea` ran from 04:58:30 to 05:01:10 UTC, 160 seconds, success | Recorded in the pull request after its first CI run |
-| Local `mise run check` | Not measured on a fixed prechange tree | 495.28 seconds, exit 0, on the changed worktree |
+| CI `check` job | [Main run 37730050520](https://github.com/tbhb-dev/agent-orchestration-poc/actions/runs/37730050520) on `e34c9ea` ran from 04:58:30 to 05:01:10 UTC, 160 seconds, success | [PR run 37733747527](https://github.com/tbhb-dev/agent-orchestration-poc/actions/runs/37733747527) ran from 05:43:56 to 05:47:10 UTC, 194 seconds, success. A later PR body edit triggered another successful `check` from 05:48:30 to 05:50:48 UTC, 138 seconds |
+| Local `mise run check` | 516.32 seconds, exit 0, in a disposable detached worktree at `e34c9ea549a7f3a652cebb6eef5df95bc02023d2` | 495.28 seconds, exit 0, on the changed worktree at `f394732ac34fc2a3e5be610ec987a405f84b0de4` |
 
-The CI baseline is a whole job, while the local probe measures only formatting. Differences between those timings do not isolate formatter overhead.
+The CI and local full-check timings include more than formatting. They are single runs with different cache states and do not isolate formatter overhead. The local formatter probe measures only file selection and formatting.
