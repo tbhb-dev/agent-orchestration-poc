@@ -364,6 +364,19 @@ def scan_text(  # noqa: C901, PLR0912  Refs: #300
                 continue
             phrase = match.group()
             tail = line[match.end() :]
+            if phrase.lower() in {"non-blocking", "non blocking"} and (
+                re.match(
+                    r"\s+findings\s*:\s*none(?=\s*(?:[.!?;]|$))",
+                    tail,
+                    re.IGNORECASE,
+                )
+                or (
+                    re.search(r"\bno\s+$", line[: match.start()], re.IGNORECASE)
+                    and re.match(r"\s+findings\b", tail, re.IGNORECASE)
+                )
+            ):
+                # Exempt only this occurrence, never other indicators in the line.
+                continue
             clause = line[
                 max(line.rfind(mark, 0, match.start()) for mark in ";.!?")
                 + 1 : match.end()
