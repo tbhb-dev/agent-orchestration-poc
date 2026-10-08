@@ -10,7 +10,7 @@ Documented: the lease contract comes from `.internal/scaffolding/check-semaphore
 
 Documented: mise task arrays run in order, dependency-only aggregates are supported, and `hide = true` hides a task from listings. Source and versioned documentation read: mise tag `v2026.8.6`, commit `71212d424cd07189b22027f496c01ccad76e8b6d`, `docs/tasks/toml-tasks.md` and dependency resolution in `src/cli/run.rs`.
 
-Fetching a missing blob into the existing mise clone failed in the Codex sandbox, which forbids writes to that clone's Git object directory. The brief authorized cloning dependency sources into temporary storage. The pinned checkout used here is `/tmp/check-semaphore-332-mise-source`, created with:
+The earlier source review used the brief-authorized temporary clone after the sandbox rejected a missing-blob fetch into the existing clone. The pinned source checkout was `/tmp/check-semaphore-332-mise-source`, created with:
 
 ```sh
 git clone --depth 1 --branch v2026.8.6 https://github.com/jdx/mise.git /tmp/check-semaphore-332-mise-source
@@ -89,7 +89,7 @@ Run B queue reports:
 
 ## Check output
 
-Verified: the initial standalone `mise run check` and both trial runs passed. The integration-enabled run passed all 1,224 tests, including 20 wrapper fixtures. The default test task separately passed 1,063 tests and omitted 161 integration tests by its existing configuration. The coverage task ran those integration tests. Wrapper fixtures cover all five tasks with installed and absent executables and status 0 or 75, including exact fallback notices. With a fake semaphore script installed, a nonzero status from the wrapped command propagates with no second, unwrapped invocation. The fixtures never make the fake semaphore itself fail; no fallback after a real semaphore error is an inference from the wrappers' `exec` structure.
+Verified by reading the recorded trial output: the standalone check and both serialized checks returned zero. Coverage ran 1,224 tests, including the 20 wrapper cases; the default pytest selection ran 1,063, with the other 161 covered by the integration-enabled coverage task. In `tests/test_check_semaphore.py`, five task names, two executable-presence states, and two child statuses produce the 20 cases. The assertions require the exact notice when the semaphore is absent and exactly one child invocation in either state. Status 75 originates in the fake `mise` command, not the fake semaphore. Inference from the task definitions: replacing the shell with `exec` prevents an unwrapped retry after a real semaphore failure; the fixtures do not directly induce that failure.
 
 Full timestamped output from trial run A:
 
@@ -548,45 +548,57 @@ Verified: gate comparison requires `gate:selector:mise.toml:file:changed`. The P
 mise run check:gate-changes -- --base 0e579b7 --head HEAD --body-file /tmp/check-semaphore-332-pr.md
 ```
 
-## Codex sandbox result
+## Earlier sandbox execution
 
-Observed: `CHECK_LINKS=1 mise run docs:build` acquired the semaphore and ran dependency installation and Astro. It exited 1 because Chromium failed to register its Mach rendezvous server inside the sandbox:
+Observed in `/tmp/check-semaphore-332-evidence/docs.log`: semaphore admission and dependency installation succeeded, then Astro encountered Chromium’s Mach rendezvous registration error. `CHECK_LINKS=1 mise run docs:build` returned 1:
 
 ```text
 FATAL:base/apple/mach_port_rendezvous_mac.cc:159
 bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer.46196: Permission denied (1100)
 ```
 
-The missing rendered pages then caused seven link-validation errors. Rendering and link validation were not disabled. Codex stopped at this check, as the repository's rules require. The same command was then run outside the Codex sandbox, with the result in the next section:
+Seven link errors followed the rendering failures. The completed host run passed with rendering and link checks enabled, using the same command:
 
 ```sh
 cd /Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.worktrees/tooling-332-check-semaphore
 CHECK_LINKS=1 mise run docs:build
 ```
 
-Observed: `mise run check:mutation` acquired a lease and entered the nested Go mutation task without a descriptor-inheritance error. It was interrupted with Ctrl-C, exit 130, when work stopped at the docs sandbox block. This run produced no mutation scores and did not reach the Python task. The full mutation run in the next section supplies both.
+The earlier mutation attempt entered the nested Go task and ended with Ctrl-C, status 130. It established admission only; the host run below completed both mutation suites.
 
-The sandbox also rejected `ps` during cleanup. Sending Ctrl-C through the existing command session stopped the run, so no other process inspection was attempted.
+The recorded cleanup used the existing command session to send Ctrl-C after `ps` was rejected by the sandbox.
 
-Codex opened no PR during this run. The implementation commit `03808c84a2b2ef59aaed48ab528a134653d6d1ea` was already pushed before this run began.
+The earlier run began after pushing implementation commit `03808c84a2b2ef59aaed48ab528a134653d6d1ea`; PR creation followed that run.
 
-## Checks completed outside the Codex sandbox
+## Completed host checks
 
-Harness: Claude Code, model `claude-opus-5-5`. Same worktree at `03808c8`, run outside the Codex sandbox, one check at a time, each through the installed semaphore as `/Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.holding/bin/check-semaphore -- <cmd>`. Times are UTC.
+Check executor: Claude Code with Claude Opus 5.5 (`claude-opus-5-5`), on the host at implementation commit `03808c8`. Writer: Codex CLI 0.157.1, `gpt-6-astra`, medium effort. For this correction, Codex read the supplied `check.log`, `docs.log`, `mut.log`, `mut-meta.log`, and `mut-queue.log` under `/private/tmp/claude-501/-Users-tony-Code-github-com-tbhb-agent-orchestration-poc/f7e46b1e-273f-40d4-8565-5fd48945d4a1/scratchpad/ev/` and wrote this summary, the fixture explanation, and the sandbox history to address PR #333. Each host command ran separately through `/Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.holding/bin/check-semaphore -- <cmd>`. Times below are UTC.
 
 | Command | Start | End | Exit | Result |
 | --- | --- | --- | --- | --- |
-| `mise run check` | 2026-10-08T23:14:39Z | 2026-10-08T23:15:59Z | 0 | `check:pytest` 1,063 passed, with the 161 integration tests left to `check:coverage` by the default configuration; `check:coverage` 1,224 passed, including the 20 wrapper fixtures; all coverage floors met |
-| `CHECK_LINKS=1 mise run docs:build` | 2026-10-08T23:16:20Z | 2026-10-08T23:16:36Z | 0 | 62 pages built; "All internal links are valid." |
-| `mise run check:mutation` | 2026-10-08T23:17:37Z | 2026-10-08T23:25:09Z | 0 | Go: 149 mutants classified, test efficacy 97.32%, mutator coverage 100.00%; Python core mutation score 90.11% (11,854 killed of 13,155) |
+| `mise run check` | 2026-10-08T23:14:39Z | 2026-10-08T23:15:59Z | 0 | 1,063 default tests passed; coverage ran 1,224 tests, including 20 wrapper cases, and passed every coverage floor |
+| `CHECK_LINKS=1 mise run docs:build` | 2026-10-08T23:16:20Z | 2026-10-08T23:16:36Z | 0 | 62 pages built; internal-link validation passed |
+| `mise run check:mutation` | 2026-10-08T23:17:37Z | 2026-10-08T23:25:09Z | 0 | 149 Go mutants classified, 97.32% efficacy, 100.00% mutator coverage; Python score 90.11%, with 11,854 of 13,155 killed |
 
-Observed: the `check` run's integration tests again regenerated the two example chart SVGs under `research/gates/data-analysis/` and added a Quarto `.gitignore` there. Those were restored and removed before committing.
+According to the executor, cleanup restored the two generated example SVGs and removed Quarto’s generated `.gitignore` in `research/gates/data-analysis/`. The PR diff contains no changes to those files.
 
-Verified: nested leases for both Go and Python. The outer semaphore (wrapper PID 62983) ran `mise run check:mutation`, whose wrapper invoked the semaphore again, then `mise run check:mutation:go` and `mise run check:mutation:python`, each also wrapped. The mutation log shows every wrapper and hidden task in order with no semaphore error. A collector read `queue.json` from the default semaphore directory every 15 seconds. All 29 snapshots after admission show one entry, PID 62983 in slot 0: 7 snapshots during `_check:mutation:go` and 22 during `_check:mutation:python`. The nested wrappers therefore reused the inherited lease rather than queuing for a second slot. Observed: load5 was 10.01 at the start, below the README's load5 condition of 20 for starting mutation. During `_check:mutation:python` it rose to a peak of 26.93 at 23:24:39Z, with load1 peaking at 49.19 at 23:23:54Z. These figures are host-wide; the run does not attribute the load between this job and other processes, and the semaphore does not bound load from them.
+Observed by reading every sample in `mut-queue.log`: the initial sample has PID 40565 before mutation admission. The next 29 samples all contain exactly one holder, PID 62983 in slot 0: seven during Go mutation and 22 during Python mutation. Both tasks completed in `mut.log`. Together these observations verify nested lease reuse for this execution. Sampling occurred at approximately 15-second intervals; the two transition samples below preserve the same lease ID and PID. Load5 began at 10.01 and reached 26.93 at 23:24:39Z; load1 peaked at 49.19 at 23:23:54Z. These are host-wide observations, with no process-level attribution.
 
-First Go and first Python snapshots:
+The first sample from each mutation suite:
 
 ```text
 2026-10-08T23:17:52Z load={ 8.61 9.85 12.41 } task=[_check:mutation:go] queue=[{"ID":"cbe484f9-7d3f-479a-b18c-b3c8ce5ec4c6","PID":62983,"Name":"mise","Slot":0,"Alive":true}]
 2026-10-08T23:19:37Z load={ 12.96 10.46 12.32 } task=[_check:mutation:python] queue=[{"ID":"cbe484f9-7d3f-479a-b18c-b3c8ce5ec4c6","PID":62983,"Name":"mise","Slot":0,"Alive":true}]
 ```
+
+## Review correction and validation
+
+Codex CLI 0.157.1, `gpt-6-astra`, medium effort, reproduced the authorship finding by comparing the PR provenance statement with commits `57236d8` and `31adb0d`. The finding concerns report production, so a runtime unit test would not express it. Codex read the entire inherited report diff and rewrote its affected passages from the fixture source and supplied execution evidence. Claude Opus 5.5 remains credited for executing the host checks.
+
+Verified from `/tmp/task-876-check.log`: the earlier correction run of `mise run check` finished in 104.50 seconds. All 1,224 coverage tests passed. Python core line and branch coverage were 97.66% and 94.38%, with shell lines at 77.38%. Go core statement and branch coverage were 96.43% and 94.74%, with shell statements at 74.58%. Each configured floor passed.
+
+The earlier reruns also recorded failures, separate from the successful host aggregate above. `/tmp/task-876-mutation.log` ends with a missing mutation metadata file and a nonzero Python task result. The inherited notes describe another incomplete export and a cache-removal failure, followed by a successful Python retry. TASK-876 confirms that both mutation suites have passed and directs this continuation to rerun only checks affected by its report edits. These report edits change no executable code or task configuration.
+
+Verified during this continuation: `git fetch origin` and `git merge origin/main` returned “Already up to date.” The report correction uses the completed host docs validation above, as TASK-876 directs; Chromium was not invoked again.
+
+The continuation’s affected checks passed: `mise run fmt:rumdl`, `mise run check:vale`, `mise run check:rumdl`, `mise run check:guard-markdown`, and `mise run check:gate-changes -- --base origin/main --head HEAD --body-file /tmp/task-876-pr.md`. The local diff scan uses the same skipscan core; the CI task supplies the GitHub event and credentials needed to scan the whole PR.
