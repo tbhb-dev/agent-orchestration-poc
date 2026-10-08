@@ -17,6 +17,7 @@ from agent_orchestration_poc.core.pr_size import (
     changed_fragments,
     classify_samples,
     measure_file,
+    needs_plain_text_retry,
     needs_scc,
     parse_name_status,
     total_units,
@@ -69,6 +70,8 @@ def _scc(
         )
         output = _run("scc", *SCC_OPTIONS, *language_option, directory)
     rows = cast("list[dict[str, Any]]", json.loads(output))
+    if needs_plain_text_retry(suffix, language, bool(rows)):
+        return _scc(content, suffix, "Plain Text", filename)
     if not rows:
         raise ValueError(f"scc did not classify {suffix or 'extensionless'} content")
     files = cast("list[dict[str, Any]]", rows[0]["Files"])
