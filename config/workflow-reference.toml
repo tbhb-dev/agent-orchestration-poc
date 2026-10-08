@@ -2,7 +2,7 @@
 [titles]
 types = ["feat", "fix", "docs", "exp", "research", "tooling", "process", "decision", "chore", "refactor", "test", "inc"]
 scopes = ["bus", "containers", "daemon", "desktop", "docs", "experiment", "remote", "research", "security", "terminal", "tooling", "ui", "workflow", "go", "python", "shell", "github", "git", "ci", "testing", "coverage", "mutation", "gates", "review", "preflight", "handoff", "project", "workers", "checkpoint", "retro", "sync", "import", "subject", "skeleton", "boundaries", "design", "process"]
-verbs = ["add", "allow", "audit", "build", "check", "clarify", "define", "detect", "document", "enforce", "fix", "gate", "keep", "make", "measure", "move", "pin", "record", "refine", "reject", "remove", "repair", "report", "require", "resolve", "restore", "retire", "run", "skip", "split", "sync", "test", "track", "update", "validate", "verify"]
+verbs = ["add", "allow", "audit", "bound", "build", "check", "clarify", "define", "detect", "document", "enforce", "fix", "gate", "keep", "make", "measure", "move", "pin", "record", "refine", "reject", "remove", "repair", "report", "require", "resolve", "restore", "retire", "run", "skip", "split", "sync", "test", "track", "update", "validate", "verify"]
 max_length = 72
 branch_pattern = "<type>/<issue>[-<issue>...]-<slug>"
 issue_only = ["inc"]
