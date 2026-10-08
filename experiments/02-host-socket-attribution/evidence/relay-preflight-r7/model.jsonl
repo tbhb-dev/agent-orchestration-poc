@@ -1,0 +1,3 @@
+{"method": "POST", "path": "/v1/messages?beta=true", "status": 200, "classification": "side-request", "fixture": "claude-side.sse", "tool_count": 0, "has_bash": false, "model": "claude-opus-5-5", "has_output_format": false}
+{"method": "POST", "path": "/v1/messages?beta=true", "status": 200, "classification": "tool", "fixture": "claude-interactive-tool.sse", "tool_count": 3, "has_bash": true, "model": "claude-opus-5-5", "has_output_format": false}
+{"method": "POST", "path": "/v1/messages?beta=true", "status": 200, "classification": "final", "fixture": "claude-interactive-final.sse", "tool_count": 3, "has_bash": true, "model": "claude-opus-5-5", "has_output_format": false}

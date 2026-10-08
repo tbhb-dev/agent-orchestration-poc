@@ -5,6 +5,8 @@ description: Issues, Project fields, review, merge policy, and CI.
 
 Work starts with an issue in [Project 9](https://github.com/users/tbhb/projects/9). The coordinator dispatches a worker into its own branch and worktree. Review and green CI precede a squash merge.
 
+Use [process incident management](/workflow/process-incidents/) to declare, contain, and review coordination failures. The [first tracking incident](/workflow/incidents/2026-09-27-001/) retains its historical evidence gaps.
+
 ```mermaid
 flowchart LR
     I[Issue] --> W[Branch and worktree]

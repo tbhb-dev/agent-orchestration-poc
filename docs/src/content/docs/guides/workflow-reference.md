@@ -132,9 +132,11 @@ Pin `github.com/boyter/scc/v4` at 4.1.0. Code counts scc-classified changed code
 
 Target 400 and limit 800 units. Project Size S is at most 200, M at most 400, and L at most 800. Split larger estimates during refinement.
 
-Excluded paths: `go.sum`, `uv.lock`, `pnpm-lock.yaml`, `**/pnpm-lock.yaml`, `**/*-checksum*`, `**/vendor/**`, `tests/fixtures/**`, `reports/inputs/**`, `experiments/**/evidence/**`, `research/imported/**`, `**/*.svg`, `**/*.excalidraw`. Also exclude `scc` detected generated and minified files, vendored code, test fixtures, evidence directories, and exported diagrams. Keep excluded files in per-file output with raw added and deleted counts and a reason.
+Excluded paths: `go.sum`, `uv.lock`, `pnpm-lock.yaml`, `**/pnpm-lock.yaml`, `package-lock.json`, `**/package-lock.json`, `yarn.lock`, `**/yarn.lock`, `Cargo.lock`, `**/Cargo.lock`, `**/*-checksum*`, `**/vendor/**`, `tests/fixtures/**`, `reports/inputs/**`, `experiments/**/evidence/**`, `research/imported/**`, `**/*.svg`, `**/*.excalidraw`. Also exclude `scc` detected generated and minified files, vendored code, test fixtures, evidence directories, and exported diagrams. Keep excluded files in per-file output with raw added and deleted counts and a reason.
 
-The counter and CI enforcement are separate work. Issue #93 owns enforcement.
+Run `mise run pr:size -- origin/main` for a PR targeting `main`, or pass the upstream target of a stacked PR. The command emits JSON with `total_units` and per-file raw added, raw deleted, counted units, and exclusion reason. `mise run check:pr-size-contract` prints passing and over-limit fixture results.
+
+The counter classifies removed and added fragments with `scc`. A fragment inside a multiline comment can be counted as code because its enclosing delimiters are absent. Subtracting full-file code counts avoids that error but loses equal-count replacements, so the fragment method is the recorded contract. Issue #93 owns CI enforcement.
 
 ## Agent provenance
 

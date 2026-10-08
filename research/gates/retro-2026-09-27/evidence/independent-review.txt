@@ -1,0 +1,35 @@
+import csv, json, hashlib, statistics, fnmatch
+from pathlib import Path
+from datetime import datetime
+p=Path('research/gates/retro-2026-09-27'); e=p/'evidence'
+def read(name): return json.loads((e/name).read_text())
+a,b=map(datetime.fromisoformat,['2026-09-26T22:22:57+00:00','2026-09-27T04:30:06+00:00'])
+pages=[read('pulls-page-1.json'),read('pulls-page-2.json')]
+ids=sorted(x['number'] for page in pages for x in page if x['merged_at'] and a<datetime.fromisoformat(x['merged_at'])<=b)
+inputs=[e/'pulls-page-1.json',e/'pulls-page-2.json']; values={}; allfiles=[]; allreviews=[]; omitted=[]
+patterns=['go.sum','uv.lock','pnpm-lock.yaml','**/pnpm-lock.yaml','**/*-checksum*','**/vendor/**','tests/fixtures/**','reports/inputs/**','experiments/**/evidence/**','research/imported/**','**/*.svg','**/*.excalidraw']
+for n in ids:
+    inputs += [e/f'pr-{n}{suffix}.json' for suffix in ['', '-files', '-reviews']]
+    detail, files, reviews = [read(f'pr-{n}{suffix}.json') for suffix in ['', '-files', '-reviews']]
+    assert len(files)==detail['changed_files']
+    assert detail['merged_at']==next(x['merged_at'] for page in pages for x in page if x['number']==n)
+    excluded=0
+    for f in files:
+        name=f['filename']; hit=any(fnmatch.fnmatchcase(name,g) for g in patterns)
+        lines=f['additions']+f['deletions']; excluded += lines if hit else 0
+        allfiles.append((str(n),name,str(f['additions']),str(f['deletions'])))
+    for r in reviews:
+        allreviews.append((str(n),str(r['id']),r['state'],r['submitted_at']))
+    values[f'PR-{n}']=(sum(r['state']=='CHANGES_REQUESTED' and bool(r['submitted_at']) for r in reviews),int((datetime.fromisoformat(detail['merged_at'])-datetime.fromisoformat(detail['created_at'])).total_seconds()),len(files),excluded)
+manifest=''.join(f'{hashlib.sha256(f.read_bytes()).hexdigest()}  {f.relative_to(p)}\n' for f in sorted(inputs))
+print('PYTHON',__import__('sys').version.split()[0]); print('INPUT_MANIFEST_SHA256',hashlib.sha256(manifest.encode()).hexdigest()); print('INPUT_FILES',len(inputs)); print('PAGES',list(map(len,pages))); print('IDS',ids)
+print('HEADLINES',dict(N01=len(ids),N02=sum(v[0] for v in values.values()),N03=sum(v[0]>0 for v in values.values()),N04=sum(v[1] for v in values.values()),N05=statistics.median(v[1] for v in values.values()),N06=sum(v[2] for v in values.values()),N07=sum(v[3] for v in values.values())))
+metrics={f"PR-{r['pr']}":r for r in csv.DictReader((e/'pr-metrics.csv').open())}
+for rid in sorted(values,key=lambda r: (hashlib.sha256(('165|'+r).encode()).hexdigest(),r))[:10]:
+    r=metrics[rid]; derived=tuple(int(r[k]) for k in ['changes_requested_rounds','open_to_merge_seconds','files_changed','excluded_raw_lines_explicit'])
+    print('SAMPLE',rid,hashlib.sha256(('165|'+rid).encode()).hexdigest(),values[rid],'CSV',derived,'DELTA',tuple(x-y for x,y in zip(values[rid],derived)))
+rawfiles=sorted(allfiles); csvfiles=sorted((r['pr'],r['path'],r['raw_additions'],r['raw_deletions']) for r in csv.DictReader((e/'pr-files.csv').open()))
+rawreviews=sorted(allreviews); csvreviews=sorted((r['pr'],r['review_id'],r['state'],r['submitted_at']) for r in csv.DictReader((e/'pr-review-rows.csv').open()))
+print('FILE_ROWS',len(rawfiles),len(csvfiles),'EQUAL',rawfiles==csvfiles); print('REVIEW_ROWS',len(rawreviews),len(csvreviews),'EQUAL',rawreviews==csvreviews)
+print('ALL_METRICS_DIFFS',[(rid,values[rid],metrics[rid]['excluded_raw_lines_explicit']) for rid in values if values[rid][3]!=int(metrics[rid]['excluded_raw_lines_explicit'])])
+print('DECLARED_KNOWN',sum(r['declared_size']!='unknown' for r in metrics.values()))

@@ -20,7 +20,7 @@ S18,issue,https://github.com/tbhb-dev/agent-orchestration-poc/issues/158,none,De
 S19,issue_comment,https://github.com/tbhb-dev/agent-orchestration-poc/issues/164#issuecomment-5852591106,evidence/issue-164-comments.jsonl,Coordinator reported original header values
 S20,issue_comment,https://github.com/tbhb-dev/agent-orchestration-poc/issues/164#issuecomment-5852783968,evidence/issue-164-comments.jsonl,Coordinator reported renewed exhaustion on agent account
 S21,issue_comment,https://github.com/tbhb-dev/agent-orchestration-poc/issues/164#issuecomment-5852895053,evidence/issue-164-comments.jsonl,Coordinator reported REST recovery and residual gaps
-S22,pr,https://github.com/tbhb-dev/agent-orchestration-poc/pull/156,none,Open notebook gate with changes requested
+S22,pr,https://github.com/tbhb-dev/agent-orchestration-poc/pull/156,none,Merged notebook gate; local Quarto execution is sandbox blocked
 S23,issue,https://github.com/tbhb-dev/agent-orchestration-poc/issues/90,none,Per PR metric definitions
 S24,issue,https://github.com/tbhb-dev/agent-orchestration-poc/issues/164,none,Later incident and reconciliation specification
 SPR75,pr,https://github.com/tbhb-dev/agent-orchestration-poc/pull/75,evidence/pr-75.json,PR body and detail snapshot with supporting rows under evidence
@@ -40,3 +40,7 @@ SPR119,pr,https://github.com/tbhb-dev/agent-orchestration-poc/pull/119,evidence/
 SPR138,pr,https://github.com/tbhb-dev/agent-orchestration-poc/pull/138,evidence/pr-138.json,PR body and detail snapshot with supporting rows under evidence
 SPR115,pr,https://github.com/tbhb-dev/agent-orchestration-poc/pull/115,evidence/pr-115.json,PR body and detail snapshot with supporting rows under evidence
 SPR144,pr,https://github.com/tbhb-dev/agent-orchestration-poc/pull/144,evidence/pr-144.json,PR body and detail snapshot with supporting rows under evidence
+S25,aggregate,https://github.com/tbhb-dev/agent-orchestration-poc/issues/165,evidence/pr-metrics.csv,Sanitized historical snapshot; full #84 size unavailable
+S26,aggregate,https://github.com/tbhb-dev/agent-orchestration-poc/issues/165,evidence/pr-review-rows.csv,Sanitized historical snapshot; full #84 size unavailable
+S27,aggregate,https://github.com/tbhb-dev/agent-orchestration-poc/issues/165,evidence/pr-files.csv,Sanitized historical snapshot; full #84 size unavailable
+S28,pr,https://github.com/tbhb-dev/agent-orchestration-poc/pull/196,none,"Later contextual partial PR, outside fixed cohort"

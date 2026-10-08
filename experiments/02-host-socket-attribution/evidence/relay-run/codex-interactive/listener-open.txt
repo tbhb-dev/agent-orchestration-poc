@@ -1,0 +1,2 @@
+COMMAND     PID USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME
+python3.1 19760 tony    3u  unix 0x2c85ecc40ac2ff1a      0t0      /private/tmp/bv01-228-codex-interactive/gateway.sock
