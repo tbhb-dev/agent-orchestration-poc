@@ -154,6 +154,28 @@ def test_pr_cases(case: dict[str, Any]) -> None:
     )
 
 
+@pytest.mark.parametrize("phase_labels", [(), ("phase/2",), ("phase/2", "phase/9")])
+def test_phase_labels_are_ignored_on_issues_and_prs(
+    phase_labels: tuple[str, ...],
+) -> None:
+    issue = _cases("issue_cases.json")[0]
+    issue_labels = (*issue["labels"], *phase_labels)
+    assert validate_issue(issue["title"], issue["body"], issue_labels, REFERENCE) == ()
+
+    pr = _cases("pr_cases.json")[0]
+    pr_labels = (*pr["labels"], *phase_labels)
+    assert (
+        validate_pr(
+            pr["title"], pr["body"], pr_labels, frozenset(pr["open"]), REFERENCE
+        )
+        == ()
+    )
+    assert not any(
+        name.startswith(("phase/", "invalid/phase"))
+        for name in expected_labels(REFERENCE)
+    )
+
+
 @pytest.mark.parametrize(
     ("path", "valid"),
     [
@@ -257,14 +279,14 @@ def test_new_class_mapping_accepts_old_and_new_labels(kind: str) -> None:
         new,
     )
     body = _cases("issue_cases.json")[0]["body"]
-    labels = ("area/workflow", old, new, "phase/1", "harness/codex")
+    labels = ("area/workflow", old, new, "harness/codex")
     assert validate_issue(title, body, labels, REFERENCE) == ()
     no_migration = {**REFERENCE, "migration": {"validator_pr": 137}}
     if old != new:
         assert validate_issue(
             title,
             body,
-            ("area/workflow", old, "phase/1", "harness/codex"),
+            ("area/workflow", old, "harness/codex"),
             no_migration,
         )
 
@@ -343,7 +365,7 @@ def test_parent_accepts_ordinary_lowercase_words(words: list[str]) -> None:
     "title", ["inc: tracking stopped", "inc(workflow): tracking stopped"]
 )
 def test_incident_title_is_issue_only_and_has_no_verb_rule(title: str) -> None:
-    labels = ("area/workflow", "type/incident", "phase/1", "harness/codex")
+    labels = ("area/workflow", "type/incident", "harness/codex")
     assert validate_issue(title, "", labels, REFERENCE) == ()
     assert validate_pr(
         title, _cases("pr_cases.json")[0]["body"], labels, frozenset({84}), REFERENCE
@@ -355,7 +377,7 @@ def test_incident_title_is_issue_only_and_has_no_verb_rule(title: str) -> None:
 )
 def test_relabel_only_exception_is_issue_specific(title: str, label: str) -> None:
     body = _cases("issue_cases.json")[0]["body"]
-    labels = ("area/workflow", label, "phase/1", "harness/codex")
+    labels = ("area/workflow", label, "harness/codex")
     assert validate_issue(title, body, labels, REFERENCE) == ()
     assert "title type does not match type/ label" in validate_pr(
         title, _cases("pr_cases.json")[0]["body"], labels, frozenset({84}), REFERENCE
@@ -364,7 +386,7 @@ def test_relabel_only_exception_is_issue_specific(title: str, label: str) -> Non
 
 def test_new_label_families_are_defined() -> None:
     expected = expected_labels(REFERENCE)
-    assert len(REFERENCE["labels"]["invalid"]) == 20
+    assert len(REFERENCE["labels"]["invalid"]) == 19
     assert len(REFERENCE["labels"]["review"]) == 4
     assert all(
         f"invalid/{value}" in expected for value in REFERENCE["labels"]["invalid"]
@@ -375,7 +397,7 @@ def test_new_label_families_are_defined() -> None:
 @given(st.sampled_from(tuple(REFERENCE["migration"]["labels"].items())))
 def test_migration_preserves_one_class(pair: tuple[str, str]) -> None:
     old, new = pair
-    labels = ("area/workflow", old, new, "phase/1", "harness/codex")
+    labels = ("area/workflow", old, new, "harness/codex")
     assert validate_labels(labels, REFERENCE) == ()
     assert validate_type_label("tooling(workflow): add forms", labels, REFERENCE) == (
         () if new == "type/chore" else ("title type does not match type/ label",)
@@ -441,7 +463,7 @@ def test_enforcement_rejects_invalid_timestamps(created: str, cutoff: str) -> No
 )
 def test_core_properties_across_reference(kind: str, word: str, number: int) -> None:
     title = f"{kind}(workflow): add {word}"
-    labels = ("area/workflow", REFERENCE["types"][kind], "phase/1", "harness/codex")
+    labels = ("area/workflow", REFERENCE["types"][kind], "harness/codex")
     issue_body = _cases("issue_cases.json")[0]["body"]
     pr_body = _cases("pr_cases.json")[0]["body"]
     assert validate_title(title, REFERENCE) == ()
@@ -451,7 +473,7 @@ def test_core_properties_across_reference(kind: str, word: str, number: int) -> 
     assert validate_labels(labels, REFERENCE) == ()
     assert validate_type_label(title, labels, REFERENCE) == ()
     wrong_type = "type/defect" if kind == "feat" else "type/feature"
-    wrong = ("area/workflow", wrong_type, "phase/1", "harness/codex")
+    wrong = ("area/workflow", wrong_type, "harness/codex")
     assert "title type does not match type/ label" in validate_issue(
         title, issue_body, wrong, REFERENCE
     )

@@ -41,21 +41,18 @@ evidence_requires = "named repository paths and exact commands"
 
 [labels]
 areas = ["bus", "containers", "daemon", "desktop", "docs", "experiment", "remote", "research", "security", "terminal", "tooling", "ui", "workflow"]
-phases = ["0", "1", "2", "3", "4", "5", "6"]
 harnesses = ["agy", "any", "claude", "codex"]
 area_color = "1d76db"
-phase_color = "5319e7"
 harness_color = "fbca04"
 type_color = "0e8a16"
 blocked_color = "b60205"
 operator_color = "d93f0b"
 area_description = "Area: {value}"
-phase_description = "Phase {value}"
 harness_description = "Intended harness: {value}"
 type_description = "Type: {value}"
 blocked_description = "Blocked on another item or a finding"
 operator_description = "Needs the operator's decision or approval"
-invalid = ["acceptance-criteria", "allowed-paths", "area", "context-and-links", "dependencies-and-paths", "docs-impact", "evidence-required", "goal", "harness", "out-of-scope", "parent", "phase", "priority", "review", "severity", "status", "stub-record", "title", "type", "work-type"]
+invalid = ["acceptance-criteria", "allowed-paths", "area", "context-and-links", "dependencies-and-paths", "docs-impact", "evidence-required", "goal", "harness", "out-of-scope", "parent", "priority", "review", "severity", "status", "stub-record", "title", "type", "work-type"]
 review = ["pending-review", "approved", "changes-requested", "rejected"]
 invalid_color = "b60205"
 review_color = "c5def5"
