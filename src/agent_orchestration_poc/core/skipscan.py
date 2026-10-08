@@ -234,7 +234,7 @@ def _inline_code(line: str, position: int) -> bool:
 
 
 def _python_spans(text: str) -> list[tuple[tuple[int, int], tuple[int, int]]]:
-    """Exempt only complete string tokens visible within one diff hunk."""
+    """Exempt complete string tokens in text starting at a known Python boundary."""
     spans = []
     try:
         for token in tokenize.generate_tokens(io.StringIO(text + "\n").readline):
@@ -412,11 +412,13 @@ def _scan_code(
     source: str,
     pending_runs: set[str],
 ) -> list[dict[str, Any]]:
-    """Scan added code with string exemptions bounded by visible hunk tokens."""
+    """Scan added code, trusting string tokens only with context from file start."""
     hits = []
+    # A later hunk may begin inside a string: its closing quote would look like
+    # an opening quote. Without the file prefix, no string exemption is proven.
     spans: list[tuple[tuple[int, int], tuple[int, int]]] = (
         _python_spans("\n".join(text for _, text, _ in hunk))
-        if path.endswith(".py")
+        if path.endswith(".py") and hunk and hunk[0][0] == 1
         else []
     )
     for index, (line, content, is_added) in enumerate(hunk, 1):

@@ -1,5 +1,7 @@
 """Exemption corpus and non-interference properties for issue #318."""
 
+from difflib import unified_diff
+
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st
@@ -171,6 +173,30 @@ def test_span_state_does_not_cross_missing_hunk_context(line: int) -> None:
         hit["line"] == line and hit["phrase"] == "pytest.skip"
         for hit in scan_diff(diff, "diff")
     )
+
+
+@pytest.mark.parametrize("quote", ['"""', "'''"])
+@pytest.mark.parametrize("statement", ['pytest.skip("real")', "# skipped deployment"])
+@given(st.integers(min_value=3, max_value=30))
+def test_hunk_starting_inside_docstring_reports(
+    quote: str, statement: str, padding: int
+) -> None:
+    prefix = quote + "\n" + "more documentation\n" * padding + quote + "\n"
+    suffix = quote + "Another string." + quote + "\n"
+    before = prefix + "pass\n" + suffix
+    after = prefix + statement + "\n" + suffix
+    compile(after, "worker.py", "exec")
+    diff = "diff --git a/worker.py b/worker.py\n" + "".join(
+        unified_diff(
+            before.splitlines(keepends=True),
+            after.splitlines(keepends=True),
+            fromfile="a/worker.py",
+            tofile="b/worker.py",
+        )
+    )
+    expected = scan_diff(added_diff("worker.py", statement, padding + 3), "diff")
+    assert expected
+    assert scan_diff(diff, "diff") == expected
 
 
 @pytest.mark.parametrize(("path", "exempt", "independent", "phrase"), CODE_CASES)
