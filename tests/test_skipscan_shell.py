@@ -116,7 +116,7 @@ def test_shell_reads_every_surface_on_loopback(
             "commit": "commit a",
             "diff": "PR #1:note.md",
         }[surface]
-        assert f"{source}:1: skipped" in caplog.text
+        assert f"{source}:1: skipped" in caplog.text  # Regression fixture for #300.
         api = f"http://127.0.0.1:{server.server_port}"
         payload = {"issue": {"number": 1, "pull_request": {"url": "pr"}}}
         assert run_event(api, "dummy", "o/r", "issue_comment", payload) == 1

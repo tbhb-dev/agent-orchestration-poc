@@ -43,3 +43,7 @@ Commit `c492e78` merges main `7b6a194` and records the #300 review fixes with no
 The explicit #300 gate comparison against main `7b6a194` passed after refreshing the five suppression IDs changed by the review fixes. `mise run pr:size -- origin/main` measured 505 counted units. The pre-existing untracked `research/gates/data-analysis/.gitignore` is outside this PR and remains uncommitted; validation-generated chart changes were restored.
 
 `mise run check:mutation` passed for #300: Go 97.32% (145 killed of 149), Python 90.10% (11,853 killed of 13,155, with two timed-out mutants classified). The initial overlapping run ended in a Go mutation-runner panic; the sequential rerun completed with exit 0.
+
+CI on `03b7e05` found an untracked indicator in the new test assertion at `tests/test_skipscan_shell.py:119` under #300 ([run](https://github.com/tbhb-dev/agent-orchestration-poc/actions/runs/37812156635/job/113431491819)). Adding an adjacent `#300` fixture comment preserves the assertion and records why that literal is present.
+
+After that comment-only correction for #300, `mise run fmt` and `mise run check` passed again. The earlier CI aggregate also observed a separate #302 temporary-directory race: `check:deadcode` reported that `issue-302-source.k6sD3c` no longer existed while scanning `./...` ([run](https://github.com/tbhb-dev/agent-orchestration-poc/actions/runs/37812156617/job/113432068140)). `scripts/test-go-format.sh` creates that directory under the repository root; this PR does not change that script.
