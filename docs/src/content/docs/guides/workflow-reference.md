@@ -11,7 +11,7 @@ Types: `feat`, `fix`, `docs`, `exp`, `research`, `tooling`, `process`, `decision
 
 Scopes: `bus`, `containers`, `daemon`, `desktop`, `docs`, `experiment`, `remote`, `research`, `security`, `terminal`, `tooling`, `ui`, `workflow`, `go`, `python`, `shell`, `github`, `git`, `ci`, `testing`, `coverage`, `mutation`, `gates`, `review`, `preflight`, `handoff`, `project`, `workers`, `checkpoint`, `retro`, `sync`, `import`, `subject`, `skeleton`, `boundaries`, `design`, `process`.
 
-Subject verbs: `add`, `allow`, `audit`, `bound`, `build`, `check`, `clarify`, `define`, `detect`, `document`, `enforce`, `fix`, `gate`, `keep`, `make`, `measure`, `move`, `pin`, `record`, `refine`, `reject`, `remove`, `repair`, `report`, `require`, `resolve`, `restore`, `retire`, `run`, `skip`, `split`, `sync`, `test`, `track`, `update`, `validate`, `verify`.
+Subject verbs: `add`, `allow`, `audit`, `bound`, `build`, `check`, `clarify`, `define`, `detect`, `document`, `enforce`, `fix`, `flag`, `gate`, `keep`, `make`, `measure`, `move`, `pin`, `record`, `refine`, `reject`, `remove`, `repair`, `report`, `require`, `resolve`, `restore`, `retire`, `run`, `skip`, `split`, `sync`, `test`, `track`, `update`, `validate`, `verify`.
 
 Titles use `type(scope): verb object` without a final period. Commit subjects have at most 72 characters. Branches use `<type>/<issue>[-<issue>...]-<slug>`. A new scope needs a reference edit in the same PR.
 
@@ -52,7 +52,6 @@ Issues also admit `inc: summary` and `inc(scope): summary` with no imperative ve
 | `invalid/harness` | Invalid harness | `#b60205` |
 | `invalid/out-of-scope` | Invalid out-of-scope | `#b60205` |
 | `invalid/parent` | Invalid parent | `#b60205` |
-| `invalid/phase` | Invalid phase | `#b60205` |
 | `invalid/priority` | Invalid priority | `#b60205` |
 | `invalid/review` | Invalid review | `#b60205` |
 | `invalid/severity` | Invalid severity | `#b60205` |
@@ -62,13 +61,6 @@ Issues also admit `inc: summary` and `inc(scope): summary` with no imperative ve
 | `invalid/type` | Invalid type | `#b60205` |
 | `invalid/work-type` | Invalid work-type | `#b60205` |
 | `needs-operator` | Needs the operator's decision or approval | `#d93f0b` |
-| `phase/0` | Phase 0 | `#5319e7` |
-| `phase/1` | Phase 1 | `#5319e7` |
-| `phase/2` | Phase 2 | `#5319e7` |
-| `phase/3` | Phase 3 | `#5319e7` |
-| `phase/4` | Phase 4 | `#5319e7` |
-| `phase/5` | Phase 5 | `#5319e7` |
-| `phase/6` | Phase 6 | `#5319e7` |
 | `review/approved` | Review: approved | `#c5def5` |
 | `review/changes-requested` | Review: changes-requested | `#c5def5` |
 | `review/pending-review` | Review: pending-review | `#c5def5` |
@@ -88,9 +80,9 @@ Issues also admit `inc: summary` and `inc(scope): summary` with no imperative ve
 | `type/spike` | Type: spike | `#0e8a16` |
 | `type/tooling` | Type: tooling | `#0e8a16` |
 
-Each issue and PR has exactly one `area/`, `type/`, `phase/`, and `harness/` label. Type-to-label mapping:
+Each issue and PR has exactly one `area/`, `type/`, and `harness/` label. Type-to-label mapping:
 
-Parent issues require one `type/initiative` or `type/epic` label and are exempt from form, `area/`, `phase/`, and `harness/` checks. An old and new label for the same class count as one during migration.
+Parent issues require one `type/initiative` or `type/epic` label and are exempt from form, `area/`, and `harness/` checks. An old and new label for the same class count as one during migration.
 
 | Type | Label |
 | --- | --- |

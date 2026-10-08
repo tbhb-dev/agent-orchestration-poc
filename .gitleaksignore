@@ -1,0 +1,2 @@
+# Placeholder private-key fixture in tests/test_skipscan.py; ADR-218, REQ-132 option 1.
+dcfec5c1d132dbdc6d1fb4c396e797f4cbbfb3d2:tests/test_skipscan.py:private-key:110

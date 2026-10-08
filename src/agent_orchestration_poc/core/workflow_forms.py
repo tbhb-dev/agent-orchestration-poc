@@ -96,7 +96,6 @@ def expected_labels(reference: Reference) -> dict[str, Label]:
         )
         for prefix, values in (
             ("area", labels["areas"]),
-            ("phase", labels["phases"]),
             ("harness", labels["harnesses"]),
             ("type", {name.split("/", 1)[1] for name in reference["types"].values()}),
             (
@@ -134,7 +133,7 @@ def validate_labels(names: tuple[str, ...], reference: Reference) -> tuple[str, 
             if len([name for name in names if name.startswith("type/")]) == 1
             else ("expected exactly one type/ label",)
         )
-    for prefix in ("area/", "type/", "phase/", "harness/"):
+    for prefix in ("area/", "type/", "harness/"):
         family = [name for name in names if name.startswith(prefix)]
         classes = {
             reference["migration"].get("labels", {}).get(name, name) for name in family
@@ -445,9 +444,9 @@ Issues also admit `inc: summary` and `inc(scope): summary` with no imperative ve
 | --- | --- | --- |
 {labels_table}
 
-Each issue and PR has exactly one `area/`, `type/`, `phase/`, and `harness/` label. Type-to-label mapping:
+Each issue and PR has exactly one `area/`, `type/`, and `harness/` label. Type-to-label mapping:
 
-Parent issues require one `type/initiative` or `type/epic` label and are exempt from form, `area/`, `phase/`, and `harness/` checks. An old and new label for the same class count as one during migration.
+Parent issues require one `type/initiative` or `type/epic` label and are exempt from form, `area/`, and `harness/` checks. An old and new label for the same class count as one during migration.
 
 | Type | Label |
 | --- | --- |
