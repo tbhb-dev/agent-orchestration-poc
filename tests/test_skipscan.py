@@ -60,6 +60,53 @@ def test_context_that_does_not_indicate_a_gap(text: str) -> None:
     assert scan_text(text.replace(r"\n", "\n"), "pr-body", "body") == []
 
 
+@pytest.mark.parametrize(
+    ("text", "phrases"),
+    [
+        ("Non-blocking findings: none.", []),
+        ("Non-blocking findings: none", []),
+        ("NON BLOCKING FINDINGS : NONE!", []),
+        ("No non-blocking findings.", []),
+        ("There are no non blocking findings", []),
+        (
+            "non-blocking: deferred to a follow-up",
+            ["non-blocking", "deferred", "follow-up"],
+        ),
+        ("Non-blocking findings: one.", ["Non-blocking"]),
+        ("Non-blocking findings: nonetheless actionable.", ["Non-blocking"]),
+        ("Non-blocking findings: none remain actionable.", ["Non-blocking"]),
+        ("Non-blocking items: none.", ["Non-blocking"]),
+        ("No non-blocking work remains.", ["non-blocking"]),
+        ("No non-blocking findingsXYZ", ["non-blocking"]),
+        ("Non-blocking findings: none. Tests skipped.", ["skipped"]),
+        ("No non-blocking findings, tests deferred.", ["deferred"]),
+        ("No findings. Non-blocking work remains.", ["Non-blocking"]),
+        ("Non-blocking findings: none; non-blocking task remains.", ["non-blocking"]),
+    ],
+)
+def test_nonblocking_review_findings(text: str, phrases: list[str]) -> None:
+    hits = scan_text(text, "review", "review")
+    assert [hit["phrase"] for hit in hits] == phrases
+    assert all(not hit["tracked"] for hit in hits)
+
+
+@given(
+    st.sampled_from(["Non-blocking findings: none.", "No non-blocking findings."]),
+    st.sampled_from([" ", "\n", "; "]),
+    st.sampled_from(["non-blocking", "deferred", "skipped", "follow-up"]),
+    st.booleans(),
+)
+def test_no_findings_preserves_independent_indicator(
+    statement: str, separator: str, phrase: str, before: bool
+) -> None:
+    text = phrase + separator + statement if before else statement + separator + phrase
+    hits = scan_text(text, "review", "review", with_positions=True)
+    assert [(hit["phrase"], hit["tracked"]) for hit in hits] == [(phrase, False)]
+    assert hits[0]["position"] == (
+        0 if before or "\n" in separator else len(statement + separator)
+    )
+
+
 @pytest.mark.parametrize("code", CASES["code"])
 def test_code_table(code: str) -> None:
     path = "test.ts" if code.startswith("test.skip") else "check.yml"
