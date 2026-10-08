@@ -21,6 +21,10 @@ Read the assigned issue and [project plan](docs/src/content/docs/project/plan.md
 - CI jobs are `check` (linters, formatting, tests, and repository guards), `docs` (site build and internal links), `pr-body` (trailers and evidence links), and `imported-research` (import immutability). See [workflow](docs/src/content/docs/workflow/index.md).
 - Use `gh query` for read-only GitHub API calls. Reserve `gh api` for mutations.
 
+## No arbitrary skipping
+
+Workers and reviewers must not drop, weaken, stub, or defer an acceptance criterion, test, check, or brief step on their own judgment. If permission, sandbox, approval, credential, tool refusal, or resource limits block an item, stop at that item and report the exact unblocking step to the coordinator for an operator request. Do not work around or weaken the blocked item. Before a PR merges, every deferral described as a follow-up, non-blocking, or out of scope for the PR needs an issue linked from the PR or review thread. Only the operator may drop planned work.
+
 ## Functional core, imperative shell
 
 - Functional core, imperative shell is a binding operator requirement from 2026-09-26. Put decisions and data transformations in pure functions. Keep side effects in a thin shell at the edges. A PR that puts I/O in the core or decisions in the shell cannot merge.
