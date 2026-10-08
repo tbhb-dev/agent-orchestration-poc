@@ -10,6 +10,8 @@
 
 - Verified on `6466a3f` for #300: `mise run check`, `mise run build`, and `mise run check:mutation` passed. Go core mutation efficacy was 97.32%; Python core mutation score was 90.06% (11,706 killed of 12,998).
 - Verified in the stacked worktree for #300: 150 targeted scanner tests, `mise run check`, `mise run docs:build`, and `mise run build` passed before the stacked commit.
+- Verified in the stacked worktree for #300: `mise run check:mutation` passed after the workflow test was made compatible with mutmut's copied test directory. Go core efficacy was 97.32%; Python core score was 90.08% (11,746 killed of 13,039).
+- Observed for #300: `mise run docs:check-links` failed twice in this macOS sandbox because Chromium could not register its rendezvous server (permission denied). The resulting seven internal-link errors followed pages that could not render; the Linux CI docs job remains the validation run.
 
 ## Event delivery boundary
 
