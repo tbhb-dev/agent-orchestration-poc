@@ -106,8 +106,9 @@ def test_code_hit_location_and_tracking(line: int, code: str, tracked: bool) -> 
 
 
 def test_redaction_and_blocks() -> None:
+    key_type = "PRIVATE KEY"
     assert (
-        redacted_lines("-----BEGIN PRIVATE KEY-----\nvalue\n-----END PRIVATE KEY-----")
+        redacted_lines(f"-----BEGIN {key_type}-----\nvalue\n-----END {key_type}-----")
         == ["[REDACTED]"] * 3
     )
     assert "privatevalue" not in excerpt("Untested TOKEN=privatevalue")
