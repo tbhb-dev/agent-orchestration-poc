@@ -15,6 +15,7 @@ from agent_orchestration_poc.core.skipscan import (
     _inert_triple_markers,
     _inline_code,
     _python_string,
+    _threshold,
     _tracked,
     _triple_spans,
     _unique,
@@ -465,3 +466,40 @@ def test_triple_span_closure(value: str) -> None:
 def test_triple_marker_after_an_inert_marker() -> None:
     assert _triple_spans('s = \'"""\'; t = """a"""', "") == ([(15, 22)], "")
     assert _triple_spans('"""a""" (', "") == ([], "")
+    assert _triple_spans('\'a\'"""b"""', "") == ([(3, 10)], "")
+    assert _triple_spans("# ''' '''", "'''") == ([(0, 5), (6, 9)], "'''")
+
+
+def test_exact_excerpt_limit_does_not_crop_at_match_offset() -> None:
+    line = "x " * 119 + "xy"
+    assert excerpt(line, 120, 121) == line
+
+
+@pytest.mark.parametrize(
+    ("path", "text", "expected"),
+    [
+        ("other.txt", "efficacy: 90", None),
+        ("other.txt", "fail_under = 95", None),
+        (".gremlins.yaml", "fail_under = 95", None),
+        ("pyproject.toml", "efficacy: 90", None),
+        ("ci.yml", "coverage minimum = 95", ("generic", 95.0)),
+    ],
+)
+def test_threshold_setting_domains(
+    path: str, text: str, expected: tuple[str, float] | None
+) -> None:
+    assert _threshold(path, text) == expected
+
+
+@given(
+    st.sampled_from([".coveragerc", "pyproject.toml", "setup.cfg", "tox.ini"]),
+    st.integers(min_value=0, max_value=100),
+)
+def test_coverage_setting_paths(path: str, value: int) -> None:
+    assert _threshold(path, f"fail_under = {value}") == ("fail_under", float(value))
+
+
+def test_negation_starts_after_the_last_punctuation() -> None:
+    hits = scan_text("OK. No request. denied", "body", "body")  # Refs: #314
+    assert [hit["phrase"] for hit in hits] == ["denied"]  # Refs: #314
+    assert scan_text("No request X denied", "body", "body") == []  # Refs: #314

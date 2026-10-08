@@ -42,3 +42,10 @@
 "diff --git a/build.sh b/build.sh\n@@ -0,0 +1 @@\n+**Deferred**\n"	[["build.sh", 1, "Deferred", false, "**Deferred**"]]	Refs: #314
 "diff --git a/build.sh b/build.sh\n@@ -0,0 +1 @@\n+  # Deferred\n"	[["build.sh", 1, "Deferred", false, "Deferred"]]	Refs: #314
 "diff --git a/TODO.txt b/TODO.txt\n--- a/TODO.txt\n+++ b/TODO.txt\n@@ -0,0 +1 @@\n+ordinary\n"	[]	Refs: #314
+"diff --git a/worker.py b/worker.py\n@@ -0,0 +1 @@\n+\"\"\"a\"\"\"TODO\n"	[["worker.py", 1, "TODO", false, "\"\"\"a\"\"\"TODO"]]	Refs: #314
+"diff --git a/worker.py b/worker.py\n@@ -0,0 +1 @@\n+\"\"\"a\"\"\"# noqa\n"	[["worker.py", 1, "# noqa", false, "\"\"\"a\"\"\"# noqa"]]	Refs: #314
+"diff --git a/build.sh b/build.sh\n@@ -0,0 +1 @@\n+# XX Deferred\n"	[["build.sh", 1, "Deferred", false, "XX Deferred"]]	Refs: #314
+"diff --git a/worker.py b/worker.py\n@@ -0,0 +1 @@\n+skipped = \"skipped\"\n"	[["worker.py", 1, "skipped", false, "skipped = \"skipped\""]]	Refs: #314
+"diff --git a/worker.py b/worker.py\n@@ -0,0 +1 @@\n+\"\"\"TODO\n"	[]	Refs: #314
+"diff --git a/worker.py b/worker.py\n@@ -0,0 +1,5 @@\n+\"\"\"\n+'''\n+TODO\n+\"\"\"\n+pytest.skip(\"reason\")\n"	[["worker.py", 5, "pytest.skip", false, "pytest.skip(\"reason\")"]]	Refs: #314
+"diff --git a/worker.py b/worker.py\n@@ -1,3 +1,4 @@\n \"\"\"\n '''\n \"\"\"\n+pytest.skip(\"reason\")\n"	[["worker.py", 4, "pytest.skip", false, "pytest.skip(\"reason\")"]]	Refs: #314
