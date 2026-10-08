@@ -6,6 +6,8 @@ from pathlib import Path
 
 import pytest
 
+pytest.importorskip("agent_orchestration_poc.shell")
+
 from agent_orchestration_poc.shell.go_branch_coverage import (
     run_gobco,
     stage_core_module,
