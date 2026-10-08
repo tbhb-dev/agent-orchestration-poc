@@ -106,6 +106,28 @@ SECRET_RE = re.compile(
 PEM_RE = re.compile(r"-----(?:BEGIN|END) [A-Z ]*(?:PRIVATE KEY|CERTIFICATE)-----")
 
 
+def event_pr_number(event_name: str, payload: dict[str, Any]) -> int | None:
+    """Resolve a pull request from a supported GitHub workflow event."""
+    if event_name == "issue_comment":
+        issue = payload["issue"]
+        return int(issue["number"]) if "pull_request" in issue else None
+    if event_name in {
+        "pull_request",
+        "pull_request_review",
+        "pull_request_review_comment",
+    }:
+        return int(payload["pull_request"]["number"])
+    raise ValueError(f"Unsupported skipscan event: {event_name}")
+
+
+def check_run_result(result: int) -> dict[str, str]:
+    """Map the scanner exit code to a completed head check."""
+    return {
+        "status": "completed",
+        "conclusion": "success" if result == 0 else "failure",
+    }
+
+
 def flag_id(source: str, line: int, phrase: str) -> str:
     """Return a stable identifier for one indicator location."""
     return hashlib.sha256(f"{source}\0{line}\0{phrase.lower()}".encode()).hexdigest()[
