@@ -5,6 +5,8 @@ description: Pinned tools, configuration, mise tasks, hooks, and prose exemption
 
 Run project tooling through mise so local checks and CI select the same versions. Use tasks for repeatable work and `mise exec -- <tool>` for an ad hoc command. Do not install global substitutes.
 
+Dependency update service selection is documented in [decision 0011](/decisions/0011-dependency-update-proposals/) and its [versioned research](https://github.com/tbhb/agent-orchestration-poc/blob/research/91-dependency-updates/reports/inputs/dependency-update-research.md). The advisory handoff awaits enablement. Before a pin moves, a worker records upstream release notes and source commit, exact manifest and lockfile changes, and any stack conventions or worker rule changes. The coordinator owns manual updates for unsupported mise pins and unannotated full SHA Actions. The future `check:dependency-updates` validator and its fixtures wait for configuration and the #92 and #93 gates.
+
 ## Setup
 
 Run `mise install` for the repository pins and `mise run vale:sync` once in a fresh worktree. Install hooks with `mise exec -- prek install`, which installs pre-commit and commit-msg hooks. `mise run check` runs the repository checks, `mise run fmt` applies formatters, and `mise run build` produces the two Go binaries. Inspect formatter diffs before committing.
