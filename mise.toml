@@ -36,6 +36,18 @@ UV_PYTHON_PREFERENCE = "only-system"
 # Aggregates. `check` is what CI and workers run; `fmt` applies every formatter.
 [tasks.check]
 description = "Run every check and the tests"
+run = '''
+semaphore="$(git rev-parse --path-format=absolute --git-common-dir)/../.holding/bin/check-semaphore"
+if [ -x "$semaphore" ]; then
+    exec "$semaphore" -- mise run _check
+fi
+printf '%s\n' 'check-semaphore absent; running check unchanged' >&2
+exec mise run _check
+'''
+
+[tasks."_check"]
+hide = true
+description = "Run every check and the tests"
 depends = [
   "check:go",
   "check:shell",
@@ -176,9 +188,33 @@ run = "uv run pyrefly check --search-path scaffolding/github-monitor"
 
 [tasks."check:mutation"]
 description = "Run the Go and Python core mutation score gates"
+run = '''
+semaphore="$(git rev-parse --path-format=absolute --git-common-dir)/../.holding/bin/check-semaphore"
+if [ -x "$semaphore" ]; then
+    exec "$semaphore" -- mise run _check:mutation
+fi
+printf '%s\n' 'check-semaphore absent; running check:mutation unchanged' >&2
+exec mise run _check:mutation
+'''
+
+[tasks."_check:mutation"]
+hide = true
+description = "Run the Go and Python core mutation score gates"
 run = ["mise run check:mutation:go", "mise run check:mutation:python"]
 
 [tasks."check:mutation:go"]
+description = "Mutation test the Go core with gremlins"
+run = '''
+semaphore="$(git rev-parse --path-format=absolute --git-common-dir)/../.holding/bin/check-semaphore"
+if [ -x "$semaphore" ]; then
+    exec "$semaphore" -- mise run _check:mutation:go
+fi
+printf '%s\n' 'check-semaphore absent; running check:mutation:go unchanged' >&2
+exec mise run _check:mutation:go
+'''
+
+[tasks."_check:mutation:go"]
+hide = true
 description = "Mutation test the Go core with gremlins"
 env = { RAPID_NOFAILFILE = "1", RAPID_SHRINKTIME = "1s" }
 run = [
@@ -188,6 +224,18 @@ run = [
 ]
 
 [tasks."check:mutation:python"]
+description = "Check Python core mutation score"
+run = '''
+semaphore="$(git rev-parse --path-format=absolute --git-common-dir)/../.holding/bin/check-semaphore"
+if [ -x "$semaphore" ]; then
+    exec "$semaphore" -- mise run _check:mutation:python
+fi
+printf '%s\n' 'check-semaphore absent; running check:mutation:python unchanged' >&2
+exec mise run _check:mutation:python
+'''
+
+[tasks."_check:mutation:python"]
+hide = true
 description = "Check Python core mutation score"
 run = "uv run python scripts/check-mutation-score.py"
 
@@ -378,6 +426,18 @@ depends = ["docs:install"]
 run = "pnpm exec astro dev"
 
 [tasks."docs:build"]
+description = "Build the docs site into docs/dist"
+run = '''
+semaphore="$(git rev-parse --path-format=absolute --git-common-dir)/../.holding/bin/check-semaphore"
+if [ -x "$semaphore" ]; then
+    exec "$semaphore" -- mise run _docs:build
+fi
+printf '%s\n' 'check-semaphore absent; running docs:build unchanged' >&2
+exec mise run _docs:build
+'''
+
+[tasks."_docs:build"]
+hide = true
 description = "Build the docs site into docs/dist"
 dir = "docs"
 depends = ["docs:install"]
