@@ -4,6 +4,7 @@ import hashlib
 import json
 import re
 import subprocess
+import sys
 import tomllib
 from pathlib import Path
 from typing import Any, cast
@@ -26,6 +27,7 @@ from agent_orchestration_poc.core.gate_changes import (
     monitored_path,
     reconcile_registries,
 )
+from agent_orchestration_poc.shell import gate_changes
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG_ROOT = ROOT if (ROOT / "config/gate-registry.toml").is_file() else ROOT.parent
@@ -572,6 +574,47 @@ def test_reason_round_trip_property(reason: str) -> None:
 @given(st.text(alphabet="abc", min_size=1, max_size=30))
 def test_unchanged_snapshot_property(content: str) -> None:
     assert compare({"prek.toml": content}, {"prek.toml": content}, REGISTRY) == ()
+
+
+@pytest.mark.parametrize("empty_env", [False, True], ids=["unset", "empty"])
+def test_shell_skips_without_pr_inputs(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture, empty_env: bool
+) -> None:
+    for name in ("GATE_BASE_SHA", "GATE_HEAD_SHA", "GATE_BODY_FILE"):
+        if empty_env:
+            monkeypatch.setenv(name, "")
+        else:
+            monkeypatch.delenv(name, raising=False)
+    monkeypatch.setattr(sys, "argv", ["gate-changes"])
+
+    assert gate_changes.main() == 0
+    assert caplog.messages == ["Gate comparison skipped outside a pull request"]
+
+
+@pytest.mark.parametrize(
+    ("environment", "arguments"),
+    [
+        ({"GATE_HEAD_SHA": "head"}, []),
+        ({"GATE_BODY_FILE": "body.md"}, []),
+        ({}, ["--base", "base"]),
+    ],
+)
+def test_shell_rejects_partial_pr_inputs(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    environment: dict[str, str],
+    arguments: list[str],
+) -> None:
+    for name in ("GATE_BASE_SHA", "GATE_HEAD_SHA", "GATE_BODY_FILE"):
+        monkeypatch.delenv(name, raising=False)
+    for name, value in environment.items():
+        monkeypatch.setenv(name, value)
+    monkeypatch.setattr(sys, "argv", ["gate-changes", *arguments])
+
+    with pytest.raises(SystemExit) as error:
+        gate_changes.main()
+    assert error.value.code == 2
+    assert "base, head, and body-file are required together" in capsys.readouterr().err
 
 
 @pytest.mark.integration
