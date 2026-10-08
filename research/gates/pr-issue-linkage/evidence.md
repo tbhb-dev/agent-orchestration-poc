@@ -1,5 +1,20 @@
 # Pull request and issue linkage evidence
 
+## Review correction, 2026-10-08
+
+[Verified] The three research citations in decision 0014 pointed to `blob/decision/124-pr-closing-links/`, while the repository setting `delete_branch_on_merge` was `true`. A search for that branch URL in the decision page returned three occurrences and exit 1 under the assertion below. Commit `6309b8cd416e948cadb142f783e53f75c279e096` contains both research artifacts, so the decision now cites that immutable revision.
+
+```sh
+if rg -n 'blob/decision/124-pr-closing-links/' docs/src/content/docs/decisions/0014-pr-issue-linkage.md; then exit 1; fi
+git show 6309b8cd416e948cadb142f783e53f75c279e096:research/gates/pr-issue-linkage/notes.md >/dev/null
+git show 6309b8cd416e948cadb142f783e53f75c279e096:research/gates/pr-issue-linkage/evidence.md >/dev/null
+/Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.holding/bin/gh-as-agent api -i 'repos/tbhb-dev/agent-orchestration-poc?per_page=100' --jq '{delete_branch_on_merge}'
+```
+
+The first assertion exited 1 before the fix, and both `git show` commands exited 0. The single read-only REST request exited 0 with HTTP 200 and `delete_branch_on_merge: true` at the GitHub response `Date` of 2026-10-08 02:03:32 UTC. Its selected API version was `2022-11-28`; `X-Ratelimit-Resource` was `core`, `X-Ratelimit-Limit` was `5000`, `X-Ratelimit-Remaining` was `4204`, and `X-Ratelimit-Reset` was `1791426163`. This request is separate from the 31-request original capture below.
+
+[Verified] After the fix, the branch-URL assertion and `git diff --check` exited 0. `mise run fmt`, `mise run docs:build`, and `mise run check:mutation` exited 0. Go mutation scored 97.32% and Python mutation scored 90.36%. `mise run docs:check-links` exited 1 on seven links in seven unchanged files; the changed decision page was not listed. Chromium also logged a macOS permission denial while rendering existing pages. The first `mise run check` exited 1 when `gobco` returned an error during Go branch coverage. A separate `mise run check:coverage` and the final `mise run check` both exited 0, including Go core branches at 94.74% against the 90% floor.
+
 ## Capture boundaries
 
 Captured 2026-10-07 from 20:05:31 through 20:08:01 UTC with read-only REST requests to `tbhb-dev/agent-orchestration-poc`. The GitHub CLI request wrapper was `/Users/tony/Code/github.com/tbhb/agent-orchestration-poc/.holding/bin/gh-as-agent api`. All 31 REST requests exited 0 with HTTP 200. The GitHub response selected API version `2022-11-28`, with `X-Ratelimit-Resource: core` and `X-Ratelimit-Limit: 5000`. No rate-limit error occurred. Seventeen requests used `-i` to inspect response headers, and fourteen earlier contextual requests did not. No authorization header, token, or full private response was retained here.
