@@ -93,6 +93,12 @@ Reviewer identity records the project review process. It does not protect creden
 
 The active [main ruleset](https://github.com/tbhb/agent-orchestration-poc/rules/24053242), read through REST on 2026-09-27, requires a PR, one approving review, stale approval dismissal on push, resolved conversations, and approval of the latest push by someone other than its pusher. It also requires an up-to-date branch and successful `check`, `docs`, `pr-body`, `imported-research`, and `mutation` checks. Extra approval is required for unattributed changes. Only squash merges are permitted. Deletion and force pushes are blocked, and the bypass list is empty. The active [all-branches ruleset](https://github.com/tbhb/agent-orchestration-poc/rules/24056095) blocks force pushes on every branch. Repository settings disable merge commits and rebase merges for PRs, while feature branches may receive merge commits from `main`. GitHub enforces the rulesets. Review by `tbhbbot` and the round limit are project policy. The provisioner will remove matching worktrees once implemented.
 
+## Dependency proposals
+
+[Decision 0011](/decisions/0011-dependency-update-proposals/) proposes Renovate as an advisory source after operator-owned setup and the #92 and #93 workflow gates. The coordinator selects or creates an open issue with compliant labels and allowed paths, then dispatches a worker on an issue-number branch. The worker reads versioned release notes and source. The worker records exact pins and lockfiles, updates the owning stack rules and conventions, then opens a coordinator-owned PR whose Evidence section links the committed research note. A generated service PR remains advisory under the current author and branch rules. A different-model `tbhbbot` review and all five required checks remain necessary. The [research comparison](https://github.com/tbhb/agent-orchestration-poc/blob/research/91-dependency-updates/reports/inputs/dependency-update-research.md) records the manual owner and procedure where a manager cannot handle a pin.
+
+The proposed service budget is two routine proposals and one security proposal open at a time. Routine patch and minor updates group by ecosystem and update class. Security fixes use their own group, and a major migration does not share a proposal with unrelated updates. The coordinator counts proposals from other sources before dispatch. Configuration, a live proposal, and a full worker PR gate remain untested, so dependency automation is inactive.
+
 ## CI jobs
 
 | Job | Trigger | Checks |
