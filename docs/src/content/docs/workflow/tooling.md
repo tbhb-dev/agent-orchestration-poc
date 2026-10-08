@@ -76,7 +76,7 @@ Python development dependencies are locked in `uv.lock` and declared in `pyproje
 | Hooks | `prek.toml` |
 | Gate change registry | `config/gate-registry.toml` records supported paths, numeric directions, required selectors, and suppression syntax |
 
-`GOTOOLCHAIN=local` prevents an implicit Go download. `UV_PYTHON_PREFERENCE=only-system` selects mise's Python. Go formatting and its check use tracked and untracked, nonignored Go files, so changing `node_modules` directories are outside their input set. Go checks include module tidiness and verification, then lint, build, and race-enabled shuffled tests. `check:pyrefly` runs in the `check` aggregate and CI.
+`GOTOOLCHAIN=local` prevents an implicit Go download. `UV_PYTHON_PREFERENCE=only-system` selects mise's Python. Go formatting and its check use existing tracked and untracked, nonignored Go files, so changing `node_modules` directories and unstaged source deletions are outside their input set. Go checks include module tidiness and verification, then lint, build, and race-enabled shuffled tests. `check:pyrefly` runs in the `check` aggregate and CI.
 
 Property tests run in `check` with ordinary Go and Python tests. Required CI fixes the rapid seed at 20260926 and uses Hypothesis's built-in `ci` profile. Nightly tasks use random seeds and file an issue with their output on failure. Mutation tests run separately through `check:mutation`, and its CI job succeeds without running the tools when no core code or test changed.
 

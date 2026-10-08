@@ -8,6 +8,10 @@ Observed locally on 2026-10-08: with an invalid `bad.go` under an ignored `node_
 
 The regression script `scripts/test-go-format.sh` checks that an untracked, nonignored Go file is detected and formatted while an ignored `node_modules` Go file stays untouched. `mise run check:go` passed on the changed worktree.
 
+Observed during PR #305 review follow-up on 2026-10-08: a disposable Git repository with a staged Go file removed from the working tree caused the original `scripts/go-source-files.sh` to emit that missing path. The new regression failed with `deleted tracked Go file remained in the source inventory`. After filtering for existing files, `mise exec -- scripts/test-go-format.sh` passed; it now runs both the check and formatter against the unstaged deletion. This fixture covers a removed tracked file, not a concurrent deletion during formatting.
+
+Verified after merging `origin/main`: `mise run check` passed in 203.60 seconds, `mise run check:shell` passed, and `mise run build` passed. A concurrent `mise run check:mutation` attempt stopped with a Gremlins panic; its isolated rerun completed Go mutation scoring with 97.32% efficacy while Python mutation scoring continued.
+
 ## Check timings
 
 | Environment | Before | After |

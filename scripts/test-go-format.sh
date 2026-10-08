@@ -5,7 +5,8 @@ cd "$(dirname "$0")/.."
 mkdir -p node_modules
 source_dir=$(mktemp -d ./issue-302-source.XXXXXX)
 ignored_dir=$(mktemp -d ./node_modules/issue-302.XXXXXX)
-trap 'rm "$source_dir/file.go" "$source_dir/check.out" "$ignored_dir/bad.go" 2>/dev/null || true; rmdir "$source_dir" "$ignored_dir" node_modules 2>/dev/null || true' 0
+deleted_repo=$(mktemp -d)
+trap 'rm "$source_dir/file.go" "$source_dir/check.out" "$ignored_dir/bad.go" 2>/dev/null || true; rmdir "$source_dir" "$ignored_dir" node_modules 2>/dev/null || true; rm -rf "$deleted_repo"' 0
 printf 'package example\n\nvar  answer=42\n' >"$source_dir/file.go"
 printf 'package ignored\n\nvar  unchanged=1\n' >"$ignored_dir/bad.go"
 
@@ -24,3 +25,16 @@ if ! printf 'package ignored\n\nvar  unchanged=1\n' | cmp - "$ignored_dir/bad.go
     echo 'formatter changed an ignored dependency file' >&2
     exit 1
 fi
+
+mkdir "$deleted_repo/scripts"
+cp scripts/go-source-files.sh scripts/check-gofumpt.sh scripts/format-go.sh "$deleted_repo/scripts/"
+git -C "$deleted_repo" init -q
+printf 'package example\n' >"$deleted_repo/removed.go"
+git -C "$deleted_repo" add removed.go
+rm "$deleted_repo/removed.go"
+if [ -n "$("$deleted_repo/scripts/go-source-files.sh")" ]; then
+    echo 'deleted tracked Go file remained in the source inventory' >&2
+    exit 1
+fi
+"$deleted_repo/scripts/check-gofumpt.sh"
+"$deleted_repo/scripts/format-go.sh"
