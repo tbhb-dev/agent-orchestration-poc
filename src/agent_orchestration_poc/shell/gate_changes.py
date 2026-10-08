@@ -80,7 +80,7 @@ def main() -> int:
     parser.add_argument("--base", default=os.environ.get("GATE_BASE_SHA"))
     parser.add_argument("--head", default=os.environ.get("GATE_HEAD_SHA"))
     parser.add_argument(
-        "--body-file", type=Path, default=os.environ.get("GATE_BODY_FILE")
+        "--body-file", type=Path, default=os.environ.get("GATE_BODY_FILE") or None
     )
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(message)s")
