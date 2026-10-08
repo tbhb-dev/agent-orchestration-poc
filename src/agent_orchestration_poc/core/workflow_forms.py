@@ -463,6 +463,8 @@ The relabel-only exceptions are keyed by their exact issue titles in the referen
 
 Issue fields: {fields}. `Allowed paths` is a separate form field.
 
+For issues filed outside the web forms, run `mise run workflow:new-issue -- --title <title> --label <label>... --body-file <path>`. The task validates the local title, labels, and body before creating the issue.
+
 Allowed paths use {reference["forms"]["allowed_path_syntax"]}.
 
 Evidence requires {reference["forms"]["evidence_requires"]}. PR sections: {pr_sections}. A PR ends with one or more `Refs: #<n>` lines naming open issues.
