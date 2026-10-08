@@ -106,6 +106,64 @@ SECRET_RE = re.compile(
 PEM_RE = re.compile(r"-----(?:BEGIN|END) [A-Z ]*(?:PRIVATE KEY|CERTIFICATE)-----")
 
 
+def validate_commit_count(expected: int, collected: int) -> None:
+    """Reject a partial collection, including the PR endpoint's 250-commit cap."""
+    if expected != collected:
+        raise ValueError(
+            f"Incomplete commit scan: expected {expected}, collected {collected}"
+        )
+
+
+def rescan_result(results: list[int]) -> int:
+    """Preserve the most severe result across matching pull requests."""
+    return max(results, default=0)
+
+
+def review_pr_numbers(payload: dict[str, Any], prs: list[dict[str, Any]]) -> list[int]:
+    """Select open PRs from the review run's repository and branch, even after a push."""
+    run = payload["workflow_run"]
+    return [
+        pr["number"]
+        for pr in prs
+        if pr["head"]["repo"] is not None
+        and pr["head"]["repo"]["full_name"] == run["head_repository"]["full_name"]
+        and pr["head"]["ref"] == run["head_branch"]
+    ]
+
+
+def event_pr_number(event_name: str, payload: dict[str, Any]) -> int | None:
+    """Resolve a pull request from a supported GitHub workflow event."""
+    if event_name == "issue_comment":
+        issue = payload["issue"]
+        return int(issue["number"]) if "pull_request" in issue else None
+    if event_name in {
+        "pull_request",
+        "pull_request_review",
+        "pull_request_review_comment",
+    }:
+        return int(payload["pull_request"]["number"])
+    raise ValueError(f"Unsupported skipscan event: {event_name}")
+
+
+def check_run_result(result: int) -> dict[str, str]:
+    """Map the scanner exit code to a completed head check."""
+    return {
+        "status": "completed",
+        "conclusion": "success" if result == 0 else "failure",
+    }
+
+
+def scan_outcome(hits: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], int]:
+    """Return the findings to report and the scanner exit code."""
+    untracked = [hit for hit in hits if not hit["tracked"]]
+    return untracked, int(bool(untracked))
+
+
+def head_result(result: int, scanned_head: str, current_head: str) -> int:
+    """Fail a result if the pull request head changed during scanning."""
+    return 2 if scanned_head != current_head else result
+
+
 def flag_id(source: str, line: int, phrase: str) -> str:
     """Return a stable identifier for one indicator location."""
     return hashlib.sha256(f"{source}\0{line}\0{phrase.lower()}".encode()).hexdigest()[
