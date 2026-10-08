@@ -82,6 +82,11 @@ def needs_scc(
     return not binary and exclusion_reason(path, old_path, patterns) is None
 
 
+def needs_plain_text_retry(suffix: str, language: str | None, classified: bool) -> bool:
+    """Retry extensionless files dropped by scc's unsuccessful shebang detection."""
+    return not suffix and language is None and not classified
+
+
 def parse_name_status(output: bytes) -> tuple[tuple[str, str | None, str], ...]:
     """Turn NUL-delimited git status output into path records."""
     fields = output.split(b"\0")
