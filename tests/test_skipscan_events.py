@@ -66,6 +66,11 @@ def test_event_pr_number(
     assert event_pr_number(event_name, payload) == number
 
 
+def test_unsupported_event_names_the_event() -> None:
+    with pytest.raises(ValueError, match="^Unsupported skipscan event: push$"):
+        event_pr_number("push", {})
+
+
 @pytest.mark.parametrize(
     ("result", "conclusion"), [(0, "success"), (1, "failure"), (2, "failure")]
 )

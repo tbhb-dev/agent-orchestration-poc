@@ -27,3 +27,18 @@
 "diff --git a/worker.py b/worker.py\n@@ -0,0 +1 @@\n+pattern = \"pytest.skip\"; pytest.skip(\"real\") #300\n"	[["worker.py", 1, "pytest.skip", true, "pattern = \"pytest.skip\"; pytest.skip(\"real\") #300"]]	#300
 "diff --git a/widget.ts b/widget.ts\n@@ -0,0 +1 @@\n+echo || true; todo!()\n"	[["widget.ts", 1, "todo!(", false, "echo || true; todo!()"]]	#300
 "diff --git a/widget.ts b/widget.ts\n@@ -0,0 +1 @@\n+widget.skip(); todo!()\n"	[["widget.ts", 1, "todo!(", false, "widget.skip(); todo!()"]]	#300
+"diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml\n@@ -4,2 +4,2 @@\n same\n-run: old\n+run: new\n"	[[".github/workflows/ci.yml", 5, "removed CI step", false, "run: old"]]	Refs: #314
+"diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml\n@@ -1 +1,2 @@\n-run: test\n+queued\n+RFC-12/34\n"	[[".github/workflows/ci.yml", 1, "removed CI step", true, "run: test"]]	Refs: #314
+"diff --git a/old.ts b/folder b/TEST.ts\n@@ -0,0 +1 @@\n+test.skip(\"case\");\n"	[["folder b/TEST.ts", 1, ".skip(", false, "test.skip(\"case\");"]]	Refs: #314
+"diff --git a/notes.md b/notes.md\n--- a/notes.md\n+++ b/notes.md\n@@ -1 +1,2 @@\n #314\n+Deferred\n"	[["notes.md", 2, "Deferred", true, "Deferred"]]	Refs: #314
+"diff --git a/notes.md b/notes.md\n@@ -1,2 +1,3 @@\n ```sh\n+Deferred\n ```\n"	[]	Refs: #314
+"diff --git a/worker.py b/worker.py\n@@ -1,2 +1,3 @@\n \"\"\"\n+Deferred\n \"\"\"\n"	[]	Refs: #314
+"diff --git a/worker.py b/worker.py\n@@ -1,3 +1,4 @@\n \"\"\"\n example\n \"\"\"\n+pytest.skip(\"reason\")\n"	[["worker.py", 4, "pytest.skip", false, "pytest.skip(\"reason\")"]]	Refs: #314
+"diff --git a/worker.py b/worker.py\n@@ -1,3 +1,4 @@\n \"\"\"\n '''\n+pytest.skip(\"reason\")\n \"\"\"\n"	[]	Refs: #314
+"diff --git a/worker.py b/worker.py\n@@ -0,0 +1,4 @@\n+\"\"\"\n+'''\n+pytest.skip(\"reason\")\n+\"\"\"\n"	[]	Refs: #314
+"diff --git a/build.sh b/build.sh\n@@ -0,0 +1 @@\n+  // Deferred\n"	[["build.sh", 1, "Deferred", false, "Deferred"]]	Refs: #314
+"diff --git a/build.sh b/build.sh\n@@ -0,0 +1 @@\n+* Deferred\n"	[["build.sh", 1, "Deferred", false, "Deferred"]]	Refs: #314
+"diff --git a/build.sh b/build.sh\n@@ -0,0 +1 @@\n+XX// Deferred\n"	[["build.sh", 1, "Deferred", false, "XX// Deferred"]]	Refs: #314
+"diff --git a/build.sh b/build.sh\n@@ -0,0 +1 @@\n+**Deferred**\n"	[["build.sh", 1, "Deferred", false, "**Deferred**"]]	Refs: #314
+"diff --git a/build.sh b/build.sh\n@@ -0,0 +1 @@\n+  # Deferred\n"	[["build.sh", 1, "Deferred", false, "Deferred"]]	Refs: #314
+"diff --git a/TODO.txt b/TODO.txt\n--- a/TODO.txt\n+++ b/TODO.txt\n@@ -0,0 +1 @@\n+ordinary\n"	[]	Refs: #314
