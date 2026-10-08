@@ -22,4 +22,4 @@ Verified after: `/usr/bin/time -p mise run -j 1 check` exited 0 in `real 526.12`
 
 Observed before: [main push run 37730050520](https://github.com/tbhb-dev/agent-orchestration-poc/actions/runs/37730050520) started its successful `check` job at 2026-10-08 04:58:30 UTC and completed at 05:01:10 UTC, or 160 seconds. [Pull request run 37731242535](https://github.com/tbhb-dev/agent-orchestration-poc/actions/runs/37731242535) completed its successful `check` job in 175 seconds, from 05:12:52 to 05:15:47 UTC. These whole-job times are reference points, not gobco-only measurements.
 
-CI after: pending the issue #303 pull request run.
+Verified after: [pull request #306 check run 37734779263](https://github.com/tbhb-dev/agent-orchestration-poc/actions/runs/37734779263) started at 2026-10-08 05:56:04 UTC and completed successfully at 05:58:41 UTC, or 157 seconds. The PR body edit restarted this job, so this is the completed check for the updated title vocabulary and coverage runner at commit `5c01308`. [Docs run 37734750658](https://github.com/tbhb-dev/agent-orchestration-poc/actions/runs/37734750658) completed successfully on the same commit.
