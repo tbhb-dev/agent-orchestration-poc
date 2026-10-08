@@ -23,7 +23,7 @@ Read the assigned issue and [project plan](docs/src/content/docs/project/plan.md
 
 ## No arbitrary skipping
 
-Workers and reviewers must not drop, weaken, stub, or defer an acceptance criterion, test, check, or brief step on their own judgment. If permission, sandbox, approval, credential, tool refusal, or resource limits block an item, stop at that item and report the exact unblocking step to the coordinator for an operator request. Do not work around or weaken the blocked item. Before a PR merges, every deferral described as a follow-up, non-blocking, or out of scope for the PR needs an issue linked from the PR or review thread. Only the operator may drop planned work.
+Every agent, including the coordinator and auditors, must not drop, narrow, weaken, stub, or defer an acceptance criterion, test, check, or brief step on their own judgment. If permission, sandbox, approval, credential, tool refusal, or resource limits block an item, stop at that item and report the exact command block needed to unblock it to the coordinator, who raises an operator request. Do not work around or weaken the blocked item. Before a PR merges, every deferral described as a follow-up, non-blocking, or out of scope for the PR needs an issue linked from the PR or review thread. A non-blocking reviewer finding may instead have an explicit answer in its thread before the thread is resolved. Only the operator may drop planned work, and the drop must be recorded as a decision.
 
 ## Functional core, imperative shell
 
