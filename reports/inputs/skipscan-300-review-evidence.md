@@ -9,3 +9,11 @@ The runnable workflow and CI probe for #300 are in PR #315. The [earlier CI prob
 In the stacked #315 worktree before the main merge, 150 targeted scanner tests, `mise run check`, `mise run docs:build`, and `mise run build` passed. `mise run check:mutation` passed with Go core 97.32% and Python core 90.08% (11,746 killed of 13,039). Local `mise run docs:check-links` failed twice because Chromium could not register its macOS rendezvous server in this sandbox; the Linux CI docs job passed on `d57f412`.
 
 GitHub [runs comment workflows from the default branch](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#issue_comment). The comment workflow checks out that branch and [creates a check run on the PR head](https://docs.github.com/en/rest/checks/runs#create-a-check-run). Live comment edits and deletions remain untested until #315 lands on the default branch; local tests cover event routing and head check publication through a loopback API.
+
+## Main merge and pass/fail policy
+
+PR #315 merged `origin/main` as `d245549`, retaining #312's round-4 scanner fixes and the #315 event routing. The 160 focused scanner and event tests passed after the merge; the core-policy tests then failed at collection because `head_result` was absent, and 163 focused scanner, event, and shell tests passed after the policy moved into the pure core.
+
+`mise run fmt` and `mise run build` passed. `mise run check` stopped at `check:secrets`: a redacted gitleaks report identified rule `private-key` in `tests/test_skipscan.py` at main commit `dcfec5c1d132dbdc6d1fb4c396e797f4cbbfb3d2` (lines 110-128). No secret value was printed or committed in this report. This historical finding is outside #315's new code and persists when the already merged commit is in history; the full aggregate check did not complete.
+
+`mise run check:mutation` passed after the policy change: Go core 97.32% (145 killed of 149), Python core 90.04% (11,813 killed of 13,119). `mise run check:gate-changes` passed after the PR body was updated with the two suppression IDs changed by the main merge.

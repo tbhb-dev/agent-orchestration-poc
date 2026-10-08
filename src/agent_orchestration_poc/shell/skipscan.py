@@ -12,7 +12,9 @@ from urllib.request import Request, urlopen
 from agent_orchestration_poc.core.skipscan import (
     check_run_result,
     event_pr_number,
+    head_result,
     scan_diff,
+    scan_outcome,
     scan_text,
 )
 
@@ -76,11 +78,11 @@ def run(api: str, token: str, repo: str, number: int) -> int:
         )
     diff = _get(f"{api}/{prefix}", token, "application/vnd.github.v3.diff")
     hits.extend(scan_diff(diff, f"PR #{number}"))
-    untracked = [hit for hit in hits if not hit["tracked"]]
+    untracked, result = scan_outcome(hits)
     for hit in untracked:
         LOGGER.error("%s:%s: %s", hit["source"], hit["line"], hit["phrase"])
     LOGGER.info("skipscan: %d untracked indicator(s)", len(untracked))
-    return int(bool(untracked))
+    return result
 
 
 def run_event(
@@ -107,8 +109,9 @@ def run_event(
     update_url = f"{checks_url}/{created['id']}"
     try:
         result = run(api, token, repo, number)
-        if json.loads(_get(pr_url, token))["head"]["sha"] != head:
-            result = 2
+        result = head_result(
+            result, head, json.loads(_get(pr_url, token))["head"]["sha"]
+        )
     except OSError, ValueError, TypeError, KeyError:
         _get(update_url, token, method="PATCH", data=check_run_result(2))
         raise

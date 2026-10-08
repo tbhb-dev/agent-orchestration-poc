@@ -128,6 +128,17 @@ def check_run_result(result: int) -> dict[str, str]:
     }
 
 
+def scan_outcome(hits: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], int]:
+    """Return the findings to report and the scanner exit code."""
+    untracked = [hit for hit in hits if not hit["tracked"]]
+    return untracked, int(bool(untracked))
+
+
+def head_result(result: int, scanned_head: str, current_head: str) -> int:
+    """Fail a result if the pull request head changed during scanning."""
+    return 2 if scanned_head != current_head else result
+
+
 def flag_id(source: str, line: int, phrase: str) -> str:
     """Return a stable identifier for one indicator location."""
     return hashlib.sha256(f"{source}\0{line}\0{phrase.lower()}".encode()).hexdigest()[

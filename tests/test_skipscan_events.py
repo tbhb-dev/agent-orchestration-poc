@@ -5,7 +5,12 @@ from pathlib import Path
 import pytest
 import yaml  # pyrefly: ignore[untyped-import]  PyYAML is available for #300's workflow test.
 
-from agent_orchestration_poc.core.skipscan import check_run_result, event_pr_number
+from agent_orchestration_poc.core.skipscan import (
+    check_run_result,
+    event_pr_number,
+    head_result,
+    scan_outcome,
+)
 
 
 def test_workflow_rescans_all_comment_and_review_changes() -> None:
@@ -59,3 +64,17 @@ def test_check_run_result(result: int, conclusion: str) -> None:
         "status": "completed",
         "conclusion": conclusion,
     }
+
+
+def test_scan_outcome_uses_only_untracked_hits() -> None:
+    tracked = {"tracked": True, "phrase": "skipped"}
+    untracked = {"tracked": False, "phrase": "deferred"}
+    assert scan_outcome([]) == ([], 0)
+    assert scan_outcome([tracked]) == ([], 0)
+    assert scan_outcome([tracked, untracked]) == ([untracked], 1)
+
+
+def test_head_result_fails_stale_scan() -> None:
+    assert head_result(0, "original", "original") == 0
+    assert head_result(1, "original", "original") == 1
+    assert head_result(0, "original", "new") == 2
