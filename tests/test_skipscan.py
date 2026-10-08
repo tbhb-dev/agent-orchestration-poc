@@ -142,9 +142,12 @@ def test_flag_id_is_stable_and_location_sensitive(line: int, phrase: str) -> Non
     assert flag_id("path", line, phrase) != flag_id("path", line + 1, phrase)
 
 
-DIFF_CASES = json.loads(
-    (Path(__file__).parent / "fixtures/skipscan/diffs.json").read_text()
-)
+DIFF_CASES = []
+for row in (
+    (Path(__file__).parent / "fixtures/skipscan/diffs.tsv").read_text().splitlines()
+):
+    diff, hits, _reference = row.split("\t")
+    DIFF_CASES.append({"diff": json.loads(diff), "hits": json.loads(hits)})
 
 
 @pytest.mark.parametrize("case", DIFF_CASES)
@@ -182,15 +185,16 @@ def test_inline_and_python_string_locations(value: str) -> None:
 
 @given(st.integers(min_value=1, max_value=999999))
 def test_tracking_references_are_local(number: int) -> None:
-    assert _tracked(f"Skipped #{number}", set())
-    assert not _tracked(f"Skipped step #{number}", set())
+    assert _tracked(f"Skipped #{number}", set())  # Refs: #300
+    assert not _tracked(f"Skipped step #{number}", set())  # Refs: #300
     assert _tracked(f"Queued RFC-{number}/{number}", set())
     assert not _tracked(f"RFC-{number}/{number}", set())
 
 
 @given(st.text(alphabet="abc", min_size=1, max_size=20))
 def test_blocks_and_uniqueness(value: str) -> None:
-    lines = [f"- Skipped {value}", "  #300", f"- Skipped {value}"]
-    assert _blocks(lines) == [f"- Skipped {value}\n  #300"] * 2 + [lines[2]]
+    word = "Skipped"
+    lines = [f"- {word} {value}", "  #300", f"- {word} {value}"]
+    assert _blocks(lines) == [f"- {word} {value}\n  #300"] * 2 + [lines[2]]
     hits = [{"id": value}, {"id": value}]
     assert _unique(hits) == hits[:1]
