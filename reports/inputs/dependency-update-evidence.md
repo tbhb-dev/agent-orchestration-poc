@@ -18,4 +18,12 @@
 
 ## Local verification
 
-The final local `mise run check`, `mise run check:mutation`, documentation checks, secret scan, and changed-line measurement are recorded below when completed. No service credentials were read or used.
+[verified] `mise run fmt` exited 0 and left only the six intended research and documentation paths changed. `mise run check:vale` exited 0 after edits to the new pages. `mise run check:rumdl`, `git diff --cached --check`, and `mise run check:secrets` exited 0. A staged-file-only `mise exec -- gitleaks dir --redact --no-banner <temporary staged copy>` exited 0 with no leaks. No service credentials were read or used.
+
+[verified] `mise run check` exited 0 on 2026-10-07 local time. Its ordinary Python suite passed 728 tests with 117 integration skips, and its coverage suite passed 845 tests. Python core lines were 97.41%, core branches 94.06%, shell lines 75.77%, Go core statements 96.43%, core branches 94.74%, and shell statements 74.58%. No source code or dependency pin changed in this delivery.
+
+[verified] `mise run pr:size -- origin/main` exited 0 before this evidence update and reported 22 counted units across the docs pages. Both `reports/inputs/` files were excluded by the repository size contract. The raw diff had 93 added lines across six files at that point.
+
+[observed] `mise run docs:check-links` exited 1 locally. The sandbox denied Chromium's Mach port rendezvous at launch. The validator also listed seven links in existing pages, including `/workflow/`, `/design/github-event-monitor/`, and `/workflow/#ci-jobs`. None of the newly added `/decisions/0011-dependency-update-proposals/` links appeared in that list. Hosted `docs` CI is needed to establish the PR's site result. The sandbox also denied `ps` during diagnosis. The first commit attempt could not write `/Users/tony/.cache/prek/prek.log`, so the unchanged normal hooks were run with `PREK_HOME=/private/tmp/codex-91-prek` and passed. No sandbox escape was attempted.
+
+[verified] `mise run check:mutation` exited 0. Go core mutation killed 145 of 149 classified mutants for 97.32% efficacy and 100.00% mutator coverage. Python core mutation killed 9,042 of 10,007 mutants for a 90.36% score.
