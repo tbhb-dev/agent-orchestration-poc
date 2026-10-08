@@ -163,6 +163,7 @@ run = [
   "uv run --group analysis pytest --run-integration --cov=agent_orchestration_poc --cov-report=json:.coverage-reports/python.json --cov-report=term",
   "go test -tags=integration -coverprofile=.coverage-reports/go.out ./...",
   "uv run python scripts/check-coverage.py",
+  "git diff --quiet HEAD --",
 ]
 
 [tasks."check:pyrefly"]
