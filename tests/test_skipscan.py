@@ -42,6 +42,7 @@ for row in (
         ("Deferred for RFC-9999/9999", False),
         ("Skipped step #2", False),
         ("Skipped. Answered in thread: https://github.com/o/r/pull/2", True),
+        ("Skipped. Answered in thread: https://example.com", False),
         ("Skipped. https://github.com/o/r/issues/300", True),
     ],
 )
@@ -201,6 +202,33 @@ def test_diff_cases(case: dict[str, Any]) -> None:
             }
         )
     assert scan_diff(case["diff"], "PR #300") == expected
+
+
+@pytest.mark.parametrize(
+    ("path", "old", "new"),
+    [
+        (".gremlins.yaml", "efficacy: 90", "efficacy: 10"),
+        (".gremlins.yaml", "mutant-coverage: 90", "mutant-coverage: 10"),
+        ("pyproject.toml", "fail_under = 95", "fail_under = 10"),
+    ],
+)
+def test_actual_threshold_reductions(path: str, old: str, new: str) -> None:
+    diff = f"diff --git a/{path} b/{path}\n@@ -1 +1 @@\n-{old}\n+{new}\n"
+    assert [hit["phrase"] for hit in scan_diff(diff, "PR #300")] == [
+        "lowered threshold"
+    ]
+
+
+def test_python_skip_outside_triple_quoted_reason() -> None:
+    diff = (
+        "diff --git a/test_a.py b/test_a.py\n@@ -0,0 +1,2 @@\n"
+        '+pytest.skip("""unsupported""")\n'
+        '+reason = """closed"""; pytest.skip("real")\n'
+    )
+    assert [hit["phrase"] for hit in scan_diff(diff, "PR #300")] == [
+        "pytest.skip",
+        "pytest.skip",
+    ]
 
 
 @given(st.text(alphabet="abc", min_size=1, max_size=30))

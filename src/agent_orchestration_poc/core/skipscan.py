@@ -79,7 +79,6 @@ ISSUE_RE = re.compile(
     re.IGNORECASE,
 )
 ITEM_RE = re.compile(r"\b(?:REQ|ADR|ACTION)-\d+\b", re.IGNORECASE)
-THREAD_RE = re.compile(r"Answered in thread:\s*https?://\S+", re.IGNORECASE)
 RUN_RE = re.compile(r"\bRFC-(\d+)(?:\s+run\s+|/)(\d+)\b", re.IGNORECASE)
 LIST_RE = re.compile(r"^\s*(?:[-*+]\s+|\d+[.)]\s+)")
 FENCE_RE = re.compile(r"^\s*(```|~~~)\s*([^\s`]*)")
@@ -89,6 +88,10 @@ CI_RE = re.compile(
 STEP_RE = re.compile(r"^\s*(?:-\s*)?(?:name:|run:|uses:|script:|step:)")
 THRESHOLD_RE = re.compile(
     r"(?:coverage|mutation).{0,50}?(?:threshold|minimum|min|fail_under|fail-under)\D{0,10}(\d+(?:\.\d+)?)",
+    re.IGNORECASE,
+)
+NAMED_THRESHOLD_RE = re.compile(
+    r"^\s*(efficacy|mutant-coverage|fail_under)\s*[:=]\s*(\d+(?:\.\d+)?)\b",
     re.IGNORECASE,
 )
 VALUE_PATTERN = r"(?:\"[^\"]*\"|'[^']*'|[^\s,'\"`]+)"
@@ -186,9 +189,39 @@ def _python_string(line: str, position: int) -> bool:
         return False
 
 
+def _triple_spans(line: str, opening: str) -> tuple[list[tuple[int, int]], str]:
+    """Return Python triple-quoted spans and the delimiter left open."""
+    spans: list[tuple[int, int]] = []
+    start = 0
+    for marker in re.finditer(r"(?<!\\)(?:'''|\"\"\")", line):
+        if opening:
+            if marker.group() == opening:
+                spans.append((start, marker.end()))
+                opening = ""
+        else:
+            opening = marker.group()
+            start = marker.start()
+    if opening:
+        spans.append((start, len(line)))
+    return spans, opening
+
+
+def _threshold(path: str, line: str) -> tuple[str, float] | None:
+    """Read a supported floor setting from one changed line."""
+    named = NAMED_THRESHOLD_RE.search(line)
+    if named and (
+        (path == ".gremlins.yaml" and named[1] in {"efficacy", "mutant-coverage"})
+        or (
+            path in {".coveragerc", "pyproject.toml", "setup.cfg", "tox.ini"}
+            and named[1] == "fail_under"
+        )
+    ):
+        return named[1], float(named[2])
+    generic = THRESHOLD_RE.search(line)
+    return ("generic", float(generic[1])) if generic else None
+
+
 def _tracked(block: str, pending_runs: set[str]) -> bool:
-    if THREAD_RE.search(block):
-        return True
     for match in ISSUE_RE.finditer(block):
         prefix = block[max(0, match.start() - 16) : match.start()]
         if match.group().startswith("#") and re.search(
@@ -359,15 +392,18 @@ def scan_diff(  # noqa: C901, PLR0912, PLR0915  Refs: #300
                     "\n".join(text for _, text in added),
                 )
         old_thresholds = [
-            float(m[1]) for _, text in removed if (m := THRESHOLD_RE.search(text))
+            value for _, text in removed if (value := _threshold(path, text))
         ]
         for new_line, text in added:
             if CI_RE.search(path) and re.match(
                 r"^\s*#\s*(?:-\s*)?(?:name:|run:|uses:|script:|step:)", text
             ):
                 add_hit(new_line, "commented CI step", text, text)
-            m = THRESHOLD_RE.search(text)
-            if m and old_thresholds and float(m[1]) < max(old_thresholds):
+            threshold = _threshold(path, text)
+            if threshold and any(
+                key == threshold[0] and threshold[1] < value
+                for key, value in old_thresholds
+            ):
                 add_hit(new_line, "lowered threshold", text, text)
 
     for raw in diff.splitlines():
@@ -391,17 +427,11 @@ def scan_diff(  # noqa: C901, PLR0912, PLR0915  Refs: #300
             content = raw[1:]
             added.append((line, content))
             hunk.append((line, content, True))
-            inside_string = bool(triple)
+            spans: list[tuple[int, int]] = []
             if path.endswith(".py"):
-                for marker in re.findall(r"(?<!\\)(?:'''|\"\"\")", content):
-                    triple = (
-                        "" if triple == marker else (marker if not triple else triple)
-                    )
-                    inside_string = True
+                spans, triple = _triple_spans(content, triple)
             if not path.endswith(".md"):
-                if not (path.endswith(".py") and inside_string) and not CODE_RE.search(
-                    content
-                ):
+                if not CODE_RE.search(content):
                     prose = (
                         content.lstrip("#/ *")
                         if content.lstrip().startswith(("# ", "//", "* "))
@@ -411,14 +441,18 @@ def scan_diff(  # noqa: C901, PLR0912, PLR0915  Refs: #300
                         prose, "diff", f"{source}:{path}", pending_runs
                     ):
                         position = content.lower().find(hit["phrase"].lower())
-                        if path.endswith(".py") and _python_string(content, position):
+                        if path.endswith(".py") and (
+                            any(start <= position < end for start, end in spans)
+                            or _python_string(content, position)
+                        ):
                             continue
                         hit["line"] = line
                         hit["id"] = flag_id(hit["source"], line, hit["phrase"])
                         hits.append(hit)
                 for match in CODE_RE.finditer(content):
                     if path.endswith(".py") and (
-                        inside_string or _python_string(content, match.start())
+                        any(start <= match.start() < end for start, end in spans)
+                        or _python_string(content, match.start())
                     ):
                         continue
                     if match.group().strip() == "|| true" and not re.search(
@@ -451,10 +485,7 @@ def scan_diff(  # noqa: C901, PLR0912, PLR0915  Refs: #300
         elif raw.startswith(" "):
             hunk.append((line, raw[1:], False))
             if path.endswith(".py"):
-                for marker in re.findall(r"(?<!\\)(?:'''|\"\"\")", raw[1:]):
-                    triple = (
-                        "" if triple == marker else (marker if not triple else triple)
-                    )
+                _, triple = _triple_spans(raw[1:], triple)
             line += 1
             old_line += 1
     flush()

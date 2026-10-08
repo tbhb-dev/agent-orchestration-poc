@@ -136,10 +136,6 @@ run = "uv run pytest"
 description = "Compare registered gates with the PR merge base and check reasons"
 run = "uv run python -m agent_orchestration_poc.shell.gate_changes"
 
-[tasks."check:skipscan"]
-description = "Flag untracked skip indicators for #300 in pull request artifacts"
-run = "uv run python -m agent_orchestration_poc.shell.skipscan"
-
 [tasks."monitor:project-probe"]
 description = "Read-only Project 9 source and event feasibility probe"
 run = "uv run python scaffolding/github-monitor/project_probe.py"
