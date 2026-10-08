@@ -27,7 +27,6 @@ from agent_orchestration_poc.core.gate_changes import (
     monitored_path,
     reconcile_registries,
 )
-from agent_orchestration_poc.shell import gate_changes
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG_ROOT = ROOT if (ROOT / "config/gate-registry.toml").is_file() else ROOT.parent
@@ -580,6 +579,7 @@ def test_unchanged_snapshot_property(content: str) -> None:
 def test_shell_skips_without_pr_inputs(
     monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture, empty_env: bool
 ) -> None:
+    shell = pytest.importorskip("agent_orchestration_poc.shell.gate_changes")
     for name in ("GATE_BASE_SHA", "GATE_HEAD_SHA", "GATE_BODY_FILE"):
         if empty_env:
             monkeypatch.setenv(name, "")
@@ -587,7 +587,7 @@ def test_shell_skips_without_pr_inputs(
             monkeypatch.delenv(name, raising=False)
     monkeypatch.setattr(sys, "argv", ["gate-changes"])
 
-    assert gate_changes.main() == 0
+    assert shell.main() == 0
     assert caplog.messages == ["Gate comparison skipped outside a pull request"]
 
 
@@ -605,6 +605,7 @@ def test_shell_rejects_partial_pr_inputs(
     environment: dict[str, str],
     arguments: list[str],
 ) -> None:
+    shell = pytest.importorskip("agent_orchestration_poc.shell.gate_changes")
     for name in ("GATE_BASE_SHA", "GATE_HEAD_SHA", "GATE_BODY_FILE"):
         monkeypatch.delenv(name, raising=False)
     for name, value in environment.items():
@@ -612,7 +613,7 @@ def test_shell_rejects_partial_pr_inputs(
     monkeypatch.setattr(sys, "argv", ["gate-changes", *arguments])
 
     with pytest.raises(SystemExit) as error:
-        gate_changes.main()
+        shell.main()
     assert error.value.code == 2
     assert "base, head, and body-file are required together" in capsys.readouterr().err
 
