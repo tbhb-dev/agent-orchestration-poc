@@ -55,3 +55,13 @@ Observed: `mise run check:mutation` exited 1 with Go 145/149 killed (97.32%) and
 Verified: `mise run check:mutation:python` then exited 0 with 9627/10662 killed (90.29%). The earlier full mutation task's Go result remained 145/149 (97.32%).
 
 Observed: A full `mise run check` retry after formatting exited 1 in the unrelated notebook integration test because Quarto tried to write `/Users/tony/Library/Application Support/quarto/logs/jupyter-kernel.log` outside this sandbox. It ran 807 passing tests and one failing notebook test before stopping coverage. No sandbox escape or host setting was changed. The focused gate suite passed all 94 tests, including its shell integration case.
+
+## Review round 3
+
+Verified: `git fetch origin` and `git merge --no-ff origin/main` brought in current `main`. The only conflict was the `mise.toml` check aggregate; merge commit `89c765d` retains both `check:gate-changes` and `check:pr-size-contract`.
+
+Verified: Before the fixes, `mise exec -- uv run pytest -q tests/test_gate_changes.py -k 'registered_ruff_selector_removal or coverage_run_omit_is_reported'` exited 1 with five failures. Removing each of the four registered Ruff rule selectors from the actual `pyproject.toml`, or adding a Coverage run `omit` for the gate-change core module, produced no findings. After the registry and exclusion changes, the same command exited 0 with five passes. The tests assert stable finding IDs and missing-reason diagnostics.
+
+Verified: `mise run fmt` exited 0 and changed only the new test formatting. `mise run check` exited 0 with 830 regular test passes, 948 integration-inclusive coverage test passes, Python core lines 97.57%, branches 94.45%, shell lines 75.32%, Go core statements 96.43%, branches 94.74%, and shell statements 74.58%.
+
+Verified: `mise run check:mutation` exited 0. Go killed 145 of 149 mutants (97.32%); Python killed 10,253 of 11,336 mutants (90.45%).

@@ -133,6 +133,42 @@ def test_existing_unclassified_gate_controls_fail_closed() -> None:
 
 
 @pytest.mark.parametrize(
+    ("rule", "key"),
+    [
+        ("PLR0913", "ruff.max-args"),
+        ("PLR0917", "ruff.max-positional-args"),
+        ("PLR0911", "ruff.max-returns"),
+        ("PLR0915", "ruff.max-statements"),
+    ],
+)
+def test_registered_ruff_selector_removal(rule: str, key: str) -> None:
+    before = (CONFIG_ROOT / "pyproject.toml").read_text()
+    line = next(
+        line for line in before.splitlines(keepends=True) if f'"{rule}",' in line
+    )
+    after = before.replace(line, "", 1)
+    findings = compare({"pyproject.toml": before}, {"pyproject.toml": after}, REGISTRY)
+    assert (
+        Finding(f"gate:gate:pyproject.toml:{key}:removed", f"{key} removed or disabled")
+        in findings
+    )
+    assert match_justifications(findings, "")
+
+
+def test_coverage_run_omit_is_reported() -> None:
+    before = (CONFIG_ROOT / "pyproject.toml").read_text()
+    omitted = "src/agent_orchestration_poc/core/gate_changes.py"
+    after = before.replace(
+        "[tool.coverage.run]\n", f'[tool.coverage.run]\nomit = ["{omitted}"]\n', 1
+    )
+    findings = compare({"pyproject.toml": before}, {"pyproject.toml": after}, REGISTRY)
+    value = f'tool.coverage.run.omit="{omitted}"'
+    digest = hashlib.sha256(value.encode()).hexdigest()[:12]
+    assert Finding(f"gate:exclusion:pyproject.toml:{digest}:added", value) in findings
+    assert match_justifications(findings, "")
+
+
+@pytest.mark.parametrize(
     ("previous", "current", "change"),
     [
         ("error", "warn", "weakened"),

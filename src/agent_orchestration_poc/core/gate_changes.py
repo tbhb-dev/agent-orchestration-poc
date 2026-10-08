@@ -97,7 +97,7 @@ def _flatten_exclusions(value: object, prefix: str = "") -> frozenset[str]:
     if isinstance(value, dict):
         for key, child in value.items():
             name = f"{prefix}.{key}" if prefix else key
-            if any(
+            if name == "tool.coverage.run.omit" or any(
                 word in key.lower()
                 for word in ("ignore", "exclude", "skip", "filterwarnings")
             ):
