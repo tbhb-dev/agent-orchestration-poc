@@ -1,0 +1,68 @@
+prose	untested	#300
+prose	not tested	#300
+prose	not run	#300
+prose	did not run	#300
+prose	skipped	#300
+prose	skip	#300
+prose	deviation	#300
+prose	deviated	#300
+prose	deferred	#300
+prose	defer	#300
+prose	follow-up	#300
+prose	out of scope	#300
+prose	non-blocking	#300
+prose	not now	#300
+prose	TODO	#300
+prose	stubbed	#300
+prose	placeholder	#300
+prose	workaround	#300
+prose	worked around	#300
+prose	bypass	#300
+prose	could not	#300
+prose	couldn't	#300
+prose	unable to	#300
+prose	blocked	#300
+prose	denied	#300
+prose	refused	#300
+prose	permission	#300
+prose	sandbox blocked	#300
+prose	left as	#300
+prose	partial	#300
+prose	narrowed	#300
+prose	reduced	#300
+prose	instead of	#300
+prose	as a stand-in	#300
+prose	approximate	#300
+prose	only one	#300
+prose	simulated	#300
+prose	mocked out	#300
+prose	assumed	#300
+code	#[ignore = "reason"]	#300
+code	#[cfg(any())]	#300
+code	pytest.skip("reason")	#300
+code	pytest.mark.skip	#300
+code	xfail	#300
+code	xit("case")	#300
+code	xdescribe("suite")	#300
+code	unittest.skip	#300
+code	t.Skipf("reason")	#300
+code	b.Skip()	#300
+code	test.skip("case")	#300
+code	todo!()	#300
+code	unimplemented!()	#300
+code	continue-on-error: true	#300
+code	check || true	#300
+code	# noqa: F401	#300
+code	# type: ignore	#300
+code	#[allow(dead_code)]	#300
+code	// nolint	#300
+code	eslint-disable	#300
+code	@ts-ignore	#300
+negative	No test was skipped	#300
+negative	No command was denied	#300
+negative	partial response	#300
+negative	narrowed path	#300
+negative	assumed role	#300
+negative	The response came 2 ms later	#300
+negative	We arrived later	#300
+negative	The `placeholder` is a value	#300
