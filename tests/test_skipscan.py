@@ -13,7 +13,7 @@ from agent_orchestration_poc.core.skipscan import (
     CODE_RE,
     _blocks,
     _inline_code,
-    _python_string,
+    _python_spans,
     _tracked,
     _unique,
     excerpt,
@@ -316,8 +316,8 @@ def test_inline_and_python_string_locations(value: str) -> None:
     assert not _inline_code(value, 0)
     assert not _inline_code("`a` `b`", 2)
     assert _inline_code("`a` `b`", 5)
-    assert _python_string(repr(value), 1)
-    assert not _python_string(f"x = {value}", 0)
+    assert _python_spans(repr(value)) == [((1, 0), (1, len(value) + 2))]
+    assert _python_spans(f"x = {value}") == []
 
 
 @given(st.integers(min_value=1, max_value=999999))

@@ -81,7 +81,6 @@ ISSUE_RE = re.compile(
 ITEM_RE = re.compile(r"\b(?:REQ|ADR|ACTION)-\d+\b", re.IGNORECASE)
 RUN_RE = re.compile(r"\bRFC-(\d+)(?:\s+run\s+|/)(\d+)\b", re.IGNORECASE)
 LIST_RE = re.compile(r"^\s*(?:[-*+]\s+|\d+[.)]\s+)")
-FENCE_RE = re.compile(r"^\s*(```|~~~)\s*([^\s`]*)")
 CI_RE = re.compile(
     r"(?:^|/)(?:\.github/workflows/|\.gitlab-ci|\.circleci/|Jenkinsfile|\.buildkite/)"
 )
@@ -234,57 +233,47 @@ def _inline_code(line: str, position: int) -> bool:
     return any(left < position < right for left, right in zip(ticks[::2], ticks[1::2]))
 
 
-def _python_string(line: str, position: int) -> bool:
+def _python_spans(text: str) -> list[tuple[tuple[int, int], tuple[int, int]]]:
+    """Exempt complete string tokens in text starting at a known Python boundary."""
+    spans = []
     try:
-        tokens = tokenize.generate_tokens(io.StringIO(line + "\n").readline)
-        return any(
-            token.type == tokenize.STRING
-            and token.start[0] == 1
-            and token.start[1] <= position < token.end[1]
-            for token in tokens
-        )
+        for token in tokenize.generate_tokens(io.StringIO(text + "\n").readline):
+            if token.type == tokenize.STRING:
+                spans.append((token.start, token.end))
     except tokenize.TokenError, IndentationError:
-        return False
+        # Diff fragments can end mid-token. No exemption covers the unknown tail.
+        pass
+    return spans
 
 
-def _inert_triple_markers(line: str) -> list[tuple[int, int]]:
-    """Locate comments, ordinary strings, and uncertain lexical tails."""
-    inert: list[tuple[int, int]] = []
-    try:
-        for token in tokenize.generate_tokens(io.StringIO(line + "\n").readline):
-            if token.start[0] != 1:
-                continue
-            if token.type == tokenize.ERRORTOKEN and token.string.strip():
-                inert.append((token.start[1], len(line)))
-            elif token.type == tokenize.COMMENT or (
-                token.type == tokenize.STRING
-                and not re.match(r"(?i)^[rubf]*(?:'''|\"\"\")", token.string)
-            ):
-                inert.append((token.start[1], token.end[1]))
-    except tokenize.TokenError as error:
-        if "multi-line string" not in str(error.args[0]):
-            return [(0, len(line))]
-    return inert
-
-
-def _triple_spans(line: str, opening: str) -> tuple[list[tuple[int, int]], str]:
-    """Return Python triple-quoted spans and the delimiter left open."""
-    spans: list[tuple[int, int]] = []
-    inert: list[tuple[int, int]] = _inert_triple_markers(line) if not opening else []
+def _fenced_lines(lines: list[str]) -> set[int]:
+    """Exempt only explicitly closed output fences, never an uncertain tail."""
+    ignored: set[int] = set()
+    opening = ""
     start = 0
-    for marker in re.finditer(r"(?<!\\)(?:'''|\"\"\")", line):
-        if opening:
-            if marker.group() == opening:
-                spans.append((start, marker.end()))
+    language = ""
+    for index, line in enumerate(lines):
+        marker = re.fullmatch(r"[ \t]*(`{3,}|~{3,})[ \t]*([\w-]*)[ \t]*", line)
+        if marker:
+            if not opening:
+                opening, language, start = marker[1], marker[2].lower(), index
+            elif (
+                not marker[2]
+                and marker[1][0] == opening[0]
+                and len(marker[1]) >= len(opening)
+            ):
+                if language in {
+                    "sh",
+                    "bash",
+                    "shell",
+                    "console",
+                    "output",
+                    "text",
+                    "zsh",
+                }:
+                    ignored.update(range(start, index + 1))
                 opening = ""
-        else:
-            if any(left <= marker.start() < right for left, right in inert):
-                continue
-            opening = marker.group()
-            start = marker.start()
-    if opening:
-        spans.append((start, len(line)))
-    return spans, opening
+    return ignored
 
 
 def _threshold(path: str, line: str) -> tuple[str, float] | None:
@@ -338,29 +327,14 @@ def scan_text(  # noqa: C901, PLR0912  Refs: #300
     safe_lines = redacted_lines(text)
     blocks = _blocks(lines)
     hits: list[dict[str, Any]] = []
-    fence = ""
-    ignore_fence = False
+    ignored_lines = _fenced_lines(lines)
     for index, line in enumerate(lines):
-        marker = FENCE_RE.match(line)
-        if marker:
-            if not fence:
-                fence = marker[1][:3]
-                ignore_fence = marker[2].lower() in {
-                    "sh",
-                    "bash",
-                    "shell",
-                    "console",
-                    "output",
-                    "text",
-                    "zsh",
-                }
-            elif marker[1][:3] == fence:
-                fence = ""
-            continue
-        if fence and ignore_fence:
+        if index in ignored_lines:
+            # This line belongs to a complete, explicitly bounded output fence.
             continue
         for match in PROSE_RE.finditer(line):
             if _inline_code(line, match.start()):
+                # Only this occurrence lies inside a paired inline code span.
                 continue
             phrase = match.group()
             tail = line[match.end() :]
@@ -373,32 +347,37 @@ def scan_text(  # noqa: C901, PLR0912  Refs: #300
                 clause,
                 re.IGNORECASE,
             ):
+                # The negated phrase ends at this occurrence.
                 continue
             if phrase.lower() in {"denied", "refused", "blocked"} and re.search(
-                r"\b(?:nothing|none|no\s+(?:command|step|request|cell|work))\b.{0,35}\b"
+                r"\b(?:nothing|none|no\s+(?:command|step|request|cell|work))\s+(?:(?:was|is)\s+)?"
                 + re.escape(phrase)
                 + r"$",
                 clause,
                 re.IGNORECASE,
             ):
+                # The exemption ends at this match or its immediate noun.
                 continue
             if phrase.lower() == "partial" and re.match(
                 r"\s+(?:manifest|file|page|read|write|response|failure)\b",
                 tail,
                 re.IGNORECASE,
             ):
+                # The exemption ends at this match or its immediate noun.
                 continue
             if phrase.lower() == "narrowed" and re.match(
                 r"\s+(?:path|prefix|mount|grant|permission)\b", tail, re.IGNORECASE
             ):
+                # The exemption ends at this match or its immediate noun.
                 continue
             if phrase.lower() == "assumed" and re.match(
                 r"\s+role\b", tail, re.IGNORECASE
             ):
+                # The exemption ends at this match or its immediate noun.
                 continue
             if phrase.lower() == "later":
                 timing = re.search(
-                    r"\b(?:\d+(?:\.\d+)?\s*(?:ms|s|sec|seconds?|minutes?|hours?)|a)\s+later\b",
+                    r"\b\d+(?:\.\d+)?\s*(?:ms|s|sec|seconds?|minutes?|hours?)\s+later$",
                     line[: match.end()],
                     re.IGNORECASE,
                 )
@@ -408,6 +387,7 @@ def scan_text(  # noqa: C901, PLR0912  Refs: #300
                     re.IGNORECASE,
                 )
                 if timing or not deferral:
+                    # Timing must end at this occurrence, not an earlier later.
                     continue
             hit = {
                 "id": flag_id(source, index + 1, phrase),
@@ -426,7 +406,85 @@ def scan_text(  # noqa: C901, PLR0912  Refs: #300
     return _unique(hits)
 
 
-def scan_diff(  # noqa: C901, PLR0912, PLR0915  Refs: #300
+def _scan_code(
+    hunk: list[tuple[int, str, bool]],
+    path: str,
+    source: str,
+    pending_runs: set[str],
+) -> list[dict[str, Any]]:
+    """Scan added code, trusting string tokens only with context from file start."""
+    hits = []
+    # A later hunk may begin inside a string: its closing quote would look like
+    # an opening quote. Without the file prefix, no string exemption is proven.
+    spans: list[tuple[tuple[int, int], tuple[int, int]]] = (
+        _python_spans("\n".join(text for _, text, _ in hunk))
+        if path.endswith(".py") and hunk and hunk[0][0] == 1
+        else []
+    )
+    for index, (line, content, is_added) in enumerate(hunk, 1):
+        if is_added:
+            prose = (
+                content.lstrip("#/ *")
+                if content.lstrip().startswith(("# ", "//", "* "))
+                else content
+            )
+            for hit in scan_text(
+                prose,
+                "diff",
+                f"{source}:{path}",
+                pending_runs,
+                with_positions=True,
+            ):
+                position = hit.pop("position") + len(content) - len(prose)
+                if path.endswith(".py") and (
+                    any(start <= (index, position) < end for start, end in spans)
+                ):
+                    # This occurrence alone is inside a complete string token.
+                    continue
+                if any(
+                    match.start() <= position < match.end()
+                    for match in CODE_RE.finditer(content)
+                ):
+                    # This occurrence overlaps code handled by the code pass.
+                    continue
+                hit["line"] = line
+                hit["id"] = flag_id(hit["source"], line, hit["phrase"])
+                hits.append(hit)
+            for match in CODE_RE.finditer(content):
+                if path.endswith(".py") and (
+                    any(start <= (index, match.start()) < end for start, end in spans)
+                ):
+                    # Only this code match is inside a complete string token.
+                    continue
+                if match.group().strip() == "|| true" and not re.search(
+                    r"\b(test|check|lint|verify|pytest|cargo|go test|npm test)\b",
+                    content,
+                    re.IGNORECASE,
+                ):
+                    # Only this non-check fallback is exempt, not later patterns. Refs: #318
+                    continue
+                if match.group() == ".skip(" and not (
+                    path.endswith((".js", ".jsx", ".ts", ".tsx"))
+                    and re.search(r"(?:test|spec)", path, re.IGNORECASE)
+                ):
+                    # Only this non-test method is exempt, not later patterns. Refs: #318
+                    continue
+                phrase = match.group()
+                hits.append(
+                    {
+                        "id": flag_id(f"{source}:{path}", line, phrase),
+                        "kind": "diff",
+                        "source": f"{source}:{path}",
+                        "line": line,
+                        "phrase": phrase,
+                        "excerpt": excerpt(content, match.start(), match.end()),
+                        "tracked": _tracked(content, pending_runs or set()),
+                    }
+                )
+    return hits
+
+
+def scan_diff(  # noqa: C901, PLR0915  Refs: #300
     diff: str, source: str, pending_runs: set[str] | None = None
 ) -> list[dict[str, Any]]:
     """Find added disable patterns and weaker checks in a unified diff."""
@@ -437,7 +495,6 @@ def scan_diff(  # noqa: C901, PLR0912, PLR0915  Refs: #300
     removed: list[tuple[int, str]] = []
     added: list[tuple[int, str]] = []
     hunk: list[tuple[int, str, bool]] = []
-    triple = ""
 
     def add_hit(number: int, phrase: str, content: str, tracking: str) -> None:
         location = f"{source}:{path}"
@@ -456,7 +513,7 @@ def scan_diff(  # noqa: C901, PLR0912, PLR0915  Refs: #300
     def flush() -> None:
         if not path:
             return
-        if path.endswith(".md") and hunk:
+        if path.endswith(".md"):
             hunk_hits = scan_text(
                 "\n".join(text for _, text, _ in hunk),
                 "diff",
@@ -469,6 +526,8 @@ def scan_diff(  # noqa: C901, PLR0912, PLR0915  Refs: #300
                     hit["line"] = actual
                     hit["id"] = flag_id(hit["source"], actual, hit["phrase"])
                     hits.append(hit)
+        else:
+            hits.extend(_scan_code(hunk, path, source, pending_runs or set()))
         for old in removed:
             if (
                 CI_RE.search(path)
@@ -506,7 +565,6 @@ def scan_diff(  # noqa: C901, PLR0912, PLR0915  Refs: #300
             removed.clear()
             added.clear()
             hunk.clear()
-            triple = ""
         elif raw.startswith("@@"):
             flush()
             removed.clear()
@@ -520,73 +578,12 @@ def scan_diff(  # noqa: C901, PLR0912, PLR0915  Refs: #300
             content = raw[1:]
             added.append((line, content))
             hunk.append((line, content, True))
-            spans: list[tuple[int, int]] = []
-            if path.endswith(".py"):
-                spans, triple = _triple_spans(content, triple)
-            if not path.endswith(".md"):
-                prose = (
-                    content.lstrip("#/ *")
-                    if content.lstrip().startswith(("# ", "//", "* "))
-                    else content
-                )
-                for hit in scan_text(
-                    prose,
-                    "diff",
-                    f"{source}:{path}",
-                    pending_runs,
-                    with_positions=True,
-                ):
-                    position = hit.pop("position") + len(content) - len(prose)
-                    if path.endswith(".py") and (
-                        any(start <= position < end for start, end in spans)
-                        or _python_string(content, position)
-                    ):
-                        continue
-                    if any(
-                        match.start() <= position < match.end()
-                        for match in CODE_RE.finditer(content)
-                    ):
-                        continue
-                    hit["line"] = line
-                    hit["id"] = flag_id(hit["source"], line, hit["phrase"])
-                    hits.append(hit)
-                for match in CODE_RE.finditer(content):
-                    if path.endswith(".py") and (
-                        any(start <= match.start() < end for start, end in spans)
-                        or _python_string(content, match.start())
-                    ):
-                        continue
-                    if match.group().strip() == "|| true" and not re.search(
-                        r"\b(test|check|lint|verify|pytest|cargo|go test|npm test)\b",
-                        content,
-                        re.IGNORECASE,
-                    ):
-                        continue
-                    if match.group() == ".skip(" and not (
-                        path.endswith((".js", ".jsx", ".ts", ".tsx"))
-                        and re.search(r"(?:test|spec)", path, re.IGNORECASE)
-                    ):
-                        continue
-                    phrase = match.group()
-                    hits.append(
-                        {
-                            "id": flag_id(f"{source}:{path}", line, phrase),
-                            "kind": "diff",
-                            "source": f"{source}:{path}",
-                            "line": line,
-                            "phrase": phrase,
-                            "excerpt": excerpt(content, match.start(), match.end()),
-                            "tracked": _tracked(content, pending_runs or set()),
-                        }
-                    )
             line += 1
         elif raw.startswith("-") and not raw.startswith("---"):
             removed.append((old_line, raw[1:]))
             old_line += 1
         elif raw.startswith(" "):
             hunk.append((line, raw[1:], False))
-            if path.endswith(".py"):
-                _, triple = _triple_spans(raw[1:], triple)
             line += 1
             old_line += 1
     flush()
