@@ -17,7 +17,7 @@ Inference from the log and repository source at `0e579b756195fefd1ff6bd24af47746
 
 Documented in `golang/tools` v0.50.0, commit `265dd1a6ecf0ee85548c7a8d1787d25fc5675e06`: `cmd/deadcode/doc.go` defines package arguments using `go list` notation. `cmd/deadcode/deadcode.go` passes the arguments to `packages.Load` and fails when loaded packages contain errors. These files explain why a disappearing directory can fail discovery before dead-code analysis.
 
-The existing dependency clone at `/Users/tony/Code/github.com/golang/tools` required a lazy object fetch for the pinned source file. The sandbox denied its write to `.git/objects/pack`. The brief's authorized alternative was used: a shallow v0.50.0 clone at `/var/folders/ns/cc4x7s5j5271ltrw1t08w7p40000gn/T/issue-313-golang-tools`. No host installation or sandbox escape was used.
+The existing dependency clone at `/Users/tony/Code/github.com/golang/tools` required a lazy object fetch for the pinned source file. The sandbox denied its write to `.git/objects/pack` during #313. The brief's authorized alternative was used: a shallow v0.50.0 clone at `/var/folders/ns/cc4x7s5j5271ltrw1t08w7p40000gn/T/issue-313-golang-tools`. The source inspection completed from that clone. This historical denial is the single indicator reported by [skipscan job 113508642671](https://github.com/tbhb-dev/agent-orchestration-poc/actions/runs/37834699358/job/113508642671); it records completed research with an authorized source location, with no omitted requirement. No host installation or sandbox escape was used.
 
 Observed local versions: `mise exec -- go version` reported Go 1.27.1 on darwin/arm64, and `mise exec -- gofumpt -version` reported v0.12.0 built with Go 1.27.1. The task pins deadcode 0.50.0 and vulture 2.16.
 
@@ -39,8 +39,10 @@ Verified locally: `/usr/bin/time -p mise run check:mutation` exited 0 in 844.32 
 
 Verified locally: `mise run build` passed. The docs link check for #313 could not finish in the worker sandbox: `mise run docs:check-links` failed when Chromium attempted `bootstrap_check_in` for its Mach-port rendezvous server, returning `Permission denied (1100)`. The coordinator was given the exact command to run outside the worker sandbox. No browser setting or check was changed.
 
-The brief requires a `phase/` PR label, but issue #313 has none, `config/workflow-reference.toml` defines none, and the repository labels API returned no `phase/` names. Clarification was requested before PR creation for #313.
+Verified from the coordinator's `/private/tmp/docs-links-313.log`: `mise run docs:check-links` completed a 62-page build and reported `All internal links are valid`. The PR body records this coordinator run at `1a93b5b003d0e32649b860973da40c16b13791f5` on 2026-10-08, completing the docs validation for #313.
 
-The passing CI run after the change remains pending for #313 because PR creation awaits that clarification. The local full check and mutation results above do not replace the required CI evidence.
+TASK-827 directed use of issue #313's existing labels, resolving the phase-label question before PR creation. PR #329 is open.
+
+Verified during revision TASK-832: the local scanner reproduced the untracked indicator at line 20 before the clarification and returned zero untracked indicators afterward. `mise run fmt` and `mise run check` exited 0; the aggregate completed in 85.68 seconds. The change is limited to this report.
 
 A diagnostic `ps` process listing was also denied by the sandbox during #313 validation. No alternate process-inspection route was attempted.
