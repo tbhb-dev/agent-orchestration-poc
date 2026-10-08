@@ -13,7 +13,10 @@ from hypothesis import strategies as st
 from agent_orchestration_poc.core.workflow_forms import validate_issue
 
 ROOT = Path(__file__).resolve().parents[1]
-REFERENCE = tomllib.loads((ROOT / "config/workflow-reference.toml").read_text())
+CONFIG_ROOT = (
+    ROOT if (ROOT / "config/workflow-reference.toml").is_file() else ROOT.parent
+)
+REFERENCE = tomllib.loads((CONFIG_ROOT / "config/workflow-reference.toml").read_text())
 TITLE = "docs(workflow): document filing"
 LABELS = ("area/workflow", "type/chore", "phase/2", "harness/codex")
 BODY = """## Goal
