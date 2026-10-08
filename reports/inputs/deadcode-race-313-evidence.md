@@ -45,4 +45,12 @@ TASK-827 directed use of issue #313's existing labels, resolving the phase-label
 
 Verified during revision TASK-832: the local scanner reproduced the untracked indicator at line 20 before the clarification and returned zero untracked indicators afterward. `mise run fmt` and `mise run check` exited 0; the aggregate completed in 85.68 seconds. The change is limited to this report.
 
+Verified during TASK-832: `mise run build` and `mise run check:mutation` exited 0. Go killed 145 of 149 mutants with 97.32 percent efficacy and 100 percent mutant coverage. Python killed 11,854 of 13,155 mutants for a 90.11 percent score, with 1,299 surviving mutants and two timeouts.
+
 A diagnostic `ps` process listing was also denied by the sandbox during #313 validation. No alternate process-inspection route was attempted.
+
+## Passing CI evidence
+
+Verified over the GitHub REST API on 2026-10-08: [check run 37835731237](https://github.com/tbhb-dev/agent-orchestration-poc/actions/runs/37835731237) completed with conclusion `success` at head `b8824d0feaa39c4e7c5530f7d925bd2205fb269c`. This run contains the formatter isolation fix and the report clarification for #313. The run URL, head SHA, status, and conclusion came from `gh-as-agent api repos/tbhb-dev/agent-orchestration-poc/actions/runs/37835731237`. This is the passing post-fix check workflow required by #313.
+
+At that head, the check-runs REST endpoint also reported successful `mutation`, `docs`, `analysis`, `imported-research`, and `pr-body` checks. The PR is not fully green: [skipscan job 113512141364](https://github.com/tbhb-dev/agent-orchestration-poc/actions/runs/37835731309/job/113512141364) reports one indicator in the review's sentence `Non-blocking findings: none.` The report indicator is fixed. The implementer [answered the remaining flag](https://github.com/tbhb-dev/agent-orchestration-poc/pull/329#issuecomment-6067937912) as a statement of no additional findings and requested that the reviewer reword their own review for #313.
