@@ -17,5 +17,6 @@ Use a numbered `NNNN-slug.md` page with `title` and `description` frontmatter. F
 - [0008, Analysis notebooks use Quarto text](/decisions/0008-analysis-notebooks/), accepted 2026-09-26 for issue #104.
 - [0009, Analysis charts use Matplotlib SVG](/decisions/0009-analysis-visualization/), accepted 2026-09-26 for issue #104.
 - [0010, Agent bus operations use an authenticated daemon relay](/decisions/0010-agent-bus-relay/), accepted 2026-09-26 for issue #96.
+- [0011, Dependency updates enter through coordinator-owned pull requests](/decisions/0011-dependency-update-proposals/), proposed 2026-10-07 for issue #91 pending enablement gates.
 - [0015, Issue hierarchy and dependencies in Project 9](/decisions/0015-sub-issues/), proposed 2026-09-27 for issue #125 pending the live trial.
 - [0131, Assisted-by provenance convention](/decisions/0131-assisted-by-provenance/), proposed 2026-09-27 for issue #131. Activation remains with #134.
