@@ -13,3 +13,17 @@
 "diff --git a/worker.c b/worker.c\n@@ -0,0 +1 @@\n+// test was skipped\n"	[["worker.c", 1, "skipped", false, "test was skipped"]]	#300
 "diff --git a/.github/workflows/check.yml b/.github/workflows/check.yml\n@@ -0,0 +1,2 @@\n+TEST || true #300\n+lint || true #300\n"	[[".github/workflows/check.yml", 1, "|| true", true, "TEST || true #300"], [".github/workflows/check.yml", 2, "|| true", true, "lint || true #300"]]	#300
 "diff --git a/note.md b/note.md\n@@ -0,0 +10,3 @@\n+Deferred for queued RFC-9999/9999\n+\n+Deferred for RFC-9999/9999\n"	[["note.md", 10, "Deferred", true, "Deferred for queued RFC-9999/9999"], ["note.md", 12, "Deferred", false, "Deferred for RFC-9999/9999"]]	#300
+"diff --git a/worker.py b/worker.py\n@@ -1,2 +1,4 @@\n fixture = \"\"\"\n+pytest.skip(\"quoted\")\n+\"\"\"\n+pytest.skip(\"real\")\n"	[["worker.py", 4, "pytest.skip", false, "pytest.skip(\"real\")"]]	#300
+"diff --git a/note.md b/note.md\n@@ -0,0 +9 @@\n+Skipped and deferred #300\n"	[["note.md", 9, "Skipped", true, "Skipped and deferred #300"], ["note.md", 9, "deferred", true, "Skipped and deferred #300"]]	#300
+"diff --git a/test.py b/test.py\n--- a/test.py\n+++ b/test.py\n@@ -0,0 +1 @@\n+pytest.skip(\"case\")\n"	[["test.py", 1, "pytest.skip", false, "pytest.skip(\"case\")"]]	#300
+"diff --git a/note.md b/note.md\n@@ -0,0 +1 @@\n+The `placeholder` was skipped #300\n"	[["note.md", 1, "skipped", true, "The `placeholder` was skipped #300"]]	#300
+"diff --git a/note.md b/note.md\n@@ -0,0 +1 @@\n+No test was skipped; follow-up #300\n"	[["note.md", 1, "follow-up", true, "No test was skipped; follow-up #300"]]	#300
+"diff --git a/note.md b/note.md\n@@ -0,0 +1 @@\n+No command was blocked; follow-up #300\n"	[["note.md", 1, "follow-up", true, "No command was blocked; follow-up #300"]]	#300
+"diff --git a/note.md b/note.md\n@@ -0,0 +1 @@\n+partial manifest; follow-up #300\n"	[["note.md", 1, "follow-up", true, "partial manifest; follow-up #300"]]	#300
+"diff --git a/note.md b/note.md\n@@ -0,0 +1 @@\n+narrowed path; follow-up #300\n"	[["note.md", 1, "follow-up", true, "narrowed path; follow-up #300"]]	#300
+"diff --git a/note.md b/note.md\n@@ -0,0 +1 @@\n+assumed role; follow-up #300\n"	[["note.md", 1, "follow-up", true, "assumed role; follow-up #300"]]	#300
+"diff --git a/note.md b/note.md\n@@ -0,0 +1 @@\n+We met 2 seconds later; follow-up #300\n"	[["note.md", 1, "follow-up", true, "We met 2 seconds later; follow-up #300"]]	#300
+"diff --git a/worker.py b/worker.py\n@@ -0,0 +1 @@\n+value = \"skipped\"; # follow-up #300\n"	[["worker.py", 1, "follow-up", true, "value = \"skipped\"; # follow-up #300"]]	#300
+"diff --git a/worker.py b/worker.py\n@@ -0,0 +1 @@\n+pattern = \"pytest.skip\"; pytest.skip(\"real\") #300\n"	[["worker.py", 1, "pytest.skip", true, "pattern = \"pytest.skip\"; pytest.skip(\"real\") #300"]]	#300
+"diff --git a/widget.ts b/widget.ts\n@@ -0,0 +1 @@\n+echo || true; todo!()\n"	[["widget.ts", 1, "todo!(", false, "echo || true; todo!()"]]	#300
+"diff --git a/widget.ts b/widget.ts\n@@ -0,0 +1 @@\n+widget.skip(); todo!()\n"	[["widget.ts", 1, "todo!(", false, "widget.skip(); todo!()"]]	#300

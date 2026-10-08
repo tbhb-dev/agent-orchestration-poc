@@ -1,5 +1,6 @@
 """Value and loopback integration tests for the pull request scanner."""
 
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -55,7 +56,7 @@ def test_prose_table(phrase: str) -> None:
 
 @pytest.mark.parametrize("text", CASES["negative"])
 def test_context_that_does_not_indicate_a_gap(text: str) -> None:
-    assert scan_text(text, "pr-body", "body") == []
+    assert scan_text(text.replace(r"\n", "\n"), "pr-body", "body") == []
 
 
 @pytest.mark.parametrize("code", CASES["code"])
@@ -115,6 +116,39 @@ def test_redaction_and_blocks() -> None:
     )
     assert _tracked("Queued RFC-9999/9999", set())
     assert _tracked("RFC-9999/9999", {"RFC-9999/9999"})
+    blocks = _blocks(["# title", "Skipped", "", "  | a", "Skipped"])
+    assert blocks == ["", "Skipped", "", "  | a\nSkipped", "  | a\nSkipped"]
+
+
+def test_redaction_and_excerpt_boundaries() -> None:
+    assert redacted_lines(
+        "before\n-----BEGIN CERTIFICATE-----\nsecret\n-----END CERTIFICATE-----\nafter"
+    ) == ["before", "[REDACTED]", "[REDACTED]", "[REDACTED]", "after"]
+    assert excerpt("-----BEGIN PRIVATE KEY-----") == "[REDACTED]"
+    assert excerpt("SECRET=privatevalue") == "[REDACTED]"
+    assert excerpt("x " * 120) == ("x " * 120).strip()
+    assert excerpt("x " * 121) == "x " * 120 + "…"
+    assert excerpt("x " * 250, 200, 201) == "…" + "x " * 120 + "…"
+    assert excerpt("x " * 250, 100, 300) == "…" + "x " * 195 + "…"
+    assert excerpt("x " * 250, 200, 500) == "…" + ("x " * 195).strip()
+
+
+def test_fence_boundaries() -> None:
+    for language in ("sh", "bash", "shell", "console", "output", "text", "zsh"):
+        assert scan_text(f"```{language}\nSkipped\n```", "body", "body") == []
+    assert [
+        hit["line"] for hit in scan_text("```sh\nSkipped\n```\nSkipped", "body", "body")
+    ] == [4]
+    assert [
+        hit["line"] for hit in scan_text("```python\nSkipped\n```", "body", "body")
+    ] == [2]
+
+
+def test_flag_id_canonical_digest() -> None:
+    assert (
+        flag_id("path", 7, "SkIp")
+        == hashlib.sha256(b"path\x007\x00skip").hexdigest()[:20]
+    )
 
 
 @given(st.integers(min_value=0, max_value=100), st.booleans())
@@ -179,6 +213,8 @@ def test_redaction_preserves_plain_lines(value: str) -> None:
 def test_inline_and_python_string_locations(value: str) -> None:
     assert _inline_code(f"`{value}`", 1)
     assert not _inline_code(value, 0)
+    assert not _inline_code("`a` `b`", 2)
+    assert _inline_code("`a` `b`", 5)
     assert _python_string(repr(value), 1)
     assert not _python_string(f"x = {value}", 0)
 

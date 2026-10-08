@@ -66,3 +66,21 @@ negative	assumed role	#300
 negative	The response came 2 ms later	#300
 negative	We arrived later	#300
 negative	The `placeholder` is a value	#300
+negative	No work was refused	#300
+negative	Nothing was blocked	#300
+negative	partial manifest	#300
+negative	partial file	#300
+negative	partial page	#300
+negative	partial read	#300
+negative	partial write	#300
+negative	partial failure	#300
+negative	narrowed mount	#300
+negative	assumed ROLE	#300
+negative	The response came 10 seconds later	#300
+negative	```sh\nSkipped\n```	#300
+negative	```bash\nSkipped\n```	#300
+negative	```shell\nSkipped\n```	#300
+negative	```console\nSkipped\n```	#300
+negative	```output\nSkipped\n```	#300
+negative	```text\nSkipped\n```	#300
+negative	```zsh\nSkipped\n```	#300
