@@ -16,96 +16,90 @@
   {
     "case": "incident without scope",
     "title": "inc: tracking stopped",
-    "labels": ["area/workflow", "type/incident", "phase/1", "harness/codex"],
+    "labels": ["area/workflow", "type/incident", "harness/codex"],
     "valid": true
   },
   {
     "case": "incident with scope",
     "title": "inc(workflow): tracking stopped",
-    "labels": ["area/workflow", "type/incident", "phase/1", "harness/codex"],
+    "labels": ["area/workflow", "type/incident", "harness/codex"],
     "valid": true
   },
   {
     "case": "old and new same class",
     "title": "fix(workflow): restore validation",
-    "labels": [
-      "area/workflow",
-      "type/bug",
-      "type/defect",
-      "phase/1",
-      "harness/codex"
-    ],
+    "labels": ["area/workflow", "type/bug", "type/defect", "harness/codex"],
     "valid": true
   },
   {
     "case": "old after migration",
     "title": "fix(workflow): restore validation",
-    "labels": ["area/workflow", "type/bug", "phase/1", "harness/codex"],
+    "labels": ["area/workflow", "type/bug", "harness/codex"],
     "migration": false,
     "valid": false
   },
   {
     "case": "exception 10",
     "title": "research(import): import the peering and session research folders with a manifest",
-    "labels": ["area/workflow", "type/chore", "phase/1", "harness/codex"],
+    "labels": ["area/workflow", "type/chore", "harness/codex"],
     "valid": true
   },
   {
     "case": "exception 10 after cutoff",
     "title": "research(import): import the peering and session research folders with a manifest",
-    "labels": ["area/workflow", "type/chore", "phase/1", "harness/codex"],
+    "labels": ["area/workflow", "type/chore", "harness/codex"],
     "migration": false,
     "valid": true
   },
   {
     "case": "exception 98",
     "title": "docs(design): design a webhook-fed monitor for pull request state",
-    "labels": ["area/workflow", "type/spike", "phase/1", "harness/codex"],
+    "labels": ["area/workflow", "type/spike", "harness/codex"],
     "valid": true
   },
   {
     "case": "exception 98 after cutoff",
     "title": "docs(design): design a webhook-fed monitor for pull request state",
-    "labels": ["area/workflow", "type/spike", "phase/1", "harness/codex"],
+    "labels": ["area/workflow", "type/spike", "harness/codex"],
     "migration": false,
     "valid": true
   },
   {
     "case": "exception 107",
     "title": "research(data): activate the analysis notebook gates",
-    "labels": ["area/workflow", "type/chore", "phase/1", "harness/codex"],
+    "labels": ["area/workflow", "type/chore", "harness/codex"],
     "valid": true
   },
   {
     "case": "exception 107 after cutoff",
     "title": "research(data): activate the analysis notebook gates",
-    "labels": ["area/workflow", "type/chore", "phase/1", "harness/codex"],
+    "labels": ["area/workflow", "type/chore", "harness/codex"],
     "migration": false,
     "valid": true
   },
   {
     "case": "exception 143",
     "title": "research(observability): run the native stack lifecycle",
-    "labels": ["area/workflow", "type/chore", "phase/1", "harness/codex"],
+    "labels": ["area/workflow", "type/chore", "harness/codex"],
     "valid": true
   },
   {
     "case": "exception 143 after cutoff",
     "title": "research(observability): run the native stack lifecycle",
-    "labels": ["area/workflow", "type/chore", "phase/1", "harness/codex"],
+    "labels": ["area/workflow", "type/chore", "harness/codex"],
     "migration": false,
     "valid": true
   },
   {
     "case": "exception 145",
     "title": "research(observability): verify stack utilization and privacy",
-    "labels": ["area/workflow", "type/experiment", "phase/1", "harness/codex"],
+    "labels": ["area/workflow", "type/experiment", "harness/codex"],
     "valid": true
   },
   {
     "case": "exception 145 after cutoff",
     "title": "research(observability): verify stack utilization and privacy",
-    "labels": ["area/workflow", "type/experiment", "phase/1", "harness/codex"],
+    "labels": ["area/workflow", "type/experiment", "harness/codex"],
     "migration": false,
     "valid": true
   }
