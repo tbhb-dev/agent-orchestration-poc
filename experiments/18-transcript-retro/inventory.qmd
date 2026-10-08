@@ -1,0 +1,256 @@
+---
+title: Session source inventory
+format: html
+engine: jupyter
+private-input: true
+execute:
+  echo: false
+  warning: false
+---
+
+## Population and method
+
+This private-input notebook inventories the read-only snapshot selected by `TRANSCRIPT_SNAPSHOT_ROOT`. The event population is repository sessions with event timestamps on September 26, 2026 in America/New_York, from 2026-09-26T04:00:00Z inclusive to 2026-09-27T04:00:00Z exclusive. A session crossing either midnight contributes only events within these bounds.
+
+Native Codex session records have precedence over repeated native copies and captured run logs. This slice exports native Codex calls, outputs, explicit aborts, usage records, and call-to-output elapsed time. The other source families remain in the inventory with a stated exclusion. A blank field means the snapshot did not supply a supported value.
+
+## Keyed inventory and native events
+
+```{python}
+#| label: inventory-and-events
+import csv
+import gzip
+import hmac
+import io
+import json
+import os
+from collections import Counter, defaultdict
+from datetime import UTC, datetime
+from hashlib import sha256
+from pathlib import Path
+
+from agent_orchestration_poc.core.analysis import transcript_retro
+from agent_orchestration_poc.core.analysis.notebooks import privacy_findings
+from agent_orchestration_poc.shell.analysis.transcript_retro import (
+    private_map_destination,
+    scan_compressed_evidence,
+)
+
+rules = vars(transcript_retro)
+root = Path(os.environ["TRANSCRIPT_SNAPSHOT_ROOT"])
+key = Path(os.environ["TRANSCRIPT_HMAC_KEY_FILE"]).read_bytes()
+assert len(key) >= 32
+repository_root = Path.cwd().parents[1].resolve()
+source_root = Path(os.environ["TRANSCRIPT_REPOSITORY_ROOT"]).resolve()
+roots = (str(source_root),)
+map_path = private_map_destination(Path(os.environ.get("TRANSCRIPT_PRIVATE_MAP", "/private/tmp/transcript-108-source-map.csv")), repository_root, source_root)
+evidence = Path("evidence")
+evidence.mkdir(exist_ok=True)
+inventory = []
+native = []
+mapping = []
+digest_groups = defaultdict(list)
+native_paths = []
+for path in sorted(p for p in root.rglob("*") if p.is_file()):
+    relative = path.relative_to(root).as_posix()
+    source_id = rules["opaque"](key, "source", relative)
+    kind = rules["source_type"](relative)
+    row = {
+        "source_id": source_id, "type": kind, "bytes": "", "first_utc": "",
+        "last_utc": "", "harness": "", "model": "", "effort": "",
+        "role": "", "state": "", "reason": "", "records": "", "unknown_times": "",
+    }
+    mapping.append((source_id, str(path)))
+    try:
+        content = path.read_bytes()
+        row["bytes"] = str(len(content))
+        digest_groups[kind].append((relative, hmac.new(key, content, sha256).hexdigest()))
+        if kind in {"codex-native", "claude-native"}:
+            records, bad = rules["parse_jsonl"](content.decode("utf-8").splitlines())
+            row["records"] = str(len(records))
+            row["first_utc"], row["last_utc"], unknown = rules["record_range"](records)
+            row["unknown_times"] = str(unknown + bad)
+            row.update(rules["source_metadata"](kind, records, roots))
+            if kind == "codex-native":
+                if row["state"] == "included":
+                    native_paths.append(path)
+                    native.extend(rules["normalize_codex"](records, key, source_id, roots))
+        else:
+            row.update(rules["source_metadata"](kind, [], roots))
+    except (OSError, UnicodeError, ValueError) as error:
+        row["state"] = "unreadable"
+        row["reason"] = type(error).__name__
+    inventory.append(row)
+
+events, duplicate_count, ambiguous_count = rules["deduplicate"](native)
+rules["validate_export"](events)
+events.sort(key=lambda row: (row["timestamp_utc"], row["event_id"]))
+
+def write_csv(path, rows, fields):
+    output = io.StringIO(newline="")
+    writer = csv.DictWriter(output, fieldnames=fields, lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(rows)
+    if path.suffix == ".gz":
+        content = output.getvalue()
+        findings = privacy_findings(content)
+        if findings:
+            raise ValueError(f"{path}: {', '.join(findings)}")
+        path.write_bytes(gzip.compress(content.encode(), compresslevel=9, mtime=0))
+    else:
+        path.write_text(output.getvalue())
+
+write_csv(evidence / "inventory.csv.gz", inventory, tuple(inventory[0]))
+write_csv(evidence / "events.csv.gz", events, rules["EVENT_FIELDS"])
+scan_compressed_evidence(evidence)
+with map_path.open("w", newline="") as output:
+    writer = csv.writer(output)
+    writer.writerow(("source_id", "private_path"))
+    writer.writerows(mapping)
+map_path.chmod(0o600)
+manifest_path = evidence / "snapshot-checksums.json"
+manifest = {
+    "algorithm": "HMAC-SHA-256",
+    "groups": [
+        {
+            "type": group,
+            "files": len(entries),
+            "hmac_sha256": hmac.new(key, json.dumps(sorted(entries), separators=(",", ":")).encode(), sha256).hexdigest(),
+        }
+        for group, entries in sorted(digest_groups.items())
+    ],
+}
+if manifest_path.exists():
+    assert json.loads(manifest_path.read_text()) == manifest, "snapshot digest mismatch"
+else:
+    manifest_path.write_text(json.dumps(manifest, sort_keys=True, indent=2) + "\n")
+totals = Counter(row["kind"] for row in events)
+states = Counter((row["type"], row["state"]) for row in inventory)
+print("Sources:", len(inventory), "states:", sorted(states.items()))
+print("Events:", sorted(totals.items()), "duplicates:", duplicate_count, "ambiguous:", ambiguous_count)
+```
+
+## Independent calculation
+
+The second pass reopens native files and counts the four direct event kinds without using the normalizer or exported event table. It checks a deterministic sample of opaque event rows against native record types and timestamps. The reviewer repeats this pass with the private snapshot and key.
+
+```{python}
+#| label: independent-recomputation
+independent = {kind: set() for kind in ("call", "output", "wait", "token", "failure")}
+for path in native_paths:
+    session = None
+    turn = None
+    calls = {}
+    for line in path.open():
+        try:
+            raw = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        payload = raw.get("payload")
+        if not isinstance(payload, dict):
+            continue
+        if raw.get("type") == "session_meta":
+            session = payload.get("id") or payload.get("session_id")
+        if raw.get("type") == "turn_context":
+            turn = payload.get("turn_id")
+        stamp = raw.get("timestamp")
+        try:
+            instant = datetime.fromisoformat(stamp) if isinstance(stamp, str) else None
+        except ValueError:
+            instant = None
+        if instant is None or instant.tzinfo is None:
+            continue
+        if not isinstance(session, str):
+            continue
+        inside = datetime(2026, 9, 26, 4, tzinfo=UTC) <= instant < datetime(2026, 9, 27, 4, tzinfo=UTC)
+        if raw.get("type") == "response_item":
+            if payload.get("type") in {"custom_tool_call", "function_call"}:
+                call_id = payload.get("call_id")
+                if isinstance(call_id, str):
+                    if inside:
+                        independent["call"].add((session, turn, call_id))
+                    calls[call_id] = instant
+            elif payload.get("type") in {"custom_tool_call_output", "function_call_output"}:
+                call_id = payload.get("call_id")
+                if isinstance(call_id, str):
+                    if inside:
+                        independent["output"].add((session, turn, call_id))
+                    if call_id in calls and instant >= calls[call_id]:
+                        if inside:
+                            independent["wait"].add((session, turn, call_id))
+                        del calls[call_id]
+        elif inside and raw.get("type") == "token_usage_record" and isinstance(payload.get("usage"), dict) and isinstance(payload.get("response_id"), str):
+            independent["token"].add((session, turn, payload["response_id"]))
+        elif inside and raw.get("type") == "event_msg" and payload.get("type") == "turn_aborted" and isinstance(payload.get("turn_id"), str):
+            independent["failure"].add((session, payload["turn_id"], payload["turn_id"]))
+for kind, identities in independent.items():
+    assert totals[kind] == len(identities), (kind, totals[kind], len(identities))
+sample = sorted((row["event_id"] for row in events), key=lambda row_id: (sha256(f"108|{row_id}".encode()).hexdigest(), row_id))[:10]
+sample_rows = {row["event_id"]: row for row in events if row["event_id"] in sample}
+source_paths = dict(mapping)
+for row_id in sample:
+    row = sample_rows[row_id]
+    with Path(source_paths[row["source_id"]]).open() as source:
+        lines = list(source)
+    raw = json.loads(lines[int(row["position"]) - 1])
+    assert datetime.fromisoformat(raw["timestamp"]) == datetime.fromisoformat(row["timestamp_utc"])
+    payload = raw["payload"]
+    if row["kind"] == "call":
+        assert raw["type"] == "response_item" and payload["type"] in {"custom_tool_call", "function_call"}
+        assert row["tool"] == payload.get("name", "")
+    elif row["kind"] in {"output", "wait"}:
+        assert raw["type"] == "response_item" and payload["type"] in {"custom_tool_call_output", "function_call_output"}
+        if row["kind"] == "output":
+            value = payload.get("output")
+            assert row["output_bytes"] == (str(len(value.encode())) if isinstance(value, str) else "")
+        else:
+            prior_calls = []
+            for line in lines[:int(row["position"]) - 1]:
+                try:
+                    prior = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                item = prior.get("payload", {})
+                if prior.get("type") == "response_item" and item.get("type") in {"custom_tool_call", "function_call"} and item.get("call_id") == payload.get("call_id"):
+                    prior_calls.append(datetime.fromisoformat(prior["timestamp"]))
+            assert prior_calls
+            assert row["duration_ms"] == str(int((datetime.fromisoformat(raw["timestamp"]) - prior_calls[-1]).total_seconds() * 1000))
+    elif row["kind"] == "token":
+        assert raw["type"] == "token_usage_record"
+        for field in ("input_tokens", "output_tokens", "total_tokens"):
+            assert row[field] == (str(payload["usage"][field]) if field in payload["usage"] else "")
+    else:
+        assert row["kind"] == "failure" and raw["type"] == "event_msg" and payload["type"] == "turn_aborted"
+print("Independent event counts:", sorted((kind, len(ids)) for kind, ids in independent.items()))
+print("Sample event IDs:", ",".join(sample))
+```
+
+## Claim ledger
+
+Each result row in `claims.csv` names its query cell and the source event kind. Direct event counts have an independent native-record calculation. The wait count measures elapsed time from a recorded call to its output. Waits outside sessions remain unknown.
+
+```{python}
+#| label: claim-ledger
+source_ids = ",".join(sorted(row["source_id"] for row in inventory if row["type"] == "codex-native" and row["state"] == "included"))
+input_version = sha256(manifest_path.read_bytes()).hexdigest()
+claim_fields = ("claim_id", "kind", "statement", "value", "unit", "population", "denominator", "source_ids", "query_path", "result_table", "result_row_id", "input_version", "verification", "limitations")
+claims = []
+for name, event_kind in (("N-01", "call"), ("N-02", "output"), ("N-03", "wait"), ("N-04", "token"), ("N-05", "failure")):
+    claims.append({
+        "claim_id": name, "kind": "supporting", "statement": f"Distinct Codex {event_kind} events",
+        "value": str(totals[event_kind]), "unit": "events", "population": "included Codex native sessions in local day",
+        "denominator": str(len(events)), "source_ids": source_ids, "query_path": "inventory.qmd#inventory-and-events",
+        "result_table": "claims.csv", "result_row_id": name, "input_version": input_version,
+        "verification": "independent-recomputation", "limitations": "native Codex only",
+    })
+for name, statement, value in (("N-06", "duplicate native rows", duplicate_count), ("N-07", "ambiguous native matches", ambiguous_count)):
+    claims.append({
+        "claim_id": name, "kind": "supporting", "statement": statement, "value": str(value),
+        "unit": "rows", "population": "included Codex native sessions in local day", "denominator": str(len(native)),
+        "source_ids": source_ids, "query_path": "inventory.qmd#inventory-and-events", "result_table": "claims.csv",
+        "result_row_id": name, "input_version": input_version, "verification": "deduplicate",
+        "limitations": "alternate captured logs deferred",
+    })
+write_csv(evidence / "claims.csv", claims, claim_fields)
+assert {row["claim_id"]: row["value"] for row in claims}["N-01"] == str(len(independent["call"]))
+```

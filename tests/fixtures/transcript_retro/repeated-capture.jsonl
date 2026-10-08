@@ -1,0 +1,2 @@
+{"timestamp":"2026-09-26T04:00:01Z","type":"response_item","payload":{"type":"function_call","call_id":"synthetic-call","name":"synthetic-tool"}}
+{"timestamp":"2026-09-26T04:00:02Z","type":"response_item","payload":{"type":"function_call_output","call_id":"synthetic-call","output":"ok"}}

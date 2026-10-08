@@ -1,0 +1,25 @@
+{
+  "algorithm": "HMAC-SHA-256",
+  "groups": [
+    {
+      "files": 279,
+      "hmac_sha256": "96d50c18f797987d112aa3e7c6011f5e22a4a8204acfdb94ca57dc496d26a828",
+      "type": "captured-run"
+    },
+    {
+      "files": 39,
+      "hmac_sha256": "a782c3d6009668abfa4cd46e21ecefe54b0cf5f3ecd3a26049bf2707ca32e584",
+      "type": "claude-native"
+    },
+    {
+      "files": 155,
+      "hmac_sha256": "85def651afc4b670df558cf344565bb105543505ca4c5bee2c53afbb6550875a",
+      "type": "codex-native"
+    },
+    {
+      "files": 18908,
+      "hmac_sha256": "3900567076884f2af3967f62ed1872b03b6bc034a8cd66a063211f27540ce83a",
+      "type": "webhook"
+    }
+  ]
+}
