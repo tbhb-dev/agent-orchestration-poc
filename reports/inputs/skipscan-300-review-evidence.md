@@ -35,3 +35,11 @@ Verified for #300: the explicit gate comparison against `origin/main` reproduced
 Verified for #300 after the review fixes: `mise run check` passed 1,057 standard tests and 1,190 coverage tests. The default suite gated off 133 integration cases, which the coverage run included. Python core lines reached 97.65%, core branches 94.38%, and shell lines 77.35%. `mise run check:mutation` passed with Go 97.32% and Python 90.10% (11,848 killed of 13,150). `mise run build`, `mise run fmt`, and `mise run docs:build` passed.
 
 Coordinator-run evidence for #300: after the worker's `mise run docs:check-links` failed because Chromium's macOS `bootstrap_check_in` returned `Permission denied (1100)`, the coordinator ran the same command outside the sandbox on the review-fix working tree. The coordinator reported exit 0; `/private/tmp/claude-501/links315.log` records 62 pages built and completion in 17.51 seconds. This result unblocked the worker's commit and publication steps.
+
+## Resumed validation
+
+Commit `c492e78` merges main `7b6a194` and records the #300 review fixes with normal hooks. An initial overlapping check and commit attempt was invalidated when the hooks temporarily hid unstaged fixes; the subsequent sequential `mise run check` passed 1,063 standard tests and all 1,204 coverage tests. Python core lines reached 97.66%, core branches 94.38%, and shell lines 77.38%. The focused scanner command above passed 180 tests. `mise run fmt` and `mise run build` passed.
+
+The explicit #300 gate comparison against main `7b6a194` passed after refreshing the five suppression IDs changed by the review fixes. `mise run pr:size -- origin/main` measured 505 counted units. The pre-existing untracked `research/gates/data-analysis/.gitignore` is outside this PR and remains uncommitted; validation-generated chart changes were restored.
+
+`mise run check:mutation` passed for #300: Go 97.32% (145 killed of 149), Python 90.10% (11,853 killed of 13,155, with two timed-out mutants classified). The initial overlapping run ended in a Go mutation-runner panic; the sequential rerun completed with exit 0.
