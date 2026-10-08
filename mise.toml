@@ -328,6 +328,10 @@ run = "uv run python -m agent_orchestration_poc.shell.workflow_forms write-forms
 description = "Read and validate one issue"
 run = "uv run python -m agent_orchestration_poc.shell.workflow_forms issue"
 
+[tasks."workflow:new-issue"]
+description = "Validate and create one issue"
+run = "uv run python -m agent_orchestration_poc.shell.workflow_new_issue"
+
 [tasks."workflow:issues"]
 description = "Read and validate every open issue"
 run = "uv run python -m agent_orchestration_poc.shell.workflow_forms issues"

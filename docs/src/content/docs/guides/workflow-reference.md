@@ -114,6 +114,8 @@ The relabel-only exceptions are keyed by their exact issue titles in the referen
 
 Issue fields: `Goal`, `Context and links`, `Dependencies and paths`, `Acceptance criteria`, `Evidence required`, `Docs impact`, `Out of scope`. `Allowed paths` is a separate form field.
 
+For issues filed outside the web forms, run `mise run workflow:new-issue -- --title <title> --label <label>... --body-file <path>`. The task validates the local title, labels, and body before creating the issue.
+
 Allowed paths use repo-relative literals or anchored globs. `*` matches one segment and `**` matches zero or more segments. Absolute paths, `..`, and negation are invalid.
 
 Evidence requires named repository paths and exact commands. PR sections: `What`, `Why`, `Evidence`, `Docs`, `Checklist`, `Size justification`, `Gate justifications`. A PR ends with one or more `Refs: #<n>` lines naming open issues.
