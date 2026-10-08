@@ -39,7 +39,7 @@ These are the exact pins in `mise.toml`. Rust uses the default profile. CI separ
 | `go:golang.org/x/tools/cmd/deadcode` | 0.50.0 |
 | `go:github.com/tbhb/repotools/cmd/guard-markdown` | 0.9.0 |
 | `go:github.com/go-gremlins/gremlins/cmd/gremlins` | 0.6.0 |
-| `go:github.com/boyter/scc/v4` | 4.1.0, scoped to `scc:version` until the size-contract task lands |
+| `go:github.com/boyter/scc/v4` | 4.1.0 |
 | `go:github.com/rillig/gobco` | 1.3.4 |
 
 Python development dependencies are locked in `uv.lock` and declared in `pyproject.toml`, including Ruff 0.16.9, pytest 9.1.1, pyrefly 1.3.1, import-linter 2.15, vulture 2.16, Hypothesis 6.168.1, mutmut 3.8.0, and pytest-cov 7.0.0. Go properties use rapid 1.3.0 from `go.mod`. Site package versions are in `docs/package.json` and `pnpm-lock.yaml`, with their rationale in [docs stack conventions](/guides/docs-stack-conventions/). Vale downloads `ai-tells` and `ai-tells-commits` v1.37.0 through the release URLs in `.vale.ini`.
@@ -127,6 +127,8 @@ The `check` aggregate also runs `check:imports`, `check:dupl`, and `check:deadco
 | `checkpoint:closure-audit` | Report closed work-item issues lacking a linked merged PR or a recorded non-code reason |
 | `check:pr-body` | Check a PR body on stdin against the commit convention: `mise run check:pr-body -- '<title>' < body.md` |
 | `check:workflow-forms` | Test the reference decisions and compare generated issue forms and the workflow guide |
+| `check:pr-size-contract` | Print per-file results for passing and over-limit counter fixtures |
+| `pr:size` | Emit size JSON for the merge base of a PR target and the selected head |
 | `forms:write` | Regenerate issue forms and the workflow guide from `config/workflow-reference.toml` |
 | `workflow:issue`, `workflow:issues`, `workflow:pr` | Read and validate one issue, all open issues, or one PR |
 | `check:imported-research` | Check that research/imported/ is unchanged against a base ref: `mise run check:imported-research -- <base> '<title>'` |
@@ -137,6 +139,10 @@ The `check` aggregate also runs `check:imports`, `check:dupl`, and `check:deadco
 | `docs:check-links` | Build the docs site with starlight-links-validator enabled |
 
 The PR-body and imported-research tasks need arguments from a PR or base ref and run separately from `check`. Docs builds also run separately. The CI job table is on [workflow](/workflow/#ci-jobs).
+
+Run `mise run pr:size -- origin/main` to count against the merge base of `origin/main`, or pass the upstream branch for a stacked PR. `--head <revision>` selects a committed head other than `HEAD`. Successful JSON goes to stdout and reports `total_units` and a `files` array with `path`, `old_path`, `raw_added`, `raw_deleted`, `counted_units`, and `exclusion_reason`. Errors go to stderr. Git blobs and `scc` output pass through the shell to the pure core, which reports totals without enforcing the 800-unit limit. [Issue #93](https://github.com/tbhb-dev/agent-orchestration-poc/issues/93) owns enforcement.
+
+The fragment method counts balanced code replacements on both sides. It can overcount changed text inside a multiline comment because a fragment omits the surrounding delimiter. [The measurement research](https://github.com/tbhb-dev/agent-orchestration-poc/blob/main/reports/inputs/pr-size-research.md) records the options, fixture comparison, and limits. Files excluded by path or `scc` detection remain in the per-file report with raw counts and a reason.
 
 Run `mise run review:preflight -- <pr>` before review, `mise run pr:wait-check -- <pr> <name> <timeout-seconds>` before merge or completion reports, and `mise run checkpoint:closure-audit` at each checkpoint. The closure audit also runs weekly in read-only GitHub Actions. The [phase 1 retrospective](/retros/2026-09-26-phase-1/) records the failures behind these checks.
 

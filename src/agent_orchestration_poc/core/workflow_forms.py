@@ -475,7 +475,9 @@ Target {size["target"]} and limit {size["limit"]} units. Project Size S is at mo
 
 Excluded paths: {exclusions}. Also exclude `scc` detected generated and minified files, vendored code, test fixtures, evidence directories, and exported diagrams. Keep excluded files in per-file output with raw added and deleted counts and a reason.
 
-The counter and CI enforcement are separate work. Issue #93 owns enforcement.
+Run `mise run pr:size -- origin/main` for a PR targeting `main`, or pass the upstream target of a stacked PR. The command emits JSON with `total_units` and per-file raw added, raw deleted, counted units, and exclusion reason. `mise run check:pr-size-contract` prints passing and over-limit fixture results.
+
+The counter classifies removed and added fragments with `scc`. A fragment inside a multiline comment can be counted as code because its enclosing delimiters are absent. Subtracting full-file code counts avoids that error but loses equal-count replacements, so the fragment method is the recorded contract. Issue #93 owns CI enforcement.
 
 ## Agent provenance
 

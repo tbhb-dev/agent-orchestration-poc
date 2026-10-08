@@ -25,6 +25,7 @@ shfmt = "3.14.0"
 "go:github.com/tbhb/repotools/cmd/guard-markdown" = "0.9.0"
 "go:github.com/go-gremlins/gremlins/cmd/gremlins" = "0.6.0"
 "go:github.com/rillig/gobco" = "1.3.4"
+"go:github.com/boyter/scc/v4" = "4.1.0"
 
 [env]
 # A go.mod toolchain mismatch fails instead of downloading a Go outside mise.
@@ -60,6 +61,7 @@ depends = [
   "check:actions",
   "notebooks:lint",
   "check:workflow-forms",
+  "check:pr-size-contract",
 ]
 
 [tasks.fmt]
@@ -330,8 +332,15 @@ run = "uv run python -m agent_orchestration_poc.shell.workflow_forms pr"
 
 [tasks."scc:version"]
 description = "Report the pinned scc version for the PR size contract"
-tools."go:github.com/boyter/scc/v4" = "4.1.0"
 run = "scc --version"
+
+[tasks."check:pr-size-contract"]
+description = "Verify the PR size counter and print every fixture result"
+run = "uv run pytest tests/test_pr_size.py --run-integration -s"
+
+[tasks."pr:size"]
+description = "Emit per-file PR size JSON against a target branch"
+run = "uv run python -m agent_orchestration_poc.shell.pr_size"
 
 [tasks."check:imported-research"]
 description = "Check that research/imported/ is unchanged against a base ref: mise run check:imported-research -- <base> '<title>'"

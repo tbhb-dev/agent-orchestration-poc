@@ -73,7 +73,7 @@ large = 800
 code_unit = "scc-classified changed code lines, added plus deleted, excluding blanks and comment-only lines"
 prose_unit = "each added or deleted nonblank line, including Markdown comments"
 base = "merge base of PR target, including upstream target for a stacked PR"
-excluded = ["go.sum", "uv.lock", "pnpm-lock.yaml", "**/pnpm-lock.yaml", "**/*-checksum*", "**/vendor/**", "tests/fixtures/**", "reports/inputs/**", "experiments/**/evidence/**", "research/imported/**", "**/*.svg", "**/*.excalidraw"]
+excluded = ["go.sum", "uv.lock", "pnpm-lock.yaml", "**/pnpm-lock.yaml", "package-lock.json", "**/package-lock.json", "yarn.lock", "**/yarn.lock", "Cargo.lock", "**/Cargo.lock", "**/*-checksum*", "**/vendor/**", "tests/fixtures/**", "reports/inputs/**", "experiments/**/evidence/**", "research/imported/**", "**/*.svg", "**/*.excalidraw"]
 detected_exclusions = ["generated", "minified"]
 
 [migration]
