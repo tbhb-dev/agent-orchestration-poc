@@ -1,6 +1,8 @@
 """Value and loopback integration tests for the pull request scanner."""
 
+import json
 from pathlib import Path
+from typing import Any
 
 import pytest
 from hypothesis import given
@@ -9,7 +11,10 @@ from hypothesis import strategies as st
 from agent_orchestration_poc.core.skipscan import (
     CODE_RE,
     _blocks,
+    _inline_code,
+    _python_string,
     _tracked,
+    _unique,
     excerpt,
     flag_id,
     redacted_lines,
@@ -98,102 +103,6 @@ def test_code_hit_location_and_tracking(line: int, code: str, tracked: bool) -> 
     ]
 
 
-def test_diff_tracks_added_line_and_detects_weaker_checks() -> None:
-    diff = """diff --git a/.github/workflows/check.yml b/.github/workflows/check.yml
-@@ -1,3 +1,3 @@
--  - name: Test
--    run: pytest
--coverage-min-threshold: 90
-+# - name: Test #300
-+coverage-min-threshold: 60
-+continue-on-error: true #300
-"""
-    hits = scan_diff(diff, "PR #300")
-    assert [
-        (hit["line"], hit["phrase"], hit["excerpt"], hit["tracked"]) for hit in hits
-    ] == [
-        (3, "continue-on-error: true", "continue-on-error: true #300", True),
-        (1, "removed CI step", "- name: Test", True),
-        (2, "removed CI step", "run: pytest", True),
-        (1, "commented CI step", "# - name: Test #300", True),
-        (2, "lowered threshold", "coverage-min-threshold: 60", False),
-    ]
-    source = "PR #300:.github/workflows/check.yml"
-    assert all(hit["source"] == source and hit["kind"] == "diff" for hit in hits)
-    assert all(hit["id"] == flag_id(source, hit["line"], hit["phrase"]) for hit in hits)
-
-
-def test_markdown_diff_uses_paragraph_local_reference() -> None:
-    diff = """diff --git a/note.md b/note.md
-@@ -0,0 +1,3 @@
-+- The test was skipped #300
-+- Another test was skipped
-+
-"""
-    hits = scan_diff(diff, "PR #300")
-    assert [hit["tracked"] for hit in hits] == [True, False]
-    assert [hit["line"] for hit in hits] == [1, 2]
-
-
-def test_python_fixture_does_not_disable_a_test() -> None:
-    diff = """diff --git a/test.py b/test.py
-@@ -0,0 +1,2 @@
-+pattern = "pytest.skip" #300
-+pytest.skip("real") #300
-"""
-    assert [hit["phrase"] for hit in scan_diff(diff, "PR #300")] == ["pytest.skip"]
-
-
-def test_multiline_python_fixture_and_file_reset() -> None:
-    diff = '''diff --git a/a.py b/a.py
-@@ -0,0 +1,4 @@
-+fixture = """
-+pytest.skip("quoted")
-+"""
-+pytest.skip("real") #300
-diff --git a/b.py b/b.py
-@@ -0,0 +7 @@
-+pytest.skip("other")
-'''
-    hits = scan_diff(diff, "PR #300")
-    assert [(hit["source"], hit["line"], hit["tracked"]) for hit in hits] == [
-        ("PR #300:a.py", 4, True),
-        ("PR #300:b.py", 7, False),
-    ]
-
-
-def test_only_check_failures_and_test_skips_are_code_hits() -> None:
-    diff = """diff --git a/widget.ts b/widget.ts
-@@ -0,0 +1,2 @@
-+task.skip()
-+echo hello || true
-diff --git a/widget.test.ts b/widget.test.ts
-@@ -0,0 +1,2 @@
-+test.skip("case")
-+check || true
-"""
-    assert [(hit["source"], hit["phrase"]) for hit in scan_diff(diff, "PR #300")] == [
-        ("PR #300:widget.test.ts", ".skip("),
-        ("PR #300:widget.test.ts", "|| true"),
-    ]
-
-
-def test_preserved_step_and_equal_threshold_are_clear() -> None:
-    diff = """diff --git a/.github/workflows/check.yml b/.github/workflows/check.yml
-@@ -1,2 +1,2 @@
--  - name: Tests
--coverage-min-threshold: 90
-+  - name: Tests
-+coverage-min-threshold: 90
-"""
-    assert scan_diff(diff, "PR #300") == []
-
-
-def test_code_comment_prose_is_scanned() -> None:
-    diff = "diff --git a/worker.py b/worker.py\n@@ -0,0 +1 @@\n+# test was skipped\n"
-    assert scan_diff(diff, "PR #300")[0]["phrase"] == "skipped"
-
-
 def test_redaction_and_blocks() -> None:
     assert (
         redacted_lines("-----BEGIN PRIVATE KEY-----\nvalue\n-----END PRIVATE KEY-----")
@@ -231,3 +140,57 @@ def test_text_location_and_tracking(prefix_lines: int, tracked: bool) -> None:
 def test_flag_id_is_stable_and_location_sensitive(line: int, phrase: str) -> None:
     assert flag_id("path", line, phrase) == flag_id("path", line, phrase.upper())
     assert flag_id("path", line, phrase) != flag_id("path", line + 1, phrase)
+
+
+DIFF_CASES = json.loads(
+    (Path(__file__).parent / "fixtures/skipscan/diffs.json").read_text()
+)
+
+
+@pytest.mark.parametrize("case", DIFF_CASES)
+def test_diff_cases(case: dict[str, Any]) -> None:
+    expected = []
+    for path, line, phrase, tracked, content in case["hits"]:
+        source = f"PR #300:{path}"
+        expected.append(
+            {
+                "id": flag_id(source, line, phrase),
+                "kind": "diff",
+                "source": source,
+                "line": line,
+                "phrase": phrase,
+                "excerpt": content,
+                "tracked": tracked,
+            }
+        )
+    assert scan_diff(case["diff"], "PR #300") == expected
+
+
+@given(st.text(alphabet="abc", min_size=1, max_size=30))
+def test_redaction_preserves_plain_lines(value: str) -> None:
+    assert redacted_lines(value + "\n" + value) == [value, value]
+    assert excerpt("  " + value + "  ") == value
+
+
+@given(st.text(alphabet="abc", min_size=1, max_size=30))
+def test_inline_and_python_string_locations(value: str) -> None:
+    assert _inline_code(f"`{value}`", 1)
+    assert not _inline_code(value, 0)
+    assert _python_string(repr(value), 1)
+    assert not _python_string(f"x = {value}", 0)
+
+
+@given(st.integers(min_value=1, max_value=999999))
+def test_tracking_references_are_local(number: int) -> None:
+    assert _tracked(f"Skipped #{number}", set())
+    assert not _tracked(f"Skipped step #{number}", set())
+    assert _tracked(f"Queued RFC-{number}/{number}", set())
+    assert not _tracked(f"RFC-{number}/{number}", set())
+
+
+@given(st.text(alphabet="abc", min_size=1, max_size=20))
+def test_blocks_and_uniqueness(value: str) -> None:
+    lines = [f"- Skipped {value}", "  #300", f"- Skipped {value}"]
+    assert _blocks(lines) == [f"- Skipped {value}\n  #300"] * 2 + [lines[2]]
+    hits = [{"id": value}, {"id": value}]
+    assert _unique(hits) == hits[:1]

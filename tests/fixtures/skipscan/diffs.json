@@ -1,0 +1,120 @@
+[
+  {
+    "diff": "diff --git a/note.md b/note.md\n@@ -0,0 +41,3 @@\n+- The test was skipped #300\n+- Another test was skipped\n+\n",
+    "hits": [
+      ["note.md", 41, "skipped", true, "- The test was skipped #300"],
+      ["note.md", 42, "skipped", false, "- Another test was skipped"]
+    ]
+  },
+  {
+    "diff": "diff --git a/note.md b/note.md\n@@ -10,2 +10,2 @@\n Skipped in old context\n+Skipped in new text #300\n",
+    "hits": [["note.md", 11, "Skipped", true, "Skipped in new text #300"]]
+  },
+  {
+    "diff": "diff --git a/.github/workflows/check.yml b/.github/workflows/check.yml\n@@ -8,2 +8,1 @@\n-  - name: Test\n-    run: pytest\n+continue-on-error: true #300\n",
+    "hits": [
+      [
+        ".github/workflows/check.yml",
+        8,
+        "continue-on-error: true",
+        true,
+        "continue-on-error: true #300"
+      ],
+      [
+        ".github/workflows/check.yml",
+        8,
+        "removed CI step",
+        true,
+        "- name: Test"
+      ],
+      [".github/workflows/check.yml", 9, "removed CI step", true, "run: pytest"]
+    ]
+  },
+  {
+    "diff": "diff --git a/.github/workflows/check.yml b/.github/workflows/check.yml\n@@ -1,2 +1,2 @@\n-  - name: Tests\n-coverage-min-threshold: 90\n+  - name: Tests\n+coverage-min-threshold: 90\n",
+    "hits": []
+  },
+  {
+    "diff": "diff --git a/.github/workflows/check.yml b/.github/workflows/check.yml\n@@ -4 +4 @@\n-coverage-min-threshold: 90\n+coverage-min-threshold: 60\n",
+    "hits": [
+      [
+        ".github/workflows/check.yml",
+        4,
+        "lowered threshold",
+        false,
+        "coverage-min-threshold: 60"
+      ]
+    ]
+  },
+  {
+    "diff": "diff --git a/.github/workflows/check.yml b/.github/workflows/check.yml\n@@ -4 +4 @@\n-coverage-min-threshold: 60\n+coverage-min-threshold: 90\n",
+    "hits": []
+  },
+  {
+    "diff": "diff --git a/.github/workflows/check.yml b/.github/workflows/check.yml\n@@ -1 +1 @@\n-  - name: Tests\n+# - name: Tests #300\n",
+    "hits": [
+      [
+        ".github/workflows/check.yml",
+        1,
+        "removed CI step",
+        true,
+        "- name: Tests"
+      ],
+      [
+        ".github/workflows/check.yml",
+        1,
+        "commented CI step",
+        true,
+        "# - name: Tests #300"
+      ]
+    ]
+  },
+  {
+    "diff": "diff --git a/test.py b/test.py\n@@ -0,0 +1,2 @@\n+pattern = \"pytest.skip\" #300\n+pytest.skip(\"real\") #300\n",
+    "hits": [["test.py", 2, "pytest.skip", true, "pytest.skip(\"real\") #300"]]
+  },
+  {
+    "diff": "diff --git a/a.py b/a.py\n@@ -0,0 +1,4 @@\n+fixture = \"\"\"\n+pytest.skip(\"quoted\")\n+\"\"\"\n+pytest.skip(\"real\") #300\ndiff --git a/b.py b/b.py\n@@ -0,0 +7 @@\n+pytest.skip(\"other\")\n",
+    "hits": [
+      ["a.py", 4, "pytest.skip", true, "pytest.skip(\"real\") #300"],
+      ["b.py", 7, "pytest.skip", false, "pytest.skip(\"other\")"]
+    ]
+  },
+  {
+    "diff": "diff --git a/widget.ts b/widget.ts\n@@ -0,0 +1,2 @@\n+task.skip()\n+echo hello || true\ndiff --git a/widget.test.ts b/widget.test.ts\n@@ -0,0 +1,2 @@\n+test.skip(\"case\")\n+check || true\n",
+    "hits": [
+      ["widget.test.ts", 1, ".skip(", false, "test.skip(\"case\")"],
+      ["widget.test.ts", 2, "|| true", false, "check || true"]
+    ]
+  },
+  {
+    "diff": "diff --git a/widget.test.js b/widget.test.js\n@@ -0,0 +1 @@\n+test.skip(\"case\")\ndiff --git a/widget.spec.jsx b/widget.spec.jsx\n@@ -0,0 +2 @@\n+test.skip(\"case\")\ndiff --git a/widget.test.tsx b/widget.test.tsx\n@@ -0,0 +3 @@\n+test.skip(\"case\")\n",
+    "hits": [
+      ["widget.test.js", 1, ".skip(", false, "test.skip(\"case\")"],
+      ["widget.spec.jsx", 2, ".skip(", false, "test.skip(\"case\")"],
+      ["widget.test.tsx", 3, ".skip(", false, "test.skip(\"case\")"]
+    ]
+  },
+  {
+    "diff": "diff --git a/worker.py b/worker.py\n@@ -0,0 +1 @@\n+# test was skipped\n",
+    "hits": [["worker.py", 1, "skipped", false, "test was skipped"]]
+  },
+  {
+    "diff": "diff --git a/worker.c b/worker.c\n@@ -0,0 +1 @@\n+// test was skipped\n",
+    "hits": [["worker.c", 1, "skipped", false, "test was skipped"]]
+  },
+  {
+    "diff": "diff --git a/.github/workflows/check.yml b/.github/workflows/check.yml\n@@ -0,0 +1,2 @@\n+TEST || true #300\n+lint || true #300\n",
+    "hits": [
+      [".github/workflows/check.yml", 1, "|| true", true, "TEST || true #300"],
+      [".github/workflows/check.yml", 2, "|| true", true, "lint || true #300"]
+    ]
+  },
+  {
+    "diff": "diff --git a/note.md b/note.md\n@@ -0,0 +10,3 @@\n+Deferred for queued RFC-9999/9999\n+\n+Deferred for RFC-9999/9999\n",
+    "hits": [
+      ["note.md", 10, "Deferred", true, "Deferred for queued RFC-9999/9999"],
+      ["note.md", 12, "Deferred", false, "Deferred for RFC-9999/9999"]
+    ]
+  }
+]
