@@ -113,8 +113,8 @@ LATER_WORK_RE = re.compile(
     r"\bafter\s+(?:this|the)\s+(?:PR|pull request)\b",
     re.IGNORECASE,
 )
-# Git trailer lines: a token and a value, or an indented continuation.
-TRAILER_LINE_RE = re.compile(r"[A-Za-z0-9-]+:\s*\S.*|\s+\S.*")
+# A logical Git trailer: a token and a value, after folding continuation lines.
+TRAILER_LINE_RE = re.compile(r"[A-Za-z0-9-]+:\s*\S.*")
 REFS_TRAILER_RE = re.compile(r"Refs: #\d+")
 
 
@@ -448,10 +448,13 @@ def scan_text(  # noqa: C901, PLR0912  Refs: #300
 def scan_commit(message: str, source: str) -> list[dict[str, Any]]:
     """Scan a commit message, tracking its subject by the message's own trailer.
 
-    Like Git's trailer parser, the final paragraph counts only when every line is
-    a trailer, and one of them must be exactly ``Refs: #<n>``.
+    Like Git's trailer parser, indented lines continue the previous trailer's
+    value. The final paragraph counts only when every logical line is a trailer,
+    and one of them must be exactly ``Refs: #<n>``. An orphan continuation at the
+    start of the paragraph is not a trailer, so it voids the block.
     """
-    trailers = re.split(r"\n[ \t]*\n", message.strip())[-1].splitlines()
+    block = re.split(r"\n[ \t]*\n", message.strip())[-1]
+    trailers = re.sub(r"\n[ \t]+", " ", block).splitlines()
     referenced = all(TRAILER_LINE_RE.fullmatch(line) for line in trailers) and any(
         REFS_TRAILER_RE.fullmatch(line) for line in trailers
     )
