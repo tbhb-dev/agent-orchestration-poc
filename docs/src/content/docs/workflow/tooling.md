@@ -102,6 +102,8 @@ Property tests run in `check` with ordinary Go and Python tests. Required CI fix
 
 The `check` aggregate also runs `check:imports`, `check:dupl`, and `check:deadcode`. Go and Python complexity checks run in their existing linter tasks. Biome checks the TypeScript complexity rules at error level. Recalibrate thresholds at the first retro with phase 2 code.
 
+The Go formatter regression check creates its source and ignored dependency fixtures in a temporary Git repository outside the checkout. It rejects a temporary directory inside the checkout so fixture cleanup cannot race with the dead-code scan's Go package discovery. Keep `TMPDIR` outside the checkout when running `check:go` or `check`.
+
 `check:gate-changes` compares the head SHA with its merge base and reads the current PR body. Run `mise run check:gate-changes -- --base <sha> --head <sha> --body-file <path>` locally. The task runs inside `check` when the CI job supplies `GATE_BASE_SHA`, `GATE_HEAD_SHA`, and `GATE_BODY_FILE`, and skips with a one-line notice when all three inputs are absent or empty, including on pushes to `main`. A partial input set remains an error. It reports floor decreases, ceiling increases, removed or disabled registered gates, and new exclusions or suppression markers, including Coverage run omissions. It also reports weakened Ruff, Biome, jscpd, and golangci selectors, changes to baseline registry entries, and any workflow or hook selector edit. The PR body must explain each stable finding ID. Unsupported changed gate syntax fails closed. The registry describes the supported subset and does not claim coverage of every tool or language syntax.
 
 ## Mise tasks
