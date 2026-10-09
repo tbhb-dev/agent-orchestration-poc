@@ -104,6 +104,9 @@ SECRET_RE = re.compile(
     r"(?<![A-Za-z0-9])[A-Za-z0-9_+/=-]{32,}(?![A-Za-z0-9])"
 )
 PEM_RE = re.compile(r"-----(?:BEGIN|END) [A-Z ]*(?:PRIVATE KEY|CERTIFICATE)-----")
+# Review text that asks for another commit or push asks for work in the same PR.
+REVIEW_KINDS = frozenset({"review-comment", "review-verdict"})
+SAME_PR_RE = re.compile(r"\s+(?:commits?|push(?:es)?)\b", re.IGNORECASE)
 
 
 def validate_commit_count(expected: int, collected: int) -> None:
@@ -364,6 +367,12 @@ def scan_text(  # noqa: C901, PLR0912  Refs: #300
                 continue
             phrase = match.group()
             tail = line[match.end() :]
+            if (
+                kind in REVIEW_KINDS
+                and phrase.lower() in {"follow-up", "follow up"}
+                and SAME_PR_RE.match(tail)
+            ):
+                continue
             clause = line[
                 max(line.rfind(mark, 0, match.start()) for mark in ";.!?")
                 + 1 : match.end()
@@ -424,6 +433,18 @@ def scan_text(  # noqa: C901, PLR0912  Refs: #300
     if with_positions:
         return list({(hit["id"], hit["position"]): hit for hit in hits}.values())
     return _unique(hits)
+
+
+def scan_commit(message: str, source: str) -> list[dict[str, Any]]:
+    """Scan a commit message, tracking its subject by the message's own trailer."""
+    trailers = re.split(r"\n[ \t]*\n", message.strip())[-1].splitlines()
+    referenced = any(
+        line.startswith("Refs:") and ISSUE_RE.search(line) for line in trailers
+    )
+    return [
+        {**hit, "tracked": True} if referenced and hit["line"] == 1 else hit
+        for hit in scan_text(message, "commit-message", source)
+    ]
 
 
 def scan_diff(  # noqa: C901, PLR0912, PLR0915  Refs: #300

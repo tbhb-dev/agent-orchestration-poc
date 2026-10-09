@@ -19,6 +19,7 @@ from agent_orchestration_poc.core.skipscan import (
     excerpt,
     flag_id,
     redacted_lines,
+    scan_commit,
     scan_diff,
     scan_text,
 )
@@ -335,3 +336,104 @@ def test_blocks_and_uniqueness(value: str) -> None:
     assert _blocks(lines) == [f"- {word} {value}\n  #300"] * 2 + [lines[2]]
     hits = [{"id": value}, {"id": value}]
     assert _unique(hits) == hits[:1]
+
+
+SUBJECT = "fix(tooling): reject empty review findings as skip indicators"
+
+
+@pytest.mark.parametrize(
+    ("message", "expected"),
+    [
+        (f"{SUBJECT}\n\nBody.\n\nRefs: #330", [(1, True)]),
+        (f"{SUBJECT}\n\nRefs: #330\n", [(1, True)]),
+        (f"{SUBJECT}\n\nRefs: #330\n\n", [(1, True)]),
+        (f"{SUBJECT}\n\nRefs: #330\r\n", [(1, True)]),
+        (f"{SUBJECT}\n\nAssisted-by: x\nRefs: o/r#330", [(1, True)]),
+        (f"{SUBJECT}\n\nRefs: https://github.com/o/r/issues/3", [(1, True)]),
+        (f"{SUBJECT}\n \t\nRefs: #330", [(1, True)]),
+        (f"{SUBJECT}\n\nBody.", [(1, False)]),
+        (f"{SUBJECT}\n\nRefs: none", [(1, False)]),
+        (f"{SUBJECT}\n\nRefs: step #2", [(1, True)]),
+        (f"{SUBJECT}\n\nSee Refs: #330", [(1, False)]),
+        (f"{SUBJECT}\n\n refs: #330", [(1, False)]),
+        (f"{SUBJECT}\n\nRefs: #330\n\nTrailing prose.", [(1, False)]),
+        (f"{SUBJECT}\n\nTests skipped.\n\nRefs: #330", [(1, True), (3, False)]),
+        ("Ordinary subject\n\nTests skipped.\n\nRefs: #330", [(3, False)]),
+        ("Ordinary subject\n\nTests skipped #12.\n\nRefs: #330", [(3, True)]),
+        (f"{SUBJECT} #330", [(1, True)]),
+    ],
+)
+def test_commit_subject_tracked_by_own_trailer(
+    message: str, expected: list[tuple[int, bool]]
+) -> None:
+    hits = scan_commit(message, "commit a")
+    assert [(hit["line"], hit["tracked"]) for hit in hits] == expected
+    assert all(hit["kind"] == "commit-message" for hit in hits)
+    assert all(hit["source"] == "commit a" for hit in hits)
+
+
+@given(
+    st.sampled_from(["skip", "deferred", "follow-up", "TODO"]),
+    st.integers(min_value=1, max_value=99999),
+    st.booleans(),
+    st.integers(min_value=0, max_value=3),
+)
+def test_commit_trailer_tracks_only_the_subject(
+    phrase: str, number: int, trailer: bool, body_lines: int
+) -> None:
+    body = "\n".join(f"{phrase} line {n}" for n in range(body_lines))
+    message = f"fix: {phrase} it\n\n{body}" if body else f"fix: {phrase} it"
+    if trailer:
+        message += f"\n\nRefs: #{number}"
+    hits = scan_commit(message, "commit a")
+    assert [(hit["line"], hit["tracked"]) for hit in hits] == [(1, trailer)] + [
+        (3 + n, False) for n in range(body_lines)
+    ]
+
+
+@pytest.mark.parametrize(
+    ("text", "kind", "phrases"),
+    [
+        ("Author the passages in a follow-up commit.", "review-comment", []),
+        ("Author the passages in a follow-up commit.", "review-verdict", []),
+        ("Fix it in follow-up commits.", "review-comment", []),
+        ("Fix it in a follow up commit.", "review-comment", []),
+        ("Fix it in a FOLLOW-UP PUSH.", "review-verdict", []),
+        ("Fix it in follow-up pushes.", "review-verdict", []),
+        ("Fix it in a follow-up\tcommit.", "review-verdict", []),
+        ("Fix it in a follow-up commit.", "pr-body", ["follow-up"]),
+        ("Fix it in a follow-up commit.", "commit-message", ["follow-up"]),
+        ("Fix it in a follow-up commit.", "diff", ["follow-up"]),
+        ("Fix it in a follow-up.", "review-comment", ["follow-up"]),
+        ("Fix it in a follow-up PR.", "review-comment", ["follow-up"]),
+        ("Fix it in a follow-up issue.", "review-verdict", ["follow-up"]),
+        ("Fix it in a follow-up committee.", "review-comment", ["follow-up"]),
+        ("Fix it in a follow-up pusher.", "review-comment", ["follow-up"]),
+        ("Fix it in a follow-up: commit it.", "review-comment", ["follow-up"]),
+        ("A follow-up commit, tests deferred.", "review-comment", ["deferred"]),
+        ("Deferred to a follow-up commit.", "review-comment", ["Deferred"]),
+        ("A follow-up commit; then a follow-up.", "review-comment", ["follow-up"]),
+    ],
+)
+def test_review_follow_up_commit_is_same_pr_work(
+    text: str, kind: str, phrases: list[str]
+) -> None:
+    hits = scan_text(text, kind, "review")
+    assert [hit["phrase"] for hit in hits] == phrases
+    assert all(not hit["tracked"] for hit in hits)
+
+
+@given(
+    st.sampled_from(["follow-up", "follow up", "Follow-Up"]),
+    st.sampled_from(["commit", "commits", "push", "pushes"]),
+    st.sampled_from(["review-comment", "review-verdict", "pr-body", "diff"]),
+    st.sampled_from(["", "skipped; "]),
+)
+def test_follow_up_commit_exempt_only_in_reviews(
+    phrase: str, noun: str, kind: str, prefix: str
+) -> None:
+    hits = scan_text(f"{prefix}Do it in a {phrase} {noun}.", kind, "review")
+    exempt = kind in {"review-comment", "review-verdict"}
+    assert [hit["phrase"] for hit in hits] == (["skipped"] if prefix else []) + (
+        [] if exempt else [phrase]
+    )
