@@ -488,14 +488,16 @@ def test_review_follow_up_commit_is_same_pr_work(
     st.sampled_from(["commit", "commits", "push", "pushes"]),
     st.sampled_from(["review-comment", "review-verdict", "pr-body", "diff"]),
     st.sampled_from(["", "skipped; "]),
-    st.sampled_from(["", " after this PR merges", " in a separate PR", "\nlater"]),
+    st.sampled_from(
+        ["", " after this PR merges", " in a separate PR", "\nonce merged"]
+    ),
 )
 def test_follow_up_commit_exempt_only_in_reviews(
-    phrase: str, noun: str, kind: str, prefix: str, later: str
+    phrase: str, noun: str, kind: str, prefix: str, suffix: str
 ) -> None:
-    text = f"{prefix}Do it in a {phrase} {noun}{later}."
+    text = f"{prefix}Do it in a {phrase} {noun}{suffix}."
     hits = [hit for hit in scan_text(text, kind, "review") if hit["line"] == 1]
-    exempt = kind in {"review-comment", "review-verdict"} and not later
+    exempt = kind in {"review-comment", "review-verdict"} and not suffix
     assert [hit["phrase"] for hit in hits] == (["skipped"] if prefix else []) + (
         [] if exempt else [phrase]
     )
