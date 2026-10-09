@@ -15,6 +15,7 @@ from agent_orchestration_poc.core.skipscan import (
     head_result,
     rescan_result,
     review_pr_numbers,
+    scan_commit,
     scan_diff,
     scan_outcome,
     scan_text,
@@ -76,11 +77,7 @@ def run(api: str, token: str, repo: str, number: int) -> int:
     commits = _pages(api, token, f"{prefix}/commits")
     validate_commit_count(pr["commits"], len(commits))
     for row in commits:
-        hits.extend(
-            scan_text(
-                row["commit"]["message"], "commit-message", f"commit {row['sha']}"
-            )
-        )
+        hits.extend(scan_commit(row["commit"]["message"], f"commit {row['sha']}"))
     diff = _get(f"{api}/{prefix}", token, "application/vnd.github.v3.diff")
     hits.extend(scan_diff(diff, f"PR #{number}"))
     untracked, result = scan_outcome(hits)
