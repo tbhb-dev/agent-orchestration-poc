@@ -12,9 +12,12 @@ from hypothesis import strategies as st
 from agent_orchestration_poc.core.skipscan import (
     CODE_RE,
     _blocks,
+    _inert_triple_markers,
     _inline_code,
     _python_string,
+    _threshold,
     _tracked,
+    _triple_spans,
     _unique,
     excerpt,
     flag_id,
@@ -336,6 +339,171 @@ def test_blocks_and_uniqueness(value: str) -> None:
     assert _blocks(lines) == [f"- {word} {value}\n  #300"] * 2 + [lines[2]]
     hits = [{"id": value}, {"id": value}]
     assert _unique(hits) == hits[:1]
+
+
+@pytest.mark.parametrize("separator", ["# Heading", "  | cell |"])
+def test_block_boundaries_after_paragraph(separator: str) -> None:
+    expected = (
+        ["before", "", "after"]
+        if separator.startswith("#")
+        else ["before", separator + "\nafter", separator + "\nafter"]
+    )
+    assert _blocks(["before", separator, "after"]) == expected
+
+
+@given(st.text(alphabet="abc", min_size=1, max_size=30))
+def test_quote_boundary_positions(value: str) -> None:
+    assert not _inline_code(f"`{value}`", 0)
+    assert _python_string(repr(value), 0)
+    assert not _python_string(repr(value), len(value) + 2)
+
+
+@pytest.mark.parametrize("line", ["(", "'''unfinished", "  x\n y"])
+def test_incomplete_python_tokens_are_not_strings(line: str) -> None:
+    assert not _python_string(line, 0)
+
+
+@pytest.mark.parametrize(
+    ("text", "pending", "expected"),
+    [
+        ("step #2", set(), False),
+        ("STEP #2", set(), False),
+        ("step #2 then #314", set(), True),
+        ("section" + " " * 10 + "#2", set(), True),
+        ("queued" + " " * 19 + "RFC-12/34", set(), False),
+        ("RFC-12/34", {"RFC-12/34"}, True),
+    ],
+)
+def test_tracking_prefix_and_run_boundaries(
+    text: str, pending: set[str], expected: bool
+) -> None:
+    assert _tracked(text, pending) is expected
+
+
+@pytest.mark.parametrize(
+    ("text", "phrases"),
+    [
+        ("PARTIAL RESPONSE", []),  # Refs: #314
+        ("NARROWED PATH", []),  # Refs: #314
+        ("Run 2 SECONDS LATER", []),  # Refs: #314
+        ("RUN LATER", ["LATER"]),  # Refs: #314
+        ("later test", ["later"]),  # Refs: #314
+    ],
+)
+def test_context_exceptions_preserve_case_insensitivity(
+    text: str, phrases: list[str]
+) -> None:
+    assert [hit["phrase"] for hit in scan_text(text, "body", "body")] == phrases
+
+
+def test_heading_tracks_its_own_reference() -> None:
+    assert scan_text("# Deferred #314", "body", "body")[0]["tracked"]  # Refs: #314
+
+
+@given(st.integers(min_value=100, max_value=200))
+def test_prose_excerpt_uses_match_start(offset: int) -> None:
+    text = "x " * offset + "Untested" + " y" * 100  # Refs: #314
+    assert scan_text(text, "body", "body")[0]["excerpt"] == (
+        "…" + text[2 * offset - 90 : 2 * offset + 150] + "…"
+    )
+
+
+@pytest.mark.parametrize(
+    ("path", "changes", "phrase"),
+    [
+        ("notes.md", "+Deferred RFC-12/34", "Deferred"),  # Refs: #314
+        ("build.sh", "+# Deferred RFC-12/34", "Deferred"),  # Refs: #314
+        ("test.ts", "+test.skip('case'); // RFC-12/34", ".skip("),  # Refs: #314
+        (".github/workflows/ci.yml", "+# run: test RFC-12/34", "commented CI step"),
+        (
+            ".github/workflows/ci.yml",
+            "-run: test\n+# RFC-12/34",
+            "removed CI step",
+        ),
+    ],
+)
+def test_diff_propagates_pending_runs(path: str, changes: str, phrase: str) -> None:
+    diff = f"diff --git a/{path} b/{path}\n@@ -1 +1 @@\n{changes}\n"
+    assert [
+        (hit["phrase"], hit["tracked"])
+        for hit in scan_diff(diff, "PR #314", {"RFC-12/34"})
+    ] == [(phrase, True)]
+    assert [(hit["phrase"], hit["tracked"]) for hit in scan_diff(diff, "PR #314")] == [
+        (phrase, False)
+    ]
+
+
+@given(st.integers(min_value=150, max_value=200))
+def test_code_excerpt_includes_long_match(spaces: int) -> None:
+    content = "x " * 100 + "continue-on-error:" + " " * spaces + "true" + " y" * 100
+    diff = f"diff --git a/ci.yml b/ci.yml\n@@ -0,0 +1 @@\n+{content}\n"
+    assert scan_diff(diff, "PR #314")[0]["excerpt"] == (
+        "…" + content[110 : 200 + 18 + spaces + 4 + 100] + "…"
+    )
+
+
+@pytest.mark.parametrize(
+    ("line", "spans"),
+    [
+        ("# comment", [(0, 9)]),
+        ("x = 1", []),
+        ("'unfinished", [(0, 11)]),
+        ("(", [(0, 1)]),
+        ('"""a""" (', [(0, 9)]),
+    ],
+)
+def test_inert_marker_spans(line: str, spans: list[tuple[int, int]]) -> None:
+    assert _inert_triple_markers(line) == spans
+
+
+@given(st.text(alphabet="abc", min_size=1, max_size=30))
+def test_triple_span_closure(value: str) -> None:
+    line = f'"""{value}"""'
+    assert _triple_spans(line, "") == ([(0, len(line))], "")
+    assert _triple_spans(value + '"""', '"""') == ([(0, len(value) + 3)], "")
+    assert _triple_spans(value, '"""') == ([(0, len(value))], '"""')
+
+
+def test_triple_marker_after_an_inert_marker() -> None:
+    assert _triple_spans('s = \'"""\'; t = """a"""', "") == ([(15, 22)], "")
+    assert _triple_spans('"""a""" (', "") == ([], "")
+    assert _triple_spans('\'a\'"""b"""', "") == ([(3, 10)], "")
+    assert _triple_spans("# ''' '''", "'''") == ([(0, 5), (6, 9)], "'''")
+
+
+def test_exact_excerpt_limit_does_not_crop_at_match_offset() -> None:
+    line = "x " * 119 + "xy"
+    assert excerpt(line, 120, 121) == line
+
+
+@pytest.mark.parametrize(
+    ("path", "text", "expected"),
+    [
+        ("other.txt", "efficacy: 90", None),
+        ("other.txt", "fail_under = 95", None),
+        (".gremlins.yaml", "fail_under = 95", None),
+        ("pyproject.toml", "efficacy: 90", None),
+        ("ci.yml", "coverage minimum = 95", ("generic", 95.0)),
+    ],
+)
+def test_threshold_setting_domains(
+    path: str, text: str, expected: tuple[str, float] | None
+) -> None:
+    assert _threshold(path, text) == expected
+
+
+@given(
+    st.sampled_from([".coveragerc", "pyproject.toml", "setup.cfg", "tox.ini"]),
+    st.integers(min_value=0, max_value=100),
+)
+def test_coverage_setting_paths(path: str, value: int) -> None:
+    assert _threshold(path, f"fail_under = {value}") == ("fail_under", float(value))
+
+
+def test_negation_starts_after_the_last_punctuation() -> None:
+    hits = scan_text("OK. No request. denied", "body", "body")  # Refs: #314
+    assert [hit["phrase"] for hit in hits] == ["denied"]  # Refs: #314
+    assert scan_text("No request X denied", "body", "body") == []  # Refs: #314
 
 
 SUBJECT = "fix(tooling): reject empty review findings as skip indicators"
