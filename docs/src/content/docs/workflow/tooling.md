@@ -13,6 +13,24 @@ Run `mise install` for the repository pins and `mise run vale:sync` once in a fr
 
 Use `mise run docs:dev` for local reading. `mise run docs:build` writes `docs/dist/`, and `mise run docs:check-links` validates internal links and hashes. Site tasks install dependencies from the committed lockfile. Mermaid rendering needs Chromium, installed through `mise run docs:browsers`. Ask the operator before a setup step requires system changes.
 
+## Heavy-check semaphore
+
+`check`, `check:mutation`, `check:mutation:go`, `check:mutation:python`, and `docs:build` acquire the installed `check-semaphore` before starting their work, including task dependencies. The wrappers locate `.holding/bin/check-semaphore` beside Git's common directory, so linked worktrees use the same installation. When that executable is absent, as in CI, each wrapper prints one notice to stderr and runs its original task body. An installed semaphore's errors propagate without falling back.
+
+The semaphore coordinates worktrees for the same OS account. Its defaults admit two jobs, report waiting progress every 30 seconds, and stop acquisition after 45 minutes with exit status 75. The command's exit status otherwise propagates. With one available slot, concurrent runs serialize. A shared one-slot configuration or another job occupying the other slot provides that condition.
+
+| Environment variable | Default | Purpose |
+| --- | --- | --- |
+| `AO_CHECK_SEMAPHORE_SLOTS` | `2` | Positive capacity, set consistently for participating callers by the host profile |
+| `AO_CHECK_SEMAPHORE_REPORT_INTERVAL` | `30s` | Positive Go duration between waiting reports |
+| `AO_CHECK_SEMAPHORE_WAIT_LIMIT` | `45m` | Positive Go duration limiting acquisition |
+| `AO_CHECK_SEMAPHORE_DIR` | `/tmp/ao-check-semaphore-UID` | Shared absolute local directory, owned by the current user with mode 0700 |
+| `AO_CHECK_SEMAPHORE_LEASE` | Internal | Inherited lease pathname, never set manually |
+
+Nested wrapped tasks inherit the lease and descriptor 3 and share the ancestor's slot. Preserve both when adding intermediaries. Python subprocesses that invoke another wrapped task need `pass_fds=(3,)`. A lease environment without its matching descriptor fails visibly. The Python mutation runner starts no further wrapped tasks, and its foreground ancestor retains the slot until it exits. Do not remove the shared directory while commands are active. The semaphore limits participating commands, not host load from unrelated processes.
+
+The semaphore code and lease contract belong to [internal issue 24](https://github.com/tbhb-dev/agent-orchestration-poc.internal/issues/24) and its `scaffolding/check-semaphore/README.md`. This repository only wires the public tasks to the installed command.
+
 ## Pinned tools
 
 These are the exact pins in `mise.toml`. Rust uses the default profile. CI separately pins mise itself to 2026.8.6.
