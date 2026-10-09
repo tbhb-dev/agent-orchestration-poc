@@ -166,3 +166,53 @@ def test_commit_endpoint_ceiling_fails_closed(monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.setattr(skipscan_shell, "_get", get)
     with pytest.raises(ValueError, match="Incomplete commit scan"):
         run("https://api.github.com", "dummy", "o/r", 1)
+
+
+def test_commit_trailers_and_review_follow_ups_through_the_shell(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    subject = "fix: reject empty findings as skip indicators"
+    commits = [
+        {"sha": "tracked", "commit": {"message": f"{subject}\n\nRefs: #334"}},
+        {
+            "sha": "body",
+            "commit": {"message": f"{subject}\n\nTests skipped.\n\nRefs: #334"},
+        },
+        {"sha": "bare", "commit": {"message": subject}},
+        {"sha": "prose", "commit": {"message": f"{subject}\n\nRefs: #334\nMore."}},
+    ]
+    comments = [
+        {"body": "Fix it in a follow-up commit.", "html_url": "same-pr"},
+        {"body": "Fix it in a follow-up commit after merge.", "html_url": "later"},
+    ]
+    reviews = [
+        {"body": "Fix it in a follow-up push.", "html_url": "verdict"},
+        {"body": "Fix it in a follow-up push to a separate PR.", "html_url": "apart"},
+    ]
+
+    def get(url: str, token: str, accept: str = "") -> str:
+        del token
+        if "/commits?" in url:
+            return json.dumps(commits if url.endswith("page=1") else [])
+        if "/pulls/1/comments?" in url:
+            return json.dumps(comments)
+        if "/reviews?" in url:
+            return json.dumps(reviews)
+        if "?" in url:
+            return "[]"
+        if accept:
+            return ""
+        return json.dumps({"body": "", "commits": len(commits)})
+
+    monkeypatch.setattr(skipscan_shell, "_get", get)
+    assert run("https://api.github.com", "dummy", "o/r", 1) == 1
+    flagged = sorted(
+        record.getMessage() for record in caplog.records if record.levelname == "ERROR"
+    )
+    assert flagged == [
+        "apart:1: follow-up",
+        "commit bare:1: skip",
+        "commit body:3: skipped",
+        "commit prose:1: skip",
+        "later:1: follow-up",
+    ]
