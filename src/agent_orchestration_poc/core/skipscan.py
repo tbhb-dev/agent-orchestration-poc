@@ -107,6 +107,15 @@ PEM_RE = re.compile(r"-----(?:BEGIN|END) [A-Z ]*(?:PRIVATE KEY|CERTIFICATE)-----
 # Review text that asks for another commit or push asks for work in the same PR.
 REVIEW_KINDS = frozenset({"review-comment", "review-verdict"})
 SAME_PR_RE = re.compile(r"\s+(?:commits?|push(?:es)?)\b", re.IGNORECASE)
+# Any sign of work after this PR in the same paragraph keeps the indicator.
+LATER_WORK_RE = re.compile(
+    r"\b(?:merg\w*|separat\w*|later|future|subsequent\w*|another|next|new)\b|"
+    r"\bafter\s+(?:this|the)\s+(?:PR|pull request)\b",
+    re.IGNORECASE,
+)
+# Git trailer lines: a token and a value, or an indented continuation.
+TRAILER_LINE_RE = re.compile(r"[A-Za-z0-9-]+:\s*\S.*|\s+\S.*")
+REFS_TRAILER_RE = re.compile(r"Refs: #\d+")
 
 
 def validate_commit_count(expected: int, collected: int) -> None:
@@ -371,6 +380,7 @@ def scan_text(  # noqa: C901, PLR0912  Refs: #300
                 kind in REVIEW_KINDS
                 and phrase.lower() in {"follow-up", "follow up"}
                 and SAME_PR_RE.match(tail)
+                and not LATER_WORK_RE.search(blocks[index] or line)
             ):
                 continue
             clause = line[
@@ -436,10 +446,14 @@ def scan_text(  # noqa: C901, PLR0912  Refs: #300
 
 
 def scan_commit(message: str, source: str) -> list[dict[str, Any]]:
-    """Scan a commit message, tracking its subject by the message's own trailer."""
+    """Scan a commit message, tracking its subject by the message's own trailer.
+
+    Like Git's trailer parser, the final paragraph counts only when every line is
+    a trailer, and one of them must be exactly ``Refs: #<n>``.
+    """
     trailers = re.split(r"\n[ \t]*\n", message.strip())[-1].splitlines()
-    referenced = any(
-        line.startswith("Refs:") and ISSUE_RE.search(line) for line in trailers
+    referenced = all(TRAILER_LINE_RE.fullmatch(line) for line in trailers) and any(
+        REFS_TRAILER_RE.fullmatch(line) for line in trailers
     )
     return [
         {**hit, "tracked": True} if referenced and hit["line"] == 1 else hit

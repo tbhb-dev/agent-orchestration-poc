@@ -348,12 +348,22 @@ SUBJECT = "fix(tooling): reject empty review findings as skip indicators"
         (f"{SUBJECT}\n\nRefs: #330\n", [(1, True)]),
         (f"{SUBJECT}\n\nRefs: #330\n\n", [(1, True)]),
         (f"{SUBJECT}\n\nRefs: #330\r\n", [(1, True)]),
-        (f"{SUBJECT}\n\nAssisted-by: x\nRefs: o/r#330", [(1, True)]),
-        (f"{SUBJECT}\n\nRefs: https://github.com/o/r/issues/3", [(1, True)]),
+        (f"{SUBJECT}\n\nAssisted-by: x\nRefs: #330", [(1, True)]),
+        (f"{SUBJECT}\n\nRefs: #330\nAssisted-by: x\n  continued", [(1, True)]),
+        (f"{SUBJECT}\n\nRefs: #330\nRefs: #331", [(1, True)]),
+        (f"{SUBJECT}\n\nRefs: o/r#330", [(1, False)]),
+        (f"{SUBJECT}\n\nRefs: https://github.com/o/r/issues/3", [(1, False)]),
+        (f"{SUBJECT}\n\nRefs: #330\nThis is trailing prose.", [(1, False)]),
+        (f"{SUBJECT}\n\nThis is leading prose.\nRefs: #330", [(1, False)]),
+        (f"{SUBJECT}\n\nRefs: #330 and more", [(1, False)]),
+        (f"{SUBJECT}\n\nRefs:#330", [(1, False)]),
+        (f"{SUBJECT}\n\nRefs: #", [(1, False)]),
+        (f"{SUBJECT}\n\nAssisted-by:\nRefs: #330", [(1, False)]),
+        (f"{SUBJECT}\n\nAssisted by: x\nRefs: #330", [(1, False)]),
         (f"{SUBJECT}\n \t\nRefs: #330", [(1, True)]),
         (f"{SUBJECT}\n\nBody.", [(1, False)]),
         (f"{SUBJECT}\n\nRefs: none", [(1, False)]),
-        (f"{SUBJECT}\n\nRefs: step #2", [(1, True)]),
+        (f"{SUBJECT}\n\nRefs: step #2", [(1, False)]),
         (f"{SUBJECT}\n\nSee Refs: #330", [(1, False)]),
         (f"{SUBJECT}\n\n refs: #330", [(1, False)]),
         (f"{SUBJECT}\n\nRefs: #330\n\nTrailing prose.", [(1, False)]),
@@ -413,6 +423,56 @@ def test_commit_trailer_tracks_only_the_subject(
         ("A follow-up commit, tests deferred.", "review-comment", ["deferred"]),
         ("Deferred to a follow-up commit.", "review-comment", ["Deferred"]),
         ("A follow-up commit; then a follow-up.", "review-comment", ["follow-up"]),
+        (
+            "Add the missing tests in a follow-up commit after this PR merges.",
+            "review-comment",
+            ["follow-up"],
+        ),
+        (
+            "Add the missing tests in a follow-up commit after this PR merges.",
+            "review-verdict",
+            ["follow-up"],
+        ),
+        (
+            "Address this in a follow-up push to a separate PR.",
+            "review-comment",
+            ["follow-up"],
+        ),
+        (
+            "Address this in a follow-up push to a separate PR.",
+            "review-verdict",
+            ["follow-up"],
+        ),
+        ("Fix it in a follow-up commit\nonce merged.", "review-comment", ["follow-up"]),
+        ("Fix it in a follow-up commit after the PR.", "review-verdict", ["follow-up"]),
+        (
+            "Fix it in a follow-up commit after this pull request.",
+            "review-comment",
+            ["follow-up"],
+        ),
+        ("Fix it in a follow-up commit, separately.", "review-comment", ["follow-up"]),
+        (
+            "Fix it in a follow-up commit in the future.",
+            "review-comment",
+            ["follow-up"],
+        ),
+        (
+            "Fix it in a follow-up commit to another branch.",
+            "review-comment",
+            ["follow-up"],
+        ),
+        (
+            "Fix it in a follow-up commit in the next PR.",
+            "review-comment",
+            ["follow-up"],
+        ),
+        (
+            "Fix it in a follow-up commit on a new branch.",
+            "review-comment",
+            ["follow-up"],
+        ),
+        ("Fix it in subsequent follow-up commits.", "review-comment", ["follow-up"]),
+        ("Fix it in a follow-up commit after this branch.", "review-comment", []),
     ],
 )
 def test_review_follow_up_commit_is_same_pr_work(
@@ -428,12 +488,14 @@ def test_review_follow_up_commit_is_same_pr_work(
     st.sampled_from(["commit", "commits", "push", "pushes"]),
     st.sampled_from(["review-comment", "review-verdict", "pr-body", "diff"]),
     st.sampled_from(["", "skipped; "]),
+    st.sampled_from(["", " after this PR merges", " in a separate PR", "\nlater"]),
 )
 def test_follow_up_commit_exempt_only_in_reviews(
-    phrase: str, noun: str, kind: str, prefix: str
+    phrase: str, noun: str, kind: str, prefix: str, later: str
 ) -> None:
-    hits = scan_text(f"{prefix}Do it in a {phrase} {noun}.", kind, "review")
-    exempt = kind in {"review-comment", "review-verdict"}
+    text = f"{prefix}Do it in a {phrase} {noun}{later}."
+    hits = [hit for hit in scan_text(text, kind, "review") if hit["line"] == 1]
+    exempt = kind in {"review-comment", "review-verdict"} and not later
     assert [hit["phrase"] for hit in hits] == (["skipped"] if prefix else []) + (
         [] if exempt else [phrase]
     )
